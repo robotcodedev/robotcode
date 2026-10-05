@@ -70,7 +70,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
 
   context.subscriptions.push(
     vscode.commands.registerCommand("robotcode.showWhatsNew", async () => {
-      await vscode.commands.executeCommand("simpleBrowser.api.open", "https://robotcode.io/news/", {
+      await vscode.commands.executeCommand("simpleBrowser.api.open", "https://robotcode.io/news/latest/", {
         preserveFocus: false,
         viewColumn: vscode.ViewColumn.Active,
       });

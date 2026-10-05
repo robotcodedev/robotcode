@@ -24,7 +24,7 @@ With this plugin, your AI coding agent uses [`robotcode`](https://robotcode.io) 
 ## Prerequisites
 
 - A Robot Framework project.
-- The [`robotcode`](https://robotcode.io) CLI tools, installed in the project's Python environment (the command-line tool — not to be confused with the VS Code extension of the same name). You can set it up yourself following the [installation guide](https://robotcode.io/03_reference/cli), or let the skill walk you through scope (dev dependency vs. venv-only) and extras (`runner`, `analyze`, `repl`, …) on first use.
+- The [`robotcode`](https://robotcode.io) CLI tools, installed in the project's Python environment (the command-line tool — not to be confused with the VS Code extension of the same name). You can set it up yourself following the [installation guide](https://robotcode.io/reference/cli/), or let the skill walk you through scope (dev dependency vs. venv-only) and extras (`runner`, `analyze`, `repl`, …) on first use.
 - An AI agent that supports plugins — see [supported agents](https://open-plugins.com/supported-agents) for the current list. Agents without plugin support can still load the skill directly (see [Install](#install)).
 
 ## Install

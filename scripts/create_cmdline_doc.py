@@ -148,7 +148,7 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
 
 
 def main() -> None:
-    cli_doc = Path("docs/03_reference/cli.md")
+    cli_doc = Path("docs/src/content/docs/reference/cli.md")
 
     regex = re.compile(
         "(.*^<!-- START -->$)(.*?)(^<!-- END -->.*$)",

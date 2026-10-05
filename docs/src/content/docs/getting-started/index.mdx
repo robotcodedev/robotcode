@@ -1,0 +1,33 @@
+---
+title: Getting Started
+description: 'Requirements for RobotCode and where to start: set it up in VS Code or Neovim, then create the robot.toml for your project.'
+sidebar:
+  label: Overview
+  order: 0
+---
+
+import AreaOverview from "../../../components/AreaOverview.astro";
+
+RobotCode is a set of tools, extensions and plugins for working with [Robot Framework](https://robotframework.org/) in different IDEs, editors and on the command line. Check the requirements, set RobotCode up in your editor, then configure your project with a `robot.toml` file.
+
+## Requirements
+
+- Python 3.10 or above
+- Robotframework version 5.0 and above
+- VSCode version 1.127 and above
+
+### Optional Python Packages
+
+Robot Framework needs additional Python packages for some documentation formats. They are optional in Robot Framework, so RobotCode neither depends on them nor ships them. If you need one of them, install it into the Python environment of your project, the same way you install Robot Framework itself, for example by adding it to the dependencies of your project.
+
+| Package | Needed for | Without it |
+|---|---|---|
+| [`docutils`](https://pypi.org/project/docutils/) | Libraries that write their documentation in reStructuredText (`ROBOT_LIBRARY_DOC_FORMAT = "reST"`), and everything else Robot Framework does with reStructuredText | RobotCode shows the documentation of such libraries as plain reStructuredText source instead of formatted text |
+| [`markdown`](https://pypi.org/project/Markdown/) (Python-Markdown) | The HTML documentation of libraries that write their documentation in Markdown: "Open Documentation (deprecated)" in the editor, "Show Documentation (deprecated)" in the Keywords view and `robotcode libdoc`. Since Robot Framework 7.5 this includes the standard libraries such as `BuiltIn` and `Collections`. `robotcode doc` and the Documentation Viewer do not need it | "Open Documentation (deprecated)" shows Robot Framework's message that the `markdown` module is missing. Hover and completion are not affected |
+
+See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html) for details about these formats.
+
+
+## Set up RobotCode
+
+<AreaOverview area="getting-started" />

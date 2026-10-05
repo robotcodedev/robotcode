@@ -363,7 +363,8 @@ These commands are mainly used by maintainers, but contributors may need some of
 **Code Generation:**
 - `hatch run generate-tmlanguage` — Regenerate the Robot Framework grammars from `syntaxes/robotframework.tmLanguage.template.json`: `syntaxes/robotframework.tmLanguage.json` for Robot Framework files (VS Code, the IntelliJ plugin and the docs) and `syntaxes/robotframework-markdown.tmLanguage.json` for the Markdown code block injection of VS Code, which also matches code blocks indented in Markdown lists and block quotes (IntelliJ's TextMate regex engine cannot compile that variant). Edit the template, not the generated files. The section-header and documentation-setting regexes come from the translations of the installed Robot Framework, so check first that `hatch run python -c "import robot; print(robot.__version__)"` prints the newest supported version. `syntaxes/robotframework-repl.tmLanguage.json` is maintained by hand and carries its own copy of the header regexes.
 - `hatch run create-json-schema` — Create JSON schema for `robot.toml` configuration validation.
-- `hatch run create-cmd-line-docs` — Regenerate the command reference in `docs/03_reference/cli.md` (the part between `<!-- START -->` and `<!-- END -->`) from the `--help` output of the commands. It runs in the default environment and documents what the help shows there: options that need a certain Robot Framework version (for example `--show-metadata`, Robot Framework 7.5+) are hidden from the help of older versions and would be dropped from the reference. The default environment does not pin Robot Framework, so check `hatch run python -c "import robot; print(robot.__version__)"` first; it must print the newest supported version, otherwise recreate the environment (`hatch env remove default`). Review the diff and keep only the hunks that belong to your change.
+- `hatch run create-cmd-line-docs` — Regenerate the command reference in `docs/src/content/docs/reference/cli.md` (the part between `<!-- START -->` and `<!-- END -->`) from the `--help` output of the commands. It runs in the default environment and documents what the help shows there: options that need a certain Robot Framework version (for example `--show-metadata`, Robot Framework 7.5+) are hidden from the help of older versions and would be dropped from the reference. The default environment does not pin Robot Framework, so check `hatch run python -c "import robot; print(robot.__version__)"` first; it must print the newest supported version, otherwise recreate the environment (`hatch env remove default`). Review the diff and keep only the hunks that belong to your change.
+- `hatch run create-config-docs` — Regenerate the configuration reference `docs/src/content/docs/reference/config.md` from `robotcode config info desc`, with the heading IDs the JSON schema links to. The frontmatter of the page is kept.
 
 **Regenerating the `robot.toml` option model:**
 
@@ -373,7 +374,7 @@ The options of `robot`, `rebot`, `libdoc` and `testdoc` in `packages/robot/src/r
 hatch run test.rf75:python scripts/generate_rf_options.py          # rewrites the generated region of model.py
 hatch run lint:fix                                                 # formats the generated code
 hatch run create-json-schema                                       # docs/public/schemas/robot.toml.json
-hatch run robotcode config info desc > docs/03_reference/config.md # configuration reference
+hatch run create-config-docs                                       # configuration reference
 ```
 
 Review the diff: only the generated region of `model.py`, the schema and `config.md` may change, and no option class may gain or lose fields unintentionally. TOML examples and type overrides for single options are maintained in `scripts/generate_rf_options.py` (`TOML_EXAMPLES`, `type_templates`), not in `model.py`.
@@ -438,28 +439,38 @@ Documentation is crucial for helping users understand and use RobotCode effectiv
 
 #### Documentation Setup
 
-The documentation is built using modern web technologies and is located in the `docs/` folder. Node.js dependencies are already installed by the [dev environment setup](#development-environment-setup):
+The documentation site https://robotcode.io is built with [Astro](https://astro.build/) and [Starlight](https://starlight.astro.build/) from the `docs/` folder and needs Node.js 24 or newer. Node.js dependencies are already installed by the [dev environment setup](#development-environment-setup):
 
 ```bash
-npm run docs:dev      # Start documentation development server
-npm run docs:build    # Build documentation for production
-npm run docs:preview  # Preview production documentation build
+npm run docs:dev      # Start the development server at http://localhost:4321
+npm run docs:build    # Build the site into docs/dist; fails on broken internal links and anchors
+npm run docs:preview  # Serve the production build
 ```
 
 You can also run the equivalent commands from the `docs/` folder: `npm run dev`, `npm run build`, and `npm run preview`.
 
-#### Preview of the New Documentation Site
+- `npm run docs:preview` runs the server in the background; stop it with `npx astro preview stop` in `docs/`.
+- The search uses the Algolia index of the published site, so its results link to https://robotcode.io.
+- Astro collects anonymous usage data unless you set `ASTRO_TELEMETRY_DISABLED=1` (or run `npx astro telemetry disable` once).
 
-The documentation site is moving to Astro + Starlight with a new structure. The preview in `docs-next/` is generated from `docs/` on every build and is not deployed; see [docs-next/README.md](docs-next/README.md) for how to run it (`npm run docs-next:install`, then `npm run docs-next:dev` or `npm run docs-next:build`, Node.js 22.12 or newer). Content is still edited in `docs/` only, with two additions:
+#### Writing Documentation Pages
 
-- A **new page** in `docs/` needs an entry in the page map of `docs-next/scripts/convert.mjs`, otherwise the preview build fails. Release posts named `news/YYYY-MM-DD-whats-new-vX.Y.Z.md` are mapped automatically.
-- Changes to the **home page** (`docs/index.md`) or the **overview pages** (`docs/03_reference/index.md`, `docs/04_tip_and_tricks/index.md`) must be mirrored in `docs-next/content/`, where the preview's own versions of these pages live.
+The pages live in `docs/src/content/docs/`, and a page's path is its URL: `guides/repl.md` is published at `/guides/repl/`.
+
+- **Where a page belongs:** choose the area by what the reader comes to do. Setting up an editor or tool goes to `getting-started/`, doing a task or learning a RobotCode tool to `guides/`, and exact specifications without task narrative to `reference/`. The sidebar and the overview page of the area list a new page automatically.
+- **Frontmatter:** every page declares `title`, a one-sentence `description` (the meta description, also shown on the overview page) and `sidebar.label` and `sidebar.order` for its place in the sidebar. The page starts without a heading of level 1. The `create-release-notes` skill describes the format of the news posts in `news/`.
+- **Images:** store them in `docs/src/assets/` (screenshots in `docs/src/assets/screenshots/`) and use relative paths, so the build optimizes them. `docs/public/` holds only files served unchanged: `CNAME`, the favicons, the Open Graph image and the JSON schema.
+- **Asides:** `:::note`, `:::tip`, `:::caution` or `:::danger`, with an optional title in brackets (`:::tip[Title]`), closed by `:::`.
+- **Code blocks:** give a code block a title with `title="robot.toml"` after the language.
+- **Tabs and steps:** `<Tabs>` with `<TabItem label="…">`, and `<Steps>` around a numbered list, are components imported from `@astrojs/starlight/components`. A page with components is an `.mdx` file; use `.mdx` only where you need components and plain `.md` everywhere else.
+- **Links:** link other pages by their path with a trailing slash, such as `/guides/repl/#exit-code-and-session-status`.
+- **Generated pages:** `reference/cli.md` and `reference/config.md` are generated (see [Additional Development Commands](#additional-development-commands)). Edit only their frontmatter, and in `cli.md` the text outside `<!-- START -->` and `<!-- END -->`.
 
 #### Documentation Standards
 
 - **Clear and concise:** Write for users of all skill levels
 - **Examples:** Include practical code examples
-- **Screenshots:** Add visual aids where helpful (stored in `docs/images/`)
+- **Screenshots:** Add visual aids where helpful (stored in `docs/src/assets/screenshots/`)
 - **Links:** Reference related concepts and external resources
 - **Testing:** Verify that code examples actually work
 
@@ -467,8 +478,8 @@ The documentation site is moving to Astro + Starlight with a new structure. The 
 
 1. **Small fixes:** Edit files directly and submit a pull request
 2. **Major changes:** Open an issue first to discuss the approach
-3. **New sections:** Follow the existing structure in the `docs/` folder
-4. **Images:** Store in `docs/images/` and use relative paths
+3. **New pages:** Put them in the area that fits (see [Writing Documentation Pages](#writing-documentation-pages))
+4. **Images:** Store in `docs/src/assets/` and use relative paths
 
 #### Documentation Review Process
 

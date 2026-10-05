@@ -1,6 +1,6 @@
 ---
 name: create-release-notes
-description: "Write or update RobotCode's user-facing release announcement: the \"What's New in vX.Y.Z\" news post under docs/news/, built from the commits since the last stable release. Use this whenever the user asks for release notes, a release announcement, a news post or a What's New article for RobotCode, or wants an existing draft post updated with newly committed changes, even if docs/news is not mentioned. Produces only the Markdown post; no changelog, build, version bump or commit."
+description: "Write or update RobotCode's user-facing release announcement: the \"What's New in vX.Y.Z\" news post under docs/src/content/docs/news/, built from the commits since the last stable release. Use this whenever the user asks for release notes, a release announcement, a news post or a What's New article for RobotCode, or wants an existing draft post updated with newly committed changes, even if the news folder is not mentioned. Produces only the Markdown post; no changelog, build, version bump or commit."
 argument-hint: "[optional release date or focus area]"
 ---
 
@@ -14,10 +14,10 @@ The post is an announcement, not a changelog. `CHANGELOG.md` lists every change.
 
 This skill only writes the news post. Do not:
 
-- run a docs build or preview, including `npm --prefix docs run build`;
+- run a docs build or preview, including `npm run docs:build`;
 - create, update or regenerate `CHANGELOG.md`;
 - edit version files;
-- edit `docs/news/index.md` or `docs/news/posts.data.ts`; the VitePress content loader finds new posts on its own;
+- edit other pages of the site; the news list, the feed and the tag pages pick up a new post on their own;
 - commit, tag or push.
 
 The rest of the release workflow is automatic or handled by the user.
@@ -32,7 +32,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 ## Sources
 
-- `references/writing-guide.md` for structure and tone. Use the existing posts in `docs/news/*.md` only for the format: frontmatter, file naming and footer. Posts before v2.8.0 predate the guide, so don't copy their openings (slogans, long feature paragraphs) or their technical explanations. Ignore April Fools posts: `docs/news/2026-04-01-whats-new-v2.5.0.md` and any post with `aprilFools` in its frontmatter.
+- `references/writing-guide.md` for structure and tone. Use the existing posts in `docs/src/content/docs/news/*.md` only for the format: frontmatter, file naming and footer. Posts before v2.8.0 predate the guide, so don't copy their openings (slogans, long feature paragraphs) or their technical explanations. Ignore April Fools posts, the ones tagged `april-fools`, such as `news/v2-5-0-april-1st.md`.
 - The next version: `hatch run build:cz bump --get-next`.
 - The newest stable release tag in `vX.Y.Z` form. Ignore `alpha`, `beta` and `dev` tags unless the user asks for prerelease notes.
 - The commits from that tag to `HEAD`, with subjects, bodies and changed files.
@@ -47,7 +47,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
     - Find the newest stable tag, for example `v2.7.0`.
     - Date the post today unless the user gave a release date.
 
-2. **Check the state.** Run `git status --short -- docs/news` and keep unrelated changes. An untracked or modified `docs/news/*-whats-new-v*.md` for a version newer than the last stable tag is the current draft. Its version can differ from the one in step 1, because a later commit can change the next version. If there is a draft and the user asks to update it, follow step 9 and then steps 10 and 11. If there is a draft and the request is unclear, ask before you overwrite or merge it.
+2. **Check the state.** Run `git status --short -- docs/src/content/docs/news` and keep unrelated changes. An untracked or modified `docs/src/content/docs/news/vX-Y-Z.md` for a version newer than the last stable tag is the current draft. Its version can differ from the one in step 1, because a later commit can change the next version. If there is a draft and the user asks to update it, follow step 9 and then steps 10 and 11. If there is a draft and the request is unclear, ask before you overwrite or merge it.
 
 3. **Collect the changes.**
     - Read the full log, not only the subjects: `git log --format='%h %s%n%b' <tag>..HEAD`.
@@ -96,15 +96,15 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 9. **Update an existing draft.** When the user says that new commits have landed:
     - Read `references/writing-guide.md` (Ordering, Chapter Patterns, Wording) before you add anything.
-    - If the next version from step 1 differs from the draft's version, rename the file and update `title:` and the H1.
+    - If the next version from step 1 differs from the draft's version, rename the file and update `title:` and `description:`.
     - Find the commits the post does not cover yet. If the conversation names the commit where the previous pass stopped, start there. Otherwise read the whole range from the tag again and skip what the post already covers. Read the bodies too: `git log --format='%h %ad %s%n%b' --date=short <commit-or-tag>..HEAD`.
     - Check new issue links as in step 3. Add only what passes step 4, each item at its place in the existing order. Keep the existing structure unless the user asks to change it.
     - Update the lede and the highlights list if a new item belongs there.
-    - If the post's `date:` is not today, rename the file to today's date and update `date:`, unless the user gave a release date.
+    - If the post's `date:` is not today, update it, unless the user gave a release date.
     - Report what you added and what you left out, with a short reason for each omission.
 
 10. **Validate the post, and only the post.**
-    - The filename date, `date:`, `title:`, the H1 and the version match.
+    - The file name, `title:`, `description:` and the version match, and `date:` is the release date.
     - Every statement is backed by a commit, the code or the docs. Don't add a "because" that you cannot back.
     - Every linked issue exists. Bug Fixes lists only issues that the commit closes.
     - Every in-page link matches a heading, and every linked docs page and anchor exists (see Post Format).
@@ -115,29 +115,37 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 ## Post Format
 
-- File: `docs/news/YYYY-MM-DD-whats-new-vX.Y.Z.md`.
+- File: `docs/src/content/docs/news/vX-Y-Z.md`, the version with dashes, such as `v2-8-0.md`. The post is published at `/news/vX-Y-Z/`.
 - Frontmatter:
 
     ```markdown
     ---
     title: What's New in vX.Y.Z
+    description: RobotCode X.Y.Z adds …, in one sentence.
     date: YYYY-MM-DD
+    tags:
+      - release
+      - editor
     ---
     ```
 
-- Heading: `# What's New in RobotCode vX.Y.Z`.
+- `description:` is one sentence about what the release brings. The site uses it as the page's meta description.
+- `tags:` has exactly one kind tag, `release` for a release post (the other kinds are `tips` and `april-fools`), followed by one topic tag for each topic the post has its own section about. Use only these topic tags: `analysis`, `editor`, `vscode`, `intellij`, `cli`, `configuration`, `ci`, `debugging`, `ai-agents`, `performance`.
+- No heading of level 1: the page shows `title:` as its heading, and the post starts with the lede.
+- Put `<!-- excerpt -->` on a line of its own after the first paragraph. The news list shows the post up to that marker.
 - Write in English. Write the product name in prose as `**RobotCode**`.
-- Link documentation pages relatively (`../03_reference/repl.md#exit-code-and-session-status`). Link issues as `([#123](https://github.com/robotcodedev/robotcode/issues/123))`.
-- In-page anchors follow VitePress: the heading in lowercase, with spaces and punctuation turned into `-` and repeats collapsed. `Robot Framework 7.5 Support` becomes `#robot-framework-7-5-support`, and `In VS Code: the Documentation Viewer` becomes `#in-vs-code-the-documentation-viewer`. Leading and trailing `-` are dropped, and a slug that starts with a digit gets a `_` prefix.
+- Link documentation pages by their path on the site, with the trailing slash (`/guides/repl/#exit-code-and-session-status`). Link issues as `([#123](https://github.com/robotcodedev/robotcode/issues/123))`.
+- Anchors follow Starlight: the heading in lowercase, spaces turned into `-`, other punctuation dropped. `Robot Framework 7.5 Support` becomes `#robot-framework-75-support`, and `In VS Code: the Documentation Viewer` becomes `#in-vs-code-the-documentation-viewer`.
 - Use code blocks only for commands and configuration that users can run. One to three lines are usually enough.
-- Put something the reader must do into a callout. Use GitHub's alert syntax, with the marker alone on its line and a bold first sentence as the title:
+- Put something the reader must do into a `caution` aside, with what to do as its title:
 
     ```markdown
-    > [!IMPORTANT]
-    > **Libdoc HTML needs the `markdown` package.** Because the standard libraries are now documented in Markdown, …
+    :::caution[Libdoc HTML needs the `markdown` package]
+    Because the standard libraries are now documented in Markdown, …
+    :::
     ```
 
-    This renders as a callout both on the website and on GitHub. VitePress `:::` containers, and a title written after the marker, render only on the website. VS Code's built-in Markdown preview renders none of these forms as a callout; there the GitHub form shows as a plain quote.
+    The site renders it as a callout. GitHub's alert syntax (`> [!IMPORTANT]`) renders there as a plain quote that starts with the marker.
 
 ## Decision Points
 
@@ -157,7 +165,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 - The post describes what RobotCode does. Robot Framework's own features are explained only as far as the reader needs them to understand RobotCode's part.
 - The text is factual, concise and neutral, with no hype and no "would otherwise have failed" framing.
 - Every Bug Fixes entry links an issue that the commit closes.
-- The Markdown is valid for VitePress, with YAML frontmatter. Exactly one post is created or changed.
+- The Markdown is valid for Starlight, with YAML frontmatter. Exactly one post is created or changed.
 - No docs build, changelog update, version edit, commit, tag or push happened.
 
 ## Example Prompts

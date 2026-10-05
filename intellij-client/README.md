@@ -66,7 +66,7 @@ With RobotCode, you can focus on building and testing your automation workflows 
 3. Start writing and running your Robot Framework tests!
 
 (Comming soon...)
-For a more detailed guide, check out the [Let's get started](https://robotcode.io/02_get_started/) Guide on
+For a more detailed guide, check out the [Let's get started](https://robotcode.io/getting-started/) Guide on
 the [RobotCode](https://robotcode.io) website.
 
 <!-- Plugin description end -->

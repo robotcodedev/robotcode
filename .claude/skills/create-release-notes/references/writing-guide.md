@@ -11,12 +11,16 @@ News is written as an inverted pyramid: the most important facts come first, and
 ```markdown
 ---
 title: What's New in vX.Y.Z
+description: <what the release brings, in one sentence>
 date: YYYY-MM-DD
+tags:
+  - release
+  - <topic tags>
 ---
 
-# What's New in RobotCode vX.Y.Z
-
 <lede: one sentence> <product sentence>
+
+<!-- excerpt -->
 
 Highlights of this release:
 

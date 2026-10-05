@@ -28,9 +28,8 @@ RobotCode is a multi-package Robot Framework toolkit.
 	- Run Gradle commands from `intellij-client/`.
 - Docs:
 	- Owning paths: `docs/`, root Markdown files.
-	- `docs-next/` is the Starlight preview of the future site, generated from `docs/`; edit content only in `docs/`.
-	- A new page in `docs/` needs an entry in the page map of `docs-next/scripts/convert.mjs`.
-	- `src/content/docs/`, `src/assets/` and `public/` in `docs-next/` are generated; do not edit them.
+	- The site is an Astro + Starlight project: pages in `docs/src/content/docs/`, images in `docs/src/assets/`.
+	- `reference/cli.md` and `reference/config.md` are generated; regenerate them with `hatch run create-cmd-line-docs` and `hatch run create-config-docs`.
 - Planning & design notes (not user-facing):
 	- Owning path: `dev-docs/` — versioned roadmaps, design rationale, and idea collections (unlike the git-ignored `playground/`). It is reference/ideas, not a status tracker: progress for OpenSpec work under `openspec/` is tracked there, not in `dev-docs/`.
 - Generated or bundled outputs (do not edit by hand):
@@ -57,10 +56,8 @@ Use `hatch run test:test` as the default test command. It runs the full Robot Fr
 	- TypeScript/JavaScript linting.
 - `npm run compile` / `npm run package`
 	- VS Code extension build commands.
-- `npm run docs:dev` / `npm run docs:build`
-	- Docs site development server or build.
-- `npm run docs-next:dev` / `npm run docs-next:build` / `npm run docs-next:preview`
-	- Starlight preview of the docs site (Node.js 22.12+; install once with `npm run docs-next:install`).
+- `npm run docs:dev` / `npm run docs:build` / `npm run docs:preview`
+	- Docs site development server, build (fails on broken internal links) or preview of the build (Node.js 24+).
 - `(cd intellij-client && ./gradlew test)`
 	- IntelliJ/Kotlin tests.
 - `(cd intellij-client && ./gradlew buildPlugin)`

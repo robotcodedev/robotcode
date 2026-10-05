@@ -1,5 +1,5 @@
 {
-  "$comment": "Schema for RobotCode's robot.toml configuration. See https://robotcode.io/03_reference/config for full documentation.",
+  "$comment": "Schema for RobotCode's robot.toml configuration. See https://robotcode.io/reference/config/ for full documentation.",
   "$id": "https://www.robotcode.io/schemas/robot.toml.json",
   "$ref": "#/definitions/RobotConfig",
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -25,7 +25,7 @@
           "title": "Cache",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache"
             }
           }
         },
@@ -47,7 +47,7 @@
           "title": "Code",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-code"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-code"
             }
           }
         },
@@ -69,7 +69,7 @@
           "title": "Exclude Patterns",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-exclude-patterns"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-exclude-patterns"
             }
           }
         },
@@ -88,7 +88,7 @@
           "title": "Extend Cache",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-extend-cache"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-extend-cache"
             }
           }
         },
@@ -107,7 +107,7 @@
           "title": "Extend Code",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-extend-code"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-extend-code"
             }
           }
         },
@@ -129,7 +129,7 @@
           "title": "Extend Exclude Patterns",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-extend-exclude-patterns"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-extend-exclude-patterns"
             }
           }
         },
@@ -151,7 +151,7 @@
           "title": "Extend Global Library Search Order",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-extend-global-library-search-order"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-extend-global-library-search-order"
             }
           }
         },
@@ -173,7 +173,7 @@
           "title": "Extend Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-extend-modifiers"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-extend-modifiers"
             }
           }
         },
@@ -195,7 +195,7 @@
           "title": "Global Library Search Order",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-global-library-search-order"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-global-library-search-order"
             }
           }
         },
@@ -219,7 +219,7 @@
           "title": "Load Library Timeout",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-load-library-timeout"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-load-library-timeout"
             }
           }
         },
@@ -241,7 +241,7 @@
           "title": "Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers"
             }
           }
         },
@@ -263,7 +263,7 @@
           "title": "Semantic Model",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-semantic-model"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-semantic-model"
             }
           }
         }
@@ -291,7 +291,7 @@
           "title": "Cache Dir",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-cache-dir"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-cache-dir"
             }
           }
         },
@@ -313,7 +313,7 @@
           "title": "Cache Namespaces",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-cache-namespaces"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-cache-namespaces"
             }
           }
         },
@@ -335,7 +335,7 @@
           "title": "Extend Ignore Arguments For Library",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-extend-ignore-arguments-for-library"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-extend-ignore-arguments-for-library"
             }
           }
         },
@@ -357,7 +357,7 @@
           "title": "Extend Ignored Libraries",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-extend-ignored-libraries"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-extend-ignored-libraries"
             }
           }
         },
@@ -379,7 +379,7 @@
           "title": "Extend Ignored Variables",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-extend-ignored-variables"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-extend-ignored-variables"
             }
           }
         },
@@ -401,7 +401,7 @@
           "title": "Ignore Arguments For Library",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-ignore-arguments-for-library"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-ignore-arguments-for-library"
             }
           }
         },
@@ -423,7 +423,7 @@
           "title": "Ignored Libraries",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-ignored-libraries"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-ignored-libraries"
             }
           }
         },
@@ -445,7 +445,7 @@
           "title": "Ignored Variables",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-cache-ignored-variables"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache-ignored-variables"
             }
           }
         }
@@ -476,7 +476,7 @@
           "title": "Collect Unused",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-code-collect-unused"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-code-collect-unused"
             }
           }
         },
@@ -509,7 +509,7 @@
           "title": "Exit Code Mask",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-code-exit-code-mask"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-code-exit-code-mask"
             }
           }
         },
@@ -539,7 +539,7 @@
           "title": "Extend Exit Code Mask",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-code-extend-exit-code-mask"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-code-extend-exit-code-mask"
             }
           }
         }
@@ -562,7 +562,7 @@
           "type": "string",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-enabled-if"
+              "key": "https://robotcode.io/reference/config/#profile-enabled"
             }
           }
         }
@@ -602,7 +602,7 @@
           "title": "Doc Format",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-doc-format"
+              "key": "https://robotcode.io/reference/config/#libdoc-doc-format"
             }
           }
         },
@@ -634,7 +634,7 @@
           "title": "Extend Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-extend-python-path"
+              "key": "https://robotcode.io/reference/config/#libdoc-extend-python-path"
             }
           }
         },
@@ -662,7 +662,7 @@
           "title": "Format",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-format"
+              "key": "https://robotcode.io/reference/config/#libdoc-format"
             }
           }
         },
@@ -687,7 +687,7 @@
           "title": "Name",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-name"
+              "key": "https://robotcode.io/reference/config/#libdoc-name"
             }
           }
         },
@@ -719,7 +719,7 @@
           "title": "Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-python-path"
+              "key": "https://robotcode.io/reference/config/#libdoc-python-path"
             }
           }
         },
@@ -748,7 +748,7 @@
           "title": "Quiet",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-quiet"
+              "key": "https://robotcode.io/reference/config/#libdoc-quiet"
             }
           }
         },
@@ -773,7 +773,7 @@
           "title": "Spec Doc Format",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-spec-doc-format"
+              "key": "https://robotcode.io/reference/config/#libdoc-spec-doc-format"
             }
           }
         },
@@ -799,7 +799,7 @@
           "title": "Theme",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc-theme"
+              "key": "https://robotcode.io/reference/config/#libdoc-theme"
             }
           }
         }
@@ -833,7 +833,7 @@
           "title": "Error",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-error"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-error"
             }
           }
         },
@@ -858,7 +858,7 @@
           "title": "Extend Error",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-extend-error"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-extend-error"
             }
           }
         },
@@ -883,7 +883,7 @@
           "title": "Extend Hint",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-extend-hint"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-extend-hint"
             }
           }
         },
@@ -908,7 +908,7 @@
           "title": "Extend Ignore",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-extend-ignore"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-extend-ignore"
             }
           }
         },
@@ -933,7 +933,7 @@
           "title": "Extend Information",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-extend-information"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-extend-information"
             }
           }
         },
@@ -958,7 +958,7 @@
           "title": "Extend Warning",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-extend-warning"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-extend-warning"
             }
           }
         },
@@ -983,7 +983,7 @@
           "title": "Hint",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-hint"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-hint"
             }
           }
         },
@@ -1008,7 +1008,7 @@
           "title": "Ignore",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-ignore"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-ignore"
             }
           }
         },
@@ -1033,7 +1033,7 @@
           "title": "Information",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-information"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-information"
             }
           }
         },
@@ -1058,7 +1058,7 @@
           "title": "Warning",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze-modifiers-warning"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-modifiers-warning"
             }
           }
         }
@@ -1078,7 +1078,7 @@
           "type": "string",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-expand-keywords-name"
+              "key": "https://robotcode.io/reference/config/#extend-expand-keywords"
             }
           }
         }
@@ -1120,7 +1120,7 @@
           "title": "Console",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-console"
+              "key": "https://robotcode.io/reference/config/#rebot-console"
             }
           }
         },
@@ -1147,7 +1147,7 @@
           "title": "Console Colors",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-console-colors"
+              "key": "https://robotcode.io/reference/config/#rebot-console-colors"
             }
           }
         },
@@ -1172,7 +1172,7 @@
           "title": "Console Links",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-console-links"
+              "key": "https://robotcode.io/reference/config/#rebot-console-links"
             }
           }
         },
@@ -1198,7 +1198,7 @@
           "title": "Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-doc"
+              "key": "https://robotcode.io/reference/config/#rebot-doc"
             }
           }
         },
@@ -1223,7 +1223,7 @@
           "title": "End Time",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-end-time"
+              "key": "https://robotcode.io/reference/config/#rebot-end-time"
             }
           }
         },
@@ -1255,7 +1255,7 @@
           "title": "Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-excludes"
+              "key": "https://robotcode.io/reference/config/#rebot-excludes"
             }
           }
         },
@@ -1290,7 +1290,7 @@
           "title": "Expand Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-expand-keywords"
+              "key": "https://robotcode.io/reference/config/#rebot-expand-keywords"
             }
           }
         },
@@ -1322,7 +1322,7 @@
           "title": "Extend Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-excludes"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-excludes"
             }
           }
         },
@@ -1357,7 +1357,7 @@
           "title": "Extend Expand Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-expand-keywords"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-expand-keywords"
             }
           }
         },
@@ -1399,7 +1399,7 @@
           "title": "Extend Flatten Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-flatten-keywords"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-flatten-keywords"
             }
           }
         },
@@ -1432,7 +1432,7 @@
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-includes"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-includes"
             }
           }
         },
@@ -1467,7 +1467,7 @@
           "title": "Extend Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-metadata"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-metadata"
             }
           }
         },
@@ -1499,7 +1499,7 @@
           "title": "Extend Parse Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-parse-include"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-parse-include"
             }
           }
         },
@@ -1537,7 +1537,7 @@
           "title": "Extend Pre Rebot Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-pre-rebot-modifiers"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-pre-rebot-modifiers"
             }
           }
         },
@@ -1569,7 +1569,7 @@
           "title": "Extend Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-python-path"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-python-path"
             }
           }
         },
@@ -1613,7 +1613,7 @@
           "title": "Extend Remove Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-remove-keywords"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-remove-keywords"
             }
           }
         },
@@ -1645,7 +1645,7 @@
           "title": "Extend Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-set-tag"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-set-tag"
             }
           }
         },
@@ -1677,7 +1677,7 @@
           "title": "Extend Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-suites"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-suites"
             }
           }
         },
@@ -1712,7 +1712,7 @@
           "title": "Extend Tag Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tag-doc"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tag-doc"
             }
           }
         },
@@ -1750,7 +1750,7 @@
           "title": "Extend Tag Stat Combine",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tag-stat-combine"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tag-stat-combine"
             }
           }
         },
@@ -1782,7 +1782,7 @@
           "title": "Extend Tag Stat Exclude",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tag-stat-exclude"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tag-stat-exclude"
             }
           }
         },
@@ -1814,7 +1814,7 @@
           "title": "Extend Tag Stat Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tag-stat-include"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tag-stat-include"
             }
           }
         },
@@ -1849,7 +1849,7 @@
           "title": "Extend Tag Stat Link",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tag-stat-link"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tag-stat-link"
             }
           }
         },
@@ -1881,7 +1881,7 @@
           "title": "Extend Tasks",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tasks"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tasks"
             }
           }
         },
@@ -1913,7 +1913,7 @@
           "title": "Extend Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-extend-tests"
+              "key": "https://robotcode.io/reference/config/#rebot-extend-tests"
             }
           }
         },
@@ -1955,7 +1955,7 @@
           "title": "Flatten Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-flatten-keywords"
+              "key": "https://robotcode.io/reference/config/#rebot-flatten-keywords"
             }
           }
         },
@@ -1988,7 +1988,7 @@
           "title": "Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-includes"
+              "key": "https://robotcode.io/reference/config/#rebot-includes"
             }
           }
         },
@@ -2017,7 +2017,7 @@
           "title": "Legacy Output",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-legacy-output"
+              "key": "https://robotcode.io/reference/config/#rebot-legacy-output"
             }
           }
         },
@@ -2043,7 +2043,7 @@
           "title": "Log",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-log"
+              "key": "https://robotcode.io/reference/config/#rebot-log"
             }
           }
         },
@@ -2069,7 +2069,7 @@
           "title": "Log Level",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-log-level"
+              "key": "https://robotcode.io/reference/config/#rebot-log-level"
             }
           }
         },
@@ -2094,7 +2094,7 @@
           "title": "Log Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-log-title"
+              "key": "https://robotcode.io/reference/config/#rebot-log-title"
             }
           }
         },
@@ -2123,7 +2123,7 @@
           "title": "Merge",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-merge"
+              "key": "https://robotcode.io/reference/config/#rebot-merge"
             }
           }
         },
@@ -2158,7 +2158,7 @@
           "title": "Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-metadata"
+              "key": "https://robotcode.io/reference/config/#rebot-metadata"
             }
           }
         },
@@ -2183,7 +2183,7 @@
           "title": "Name",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-name"
+              "key": "https://robotcode.io/reference/config/#rebot-name"
             }
           }
         },
@@ -2212,7 +2212,7 @@
           "title": "No Status Rc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-no-status-rc"
+              "key": "https://robotcode.io/reference/config/#rebot-no-status-rc"
             }
           }
         },
@@ -2237,7 +2237,7 @@
           "title": "Output",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-output"
+              "key": "https://robotcode.io/reference/config/#rebot-output"
             }
           }
         },
@@ -2262,7 +2262,7 @@
           "title": "Output Dir",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-output-dir"
+              "key": "https://robotcode.io/reference/config/#rebot-output-dir"
             }
           }
         },
@@ -2294,7 +2294,7 @@
           "title": "Parse Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-parse-include"
+              "key": "https://robotcode.io/reference/config/#rebot-parse-include"
             }
           }
         },
@@ -2332,7 +2332,7 @@
           "title": "Pre Rebot Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-pre-rebot-modifiers"
+              "key": "https://robotcode.io/reference/config/#rebot-pre-rebot-modifiers"
             }
           }
         },
@@ -2361,7 +2361,7 @@
           "title": "Process Empty Suite",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-process-empty-suite"
+              "key": "https://robotcode.io/reference/config/#rebot-process-empty-suite"
             }
           }
         },
@@ -2393,7 +2393,7 @@
           "title": "Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-python-path"
+              "key": "https://robotcode.io/reference/config/#rebot-python-path"
             }
           }
         },
@@ -2422,7 +2422,7 @@
           "title": "Quiet",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-quiet"
+              "key": "https://robotcode.io/reference/config/#rebot-quiet"
             }
           }
         },
@@ -2466,7 +2466,7 @@
           "title": "Remove Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-remove-keywords"
+              "key": "https://robotcode.io/reference/config/#rebot-remove-keywords"
             }
           }
         },
@@ -2491,7 +2491,7 @@
           "title": "Report",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-report"
+              "key": "https://robotcode.io/reference/config/#rebot-report"
             }
           }
         },
@@ -2517,7 +2517,7 @@
           "title": "Report Background",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-report-background"
+              "key": "https://robotcode.io/reference/config/#rebot-report-background"
             }
           }
         },
@@ -2542,7 +2542,7 @@
           "title": "Report Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-report-title"
+              "key": "https://robotcode.io/reference/config/#rebot-report-title"
             }
           }
         },
@@ -2571,7 +2571,7 @@
           "title": "Rpa",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-rpa"
+              "key": "https://robotcode.io/reference/config/#rebot-rpa"
             }
           }
         },
@@ -2603,7 +2603,7 @@
           "title": "Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-set-tag"
+              "key": "https://robotcode.io/reference/config/#rebot-set-tag"
             }
           }
         },
@@ -2632,7 +2632,7 @@
           "title": "Split Log",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-split-log"
+              "key": "https://robotcode.io/reference/config/#rebot-split-log"
             }
           }
         },
@@ -2657,7 +2657,7 @@
           "title": "Start Time",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-start-time"
+              "key": "https://robotcode.io/reference/config/#rebot-start-time"
             }
           }
         },
@@ -2679,7 +2679,7 @@
           "title": "Suite Stat Level",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-suite-stat-level"
+              "key": "https://robotcode.io/reference/config/#rebot-suite-stat-level"
             }
           }
         },
@@ -2711,7 +2711,7 @@
           "title": "Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-suites"
+              "key": "https://robotcode.io/reference/config/#rebot-suites"
             }
           }
         },
@@ -2746,7 +2746,7 @@
           "title": "Tag Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tag-doc"
+              "key": "https://robotcode.io/reference/config/#rebot-tag-doc"
             }
           }
         },
@@ -2784,7 +2784,7 @@
           "title": "Tag Stat Combine",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tag-stat-combine"
+              "key": "https://robotcode.io/reference/config/#rebot-tag-stat-combine"
             }
           }
         },
@@ -2816,7 +2816,7 @@
           "title": "Tag Stat Exclude",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tag-stat-exclude"
+              "key": "https://robotcode.io/reference/config/#rebot-tag-stat-exclude"
             }
           }
         },
@@ -2848,7 +2848,7 @@
           "title": "Tag Stat Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tag-stat-include"
+              "key": "https://robotcode.io/reference/config/#rebot-tag-stat-include"
             }
           }
         },
@@ -2883,7 +2883,7 @@
           "title": "Tag Stat Link",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tag-stat-link"
+              "key": "https://robotcode.io/reference/config/#rebot-tag-stat-link"
             }
           }
         },
@@ -2915,7 +2915,7 @@
           "title": "Tasks",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tasks"
+              "key": "https://robotcode.io/reference/config/#rebot-tasks"
             }
           }
         },
@@ -2947,7 +2947,7 @@
           "title": "Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-tests"
+              "key": "https://robotcode.io/reference/config/#rebot-tests"
             }
           }
         },
@@ -2976,7 +2976,7 @@
           "title": "Timestamp Outputs",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-timestamp-outputs"
+              "key": "https://robotcode.io/reference/config/#rebot-timestamp-outputs"
             }
           }
         },
@@ -3001,7 +3001,7 @@
           "title": "Xunit",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot-xunit"
+              "key": "https://robotcode.io/reference/config/#rebot-xunit"
             }
           }
         }
@@ -3035,7 +3035,7 @@
           "title": "Args",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#args"
+              "key": "https://robotcode.io/reference/config/#args"
             }
           }
         },
@@ -3066,7 +3066,7 @@
           "title": "Console",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#console"
+              "key": "https://robotcode.io/reference/config/#console"
             }
           }
         },
@@ -3093,7 +3093,7 @@
           "title": "Console Colors",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#console-colors"
+              "key": "https://robotcode.io/reference/config/#console-colors"
             }
           }
         },
@@ -3118,7 +3118,7 @@
           "title": "Console Links",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#console-links"
+              "key": "https://robotcode.io/reference/config/#console-links"
             }
           }
         },
@@ -3144,7 +3144,7 @@
           "title": "Console Markers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#console-markers"
+              "key": "https://robotcode.io/reference/config/#console-markers"
             }
           }
         },
@@ -3166,7 +3166,7 @@
           "title": "Console Width",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#console-width"
+              "key": "https://robotcode.io/reference/config/#console-width"
             }
           }
         },
@@ -3191,7 +3191,7 @@
           "title": "Debug File",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#debug-file"
+              "key": "https://robotcode.io/reference/config/#debug-file"
             }
           }
         },
@@ -3220,7 +3220,7 @@
           "title": "Default Profiles",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#default-profiles"
+              "key": "https://robotcode.io/reference/config/#default-profiles"
             }
           }
         },
@@ -3246,7 +3246,7 @@
           "title": "Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#doc"
+              "key": "https://robotcode.io/reference/config/#doc"
             }
           }
         },
@@ -3275,7 +3275,7 @@
           "title": "Dotted",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#dotted"
+              "key": "https://robotcode.io/reference/config/#dotted"
             }
           }
         },
@@ -3304,7 +3304,7 @@
           "title": "Dry Run",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#dry-run"
+              "key": "https://robotcode.io/reference/config/#dry-run"
             }
           }
         },
@@ -3339,7 +3339,7 @@
           "title": "Env",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#env"
+              "key": "https://robotcode.io/reference/config/#env"
             }
           }
         },
@@ -3371,7 +3371,7 @@
           "title": "Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#excludes"
+              "key": "https://robotcode.io/reference/config/#excludes"
             }
           }
         },
@@ -3400,7 +3400,7 @@
           "title": "Exit On Error",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#exit-on-error"
+              "key": "https://robotcode.io/reference/config/#exit-on-error"
             }
           }
         },
@@ -3429,7 +3429,7 @@
           "title": "Exit On Failure",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#exit-on-failure"
+              "key": "https://robotcode.io/reference/config/#exit-on-failure"
             }
           }
         },
@@ -3464,7 +3464,7 @@
           "title": "Expand Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#expand-keywords"
+              "key": "https://robotcode.io/reference/config/#expand-keywords"
             }
           }
         },
@@ -3489,7 +3489,7 @@
           "title": "Extend Args",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-args"
+              "key": "https://robotcode.io/reference/config/#extend-args"
             }
           }
         },
@@ -3524,7 +3524,7 @@
           "title": "Extend Env",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-env"
+              "key": "https://robotcode.io/reference/config/#extend-env"
             }
           }
         },
@@ -3556,7 +3556,7 @@
           "title": "Extend Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-excludes"
+              "key": "https://robotcode.io/reference/config/#extend-excludes"
             }
           }
         },
@@ -3591,7 +3591,7 @@
           "title": "Extend Expand Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-expand-keywords"
+              "key": "https://robotcode.io/reference/config/#extend-expand-keywords"
             }
           }
         },
@@ -3633,7 +3633,7 @@
           "title": "Extend Flatten Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-flatten-keywords"
+              "key": "https://robotcode.io/reference/config/#extend-flatten-keywords"
             }
           }
         },
@@ -3666,7 +3666,7 @@
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-includes"
+              "key": "https://robotcode.io/reference/config/#extend-includes"
             }
           }
         },
@@ -3698,7 +3698,7 @@
           "title": "Extend Languages",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-languages"
+              "key": "https://robotcode.io/reference/config/#extend-languages"
             }
           }
         },
@@ -3736,7 +3736,7 @@
           "title": "Extend Listeners",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-listeners"
+              "key": "https://robotcode.io/reference/config/#extend-listeners"
             }
           }
         },
@@ -3771,7 +3771,7 @@
           "title": "Extend Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-metadata"
+              "key": "https://robotcode.io/reference/config/#extend-metadata"
             }
           }
         },
@@ -3803,7 +3803,7 @@
           "title": "Extend Parse Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-parse-include"
+              "key": "https://robotcode.io/reference/config/#extend-parse-include"
             }
           }
         },
@@ -3841,7 +3841,7 @@
           "title": "Extend Parsers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-parsers"
+              "key": "https://robotcode.io/reference/config/#extend-parsers"
             }
           }
         },
@@ -3869,7 +3869,7 @@
           "title": "Extend Paths",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-paths"
+              "key": "https://robotcode.io/reference/config/#extend-paths"
             }
           }
         },
@@ -3907,7 +3907,7 @@
           "title": "Extend Pre Rebot Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-pre-rebot-modifiers"
+              "key": "https://robotcode.io/reference/config/#extend-pre-rebot-modifiers"
             }
           }
         },
@@ -3945,7 +3945,7 @@
           "title": "Extend Pre Run Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-pre-run-modifiers"
+              "key": "https://robotcode.io/reference/config/#extend-pre-run-modifiers"
             }
           }
         },
@@ -3970,7 +3970,7 @@
           "title": "Extend Profiles",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-profiles"
+              "key": "https://robotcode.io/reference/config/#extend-profiles"
             }
           }
         },
@@ -4002,7 +4002,7 @@
           "title": "Extend Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-python-path"
+              "key": "https://robotcode.io/reference/config/#extend-python-path"
             }
           }
         },
@@ -4046,7 +4046,7 @@
           "title": "Extend Remove Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-remove-keywords"
+              "key": "https://robotcode.io/reference/config/#extend-remove-keywords"
             }
           }
         },
@@ -4078,7 +4078,7 @@
           "title": "Extend Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-set-tag"
+              "key": "https://robotcode.io/reference/config/#extend-set-tag"
             }
           }
         },
@@ -4110,7 +4110,7 @@
           "title": "Extend Skip",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-skip"
+              "key": "https://robotcode.io/reference/config/#extend-skip"
             }
           }
         },
@@ -4142,7 +4142,7 @@
           "title": "Extend Skip On Failure",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-skip-on-failure"
+              "key": "https://robotcode.io/reference/config/#extend-skip-on-failure"
             }
           }
         },
@@ -4174,7 +4174,7 @@
           "title": "Extend Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-suites"
+              "key": "https://robotcode.io/reference/config/#extend-suites"
             }
           }
         },
@@ -4209,7 +4209,7 @@
           "title": "Extend Tag Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tag-doc"
+              "key": "https://robotcode.io/reference/config/#extend-tag-doc"
             }
           }
         },
@@ -4247,7 +4247,7 @@
           "title": "Extend Tag Stat Combine",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tag-stat-combine"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-combine"
             }
           }
         },
@@ -4279,7 +4279,7 @@
           "title": "Extend Tag Stat Exclude",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tag-stat-exclude"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-exclude"
             }
           }
         },
@@ -4311,7 +4311,7 @@
           "title": "Extend Tag Stat Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tag-stat-include"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-include"
             }
           }
         },
@@ -4346,7 +4346,7 @@
           "title": "Extend Tag Stat Link",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tag-stat-link"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-link"
             }
           }
         },
@@ -4378,7 +4378,7 @@
           "title": "Extend Tasks",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tasks"
+              "key": "https://robotcode.io/reference/config/#extend-tasks"
             }
           }
         },
@@ -4410,7 +4410,7 @@
           "title": "Extend Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-tests"
+              "key": "https://robotcode.io/reference/config/#extend-tests"
             }
           }
         },
@@ -4442,7 +4442,7 @@
           "title": "Extend Variable Files",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-variable-files"
+              "key": "https://robotcode.io/reference/config/#extend-variable-files"
             }
           }
         },
@@ -4477,7 +4477,7 @@
           "title": "Extend Variables",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-variables"
+              "key": "https://robotcode.io/reference/config/#extend-variables"
             }
           }
         },
@@ -4509,7 +4509,7 @@
           "title": "Extend Wrapper",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-wrapper"
+              "key": "https://robotcode.io/reference/config/#extend-wrapper"
             }
           }
         },
@@ -4535,7 +4535,7 @@
           "title": "Extensions",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extensions"
+              "key": "https://robotcode.io/reference/config/#extensions"
             }
           }
         },
@@ -4577,7 +4577,7 @@
           "title": "Flatten Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#flatten-keywords"
+              "key": "https://robotcode.io/reference/config/#flatten-keywords"
             }
           }
         },
@@ -4610,7 +4610,7 @@
           "title": "Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#includes"
+              "key": "https://robotcode.io/reference/config/#includes"
             }
           }
         },
@@ -4642,7 +4642,7 @@
           "title": "Languages",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#languages"
+              "key": "https://robotcode.io/reference/config/#languages"
             }
           }
         },
@@ -4671,7 +4671,7 @@
           "title": "Legacy Output",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#legacy-output"
+              "key": "https://robotcode.io/reference/config/#legacy-output"
             }
           }
         },
@@ -4690,7 +4690,7 @@
           "title": "Libdoc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#libdoc"
+              "key": "https://robotcode.io/reference/config/#libdoc"
             }
           }
         },
@@ -4728,7 +4728,7 @@
           "title": "Listeners",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#listeners"
+              "key": "https://robotcode.io/reference/config/#listeners"
             }
           }
         },
@@ -4754,7 +4754,7 @@
           "title": "Log",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#log"
+              "key": "https://robotcode.io/reference/config/#log"
             }
           }
         },
@@ -4780,7 +4780,7 @@
           "title": "Log Level",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#log-level"
+              "key": "https://robotcode.io/reference/config/#log-level"
             }
           }
         },
@@ -4805,7 +4805,7 @@
           "title": "Log Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#log-title"
+              "key": "https://robotcode.io/reference/config/#log-title"
             }
           }
         },
@@ -4827,7 +4827,7 @@
           "title": "Max Assign Length",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#max-assign-length"
+              "key": "https://robotcode.io/reference/config/#max-assign-length"
             }
           }
         },
@@ -4853,7 +4853,7 @@
           "title": "Max Error Lines",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#max-error-lines"
+              "key": "https://robotcode.io/reference/config/#max-error-lines"
             }
           }
         },
@@ -4888,7 +4888,7 @@
           "title": "Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#metadata"
+              "key": "https://robotcode.io/reference/config/#metadata"
             }
           }
         },
@@ -4913,7 +4913,7 @@
           "title": "Name",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#name"
+              "key": "https://robotcode.io/reference/config/#name"
             }
           }
         },
@@ -4942,7 +4942,7 @@
           "title": "No Status Rc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#no-status-rc"
+              "key": "https://robotcode.io/reference/config/#no-status-rc"
             }
           }
         },
@@ -4967,7 +4967,7 @@
           "title": "Output",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#output"
+              "key": "https://robotcode.io/reference/config/#output"
             }
           }
         },
@@ -4992,7 +4992,7 @@
           "title": "Output Dir",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#output-dir"
+              "key": "https://robotcode.io/reference/config/#output-dir"
             }
           }
         },
@@ -5024,7 +5024,7 @@
           "title": "Parse Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#parse-include"
+              "key": "https://robotcode.io/reference/config/#parse-include"
             }
           }
         },
@@ -5062,7 +5062,7 @@
           "title": "Parsers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#parsers"
+              "key": "https://robotcode.io/reference/config/#parsers"
             }
           }
         },
@@ -5090,7 +5090,7 @@
           "title": "Paths",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#paths"
+              "key": "https://robotcode.io/reference/config/#paths"
             }
           }
         },
@@ -5128,7 +5128,7 @@
           "title": "Pre Rebot Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#pre-rebot-modifiers"
+              "key": "https://robotcode.io/reference/config/#pre-rebot-modifiers"
             }
           }
         },
@@ -5166,7 +5166,7 @@
           "title": "Pre Run Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#pre-run-modifiers"
+              "key": "https://robotcode.io/reference/config/#pre-run-modifiers"
             }
           }
         },
@@ -5191,7 +5191,7 @@
           "title": "Profiles",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profiles"
+              "key": "https://robotcode.io/reference/config/#profiles"
             }
           }
         },
@@ -5223,7 +5223,7 @@
           "title": "Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#python-path"
+              "key": "https://robotcode.io/reference/config/#python-path"
             }
           }
         },
@@ -5252,7 +5252,7 @@
           "title": "Quiet",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#quiet"
+              "key": "https://robotcode.io/reference/config/#quiet"
             }
           }
         },
@@ -5283,7 +5283,7 @@
           "title": "Randomize",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#randomize"
+              "key": "https://robotcode.io/reference/config/#randomize"
             }
           }
         },
@@ -5308,7 +5308,7 @@
           "title": "Re Run Failed",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#re-run-failed"
+              "key": "https://robotcode.io/reference/config/#re-run-failed"
             }
           }
         },
@@ -5333,7 +5333,7 @@
           "title": "Re Run Failed Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#re-run-failed-suites"
+              "key": "https://robotcode.io/reference/config/#re-run-failed-suites"
             }
           }
         },
@@ -5352,7 +5352,7 @@
           "title": "Rebot",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rebot"
+              "key": "https://robotcode.io/reference/config/#rebot"
             }
           }
         },
@@ -5396,7 +5396,7 @@
           "title": "Remove Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#remove-keywords"
+              "key": "https://robotcode.io/reference/config/#remove-keywords"
             }
           }
         },
@@ -5421,7 +5421,7 @@
           "title": "Report",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#report"
+              "key": "https://robotcode.io/reference/config/#report"
             }
           }
         },
@@ -5447,7 +5447,7 @@
           "title": "Report Background",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#report-background"
+              "key": "https://robotcode.io/reference/config/#report-background"
             }
           }
         },
@@ -5472,7 +5472,7 @@
           "title": "Report Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#report-title"
+              "key": "https://robotcode.io/reference/config/#report-title"
             }
           }
         },
@@ -5501,7 +5501,7 @@
           "title": "Rpa",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#rpa"
+              "key": "https://robotcode.io/reference/config/#rpa"
             }
           }
         },
@@ -5530,7 +5530,7 @@
           "title": "Run Empty Suite",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#run-empty-suite"
+              "key": "https://robotcode.io/reference/config/#run-empty-suite"
             }
           }
         },
@@ -5562,7 +5562,7 @@
           "title": "Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#set-tag"
+              "key": "https://robotcode.io/reference/config/#set-tag"
             }
           }
         },
@@ -5594,7 +5594,7 @@
           "title": "Skip",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#skip"
+              "key": "https://robotcode.io/reference/config/#skip"
             }
           }
         },
@@ -5626,7 +5626,7 @@
           "title": "Skip On Failure",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#skip-on-failure"
+              "key": "https://robotcode.io/reference/config/#skip-on-failure"
             }
           }
         },
@@ -5655,7 +5655,7 @@
           "title": "Skip Teardown On Exit",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#skip-teardown-on-exit"
+              "key": "https://robotcode.io/reference/config/#skip-teardown-on-exit"
             }
           }
         },
@@ -5684,7 +5684,7 @@
           "title": "Split Log",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#split-log"
+              "key": "https://robotcode.io/reference/config/#split-log"
             }
           }
         },
@@ -5706,7 +5706,7 @@
           "title": "Suite Stat Level",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#suite-stat-level"
+              "key": "https://robotcode.io/reference/config/#suite-stat-level"
             }
           }
         },
@@ -5738,7 +5738,7 @@
           "title": "Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#suites"
+              "key": "https://robotcode.io/reference/config/#suites"
             }
           }
         },
@@ -5773,7 +5773,7 @@
           "title": "Tag Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tag-doc"
+              "key": "https://robotcode.io/reference/config/#tag-doc"
             }
           }
         },
@@ -5811,7 +5811,7 @@
           "title": "Tag Stat Combine",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tag-stat-combine"
+              "key": "https://robotcode.io/reference/config/#tag-stat-combine"
             }
           }
         },
@@ -5843,7 +5843,7 @@
           "title": "Tag Stat Exclude",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tag-stat-exclude"
+              "key": "https://robotcode.io/reference/config/#tag-stat-exclude"
             }
           }
         },
@@ -5875,7 +5875,7 @@
           "title": "Tag Stat Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tag-stat-include"
+              "key": "https://robotcode.io/reference/config/#tag-stat-include"
             }
           }
         },
@@ -5910,7 +5910,7 @@
           "title": "Tag Stat Link",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tag-stat-link"
+              "key": "https://robotcode.io/reference/config/#tag-stat-link"
             }
           }
         },
@@ -5942,7 +5942,7 @@
           "title": "Tasks",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tasks"
+              "key": "https://robotcode.io/reference/config/#tasks"
             }
           }
         },
@@ -5961,7 +5961,7 @@
           "title": "Testdoc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc"
+              "key": "https://robotcode.io/reference/config/#testdoc"
             }
           }
         },
@@ -5993,7 +5993,7 @@
           "title": "Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tests"
+              "key": "https://robotcode.io/reference/config/#tests"
             }
           }
         },
@@ -6022,7 +6022,7 @@
           "title": "Timestamp Outputs",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#timestamp-outputs"
+              "key": "https://robotcode.io/reference/config/#timestamp-outputs"
             }
           }
         },
@@ -6047,7 +6047,7 @@
           "title": "Tool",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool"
+              "key": "https://robotcode.io/reference/config/#tool"
             }
           }
         },
@@ -6079,7 +6079,7 @@
           "title": "Variable Files",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#variable-files"
+              "key": "https://robotcode.io/reference/config/#variable-files"
             }
           }
         },
@@ -6114,7 +6114,7 @@
           "title": "Variables",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#variables"
+              "key": "https://robotcode.io/reference/config/#variables"
             }
           }
         },
@@ -6146,7 +6146,7 @@
           "title": "Wrapper",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#wrapper"
+              "key": "https://robotcode.io/reference/config/#wrapper"
             }
           }
         },
@@ -6171,7 +6171,7 @@
           "title": "Xunit",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#xunit"
+              "key": "https://robotcode.io/reference/config/#xunit"
             }
           }
         }
@@ -6205,7 +6205,7 @@
           "title": "Args",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-args"
+              "key": "https://robotcode.io/reference/config/#args"
             }
           }
         },
@@ -6236,7 +6236,7 @@
           "title": "Console",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-console"
+              "key": "https://robotcode.io/reference/config/#console"
             }
           }
         },
@@ -6263,7 +6263,7 @@
           "title": "Console Colors",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-console-colors"
+              "key": "https://robotcode.io/reference/config/#console-colors"
             }
           }
         },
@@ -6288,7 +6288,7 @@
           "title": "Console Links",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-console-links"
+              "key": "https://robotcode.io/reference/config/#console-links"
             }
           }
         },
@@ -6314,7 +6314,7 @@
           "title": "Console Markers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-console-markers"
+              "key": "https://robotcode.io/reference/config/#console-markers"
             }
           }
         },
@@ -6336,7 +6336,7 @@
           "title": "Console Width",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-console-width"
+              "key": "https://robotcode.io/reference/config/#console-width"
             }
           }
         },
@@ -6361,7 +6361,7 @@
           "title": "Debug File",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-debug-file"
+              "key": "https://robotcode.io/reference/config/#debug-file"
             }
           }
         },
@@ -6380,7 +6380,7 @@
           "title": "Description",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-description"
+              "key": "https://robotcode.io/reference/config/#profile-description"
             }
           }
         },
@@ -6399,7 +6399,7 @@
           "title": "Detached",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-detached"
+              "key": "https://robotcode.io/reference/config/#profile-detached"
             }
           }
         },
@@ -6425,7 +6425,7 @@
           "title": "Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-doc"
+              "key": "https://robotcode.io/reference/config/#doc"
             }
           }
         },
@@ -6454,7 +6454,7 @@
           "title": "Dotted",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-dotted"
+              "key": "https://robotcode.io/reference/config/#dotted"
             }
           }
         },
@@ -6483,7 +6483,7 @@
           "title": "Dry Run",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-dry-run"
+              "key": "https://robotcode.io/reference/config/#dry-run"
             }
           }
         },
@@ -6509,7 +6509,7 @@
           "title": "Enabled",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-enabled"
+              "key": "https://robotcode.io/reference/config/#profile-enabled"
             }
           }
         },
@@ -6544,7 +6544,7 @@
           "title": "Env",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-env"
+              "key": "https://robotcode.io/reference/config/#env"
             }
           }
         },
@@ -6576,7 +6576,7 @@
           "title": "Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-excludes"
+              "key": "https://robotcode.io/reference/config/#excludes"
             }
           }
         },
@@ -6605,7 +6605,7 @@
           "title": "Exit On Error",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-exit-on-error"
+              "key": "https://robotcode.io/reference/config/#exit-on-error"
             }
           }
         },
@@ -6634,7 +6634,7 @@
           "title": "Exit On Failure",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-exit-on-failure"
+              "key": "https://robotcode.io/reference/config/#exit-on-failure"
             }
           }
         },
@@ -6669,7 +6669,7 @@
           "title": "Expand Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-expand-keywords"
+              "key": "https://robotcode.io/reference/config/#expand-keywords"
             }
           }
         },
@@ -6694,7 +6694,7 @@
           "title": "Extend Args",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-args"
+              "key": "https://robotcode.io/reference/config/#extend-args"
             }
           }
         },
@@ -6729,7 +6729,7 @@
           "title": "Extend Env",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-env"
+              "key": "https://robotcode.io/reference/config/#extend-env"
             }
           }
         },
@@ -6761,7 +6761,7 @@
           "title": "Extend Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-excludes"
+              "key": "https://robotcode.io/reference/config/#extend-excludes"
             }
           }
         },
@@ -6796,7 +6796,7 @@
           "title": "Extend Expand Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-expand-keywords"
+              "key": "https://robotcode.io/reference/config/#extend-expand-keywords"
             }
           }
         },
@@ -6838,7 +6838,7 @@
           "title": "Extend Flatten Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-flatten-keywords"
+              "key": "https://robotcode.io/reference/config/#extend-flatten-keywords"
             }
           }
         },
@@ -6871,7 +6871,7 @@
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-includes"
+              "key": "https://robotcode.io/reference/config/#extend-includes"
             }
           }
         },
@@ -6903,7 +6903,7 @@
           "title": "Extend Languages",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-languages"
+              "key": "https://robotcode.io/reference/config/#extend-languages"
             }
           }
         },
@@ -6941,7 +6941,7 @@
           "title": "Extend Listeners",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-listeners"
+              "key": "https://robotcode.io/reference/config/#extend-listeners"
             }
           }
         },
@@ -6976,7 +6976,7 @@
           "title": "Extend Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-metadata"
+              "key": "https://robotcode.io/reference/config/#extend-metadata"
             }
           }
         },
@@ -7008,7 +7008,7 @@
           "title": "Extend Parse Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-parse-include"
+              "key": "https://robotcode.io/reference/config/#extend-parse-include"
             }
           }
         },
@@ -7046,7 +7046,7 @@
           "title": "Extend Parsers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-parsers"
+              "key": "https://robotcode.io/reference/config/#extend-parsers"
             }
           }
         },
@@ -7074,7 +7074,7 @@
           "title": "Extend Paths",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-paths"
+              "key": "https://robotcode.io/reference/config/#extend-paths"
             }
           }
         },
@@ -7112,7 +7112,7 @@
           "title": "Extend Pre Rebot Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-pre-rebot-modifiers"
+              "key": "https://robotcode.io/reference/config/#extend-pre-rebot-modifiers"
             }
           }
         },
@@ -7150,7 +7150,7 @@
           "title": "Extend Pre Run Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-pre-run-modifiers"
+              "key": "https://robotcode.io/reference/config/#extend-pre-run-modifiers"
             }
           }
         },
@@ -7182,7 +7182,7 @@
           "title": "Extend Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-python-path"
+              "key": "https://robotcode.io/reference/config/#extend-python-path"
             }
           }
         },
@@ -7226,7 +7226,7 @@
           "title": "Extend Remove Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-remove-keywords"
+              "key": "https://robotcode.io/reference/config/#extend-remove-keywords"
             }
           }
         },
@@ -7258,7 +7258,7 @@
           "title": "Extend Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-set-tag"
+              "key": "https://robotcode.io/reference/config/#extend-set-tag"
             }
           }
         },
@@ -7290,7 +7290,7 @@
           "title": "Extend Skip",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-skip"
+              "key": "https://robotcode.io/reference/config/#extend-skip"
             }
           }
         },
@@ -7322,7 +7322,7 @@
           "title": "Extend Skip On Failure",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-skip-on-failure"
+              "key": "https://robotcode.io/reference/config/#extend-skip-on-failure"
             }
           }
         },
@@ -7354,7 +7354,7 @@
           "title": "Extend Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-suites"
+              "key": "https://robotcode.io/reference/config/#extend-suites"
             }
           }
         },
@@ -7389,7 +7389,7 @@
           "title": "Extend Tag Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tag-doc"
+              "key": "https://robotcode.io/reference/config/#extend-tag-doc"
             }
           }
         },
@@ -7427,7 +7427,7 @@
           "title": "Extend Tag Stat Combine",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tag-stat-combine"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-combine"
             }
           }
         },
@@ -7459,7 +7459,7 @@
           "title": "Extend Tag Stat Exclude",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tag-stat-exclude"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-exclude"
             }
           }
         },
@@ -7491,7 +7491,7 @@
           "title": "Extend Tag Stat Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tag-stat-include"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-include"
             }
           }
         },
@@ -7526,7 +7526,7 @@
           "title": "Extend Tag Stat Link",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tag-stat-link"
+              "key": "https://robotcode.io/reference/config/#extend-tag-stat-link"
             }
           }
         },
@@ -7558,7 +7558,7 @@
           "title": "Extend Tasks",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tasks"
+              "key": "https://robotcode.io/reference/config/#extend-tasks"
             }
           }
         },
@@ -7590,7 +7590,7 @@
           "title": "Extend Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-tests"
+              "key": "https://robotcode.io/reference/config/#extend-tests"
             }
           }
         },
@@ -7622,7 +7622,7 @@
           "title": "Extend Variable Files",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-variable-files"
+              "key": "https://robotcode.io/reference/config/#extend-variable-files"
             }
           }
         },
@@ -7657,7 +7657,7 @@
           "title": "Extend Variables",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-variables"
+              "key": "https://robotcode.io/reference/config/#extend-variables"
             }
           }
         },
@@ -7689,7 +7689,7 @@
           "title": "Extend Wrapper",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extend-wrapper"
+              "key": "https://robotcode.io/reference/config/#extend-wrapper"
             }
           }
         },
@@ -7715,7 +7715,7 @@
           "title": "Extensions",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-extensions"
+              "key": "https://robotcode.io/reference/config/#extensions"
             }
           }
         },
@@ -7757,7 +7757,7 @@
           "title": "Flatten Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-flatten-keywords"
+              "key": "https://robotcode.io/reference/config/#flatten-keywords"
             }
           }
         },
@@ -7783,7 +7783,7 @@
           "title": "Hidden",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-hidden"
+              "key": "https://robotcode.io/reference/config/#profile-hidden"
             }
           }
         },
@@ -7816,7 +7816,7 @@
           "title": "Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-includes"
+              "key": "https://robotcode.io/reference/config/#includes"
             }
           }
         },
@@ -7854,7 +7854,7 @@
           "title": "Inherits",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-inherits"
+              "key": "https://robotcode.io/reference/config/#profile-inherits"
             }
           }
         },
@@ -7886,7 +7886,7 @@
           "title": "Languages",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-languages"
+              "key": "https://robotcode.io/reference/config/#languages"
             }
           }
         },
@@ -7915,7 +7915,7 @@
           "title": "Legacy Output",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-legacy-output"
+              "key": "https://robotcode.io/reference/config/#legacy-output"
             }
           }
         },
@@ -7934,7 +7934,7 @@
           "title": "Libdoc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-libdoc"
+              "key": "https://robotcode.io/reference/config/#libdoc"
             }
           }
         },
@@ -7972,7 +7972,7 @@
           "title": "Listeners",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-listeners"
+              "key": "https://robotcode.io/reference/config/#listeners"
             }
           }
         },
@@ -7998,7 +7998,7 @@
           "title": "Log",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-log"
+              "key": "https://robotcode.io/reference/config/#log"
             }
           }
         },
@@ -8024,7 +8024,7 @@
           "title": "Log Level",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-log-level"
+              "key": "https://robotcode.io/reference/config/#log-level"
             }
           }
         },
@@ -8049,7 +8049,7 @@
           "title": "Log Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-log-title"
+              "key": "https://robotcode.io/reference/config/#log-title"
             }
           }
         },
@@ -8071,7 +8071,7 @@
           "title": "Max Assign Length",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-max-assign-length"
+              "key": "https://robotcode.io/reference/config/#max-assign-length"
             }
           }
         },
@@ -8097,7 +8097,7 @@
           "title": "Max Error Lines",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-max-error-lines"
+              "key": "https://robotcode.io/reference/config/#max-error-lines"
             }
           }
         },
@@ -8132,7 +8132,7 @@
           "title": "Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-metadata"
+              "key": "https://robotcode.io/reference/config/#metadata"
             }
           }
         },
@@ -8157,7 +8157,7 @@
           "title": "Name",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-name"
+              "key": "https://robotcode.io/reference/config/#name"
             }
           }
         },
@@ -8186,7 +8186,7 @@
           "title": "No Status Rc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-no-status-rc"
+              "key": "https://robotcode.io/reference/config/#no-status-rc"
             }
           }
         },
@@ -8211,7 +8211,7 @@
           "title": "Output",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-output"
+              "key": "https://robotcode.io/reference/config/#output"
             }
           }
         },
@@ -8236,7 +8236,7 @@
           "title": "Output Dir",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-output-dir"
+              "key": "https://robotcode.io/reference/config/#output-dir"
             }
           }
         },
@@ -8268,7 +8268,7 @@
           "title": "Parse Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-parse-include"
+              "key": "https://robotcode.io/reference/config/#parse-include"
             }
           }
         },
@@ -8306,7 +8306,7 @@
           "title": "Parsers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-parsers"
+              "key": "https://robotcode.io/reference/config/#parsers"
             }
           }
         },
@@ -8334,7 +8334,7 @@
           "title": "Paths",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-paths"
+              "key": "https://robotcode.io/reference/config/#paths"
             }
           }
         },
@@ -8372,7 +8372,7 @@
           "title": "Pre Rebot Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-pre-rebot-modifiers"
+              "key": "https://robotcode.io/reference/config/#pre-rebot-modifiers"
             }
           }
         },
@@ -8410,7 +8410,7 @@
           "title": "Pre Run Modifiers",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-pre-run-modifiers"
+              "key": "https://robotcode.io/reference/config/#pre-run-modifiers"
             }
           }
         },
@@ -8429,7 +8429,7 @@
           "title": "Precedence",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-precedence"
+              "key": "https://robotcode.io/reference/config/#profile-precedence"
             }
           }
         },
@@ -8461,7 +8461,7 @@
           "title": "Python Path",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-python-path"
+              "key": "https://robotcode.io/reference/config/#python-path"
             }
           }
         },
@@ -8490,7 +8490,7 @@
           "title": "Quiet",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-quiet"
+              "key": "https://robotcode.io/reference/config/#quiet"
             }
           }
         },
@@ -8521,7 +8521,7 @@
           "title": "Randomize",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-randomize"
+              "key": "https://robotcode.io/reference/config/#randomize"
             }
           }
         },
@@ -8546,7 +8546,7 @@
           "title": "Re Run Failed",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-re-run-failed"
+              "key": "https://robotcode.io/reference/config/#re-run-failed"
             }
           }
         },
@@ -8571,7 +8571,7 @@
           "title": "Re Run Failed Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-re-run-failed-suites"
+              "key": "https://robotcode.io/reference/config/#re-run-failed-suites"
             }
           }
         },
@@ -8590,7 +8590,7 @@
           "title": "Rebot",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-rebot"
+              "key": "https://robotcode.io/reference/config/#rebot"
             }
           }
         },
@@ -8634,7 +8634,7 @@
           "title": "Remove Keywords",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-remove-keywords"
+              "key": "https://robotcode.io/reference/config/#remove-keywords"
             }
           }
         },
@@ -8659,7 +8659,7 @@
           "title": "Report",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-report"
+              "key": "https://robotcode.io/reference/config/#report"
             }
           }
         },
@@ -8685,7 +8685,7 @@
           "title": "Report Background",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-report-background"
+              "key": "https://robotcode.io/reference/config/#report-background"
             }
           }
         },
@@ -8710,7 +8710,7 @@
           "title": "Report Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-report-title"
+              "key": "https://robotcode.io/reference/config/#report-title"
             }
           }
         },
@@ -8739,7 +8739,7 @@
           "title": "Rpa",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-rpa"
+              "key": "https://robotcode.io/reference/config/#rpa"
             }
           }
         },
@@ -8768,7 +8768,7 @@
           "title": "Run Empty Suite",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-run-empty-suite"
+              "key": "https://robotcode.io/reference/config/#run-empty-suite"
             }
           }
         },
@@ -8800,7 +8800,7 @@
           "title": "Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-set-tag"
+              "key": "https://robotcode.io/reference/config/#set-tag"
             }
           }
         },
@@ -8832,7 +8832,7 @@
           "title": "Skip",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-skip"
+              "key": "https://robotcode.io/reference/config/#skip"
             }
           }
         },
@@ -8864,7 +8864,7 @@
           "title": "Skip On Failure",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-skip-on-failure"
+              "key": "https://robotcode.io/reference/config/#skip-on-failure"
             }
           }
         },
@@ -8893,7 +8893,7 @@
           "title": "Skip Teardown On Exit",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-skip-teardown-on-exit"
+              "key": "https://robotcode.io/reference/config/#skip-teardown-on-exit"
             }
           }
         },
@@ -8922,7 +8922,7 @@
           "title": "Split Log",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-split-log"
+              "key": "https://robotcode.io/reference/config/#split-log"
             }
           }
         },
@@ -8944,7 +8944,7 @@
           "title": "Suite Stat Level",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-suite-stat-level"
+              "key": "https://robotcode.io/reference/config/#suite-stat-level"
             }
           }
         },
@@ -8976,7 +8976,7 @@
           "title": "Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-suites"
+              "key": "https://robotcode.io/reference/config/#suites"
             }
           }
         },
@@ -9011,7 +9011,7 @@
           "title": "Tag Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tag-doc"
+              "key": "https://robotcode.io/reference/config/#tag-doc"
             }
           }
         },
@@ -9049,7 +9049,7 @@
           "title": "Tag Stat Combine",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tag-stat-combine"
+              "key": "https://robotcode.io/reference/config/#tag-stat-combine"
             }
           }
         },
@@ -9081,7 +9081,7 @@
           "title": "Tag Stat Exclude",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tag-stat-exclude"
+              "key": "https://robotcode.io/reference/config/#tag-stat-exclude"
             }
           }
         },
@@ -9113,7 +9113,7 @@
           "title": "Tag Stat Include",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tag-stat-include"
+              "key": "https://robotcode.io/reference/config/#tag-stat-include"
             }
           }
         },
@@ -9148,7 +9148,7 @@
           "title": "Tag Stat Link",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tag-stat-link"
+              "key": "https://robotcode.io/reference/config/#tag-stat-link"
             }
           }
         },
@@ -9180,7 +9180,7 @@
           "title": "Tasks",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tasks"
+              "key": "https://robotcode.io/reference/config/#tasks"
             }
           }
         },
@@ -9199,7 +9199,7 @@
           "title": "Testdoc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-testdoc"
+              "key": "https://robotcode.io/reference/config/#testdoc"
             }
           }
         },
@@ -9231,7 +9231,7 @@
           "title": "Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-tests"
+              "key": "https://robotcode.io/reference/config/#tests"
             }
           }
         },
@@ -9260,7 +9260,7 @@
           "title": "Timestamp Outputs",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-timestamp-outputs"
+              "key": "https://robotcode.io/reference/config/#timestamp-outputs"
             }
           }
         },
@@ -9292,7 +9292,7 @@
           "title": "Variable Files",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-variable-files"
+              "key": "https://robotcode.io/reference/config/#variable-files"
             }
           }
         },
@@ -9327,7 +9327,7 @@
           "title": "Variables",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-variables"
+              "key": "https://robotcode.io/reference/config/#variables"
             }
           }
         },
@@ -9359,7 +9359,7 @@
           "title": "Wrapper",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-wrapper"
+              "key": "https://robotcode.io/reference/config/#wrapper"
             }
           }
         },
@@ -9384,7 +9384,7 @@
           "title": "Xunit",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-xunit"
+              "key": "https://robotcode.io/reference/config/#xunit"
             }
           }
         }
@@ -9407,7 +9407,7 @@
           "type": "string",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-languages-expr"
+              "key": "https://robotcode.io/reference/config/#extend-languages"
             }
           }
         }
@@ -9430,7 +9430,7 @@
           "type": "string",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#extend-expand-keywords-tag"
+              "key": "https://robotcode.io/reference/config/#extend-expand-keywords"
             }
           }
         }
@@ -9468,7 +9468,7 @@
           "title": "Doc",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-doc"
+              "key": "https://robotcode.io/reference/config/#testdoc-doc"
             }
           }
         },
@@ -9500,7 +9500,7 @@
           "title": "Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-excludes"
+              "key": "https://robotcode.io/reference/config/#testdoc-excludes"
             }
           }
         },
@@ -9532,7 +9532,7 @@
           "title": "Extend Excludes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-extend-excludes"
+              "key": "https://robotcode.io/reference/config/#testdoc-extend-excludes"
             }
           }
         },
@@ -9565,7 +9565,7 @@
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-extend-includes"
+              "key": "https://robotcode.io/reference/config/#testdoc-extend-includes"
             }
           }
         },
@@ -9600,7 +9600,7 @@
           "title": "Extend Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-extend-metadata"
+              "key": "https://robotcode.io/reference/config/#testdoc-extend-metadata"
             }
           }
         },
@@ -9632,7 +9632,7 @@
           "title": "Extend Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-extend-set-tag"
+              "key": "https://robotcode.io/reference/config/#testdoc-extend-set-tag"
             }
           }
         },
@@ -9664,7 +9664,7 @@
           "title": "Extend Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-extend-suites"
+              "key": "https://robotcode.io/reference/config/#testdoc-extend-suites"
             }
           }
         },
@@ -9696,7 +9696,7 @@
           "title": "Extend Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-extend-tests"
+              "key": "https://robotcode.io/reference/config/#testdoc-extend-tests"
             }
           }
         },
@@ -9729,7 +9729,7 @@
           "title": "Includes",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-includes"
+              "key": "https://robotcode.io/reference/config/#testdoc-includes"
             }
           }
         },
@@ -9764,7 +9764,7 @@
           "title": "Metadata",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-metadata"
+              "key": "https://robotcode.io/reference/config/#testdoc-metadata"
             }
           }
         },
@@ -9789,7 +9789,7 @@
           "title": "Name",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-name"
+              "key": "https://robotcode.io/reference/config/#testdoc-name"
             }
           }
         },
@@ -9821,7 +9821,7 @@
           "title": "Set Tag",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-set-tag"
+              "key": "https://robotcode.io/reference/config/#testdoc-set-tag"
             }
           }
         },
@@ -9853,7 +9853,7 @@
           "title": "Suites",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-suites"
+              "key": "https://robotcode.io/reference/config/#testdoc-suites"
             }
           }
         },
@@ -9885,7 +9885,7 @@
           "title": "Tests",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-tests"
+              "key": "https://robotcode.io/reference/config/#testdoc-tests"
             }
           }
         },
@@ -9910,7 +9910,7 @@
           "title": "Title",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#testdoc-title"
+              "key": "https://robotcode.io/reference/config/#testdoc-title"
             }
           }
         }
@@ -9938,7 +9938,7 @@
           "title": "Robotcode Analyze",
           "x-taplo": {
             "links": {
-              "key": "https://robotcode.io/03_reference/config#tool-robotcode-analyze"
+              "key": "https://robotcode.io/reference/config/#tool-robotcode-analyze-cache"
             }
           }
         }

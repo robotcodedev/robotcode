@@ -75,7 +75,7 @@ Other editors (Neovim, Sublime Text, Helix, Emacs, …) connect to the language 
 ### Visual Studio Code
 
 1. **Install the RobotCode Extension** from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode).
-2. **Continue with the [Getting Started Guide](https://robotcode.io/02_get_started/)** for setup, your first `robot.toml`, and running your first test.
+2. **Continue with the [Getting Started Guide](https://robotcode.io/getting-started/)** for setup, your first `robot.toml`, and running your first test.
 
 **Extensions:**
 RobotCode declares dependencies on the [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) extensions so VS Code installs them when required. Additional extensions may be needed depending on your project.
@@ -89,7 +89,7 @@ RobotCode declares dependencies on the [Python](https://marketplace.visualstudio
    - **[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216):** click <kbd>Install to ...</kbd> if your IDE is running.
    - **Manual:** download the [latest release](https://github.com/robotcodedev/robotcode/releases/latest) and use <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>.
 
-2. **Continue with the [Getting Started Guide](https://robotcode.io/02_get_started/)** for setup, your first `robot.toml`, and running your first test.
+2. **Continue with the [Getting Started Guide](https://robotcode.io/getting-started/)** for setup, your first `robot.toml`, and running your first test.
 
 **Plugins:**
 RobotCode declares a dependency on [LSP4IJ](https://plugins.jetbrains.com/plugin/23257) so your IDE installs it automatically. Additional plugins may be required depending on your project needs.
@@ -103,7 +103,7 @@ For CI pipelines, the command line, or LSP-compatible editors like Neovim, Subli
 pip install robotcode[runner,analyze]
 ```
 
-Pick the extras that match your use case — see the [CLI reference](https://robotcode.io/03_reference/cli) for the available packages and how to install them.
+Pick the extras that match your use case — see the [CLI reference](https://robotcode.io/reference/cli/) for the available packages and how to install them.
 
 
 ## Documentation
@@ -111,10 +111,10 @@ Pick the extras that match your use case — see the [CLI reference](https://rob
 For detailed instructions, visit our **[official documentation](https://robotcode.io)**. Additional resources:
 
 - **[Q&A](https://github.com/robotcodedev/robotcode/discussions/categories/q-a):** Answers to common questions about RobotCode.
-- **[Tips & Tricks](https://robotcode.io/04_tip_and_tricks/):** Common pitfalls, editor customization, and setup recipes.
-- **[Command Line Tools Reference](https://robotcode.io/03_reference/cli):** Comprehensive documentation on using RobotCode's CLI tools.
+- **[Guides](https://robotcode.io/guides/):** How to use RobotCode's commands and set up projects, plus common pitfalls and editor customization.
+- **[Command Line Tools Reference](https://robotcode.io/reference/cli/):** Comprehensive documentation on using RobotCode's CLI tools.
 - **[Changelog](https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md):** Track changes, updates, and new features in each release.
-- **[Support & Contribute](https://robotcode.io/05_contributing/):** Ways to back the project — financial, code, feedback.
+- **[Support & Contribute](https://robotcode.io/contributing/):** Ways to back the project — financial, code, feedback.
 
 
 ## Sponsor RobotCode

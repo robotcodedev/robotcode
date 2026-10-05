@@ -10,6 +10,7 @@ from mashumaro.jsonschema.plugins import BasePlugin
 from mashumaro.jsonschema.schema import Instance
 
 from robotcode.analyze.config import AnalyzeConfig
+from robotcode.cli.commands.config import get_config_fields
 from robotcode.robot.config.model import RobotConfig as OrigRobotConfig
 from robotcode.robot.config.model import field
 
@@ -111,7 +112,7 @@ def _to_anchor(value: str) -> str:
 
 def _post_process_schema(
     schema_dict: dict,
-    base_url: str = "https://robotcode.io/03_reference/config",
+    base_url: str = "https://robotcode.io/reference/config/",
 ) -> None:
     """Add markdownDescription, x-taplo links, and examples to schema.
 
@@ -120,6 +121,8 @@ def _post_process_schema(
 
     defs = schema_dict.get("$defs", {})
     visited: set[tuple[str, str]] = set()
+    # The settings that have a heading in the configuration reference (`robotcode config info desc`), sorted.
+    documented = list(get_config_fields())
 
     def add_common_metadata(node: dict) -> None:
         """Add markdownDescription and examples from description field."""
@@ -133,6 +136,28 @@ def _post_process_schema(
             if examples:
                 node["examples"] = examples
 
+    def documenting_setting(path: str) -> str:
+        """The setting whose heading documents a property path: the setting itself, the first setting of a
+        section without a heading of its own (`tool.robotcode-analyze`), else the parent setting.
+
+        A setting inside a profile is documented at the top-level setting of the same name, unless it is one of
+        the `[profile].*` settings."""
+        if path.startswith("profile."):
+            path = path.removeprefix("profile.")
+            if f"[profile].{path.split('.')[0]}" in documented:
+                path = f"[profile].{path}"
+        if path in documented:
+            return path
+        section = next((n for n in documented if n.startswith(f"{path}.")), None)
+        if section is not None:
+            return section
+        name = path
+        while name not in documented and "." in name:
+            name = name.rsplit(".", 1)[0]
+        if name not in documented:
+            raise ValueError(f"no heading of the configuration reference documents {path!r}")
+        return name
+
     def add_link(node: dict, path: str) -> None:
         """Add x-taplo link to documentation for this property."""
         # Taplo ignores custom fields on objects that have direct $ref.
@@ -140,7 +165,7 @@ def _post_process_schema(
             return
         node["x-taplo"] = {
             "links": {
-                "key": f"{base_url}#{_to_anchor(path)}",
+                "key": f"{base_url}#{_to_anchor(documenting_setting(path))}",
             }
         }
 
@@ -289,7 +314,7 @@ if __name__ == "__main__":
     schema_dict.update(
         {
             "$comment": "Schema for RobotCode's robot.toml configuration. "
-            "See https://robotcode.io/03_reference/config for full documentation.",
+            "See https://robotcode.io/reference/config/ for full documentation.",
             "$id": "https://www.robotcode.io/schemas/robot.toml.json",
             "title": "JSON schema for RobotCode's Robot Framework configuration",
             "description": OrigRobotConfig.__doc__,

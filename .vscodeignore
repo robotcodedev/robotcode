@@ -49,7 +49,6 @@ coverage.xml
 
 # docs
 docs/
-docs-next/
 dev-docs/
 openspec/
 AI_POLICY.md

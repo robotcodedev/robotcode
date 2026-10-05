@@ -73,7 +73,7 @@ Before opening a pull request, make sure that:
 - the change follows the [Contribution Guide](CONTRIBUTING.md)
 - the documented test, lint, and code-generation workflows were used where applicable
 - the change is focused on one issue or purpose
-- generated files are explained and reproducible (for example, `docs/public/schemas/robot.toml.json` is regenerated via `scripts/create_robot_toml_json_schema.py`, and `docs/03_reference/cli.md` via `scripts/create_cmdline_doc.py` — never edit such generated files by hand)
+- generated files are explained and reproducible (for example, `docs/public/schemas/robot.toml.json` is regenerated via `scripts/create_robot_toml_json_schema.py`, and `docs/src/content/docs/reference/cli.md` via `scripts/create_cmdline_doc.py` — never edit such generated files by hand)
 - tests cover the relevant behavior, not only the narrow shape of the submitted patch, and no tests are written solely to make the diff pass
 - the pull request does not shift validation, cleanup, integration, or design work onto maintainers
 
