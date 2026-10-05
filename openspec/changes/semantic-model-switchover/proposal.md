@@ -2,7 +2,7 @@
 
 ## Why
 
-Phase 3 of the SemanticModel migration (`dev-docs/semantic-model.md`) is the verification-and-switch milestone: once every LSP feature runs on the model behind the flag, the flag defaults to `true`, `Namespace` uses `SemanticAnalyzer` as its sole analyzer, the now-redundant `KeywordTokenAnalyzer` (~400 LOC, still live at [semantic_tokens.py:640](../../../packages/language_server/src/robotcode/language_server/robotframework/parts/semantic_tokens.py)) is removed, and the first genuinely *new* semantic-tokens capability — variable type modifiers (local/global/builtin/environment) — is enabled. None of this exists yet: the flag defaults to `false` in both `package.json` and `workspace_config.py`, and there is no cross-feature verification harness (no global Level-D flag fixture, no `test_analyzer_performance.py` for Level E).
+Phase 3 of the SemanticModel migration (`dev-docs/semantic-model.md`) is the verification-and-switch milestone: once every LSP feature runs on the model behind the flag, the flag defaults to `true`, `Namespace` uses `SemanticAnalyzer` as its sole analyzer, the now-redundant `KeywordTokenAnalyzer` (~400 LOC, still live at [semantic_tokens.py:640](../../../packages/language_server/src/robotcode/language_server/robotframework/parts/semantic_tokens.py)) is removed, and the first genuinely *new* semantic-tokens capability — the builtin modifier for variables — is enabled. None of this exists yet: the flag defaults to `false` in both `package.json` and `workspace_config.py`, and there is no cross-feature verification harness (no global Level-D flag fixture, no `test_analyzer_performance.py` for Level E).
 
 This is the gate that makes the SemanticModel the default. It must not flip until the verification harness proves parity across *all* migrated features and confirms the performance/memory budget from the design doc.
 
@@ -16,14 +16,14 @@ This is the gate that makes the SemanticModel the default. It must not flip unti
   - `Namespace` uses `SemanticAnalyzer.run()` as the sole source of all `AnalyzerResult` outputs (it already produces the superset).
 - **Post-switch cleanups that only make sense once the model path is default:**
   - Remove `KeywordTokenAnalyzer` (the model renderer owns semantic tokens after `semantic-model-tier1-completion`).
-  - Add variable type modifiers as a new semantic-tokens capability, derived from `model.find_variable()` variable types.
+  - Add the builtin modifier to the name token of built-in variables, derived from the variable types the analyzer resolves.
 
 ## Capabilities
 
 ### New Capabilities
 
 - `semantic-model-default`: The SemanticModel is the default analysis path — the flag defaults to `true`, `Namespace` runs only `SemanticAnalyzer`, and the switch is gated by a cross-feature parity harness plus performance/memory budgets.
-- `semantic-model-variable-modifiers`: Semantic tokens carry variable type modifiers (local/global/builtin/environment) derived from resolved `VariableDefinition` types — a capability the legacy `KeywordTokenAnalyzer` path did not provide.
+- `semantic-model-variable-modifiers`: The name token of a built-in variable carries the builtin modifier, derived from the resolved `VariableDefinition` type — a capability the legacy `KeywordTokenAnalyzer` path did not provide. Local, global and environment modifiers are not part of it (see design D4).
 
 ### Modified Capabilities
 
@@ -31,7 +31,7 @@ _None — the change-local specs from the other semantic-model changes are not y
 
 ## Impact
 
-- **Code**: `package.json`, `packages/robot/.../workspace_config.py` (default flip); `packages/robot/.../namespace.py` + `document_cache_helper.py` (sole-analyzer selection); `packages/language_server/.../parts/semantic_tokens.py` (remove `KeywordTokenAnalyzer`, add modifier column).
+- **Code**: `package.json`, `packages/robot/.../workspace_config.py` (default flip); `packages/robot/.../namespace.py` + `document_cache_helper.py` (sole-analyzer selection); `packages/language_server/.../parts/semantic_tokens.py` (remove `KeywordTokenAnalyzer`); `packages/robot/.../semantic_analyzer/analyzer.py` (builtin modifier on variable tokens).
 - **Tests**: new global Level-D fixture; new `test_analyzer_performance.py`; all existing LSP suites must pass with the flag defaulting on.
 - **Docs**: update `dev-docs/semantic-model.md` (Impact / Ideas sections) if affected; Phase-3 completion is tracked in OpenSpec, not in the doc.
-- **Dependency (HARD GATE)**: MUST come after **all** feature migrations are complete — `semantic-model-tier1-completion`, `semantic-model-sidecar-cleanup`, `semantic-model-hover`, `semantic-model-completion`. This is one of only two hard gates in the whole migration (the other is `semantic-model-cleanup`): flipping the default with an unmigrated feature would ship the legacy fallback as the de-facto path, defeating the switch. This is a user-visible default change (behavior should be identical, but the analysis path changes for everyone); it is the deliberate go/no-go gate. Not breaking by intent — guarded by the harness. The legacy `NamespaceAnalyzer`/`ModelHelper`/`ScopeTree` remain in the tree (deleted in `semantic-model-cleanup`).
+- **Dependency (HARD GATE)**: MUST come after **all** feature migrations are complete — `semantic-model-tier1-completion`, `semantic-model-sidecar-cleanup`, `semantic-model-hover`, `semantic-model-completion`. The builtin modifier also needs `semantic-tokens-variable-names`, which renders a token for the variable name only. This is one of only two hard gates in the whole migration (the other is `semantic-model-cleanup`): flipping the default with an unmigrated feature would ship the legacy fallback as the de-facto path, defeating the switch. This is a user-visible default change (behavior should be identical, but the analysis path changes for everyone); it is the deliberate go/no-go gate. Not breaking by intent — guarded by the harness. The legacy `NamespaceAnalyzer`/`ModelHelper`/`ScopeTree` remain in the tree (deleted in `semantic-model-cleanup`).

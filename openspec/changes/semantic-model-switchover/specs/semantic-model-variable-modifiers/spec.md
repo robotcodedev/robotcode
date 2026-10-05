@@ -2,21 +2,28 @@
 
 ## ADDED Requirements
 
-### Requirement: Semantic tokens carry variable type modifiers
+### Requirement: Built-in variables carry the builtin modifier
 
-The model semantic-tokens renderer SHALL emit variable type modifiers (local, global, builtin, environment) on variable tokens, derived from the resolved `VariableDefinition.type` obtained via `model.find_variable(value, line)`. This is a new capability the legacy `KeywordTokenAnalyzer` path did not provide; it is additive and requires no additional resolution pass.
+The name token of a variable that resolves to a Robot Framework built-in variable (such as `${CURDIR}`, `${EMPTY}`, `${SPACE}` or `${TRUE}`) SHALL carry the builtin modifier. The modifier SHALL be computed when the file is analyzed, from the resolved variable type, and rendering SHALL map it without resolving anything again. This is a new capability the legacy `KeywordTokenAnalyzer` path did not provide.
 
-#### Scenario: Builtin variable modifier
+Variable tokens SHALL carry no other variable type modifier: no local, global or environment modifier.
+
+#### Scenario: Built-in variable
 
 - **WHEN** semantic tokens are rendered for a reference to `${CURDIR}`
-- **THEN** the variable token carries the builtin modifier bit
+- **THEN** the token for `CURDIR` carries the builtin modifier
 
-#### Scenario: Local variable modifier
+#### Scenario: Built-in variable with extended syntax
 
-- **WHEN** semantic tokens are rendered for a reference to a FOR loop variable inside the loop body
-- **THEN** the variable token carries the local modifier bit
+- **WHEN** semantic tokens are rendered for `Log    ${SPACE * 4}`
+- **THEN** the token for `SPACE` carries the builtin modifier
 
-#### Scenario: Modifiers are the only sanctioned deviation from legacy output
+#### Scenario: Other variables
+
+- **WHEN** semantic tokens are rendered for a reference to a `FOR` loop variable inside the loop body, and for `%{HOME}`
+- **THEN** neither variable token carries a variable type modifier
+
+#### Scenario: The modifier is the only sanctioned deviation from legacy output
 
 - **WHEN** the Level-D parity fixture compares model output to legacy output
-- **THEN** the variable type modifier bits are the only permitted difference; all other token data remains identical
+- **THEN** the builtin modifier bit on variable tokens is the only permitted difference; all other token data remains identical
