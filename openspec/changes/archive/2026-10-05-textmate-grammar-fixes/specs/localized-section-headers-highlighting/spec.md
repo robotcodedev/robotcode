@@ -1,10 +1,6 @@
-# Spec: localized-section-headers-highlighting
+# Spec Delta: localized-section-headers-highlighting
 
-## Purpose
-
-Guarantees that syntax highlighting recognises every section header spelling Robot Framework accepts in its built-in languages, including translations Robot Framework has deprecated but still accepts, in both the editor grammar and the REPL grammar.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: All accepted section header translations are highlighted
 
