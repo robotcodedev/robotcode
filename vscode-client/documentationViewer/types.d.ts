@@ -1,4 +1,4 @@
-import type { JSX as PreactJSX } from "preact";
+import type { HTMLAttributes } from "preact";
 
 declare global {
   function acquireVsCodeApi(): {
@@ -8,7 +8,7 @@ declare global {
   };
 }
 
-type CustomElement<P> = PreactJSX.HTMLAttributes<HTMLElement> & P;
+type CustomElement<P> = HTMLAttributes<HTMLElement> & P;
 
 declare module "preact" {
   namespace JSX {
