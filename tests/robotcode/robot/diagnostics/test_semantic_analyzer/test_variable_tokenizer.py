@@ -1,10 +1,14 @@
 """Tests for variable_tokenizer sub-token decomposition."""
 
+from typing import Callable, Optional
+
+import pytest
 from robot.parsing.lexer.tokens import Token
 
 from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import SemanticToken
 from robotcode.robot.diagnostics.semantic_analyzer.variable_tokenizer import (
+    VariableSite,
     build_index_sub_tokens,
     build_variable_occurrence,
     build_variable_sub_tokens,
@@ -12,6 +16,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.variable_tokenizer import (
     iter_variable_occurrences_from_token,
     normalize_variable_lookup_name,
 )
+from robotcode.robot.utils import RF_VERSION
 
 
 def _kinds(tokens: list[SemanticToken]) -> list[TokenKind]:
@@ -149,85 +154,116 @@ class TestVariableTypes:
 
 # --- Type hints ---
 
+requires_types = pytest.mark.skipif(RF_VERSION < (7, 3), reason="type hints need Robot Framework 7.3")
+
+
+def _inner(value: str, site: VariableSite, is_defined: Optional[Callable[[str], bool]] = None) -> list[SemanticToken]:
+    """Sub-tokens between the braces of a variable."""
+    return build_variable_sub_tokens(value, 1, 0, site=site, is_defined=is_defined)[2:-1]
+
 
 class TestTypeHints:
+    @requires_types
     def test_simple_type_hint(self) -> None:
-        tokens = build_variable_sub_tokens("${age: int}", 1, 0)
-        inner = tokens[2:-1]  # skip prefix, open, close
+        inner = _inner("${age: int}", VariableSite.DECLARATION)
         assert _kinds(inner) == [
             TokenKind.VARIABLE_BASE,
             TokenKind.VARIABLE_TYPE_SEPARATOR,
             TokenKind.VARIABLE_TYPE_HINT,
         ]
-        assert inner[0].value == "age"
-        assert inner[1].value == ": "
-        assert inner[2].value == "int"
+        assert _values(inner) == ["age", ": ", "int"]
+        assert [t.col_offset for t in inner] == [2, 5, 7]
 
+    @requires_types
+    def test_list_and_dict_type_hints(self) -> None:
+        assert _values(_inner("@{items: int}", VariableSite.DECLARATION)) == ["items", ": ", "int"]
+        assert _values(_inner("&{map: str=int}", VariableSite.DECLARATION)) == ["map", ": ", "str=int"]
+
+    @requires_types
+    def test_type_hint_splits_at_last_separator(self) -> None:
+        # RF: `match.base.rsplit(": ", 1)`.
+        assert _values(_inner("${a: b: int}", VariableSite.DECLARATION)) == ["a: b", ": ", "int"]
+
+    @requires_types
     def test_type_hint_with_colon_in_hint(self) -> None:
-        # RF uses ': ' (colon + space) as the sole type separator. Any ':' that
-        # appears inside the type expression itself is NOT a pattern separator —
-        # ${name: str:\w+} has 'str:\w+' as the full type hint.
-        tokens = build_variable_sub_tokens("${name: str:\\w+}", 1, 0)
-        inner = tokens[2:-1]
-        assert _kinds(inner) == [
-            TokenKind.VARIABLE_BASE,
-            TokenKind.VARIABLE_TYPE_SEPARATOR,
-            TokenKind.VARIABLE_TYPE_HINT,
-        ]
-        assert inner[0].value == "name"
-        assert inner[1].value == ": "
-        assert inner[2].value == "str:\\w+"
+        # Only ': ' (colon + space) separates the type; ':' alone belongs to it.
+        assert _values(_inner("${name: str:\\w+}", VariableSite.DECLARATION)) == ["name", ": ", "str:\\w+"]
 
-    def test_complex_type_hint_with_colon_literal_is_tokenized_correctly(self) -> None:
-        # ':' inside a Literal string within the type hint must NOT be treated as a
-        # pattern separator. The entire expression after ': ' is the type hint.
+    @requires_types
+    def test_complex_type_hint_with_colon_literal(self) -> None:
         value = '${x: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}'
-        tokens = build_variable_sub_tokens(value, 1, 0)
-        inner = tokens[2:-1]
-
-        assert _kinds(inner) == [
-            TokenKind.VARIABLE_BASE,
-            TokenKind.VARIABLE_TYPE_SEPARATOR,
-            TokenKind.VARIABLE_TYPE_HINT,
+        assert _values(_inner(value, VariableSite.DECLARATION)) == [
+            "x",
+            ": ",
+            'Literal["abc", ":", ";"] | List[Literal[1,2,3]]',
         ]
-        assert inner[0].value == "x"
-        assert inner[1].value == ": "
-        assert inner[2].value == 'Literal["abc", ":", ";"] | List[Literal[1,2,3]]'
 
-    def test_type_hint_with_colon_space_in_literal_is_tokenized_correctly(self) -> None:
-        # When ': ' (colon + space) appears inside a Literal string, RF's rsplit-based
-        # type parsing gets confused and produces an 'Invalid variable' error at collection
-        # time. Our tokenizer correctly splits at the FIRST ': ' (position 1 → base='x'),
-        # so the visual representation is as accurate as possible given RF's limitation.
-        # The RF parse-time error is already surfaced via Variable.errors diagnostics.
-        value = '${x: Literal["abc", ": ", ";"]}'
-        tokens = build_variable_sub_tokens(value, 1, 0)
-        inner = tokens[2:-1]
+    @pytest.mark.skipif(RF_VERSION >= (7, 3), reason="Robot Framework 7.3 parses type hints")
+    def test_no_type_hint_before_rf_73(self) -> None:
+        inner = _inner("${age: int}", VariableSite.DECLARATION)
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE]
+        assert _values(inner) == ["age: int"]
 
-        assert _kinds(inner) == [
-            TokenKind.VARIABLE_BASE,
-            TokenKind.VARIABLE_TYPE_SEPARATOR,
-            TokenKind.VARIABLE_TYPE_HINT,
-        ]
-        assert inner[0].value == "x"
-        assert inner[1].value == ": "
-        assert inner[2].value == 'Literal["abc", ": ", ";"]'
+    def test_usage_has_no_type_hint(self) -> None:
+        # RF parses types only in definitions; a usage looks `${age: int}` up as a whole,
+        # then falls back to the extended syntax.
+        inner = _inner("${age: int}", VariableSite.USAGE)
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE, TokenKind.VARIABLE_EXTENDED]
+        assert _values(inner) == ["age", ": int"]
+
+    def test_usage_of_a_defined_name_with_colon(self) -> None:
+        inner = _inner("${age: int}", VariableSite.USAGE, lambda name: name == "${age: int}")
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE]
+        assert _values(inner) == ["age: int"]
 
 
-# --- Embedded patterns ---
+# --- Embedded arguments in keyword names ---
 
 
 class TestEmbeddedPatterns:
     def test_pattern_without_type(self) -> None:
-        tokens = build_variable_sub_tokens("${arg:\\d+}", 1, 0)
-        inner = tokens[2:-1]
+        inner = _inner("${arg:\\d+}", VariableSite.KEYWORD_NAME)
         assert _kinds(inner) == [
             TokenKind.VARIABLE_BASE,
             TokenKind.VARIABLE_PATTERN_SEPARATOR,
             TokenKind.VARIABLE_PATTERN,
         ]
-        assert inner[0].value == "arg"
-        assert inner[2].value == "\\d+"
+        assert _values(inner) == ["arg", ":", "\\d+"]
+
+    @requires_types
+    def test_type_without_pattern(self) -> None:
+        inner = _inner("${count: int}", VariableSite.KEYWORD_NAME)
+        assert _kinds(inner) == [
+            TokenKind.VARIABLE_BASE,
+            TokenKind.VARIABLE_TYPE_SEPARATOR,
+            TokenKind.VARIABLE_TYPE_HINT,
+        ]
+        assert _values(inner) == ["count", ": ", "int"]
+
+    @requires_types
+    def test_type_and_pattern(self) -> None:
+        inner = _inner("${count: int:\\d+}", VariableSite.KEYWORD_NAME)
+        assert _kinds(inner) == [
+            TokenKind.VARIABLE_BASE,
+            TokenKind.VARIABLE_TYPE_SEPARATOR,
+            TokenKind.VARIABLE_TYPE_HINT,
+            TokenKind.VARIABLE_PATTERN_SEPARATOR,
+            TokenKind.VARIABLE_PATTERN,
+        ]
+        assert _values(inner) == ["count", ": ", "int", ":", "\\d+"]
+        assert [t.col_offset for t in inner] == [2, 7, 9, 12, 13]
+
+    @pytest.mark.skipif(RF_VERSION >= (7, 3), reason="Robot Framework 7.3 parses type hints")
+    def test_type_is_a_pattern_before_rf_73(self) -> None:
+        assert _values(_inner("${count: int}", VariableSite.KEYWORD_NAME)) == ["count", ":", " int"]
+
+    def test_no_pattern_in_usage(self) -> None:
+        inner = _inner("${arg:x}", VariableSite.USAGE)
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE, TokenKind.VARIABLE_EXTENDED]
+        assert _values(inner) == ["arg", ":x"]
+
+    def test_no_pattern_in_declaration(self) -> None:
+        assert _values(_inner("${arg:x}", VariableSite.DECLARATION)) == ["arg:x"]
 
 
 # --- Extended syntax ---
@@ -235,22 +271,39 @@ class TestEmbeddedPatterns:
 
 class TestExtendedSyntax:
     def test_dot_access(self) -> None:
-        tokens = build_variable_sub_tokens("${obj.attr}", 1, 0)
-        inner = tokens[2:-1]
+        inner = _inner("${obj.attr}", VariableSite.USAGE)
         assert _kinds(inner) == [
             TokenKind.VARIABLE_BASE,
             TokenKind.VARIABLE_EXTENDED,
         ]
-        assert inner[0].value == "obj"
-        assert inner[1].value == ".attr"
+        assert _values(inner) == ["obj", ".attr"]
 
     def test_multiply(self) -> None:
-        tokens = build_variable_sub_tokens("${SPACE * 4}", 1, 0)
-        inner = tokens[2:-1]
-        assert inner[0].kind == TokenKind.VARIABLE_BASE
-        assert inner[0].value == "SPACE "
-        assert inner[1].kind == TokenKind.VARIABLE_EXTENDED
-        assert inner[1].value == "* 4"
+        inner = _inner("${SPACE * 4}", VariableSite.USAGE)
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE, TokenKind.VARIABLE_EXTENDED]
+        assert _values(inner) == ["SPACE", " * 4"]
+
+    def test_defined_full_name_is_not_split(self) -> None:
+        inner = _inner("${obj.attr}", VariableSite.USAGE, lambda name: name == "${obj.attr}")
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE]
+        assert _values(inner) == ["obj.attr"]
+
+    def test_number_is_not_split(self) -> None:
+        assert _values(_inner("${1.5}", VariableSite.USAGE)) == ["1.5"]
+
+    def test_names_in_declarations_and_keyword_names_are_not_split(self) -> None:
+        assert _values(_inner("${MY-VAR}", VariableSite.DECLARATION)) == ["MY-VAR"]
+        assert _values(_inner("${MY-VAR}", VariableSite.KEYWORD_NAME)) == ["MY-VAR"]
+
+    def test_check_reaches_nested_variables(self) -> None:
+        tokens = build_variable_sub_tokens("${a}[${k.x}]", 1, 0, is_defined=lambda name: name == "${k.x}")
+        index = tokens[-1]
+        assert index.kind == TokenKind.VARIABLE_INDEX
+        assert index.sub_tokens is not None
+        nested = index.sub_tokens[1]
+        assert nested.kind == TokenKind.VARIABLE
+        assert nested.sub_tokens is not None
+        assert _values(nested.sub_tokens[2:-1]) == ["k.x"]
 
 
 # --- Assign mark ---
@@ -314,8 +367,9 @@ class TestNestedVariables:
         tokens = build_variable_sub_tokens("${cfg_${env}}", 1, 0)
         # prefix, open, [nested content], close
         inner = tokens[2:-1]
-        assert len(inner) == 2  # TEXT_FRAGMENT + VARIABLE
-        assert inner[0].kind == TokenKind.TEXT_FRAGMENT
+        assert len(inner) == 2  # VARIABLE_BASE + VARIABLE
+        # The text around a nested variable is part of the base name.
+        assert inner[0].kind == TokenKind.VARIABLE_BASE
         assert inner[0].value == "cfg_"
         assert inner[1].kind == TokenKind.VARIABLE
         assert inner[1].value == "${env}"
@@ -331,9 +385,8 @@ class TestNestedVariables:
     def test_text_before_and_after(self) -> None:
         tokens = build_variable_sub_tokens("${a${b}c}", 1, 0)
         inner = tokens[2:-1]
-        kinds = _kinds(inner)
-        assert TokenKind.TEXT_FRAGMENT in kinds
-        assert TokenKind.VARIABLE in kinds
+        assert _kinds(inner) == [TokenKind.VARIABLE_BASE, TokenKind.VARIABLE, TokenKind.VARIABLE_BASE]
+        assert _values(inner) == ["a", "${b}", "c"]
 
 
 # --- Index access ---

@@ -11,6 +11,7 @@ using RF's search_variable(), VariableMatch, and tokenize_variables() directly.
 import re
 import token as python_token
 from dataclasses import dataclass
+from enum import Enum
 from io import StringIO
 from tokenize import TokenError, generate_tokens
 from typing import Callable, Iterator, List, Optional, Set, Tuple
@@ -18,8 +19,9 @@ from typing import Callable, Iterator, List, Optional, Set, Tuple
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 
+from ...utils import RF_VERSION
 from ...utils.ast import tokenize_variables
-from ...utils.variables import contains_variable, search_variable
+from ...utils.variables import contains_variable, is_number_literal, search_variable
 from .enums import TokenKind
 from .nodes import SemanticToken
 
@@ -31,6 +33,26 @@ _MATCH_EXTENDED = re.compile(
     """,
     re.UNICODE | re.VERBOSE,
 )
+
+# Embedded argument with a type in a keyword name (RF 7.3+): ${name: type} or ${name: type:pattern}
+_MATCH_EMBEDDED_TYPE = re.compile(r"([^:]+): ([^:]+)(?::(.*))?", re.DOTALL)
+
+
+class VariableSite(Enum):
+    """Where a variable stands. Robot Framework splits a variable differently by site."""
+
+    USAGE = "usage"
+    """A variable that is used: no type hint, no pattern."""
+
+    DECLARATION = "declaration"
+    """A variable that is defined in `*** Variables ***`, by an assignment, `VAR`, `FOR` or `[Arguments]`:
+    type hints with RF 7.3+."""
+
+    UNTYPED_DECLARATION = "untyped_declaration"
+    """A variable that is defined without a type, such as the target of `EXCEPT ... AS`: the name as written."""
+
+    KEYWORD_NAME = "keyword_name"
+    """An embedded argument in a keyword name: patterns, and type hints with RF 7.3+."""
 
 
 @dataclass(slots=True)
@@ -51,10 +73,21 @@ class VariableOccurrence:
 
 
 def build_variable_occurrence(
-    value: str, line: int, col_offset: int, *, parse_type: bool = False
+    value: str,
+    line: int,
+    col_offset: int,
+    *,
+    parse_type: bool = False,
+    site: Optional[VariableSite] = None,
+    is_defined: Optional[Callable[[str], bool]] = None,
 ) -> VariableOccurrence:
-    """Parse a single variable expression once and return shared occurrence data."""
-    sub_tokens = build_variable_sub_tokens(value, line, col_offset)
+    """Parse a single variable expression once and return shared occurrence data.
+
+    Without an explicit `site`, `parse_type=True` means a declaration and `False` a usage.
+    """
+    if site is None:
+        site = VariableSite.DECLARATION if parse_type else VariableSite.USAGE
+    sub_tokens = build_variable_sub_tokens(value, line, col_offset, site=site, is_defined=is_defined)
     return VariableOccurrence(
         value=value,
         line=line,
@@ -160,6 +193,8 @@ def iter_variable_occurrences_from_token(
     identifiers: str = "$@&%",
     *,
     parse_type: bool = False,
+    site: Optional[VariableSite] = None,
+    is_defined: Optional[Callable[[str], bool]] = None,
     ignore_errors: bool = False,
     extra_types: Optional[Set[str]] = None,
     exception_handler: Optional[Callable[[Exception, Token], None]] = None,
@@ -167,7 +202,8 @@ def iter_variable_occurrences_from_token(
     """Parse a token once and yield all variable occurrences (root + related).
 
     This is the shared entry point for analyzer-side variable resolution and
-    model-side variable rendering consumers.
+    model-side variable rendering consumers. `site` and `is_defined` steer the
+    sub-token decomposition, see `build_variable_sub_tokens`.
     """
     parsed_token = token
     if token.type == Token.VARIABLE and token.value.endswith("="):
@@ -198,6 +234,8 @@ def iter_variable_occurrences_from_token(
             sub_token.lineno,
             sub_token.col_offset,
             parse_type=parse_type,
+            site=site,
+            is_defined=is_defined,
         )
         yield from iter_related_occurrences(occurrence)
 
@@ -295,6 +333,9 @@ def build_variable_sub_tokens(
     value: str,
     line: int,
     col_offset: int,
+    *,
+    site: VariableSite = VariableSite.USAGE,
+    is_defined: Optional[Callable[[str], bool]] = None,
 ) -> List[SemanticToken]:
     """Decompose a variable expression into granular sub-tokens.
 
@@ -302,10 +343,18 @@ def build_variable_sub_tokens(
     ``${{expr}}``, ``%{HOME=default}``, ``${var}[0]``, etc.
     Returns a list of sub-tokens covering every character.
 
+    The parts follow Robot Framework at the variable's `site`: type hints are
+    split off only in declarations and keyword names (RF 7.3+), patterns only
+    in keyword names. The extended syntax (``${obj.attr}``) is split off only
+    when `is_defined` does not know the full name; without `is_defined` it is
+    always split off.
+
     Args:
         value: The full variable string including delimiters.
         line: 1-indexed line number.
         col_offset: 0-indexed column offset of the start of the variable.
+        site: Where the variable stands.
+        is_defined: Tells whether a variable with the given full name exists.
     """
     if not value or len(value) < 3:
         return []
@@ -341,7 +390,7 @@ def build_variable_sub_tokens(
         expr_sub_tokens = _build_python_expression_sub_tokens(expr_content, line, expr_start)
         has_nested_vars = "${" in expr_content or "@{" in expr_content or "&{" in expr_content or "%{" in expr_content
         if has_nested_vars:
-            nested = _decompose_nested_variable(expr_content, line, expr_start)
+            nested = _decompose_nested_variable(expr_content, line, expr_start, is_defined)
             if nested:
                 if expr_sub_tokens is None:
                     expr_sub_tokens = []
@@ -412,7 +461,7 @@ def build_variable_sub_tokens(
         inner_start = col_offset + 2
 
         # Parse the inner content
-        inner_tokens = _decompose_variable_inner(inner, line, inner_start, prefix_char)
+        inner_tokens = _decompose_variable_inner(inner, line, inner_start, prefix_char, site, is_defined)
         tokens.extend(inner_tokens)
 
         tokens.append(
@@ -438,7 +487,7 @@ def build_variable_sub_tokens(
             )
         elif index_part.startswith("["):
             # Index access: ${var}[0], ${var}[key], ${var}[0][key]
-            idx_tokens = build_index_sub_tokens(index_part, line, col_offset + brace_end + 1)
+            idx_tokens = build_index_sub_tokens(index_part, line, col_offset + brace_end + 1, is_defined=is_defined)
             tokens.extend(idx_tokens)
 
     return tokens
@@ -449,15 +498,17 @@ def _decompose_variable_inner(
     line: int,
     col_offset: int,
     prefix_char: str,
+    site: VariableSite,
+    is_defined: Optional[Callable[[str], bool]],
 ) -> List[SemanticToken]:
     """Parse content between { and } of a variable.
 
     Handles:
     - Simple name: ``name``
-    - Type hint (RF 7.0+): ``age: int``
-    - Extended syntax: ``obj.attr``, ``SPACE * 5``
+    - Type hint (RF 7.3+, declarations and keyword names): ``age: int``
+    - Extended syntax (usages): ``obj.attr``, ``SPACE * 5``
     - Default value (env vars): ``HOME=default``
-    - Embedded pattern: ``arg:\\d+``
+    - Embedded pattern (keyword names): ``arg:\\d+``
     - Nested variables: ``cfg_${env}``
     """
     tokens: List[SemanticToken] = []
@@ -483,7 +534,9 @@ def _decompose_variable_inner(
                     line=line,
                     col_offset=col_offset,
                     length=len(base),
-                    sub_tokens=_decompose_env_variable_part(base, line, col_offset, TokenKind.VARIABLE_BASE),
+                    sub_tokens=_decompose_env_variable_part(
+                        base, line, col_offset, TokenKind.VARIABLE_BASE, is_defined
+                    ),
                 )
             )
             tokens.append(
@@ -503,7 +556,7 @@ def _decompose_variable_inner(
                     col_offset=col_offset + eq_pos + 1,
                     length=len(default_val),
                     sub_tokens=_decompose_env_variable_part(
-                        default_val, line, col_offset + eq_pos + 1, TokenKind.VARIABLE_DEFAULT_VALUE
+                        default_val, line, col_offset + eq_pos + 1, TokenKind.VARIABLE_DEFAULT_VALUE, is_defined
                     ),
                 )
             )
@@ -515,100 +568,46 @@ def _decompose_variable_inner(
                 line=line,
                 col_offset=col_offset,
                 length=len(inner),
-                sub_tokens=_decompose_env_variable_part(inner, line, col_offset, TokenKind.VARIABLE_BASE),
+                sub_tokens=_decompose_env_variable_part(inner, line, col_offset, TokenKind.VARIABLE_BASE, is_defined),
             )
         )
         return tokens
 
     # Check for nested variables: ${cfg_${env}}
     if "${" in inner or "@{" in inner or "&{" in inner or "%{" in inner:
-        return _decompose_nested_variable(inner, line, col_offset)
+        # The text around nested variables belongs to the base name: ${cfg_${env}}
+        return _decompose_nested_variable(inner, line, col_offset, is_defined, TokenKind.VARIABLE_BASE)
 
-    # Check for type hint: ${age: int}
-    # RF uses ': ' (colon + space) as the type separator.
-    # Everything after ': ' is the type hint — no further splitting.
-    if ": " in inner and prefix_char == "$":
-        colon_pos = inner.index(": ")
-        base = inner[:colon_pos]
-        rest = inner[colon_pos + 2 :]
-
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_BASE,
-                value=base,
-                line=line,
-                col_offset=col_offset,
-                length=len(base),
-            )
-        )
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_TYPE_SEPARATOR,
-                value=": ",
-                line=line,
-                col_offset=col_offset + colon_pos,
-                length=2,
-            )
-        )
-
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_TYPE_HINT,
-                value=rest,
-                line=line,
-                col_offset=col_offset + colon_pos + 2,
-                length=len(rest),
-            )
-        )
+    # Embedded argument in a keyword name, split like RF's EmbeddedArgumentParser:
+    # ``name:pattern``, and since RF 7.3 also ``name: type`` and ``name: type:pattern``.
+    if site is VariableSite.KEYWORD_NAME and ":" in inner:
+        typed = _MATCH_EMBEDDED_TYPE.fullmatch(inner) if RF_VERSION >= (7, 3) else None
+        if typed is not None:
+            base, type_hint, pattern = typed.groups()
+            tokens.extend(_name_and_type_tokens(base, type_hint, line, col_offset))
+            if pattern is not None:
+                tokens.extend(_pattern_tokens(pattern, line, col_offset + len(base) + 2 + len(type_hint)))
+            return tokens
+        base, pattern = inner.split(":", 1)
+        tokens.append(_base_token(base, line, col_offset))
+        tokens.extend(_pattern_tokens(pattern, line, col_offset + len(base)))
         return tokens
 
-    # Check for embedded pattern without type: ${arg:\d+}
-    if ":" in inner and prefix_char == "$":
-        colon_pos = inner.index(":")
-        base = inner[:colon_pos]
-        pattern = inner[colon_pos + 1 :]
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_BASE,
-                value=base,
-                line=line,
-                col_offset=col_offset,
-                length=len(base),
-            )
-        )
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_PATTERN_SEPARATOR,
-                value=":",
-                line=line,
-                col_offset=col_offset + colon_pos,
-                length=1,
-            )
-        )
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_PATTERN,
-                value=pattern,
-                line=line,
-                col_offset=col_offset + colon_pos + 1,
-                length=len(pattern),
-            )
-        )
+    # Type hint in a declaration (RF 7.3+): RF splits at the last ': '.
+    if site is VariableSite.DECLARATION and RF_VERSION >= (7, 3) and ": " in inner:
+        base, type_hint = inner.rsplit(": ", 1)
+        tokens.extend(_name_and_type_tokens(base, type_hint, line, col_offset))
         return tokens
 
-    # Check for extended syntax: ${obj.attr}, ${SPACE * 5}
-    extended_match = _MATCH_EXTENDED.match(inner)
-    if extended_match:
+    # Extended syntax: ${obj.attr}, ${SPACE * 5}. RF applies it only when it looks
+    # a variable up and neither a variable nor a number has the full name.
+    extended_match = _MATCH_EXTENDED.match(inner) if site is VariableSite.USAGE else None
+    if extended_match and not _is_full_name(f"{prefix_char}{{{inner}}}", is_defined):
         base, extended = extended_match.groups()
-        tokens.append(
-            SemanticToken(
-                kind=TokenKind.VARIABLE_BASE,
-                value=base,
-                line=line,
-                col_offset=col_offset,
-                length=len(base),
-            )
-        )
+        # `${SPACE * 4}` matches as `SPACE ` + `* 4`; the name ends before the whitespace.
+        name = base.rstrip()
+        base, extended = name, base[len(name) :] + extended
+        tokens.append(_base_token(base, line, col_offset))
         tokens.append(
             SemanticToken(
                 kind=TokenKind.VARIABLE_EXTENDED,
@@ -621,27 +620,76 @@ def _decompose_variable_inner(
         return tokens
 
     # Simple variable name
-    tokens.append(
-        SemanticToken(
-            kind=TokenKind.VARIABLE_BASE,
-            value=inner,
-            line=line,
-            col_offset=col_offset,
-            length=len(inner),
-        )
-    )
+    tokens.append(_base_token(inner, line, col_offset))
 
     return tokens
+
+
+def _is_full_name(name: str, is_defined: Optional[Callable[[str], bool]]) -> bool:
+    return is_number_literal(name) or (is_defined is not None and is_defined(name))
+
+
+def _base_token(base: str, line: int, col_offset: int) -> SemanticToken:
+    return SemanticToken(
+        kind=TokenKind.VARIABLE_BASE,
+        value=base,
+        line=line,
+        col_offset=col_offset,
+        length=len(base),
+    )
+
+
+def _name_and_type_tokens(base: str, type_hint: str, line: int, col_offset: int) -> List[SemanticToken]:
+    """``name: type`` -> VARIABLE_BASE + VARIABLE_TYPE_SEPARATOR + VARIABLE_TYPE_HINT."""
+    return [
+        _base_token(base, line, col_offset),
+        SemanticToken(
+            kind=TokenKind.VARIABLE_TYPE_SEPARATOR,
+            value=": ",
+            line=line,
+            col_offset=col_offset + len(base),
+            length=2,
+        ),
+        SemanticToken(
+            kind=TokenKind.VARIABLE_TYPE_HINT,
+            value=type_hint,
+            line=line,
+            col_offset=col_offset + len(base) + 2,
+            length=len(type_hint),
+        ),
+    ]
+
+
+def _pattern_tokens(pattern: str, line: int, separator_col: int) -> List[SemanticToken]:
+    """``:pattern`` starting at `separator_col` -> VARIABLE_PATTERN_SEPARATOR + VARIABLE_PATTERN."""
+    return [
+        SemanticToken(
+            kind=TokenKind.VARIABLE_PATTERN_SEPARATOR,
+            value=":",
+            line=line,
+            col_offset=separator_col,
+            length=1,
+        ),
+        SemanticToken(
+            kind=TokenKind.VARIABLE_PATTERN,
+            value=pattern,
+            line=line,
+            col_offset=separator_col + 1,
+            length=len(pattern),
+        ),
+    ]
 
 
 def _decompose_nested_variable(
     inner: str,
     line: int,
     col_offset: int,
+    is_defined: Optional[Callable[[str], bool]] = None,
+    text_kind: TokenKind = TokenKind.TEXT_FRAGMENT,
 ) -> List[SemanticToken]:
     """Decompose inner content that contains nested variables.
 
-    E.g., ``cfg_${env}`` -> TEXT_FRAGMENT + nested VARIABLE sub-tokens.
+    E.g., ``cfg_${env}`` -> `text_kind` text + nested VARIABLE sub-tokens.
     """
     tokens: List[SemanticToken] = []
     pos = 0
@@ -660,7 +708,7 @@ def _decompose_nested_variable(
                 text = inner[pos:]
                 tokens.append(
                     SemanticToken(
-                        kind=TokenKind.TEXT_FRAGMENT,
+                        kind=text_kind,
                         value=text,
                         line=line,
                         col_offset=col_offset + pos,
@@ -674,7 +722,7 @@ def _decompose_nested_variable(
             text = inner[pos:next_var]
             tokens.append(
                 SemanticToken(
-                    kind=TokenKind.TEXT_FRAGMENT,
+                    kind=text_kind,
                     value=text,
                     line=line,
                     col_offset=col_offset + pos,
@@ -699,7 +747,7 @@ def _decompose_nested_variable(
             text = inner[next_var:]
             tokens.append(
                 SemanticToken(
-                    kind=TokenKind.TEXT_FRAGMENT,
+                    kind=text_kind,
                     value=text,
                     line=line,
                     col_offset=col_offset + next_var,
@@ -710,7 +758,7 @@ def _decompose_nested_variable(
 
         # Recurse into the nested variable
         nested_var = inner[next_var : end + 1]
-        nested_sub = build_variable_sub_tokens(nested_var, line, col_offset + next_var)
+        nested_sub = build_variable_sub_tokens(nested_var, line, col_offset + next_var, is_defined=is_defined)
         # The parent kind should be the nested variable itself
         tokens.append(
             SemanticToken(
@@ -732,6 +780,7 @@ def _decompose_env_variable_part(
     line: int,
     col_offset: int,
     text_kind: TokenKind,
+    is_defined: Optional[Callable[[str], bool]] = None,
 ) -> Optional[List[SemanticToken]]:
     """Decompose the name or default of ``%{NAME=default}`` if it contains variables.
 
@@ -746,7 +795,7 @@ def _decompose_env_variable_part(
         Token(Token.ARGUMENT, value, line, col_offset), "$@&%", ignore_errors=True
     ):
         if t.type == Token.VARIABLE:
-            nested_sub = build_variable_sub_tokens(t.value, line, t.col_offset)
+            nested_sub = build_variable_sub_tokens(t.value, line, t.col_offset, is_defined=is_defined)
             tokens.append(
                 SemanticToken(
                     kind=TokenKind.VARIABLE,
@@ -775,6 +824,8 @@ def build_index_sub_tokens(
     index_str: str,
     line: int,
     col_offset: int,
+    *,
+    is_defined: Optional[Callable[[str], bool]] = None,
 ) -> List[SemanticToken]:
     """Decompose index access into sub-tokens.
 
@@ -815,7 +866,7 @@ def build_index_sub_tokens(
 
         # Check if inner content has variables
         if "${" in inner_content or "@{" in inner_content or "&{" in inner_content:
-            nested = _decompose_nested_variable(inner_content, line, col_offset + pos + 1)
+            nested = _decompose_nested_variable(inner_content, line, col_offset + pos + 1, is_defined)
             sub_tokens.extend(nested)
         else:
             sub_tokens.append(

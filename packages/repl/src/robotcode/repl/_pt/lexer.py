@@ -37,6 +37,7 @@ from robot.api import get_tokens
 from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import SemanticToken
 from robotcode.robot.diagnostics.semantic_analyzer.variable_tokenizer import (
+    VariableSite,
     build_variable_sub_tokens,
 )
 
@@ -145,7 +146,9 @@ def _split_variable(value: str) -> Iterable[Tuple[str, str]]:
     still renders (just without per-part colouring).
     """
     try:
-        sub_tokens = build_variable_sub_tokens(value, line=1, col_offset=0)
+        # The lexer cannot tell definitions from usages, so it splits like a
+        # definition to show the type hints of `VAR` and `FOR` variables.
+        sub_tokens = build_variable_sub_tokens(value, line=1, col_offset=0, site=VariableSite.DECLARATION)
     except Exception:
         yield (_VARIABLE_FALLBACK_STYLE, value)
         return

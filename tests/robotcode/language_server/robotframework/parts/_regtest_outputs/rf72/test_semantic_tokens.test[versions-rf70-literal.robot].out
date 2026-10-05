@@ -66,14 +66,14 @@ result: !SemanticTokens
   - 21
   - 0
   - 0
-  - 5
-  - 23
-  - 54
+  - 7
+  - 20
+  - 7
   - 0
   - 0
   - 27
-  - 29
-  - 54
+  - 26
+  - 7
   - 0
   - 1
   - 4
@@ -81,8 +81,8 @@ result: !SemanticTokens
   - 37
   - 0
   - 0
-  - 14
-  - 4
+  - 16
+  - 1
   - 36
   - 0
   - 1
@@ -91,8 +91,8 @@ result: !SemanticTokens
   - 37
   - 0
   - 0
-  - 14
-  - 4
+  - 16
+  - 1
   - 36
   - 0
   result_id: null

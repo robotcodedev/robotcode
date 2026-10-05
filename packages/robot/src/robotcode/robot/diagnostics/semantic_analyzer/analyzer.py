@@ -169,7 +169,9 @@ from .run_keyword import (
 from .variable_tokenizer import (
     _MATCH_EXTENDED,
     VariableOccurrence,
+    VariableSite,
     _build_python_expression_sub_tokens,
+    build_variable_sub_tokens,
     iter_variable_occurrences_from_token,
     iter_variable_tokens_with_index_access,
 )
@@ -791,9 +793,9 @@ class SemanticAnalyzer(Visitor):
     # --- Variables section rows ---
 
     def visit_Variable(self, node: Variable) -> None:  # noqa: N802
-        """Variables-section row: the defining name renders atomically as a
-        variable; values get variable decomposition; `&{dict}` rows split
-        `key=value` items into named-argument sub-tokens (legacy behavior)."""
+        """Variables-section row: the defining name is a variable with sub-tokens
+        split as a declaration; values get variable decomposition; `&{dict}` rows
+        split `key=value` items into named-argument sub-tokens (legacy behavior)."""
         self._analyze_statement_variables(node)
 
         name_token = node.get_token(Token.VARIABLE)
@@ -808,7 +810,15 @@ class SemanticAnalyzer(Visitor):
             kind=NodeKind.VARIABLE_DEF,
             line_start=node.lineno,
             line_end=node.end_lineno or node.lineno,
-            tokens=self._build_header_tokens(node, special={Token.ARGUMENT: handle_argument}),
+            tokens=self._build_header_tokens(
+                node,
+                special={
+                    Token.VARIABLE: lambda t: [
+                        self._build_token_with_var_subtokens(t, TokenKind.VARIABLE, site=VariableSite.DECLARATION)
+                    ],
+                    Token.ARGUMENT: handle_argument,
+                },
+            ),
         )
         self._add_statement(stmt)
 
@@ -995,6 +1005,8 @@ class SemanticAnalyzer(Visitor):
             return self._build_setting_name_token(rf_token)
         if kind is TokenKind.TEST_NAME or kind is TokenKind.KEYWORD_NAME:
             return self._build_definition_name_token(rf_token, kind)
+        if rf_token.type == Token.ASSIGN:
+            return self._build_token_with_var_subtokens(rf_token, kind, site=VariableSite.DECLARATION)
         return SemanticToken(
             kind=kind,
             value=rf_token.value,
@@ -1044,10 +1056,15 @@ class SemanticAnalyzer(Visitor):
         token = SemanticToken(kind=kind, value=value, line=line, col_offset=col, length=len(value))
 
         identifiers = "$" if kind is TokenKind.KEYWORD_NAME else "$@&%"
+        site = VariableSite.KEYWORD_NAME if kind is TokenKind.KEYWORD_NAME else VariableSite.USAGE
         try:
             occurrences = list(
                 iter_variable_occurrences_from_token(
-                    rf_token, identifiers=identifiers, parse_type=False, ignore_errors=True
+                    rf_token,
+                    identifiers=identifiers,
+                    site=site,
+                    is_defined=self._is_variable_defined,
+                    ignore_errors=True,
                 )
             )
         except (VariableError, InvalidVariableError):
@@ -1252,7 +1269,10 @@ class SemanticAnalyzer(Visitor):
             try:
                 occurrences = list(
                     iter_variable_occurrences_from_token(
-                        arg_rf_token, identifiers="$@&%", parse_type=False, ignore_errors=True
+                        arg_rf_token,
+                        identifiers="$@&%",
+                        is_defined=self._is_variable_defined,
+                        ignore_errors=True,
                     )
                 )
             except (VariableError, InvalidVariableError):
@@ -1418,7 +1438,7 @@ class SemanticAnalyzer(Visitor):
                 for occ in iter_variable_occurrences_from_token(
                     rf_token,
                     identifiers="$@&%",
-                    parse_type=False,
+                    is_defined=self._is_variable_defined,
                     ignore_errors=True,
                 )
             ]
@@ -1482,11 +1502,15 @@ class SemanticAnalyzer(Visitor):
         return arg_token
 
     def _argument_sub_tokens(
-        self, rf_token: Token, text_kind: TokenKind = TokenKind.TEXT_FRAGMENT
+        self,
+        rf_token: Token,
+        text_kind: TokenKind = TokenKind.TEXT_FRAGMENT,
+        site: VariableSite = VariableSite.USAGE,
     ) -> Optional[list[SemanticToken]]:
         """Variable sub-tokens (with `text_kind` fragments for literal text) for
         an ARGUMENT-like RF token. Returns None if the value contains no
         variables (caller should leave sub_tokens empty in that case).
+        `site` tells where the variables stand (see `VariableSite`).
         """
         line = rf_token.lineno
         col_start = rf_token.col_offset
@@ -1498,7 +1522,8 @@ class SemanticAnalyzer(Visitor):
                 iter_variable_occurrences_from_token(
                     rf_token,
                     identifiers="$@&%",
-                    parse_type=False,
+                    site=site,
+                    is_defined=self._is_variable_defined,
                     ignore_errors=True,
                 )
             )
@@ -1554,7 +1579,11 @@ class SemanticAnalyzer(Visitor):
         return sub_tokens
 
     def _build_token_with_var_subtokens(
-        self, rf_token: Token, kind: TokenKind, text_kind: TokenKind = TokenKind.TEXT_FRAGMENT
+        self,
+        rf_token: Token,
+        kind: TokenKind,
+        text_kind: TokenKind = TokenKind.TEXT_FRAGMENT,
+        site: VariableSite = VariableSite.USAGE,
     ) -> SemanticToken:
         """Build a SemanticToken (any kind) with variable sub-tokens
         attached when the RF token contains variables. Used for CONDITION,
@@ -1568,7 +1597,7 @@ class SemanticAnalyzer(Visitor):
             col_offset=rf_token.col_offset,
             length=len(rf_token.value),
         )
-        sub = self._argument_sub_tokens(rf_token, text_kind=text_kind)
+        sub = self._argument_sub_tokens(rf_token, text_kind=text_kind, site=site)
         if sub:
             token.sub_tokens = sub
         return token
@@ -1622,10 +1651,11 @@ class SemanticAnalyzer(Visitor):
                     tokens.append(self._build_token_with_var_subtokens(rf_token, argument_kind))
                 continue
             if rf_token.type == Token.VARIABLE and rf_token.value and rf_token.col_offset is not None:
-                tokens.append(self._build_token_with_var_subtokens(rf_token, variable_kind))
+                site = VariableSite.DECLARATION if variable_kind is TokenKind.VARIABLE_NAME else VariableSite.USAGE
+                tokens.append(self._build_token_with_var_subtokens(rf_token, variable_kind, site=site))
                 continue
             if split_options and rf_token.type == Token.OPTION and rf_token.value and rf_token.col_offset is not None:
-                tokens.extend(self._split_option_token(rf_token, whole=True))
+                tokens.extend(self._split_option_token(rf_token))
                 continue
             if rf_token.value and rf_token.col_offset is not None:
                 sem_token = self._map_generic_token(rf_token)
@@ -1644,15 +1674,12 @@ class SemanticAnalyzer(Visitor):
         name = value.split("=", 1)[0]
         return bool(name) and name in known_names
 
-    def _split_option_token(self, rf_token: Token, whole: bool = False) -> list[SemanticToken]:
-        """Split an option token (`name=value`) into OPTION_NAME + OPERATOR +
-        OPTION_VALUE tokens with variable decomposition on the value half.
-
-        With `whole=True` (VAR / FOR options) the triple becomes the
-        sub-tokens of a single OPTION parent token — legacy renders these
-        options as one control-flow cell, while WHILE / EXCEPT options render
-        as name + `=` + value. Falls back to a single ARGUMENT token if the
-        value doesn't actually contain `=`.
+    def _split_option_token(self, rf_token: Token) -> list[SemanticToken]:
+        """Split an option token (`name=value`) of `VAR`, `FOR`, `WHILE` or
+        `EXCEPT` into an OPTION token with OPTION_NAME + OPERATOR +
+        OPTION_VALUE sub-tokens, with variable decomposition on the value half.
+        Falls back to a single ARGUMENT token if the value doesn't actually
+        contain `=`.
         """
         value = rf_token.value or ""
         line = rf_token.lineno
@@ -1677,7 +1704,7 @@ class SemanticAnalyzer(Visitor):
         # `_argument_sub_tokens`.
         value_rf_token = Token(rf_token.type, value_part, line, value_col, rf_token.error)
         value_sub = self._argument_sub_tokens(value_rf_token) if value_part else None
-        triple = [
+        sub_tokens = [
             SemanticToken(
                 kind=TokenKind.OPTION_NAME,
                 value=name_part,
@@ -1701,18 +1728,16 @@ class SemanticAnalyzer(Visitor):
                 sub_tokens=value_sub,
             ),
         ]
-        if whole:
-            return [
-                SemanticToken(
-                    kind=TokenKind.OPTION,
-                    value=value,
-                    line=line,
-                    col_offset=col,
-                    length=len(value),
-                    sub_tokens=triple,
-                )
-            ]
-        return triple
+        return [
+            SemanticToken(
+                kind=TokenKind.OPTION,
+                value=value,
+                line=line,
+                col_offset=col,
+                length=len(value),
+                sub_tokens=sub_tokens,
+            )
+        ]
 
     def _build_keyword_call_tokens(
         self,
@@ -3278,7 +3303,9 @@ class SemanticAnalyzer(Visitor):
         return self._build_header_tokens(
             node,
             special={
-                Token.ASSIGN: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME)],
+                Token.ASSIGN: lambda t: [
+                    self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME, site=VariableSite.DECLARATION)
+                ],
                 Token.ARGUMENT: lambda t: [self._build_condition_token(t)],
             },
         )
@@ -3409,15 +3436,17 @@ class SemanticAnalyzer(Visitor):
 
         def handle_argument(t: Token) -> List[SemanticToken]:
             if self._looks_like_named_option(t.value, self._FOR_OPTION_NAMES):
-                return self._split_option_token(t, whole=True)
+                return self._split_option_token(t)
             return [self._build_argument_semantic_token(t, keyword_doc=None)]
 
         return self._build_header_tokens(
             node,
             special={
-                Token.VARIABLE: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME)],
+                Token.VARIABLE: lambda t: [
+                    self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME, site=VariableSite.DECLARATION)
+                ],
                 Token.ARGUMENT: handle_argument,
-                Token.OPTION: lambda t: self._split_option_token(t, whole=True),
+                Token.OPTION: lambda t: self._split_option_token(t),
             },
         )
 
@@ -3492,7 +3521,11 @@ class SemanticAnalyzer(Visitor):
             special={
                 Token.ARGUMENT: handle_argument,
                 Token.OPTION: lambda t: self._split_option_token(t),
-                Token.VARIABLE: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME)],
+                Token.VARIABLE: lambda t: [
+                    self._build_token_with_var_subtokens(
+                        t, TokenKind.VARIABLE_NAME, site=VariableSite.UNTYPED_DECLARATION
+                    )
+                ],
             },
         )
 
@@ -3650,23 +3683,23 @@ class SemanticAnalyzer(Visitor):
         self._add_statement(stmt)
 
     def _build_argument_definition_token(self, rf_token: Token) -> SemanticToken:
-        """[Arguments] entry. Plain `${x}` definitions render as named
-        arguments in the legacy path (NAMED_ARGUMENT_NAME); `${x}=default`
-        splits into PARAMETER + OPERATOR + default-value fragments. The
-        argument *definitions* themselves are carried on the enclosing
+        """[Arguments] entry. `${x}` becomes a PARAMETER token whose sub-tokens
+        split the variable as a declaration; `${x}=default` becomes an ARGUMENT
+        with that PARAMETER, a VARIABLE_DEFAULT_SEPARATOR and the default value.
+        The argument *definitions* themselves are carried on the enclosing
         definition's `local_variables`, not on these render tokens."""
         value = rf_token.value
         line = rf_token.lineno
         col = rf_token.col_offset
         name, default = split_from_equals(value)
+        parameter = SemanticToken(kind=TokenKind.PARAMETER, value=name, line=line, col_offset=col, length=len(name))
+        name_subs = build_variable_sub_tokens(
+            name, line, col, site=VariableSite.DECLARATION, is_defined=self._is_variable_defined
+        )
+        if name_subs:
+            parameter.sub_tokens = name_subs
         if default is None:
-            return SemanticToken(
-                kind=TokenKind.NAMED_ARGUMENT_NAME,
-                value=value,
-                line=line,
-                col_offset=col,
-                length=len(value),
-            )
+            return parameter
         parent = SemanticToken(
             kind=TokenKind.ARGUMENT,
             value=value,
@@ -3675,8 +3708,10 @@ class SemanticAnalyzer(Visitor):
             length=len(value),
         )
         sub_tokens = [
-            SemanticToken(kind=TokenKind.PARAMETER, value=name, line=line, col_offset=col, length=len(name)),
-            SemanticToken(kind=TokenKind.OPERATOR, value="=", line=line, col_offset=col + len(name), length=1),
+            parameter,
+            SemanticToken(
+                kind=TokenKind.VARIABLE_DEFAULT_SEPARATOR, value="=", line=line, col_offset=col + len(name), length=1
+            ),
         ]
         if default:
             default_col = col + len(name) + 1
@@ -4101,7 +4136,7 @@ class SemanticAnalyzer(Visitor):
     def _build_while_header_tokens(self, node: Statement) -> List[SemanticToken]:
         """WHILE header tokens: first ARGUMENT becomes CONDITION; subsequent
         ARGUMENT tokens that match a known WHILE-option name (RF < 7.0) and
-        Token.OPTION (RF 7.0+) are split into NAMED_ARGUMENT_NAME/VALUE."""
+        Token.OPTION (RF 7.0+) become OPTION tokens with name, operator and value."""
         # Closure-state: the first ARGUMENT is the condition, subsequent ones
         # may be RF<7.0-style options.
         condition_seen = [False]
@@ -4290,6 +4325,9 @@ class SemanticAnalyzer(Visitor):
             return vars.get(matcher, None)
         except (VariableError, InvalidVariableError):
             return None
+
+    def _is_variable_defined(self, name: str) -> bool:
+        return self._find_variable(name) is not None
 
     def _try_resolve_nested_variable_base(
         self, identifier: str, base: str, name_token: Token
@@ -4527,6 +4565,7 @@ class SemanticAnalyzer(Visitor):
             token,
             identifiers="$@&%",
             parse_type=parse_type,
+            is_defined=self._is_variable_defined,
             ignore_errors=True,
             extra_types=None,
             exception_handler=exception_handler,

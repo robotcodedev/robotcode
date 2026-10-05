@@ -47,6 +47,7 @@ _SCANNABLE_KINDS = frozenset(
         TokenKind.CONDITION,
         TokenKind.NAMED_ARGUMENT_NAME,
         TokenKind.NAMED_ARGUMENT_VALUE,
+        TokenKind.PARAMETER,
         TokenKind.OPTION,
         TokenKind.OPTION_NAME,
         TokenKind.OPTION_VALUE,

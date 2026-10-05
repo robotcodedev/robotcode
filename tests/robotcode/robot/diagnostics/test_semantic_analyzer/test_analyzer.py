@@ -8,7 +8,7 @@ Tests that the analyzer correctly:
 - Produces diagnostics compatible with NamespaceAnalyzer
 """
 
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Tuple
 
 import pytest
 from pytest_mock import MockerFixture
@@ -136,6 +136,19 @@ def _statements_of_kind(result: AnalyzerResult, kind: NodeKind) -> List[Semantic
     """Filter statements by kind."""
     assert result.semantic_model is not None
     return [s for s in result.semantic_model.statements if s.kind == kind]
+
+
+_VARIABLE_PART_KINDS = frozenset({TokenKind.VARIABLE_BASE, TokenKind.VARIABLE_TYPE_HINT})
+
+
+def _variable_parts(token: SemanticToken) -> List[Tuple[TokenKind, str]]:
+    """The name and type-hint leaves below `token`, in order."""
+    result: List[Tuple[TokenKind, str]] = []
+    for sub in token.sub_tokens or []:
+        if sub.kind in _VARIABLE_PART_KINDS:
+            result.append((sub.kind, sub.value))
+        result.extend(_variable_parts(sub))
+    return result
 
 
 # --- Basic test structure ---
@@ -860,13 +873,12 @@ My Test
         kinds = [t.kind for t in whiles[0].tokens]
         assert TokenKind.CONTROL_FLOW in kinds  # WHILE
         assert TokenKind.CONDITION in kinds
-        # Options split into OPTION_NAME + OPERATOR + OPTION_VALUE triples
-        names = [t for t in whiles[0].tokens if t.kind == TokenKind.OPTION_NAME]
-        values = [t for t in whiles[0].tokens if t.kind == TokenKind.OPTION_VALUE]
-        assert len(names) == 2
-        assert len(values) == 2
-        assert {t.value for t in names} == {"limit", "on_limit"}
-        assert {t.value for t in values} == {"10", "PASS"}
+        # Options are whole OPTION tokens with OPTION_NAME + OPERATOR + OPTION_VALUE sub-tokens
+        options = [t for t in whiles[0].tokens if t.kind == TokenKind.OPTION]
+        assert [t.value for t in options] == ["limit=10", "on_limit=PASS"]
+        assert [[s.kind for s in t.sub_tokens or []] for t in options] == [
+            [TokenKind.OPTION_NAME, TokenKind.OPERATOR, TokenKind.OPTION_VALUE]
+        ] * 2
 
     def test_for_header_loop_variable_is_variable_name(self, analyzer_factory: AnalyzerFactory) -> None:
         result = analyzer_factory(
@@ -923,13 +935,164 @@ My Test
         excepts = _statements_of_kind(result, NodeKind.EXCEPT_HEADER)
         assert len(excepts) == 1
         kinds = [t.kind for t in excepts[0].tokens]
-        # Pattern as ARGUMENT, type= split, AS variable as VARIABLE_NAME
+        # Pattern as ARGUMENT, type= as a whole OPTION, AS variable as VARIABLE_NAME
         assert TokenKind.ARGUMENT in kinds  # ValueError pattern
-        assert TokenKind.OPTION_NAME in kinds  # type
-        assert TokenKind.OPTION_VALUE in kinds  # GLOB
         assert TokenKind.VARIABLE_NAME in kinds  # ${err}
+        option = next(t for t in excepts[0].tokens if t.kind == TokenKind.OPTION)
+        assert option.value == "type=GLOB"
+        assert [(t.kind, t.value) for t in option.sub_tokens or []] == [
+            (TokenKind.OPTION_NAME, "type"),
+            (TokenKind.OPERATOR, "="),
+            (TokenKind.OPTION_VALUE, "GLOB"),
+        ]
         as_var = next(t for t in excepts[0].tokens if t.kind == TokenKind.VARIABLE_NAME)
         assert as_var.value == "${err}"
+        assert _variable_parts(as_var) == [(TokenKind.VARIABLE_BASE, "err")]
+
+
+class TestVariableNameSubTokens:
+    """Every variable definition carries its name, and with RF 7.3+ its type hint,
+    as sub-tokens."""
+
+    @staticmethod
+    def _tokens(result: AnalyzerResult, kind: NodeKind) -> List[SemanticToken]:
+        return [t for stmt in _statements_of_kind(result, kind) for t in stmt.tokens]
+
+    def test_variables_section_declarations(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Variables ***
+${SCALAR}    value
+@{LIST}    a    b
+&{DICT}    key=value
+${X} =    2
+"""
+        )
+        names = [t for t in self._tokens(result, NodeKind.VARIABLE_DEF) if t.kind == TokenKind.VARIABLE]
+        assert [_variable_parts(t) for t in names] == [
+            [(TokenKind.VARIABLE_BASE, "SCALAR")],
+            [(TokenKind.VARIABLE_BASE, "LIST")],
+            [(TokenKind.VARIABLE_BASE, "DICT")],
+            [(TokenKind.VARIABLE_BASE, "X")],
+        ]
+
+    @pytest.mark.skipif(RF_VERSION < (7, 3), reason="type hints need Robot Framework 7.3")
+    def test_typed_declarations(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Variables ***
+${TYPED: int}    1
+
+*** Test Cases ***
+Test
+    ${r: int}=    Set Variable    1
+"""
+        )
+        declaration = next(t for t in self._tokens(result, NodeKind.VARIABLE_DEF) if t.kind == TokenKind.VARIABLE)
+        assert _variable_parts(declaration) == [
+            (TokenKind.VARIABLE_BASE, "TYPED"),
+            (TokenKind.VARIABLE_TYPE_HINT, "int"),
+        ]
+        assignment = next(t for t in self._tokens(result, NodeKind.KEYWORD_CALL) if t.value == "${r: int}=")
+        assert _variable_parts(assignment) == [(TokenKind.VARIABLE_BASE, "r"), (TokenKind.VARIABLE_TYPE_HINT, "int")]
+
+    def test_keyword_call_assignments(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+Test
+    ${result}=    Set Variable    x
+    ${a}    ${b}=    Set Variable    x    y
+"""
+        )
+        tokens = self._tokens(result, NodeKind.KEYWORD_CALL)
+        parts = {t.value: _variable_parts(t) for t in tokens if t.value.startswith("${")}
+        assert parts == {
+            "${result}=": [(TokenKind.VARIABLE_BASE, "result")],
+            "${a}": [(TokenKind.VARIABLE_BASE, "a")],
+            "${b}=": [(TokenKind.VARIABLE_BASE, "b")],
+        }
+
+    @pytest.mark.skipif(RF_VERSION < (6, 1), reason="item assignments need Robot Framework 6.1")
+    def test_item_assignments(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+Test
+    ${DICT}[key]=    Set Variable    x
+    ${DICT}[${k}]=    Set Variable    x
+"""
+        )
+        tokens = self._tokens(result, NodeKind.KEYWORD_CALL)
+        parts = {t.value: _variable_parts(t) for t in tokens if t.value.startswith("${")}
+        assert parts == {
+            "${DICT}[key]=": [(TokenKind.VARIABLE_BASE, "DICT")],
+            "${DICT}[${k}]=": [(TokenKind.VARIABLE_BASE, "DICT"), (TokenKind.VARIABLE_BASE, "k")],
+        }
+
+    def test_argument_declarations(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Keywords ***
+Kw
+    [Arguments]    ${a}    ${b}=default    ${c}=${DEFAULT}    @{rest}    &{named}
+    No Operation
+"""
+        )
+        tokens = self._tokens(result, NodeKind.SETTING_ARGUMENTS)
+
+        def parameters(toks: List[SemanticToken]) -> List[SemanticToken]:
+            found: List[SemanticToken] = []
+            for t in toks:
+                if t.kind == TokenKind.PARAMETER:
+                    found.append(t)
+                else:
+                    found.extend(parameters(t.sub_tokens or []))
+            return found
+
+        assert [(t.value, _variable_parts(t)) for t in parameters(tokens)] == [
+            ("${a}", [(TokenKind.VARIABLE_BASE, "a")]),
+            ("${b}", [(TokenKind.VARIABLE_BASE, "b")]),
+            ("${c}", [(TokenKind.VARIABLE_BASE, "c")]),
+            ("@{rest}", [(TokenKind.VARIABLE_BASE, "rest")]),
+            ("&{named}", [(TokenKind.VARIABLE_BASE, "named")]),
+        ]
+        with_variable_default = next(t for t in tokens if t.value == "${c}=${DEFAULT}")
+        default = (with_variable_default.sub_tokens or [])[-1]
+        assert default.kind == TokenKind.VARIABLE_DEFAULT_VALUE
+        assert _variable_parts(default) == [(TokenKind.VARIABLE_BASE, "DEFAULT")]
+
+    @pytest.mark.skipif(RF_VERSION < (7, 3), reason="type hints need Robot Framework 7.3")
+    def test_typed_argument_declaration(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Keywords ***
+Kw
+    [Arguments]    ${count: int}
+    No Operation
+"""
+        )
+        parameter = next(t for t in self._tokens(result, NodeKind.SETTING_ARGUMENTS) if t.kind == TokenKind.PARAMETER)
+        assert _variable_parts(parameter) == [
+            (TokenKind.VARIABLE_BASE, "count"),
+            (TokenKind.VARIABLE_TYPE_HINT, "int"),
+        ]
+
+    def test_usage_keeps_colons_in_the_name(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Variables ***
+${A}    1
+
+*** Test Cases ***
+Test
+    Log    ${A: int}
+"""
+        )
+        argument = next(
+            t for t in self._tokens(result, NodeKind.KEYWORD_CALL) if t.kind == TokenKind.ARGUMENT and "${A" in t.value
+        )
+        assert _variable_parts(argument) == [(TokenKind.VARIABLE_BASE, "A")]
 
 
 class TestConditionExpressionRefs:
@@ -1083,17 +1246,20 @@ My Keyword
         )
         args_settings = _statements_of_kind(result, NodeKind.SETTING_ARGUMENTS)
         assert len(args_settings) == 1
-        # Plain definitions render as named arguments (legacy parity)...
-        plain = [t for t in args_settings[0].tokens if t.kind == TokenKind.NAMED_ARGUMENT_NAME]
-        assert {t.value for t in plain} == {"${name}"}
-        # ...definitions with defaults split into PARAMETER + OPERATOR + default.
+        # Plain definitions are PARAMETER tokens...
+        plain = [t for t in args_settings[0].tokens if t.kind == TokenKind.PARAMETER]
+        assert [t.value for t in plain] == ["${name}"]
+        assert _variable_parts(plain[0]) == [(TokenKind.VARIABLE_BASE, "name")]
+        # ...definitions with defaults split into PARAMETER + default separator + default.
         with_default = next(
             t for t in args_settings[0].tokens if t.kind == TokenKind.ARGUMENT and t.value == "${count}=5"
         )
         assert with_default.sub_tokens is not None
-        sub_kinds = [t.kind for t in with_default.sub_tokens]
-        assert TokenKind.PARAMETER in sub_kinds
-        assert TokenKind.OPERATOR in sub_kinds
+        assert [(t.kind, t.value) for t in with_default.sub_tokens] == [
+            (TokenKind.PARAMETER, "${count}"),
+            (TokenKind.VARIABLE_DEFAULT_SEPARATOR, "="),
+            (TokenKind.VARIABLE_DEFAULT_VALUE, "5"),
+        ]
 
     def test_timeout_setting(self, analyzer_factory: AnalyzerFactory) -> None:
         result = analyzer_factory(

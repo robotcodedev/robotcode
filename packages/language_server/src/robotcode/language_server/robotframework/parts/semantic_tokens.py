@@ -39,7 +39,6 @@ from robot.parsing.model.statements import (
     TestTemplate,
     Variable,
     VariablesImport,
-    WhileHeader,
 )
 from robot.utils.escaping import unescape
 
@@ -74,6 +73,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     SemanticStatement,
     SemanticToken,
 )
+from robotcode.robot.diagnostics.semantic_analyzer.variable_tokenizer import VariableSite, build_variable_sub_tokens
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     cached_isinstance,
@@ -1054,31 +1054,12 @@ class SemanticTokenGenerator:
         TokenKind.KEYWORD_INNER: (RobotSemTokenTypes.KEYWORD_INNER, None),
         TokenKind.BDD_PREFIX: (RobotSemTokenTypes.BDD_PREFIX, None),
         TokenKind.NAMESPACE: (RobotSemTokenTypes.NAMESPACE, None),
+        # Variables render their name only (see `_render_variable_part`).
         TokenKind.VARIABLE: (RobotSemTokenTypes.VARIABLE, None),
         TokenKind.VARIABLE_NOT_FOUND: (RobotSemTokenTypes.VARIABLE, None),
-        # Assign targets / VAR targets / FOR loop vars render as plain
-        # variables (atomic, including a trailing assign mark).
         TokenKind.VARIABLE_NAME: (RobotSemTokenTypes.VARIABLE, None),
-        TokenKind.VARIABLE_PREFIX: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
-        TokenKind.VARIABLE_OPEN_BRACE: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
-        TokenKind.VARIABLE_CLOSE_BRACE: (RobotSemTokenTypes.VARIABLE_END, None),
-        TokenKind.VARIABLE_BASE: (RobotSemTokenTypes.VARIABLE, None),
-        TokenKind.VARIABLE_EXTENDED: (RobotSemTokenTypes.VARIABLE, None),
-        TokenKind.VARIABLE_TYPE_SEPARATOR: (SemanticTokenTypes.OPERATOR, None),
-        TokenKind.VARIABLE_TYPE_HINT: (SemanticTokenTypes.TYPE, None),
-        TokenKind.VARIABLE_DEFAULT_SEPARATOR: (SemanticTokenTypes.OPERATOR, None),
         TokenKind.VARIABLE_DEFAULT_VALUE: (RobotSemTokenTypes.ARGUMENT, None),
-        TokenKind.VARIABLE_PATTERN_SEPARATOR: (SemanticTokenTypes.OPERATOR, None),
         TokenKind.VARIABLE_PATTERN: (RobotSemTokenTypes.ARGUMENT, None),
-        TokenKind.VARIABLE_ASSIGN_MARK: (RobotSemTokenTypes.VARIABLE, None),
-        TokenKind.VARIABLE_EXPRESSION_OPEN: (RobotSemTokenTypes.EXPRESSION_BEGIN, None),
-        TokenKind.VARIABLE_EXPRESSION_CLOSE: (RobotSemTokenTypes.EXPRESSION_END, None),
-        TokenKind.PYTHON_EXPRESSION: (RobotSemTokenTypes.VARIABLE_EXPRESSION, None),
-        TokenKind.PYTHON_VARIABLE_REF: (RobotSemTokenTypes.VARIABLE, None),
-        TokenKind.VARIABLE_INDEX: (RobotSemTokenTypes.VARIABLE, None),
-        TokenKind.VARIABLE_INDEX_OPEN: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
-        TokenKind.VARIABLE_INDEX_CLOSE: (RobotSemTokenTypes.VARIABLE_END, None),
-        TokenKind.VARIABLE_INDEX_CONTENT: (RobotSemTokenTypes.VARIABLE, None),
         TokenKind.TEXT_FRAGMENT: (RobotSemTokenTypes.ARGUMENT, None),
         TokenKind.ARGUMENT: (RobotSemTokenTypes.ARGUMENT, None),
         TokenKind.NAMED_ARGUMENT_NAME: (RobotSemTokenTypes.NAMED_ARGUMENT, None),
@@ -1089,7 +1070,6 @@ class SemanticTokenGenerator:
         TokenKind.FOR_SEPARATOR: (RobotSemTokenTypes.FOR_SEPARATOR, None),
         TokenKind.VAR_MARKER: (RobotSemTokenTypes.VAR, None),
         TokenKind.OPTION: (RobotSemTokenTypes.CONTROL_FLOW, None),
-        TokenKind.OPTION_NAME: (RobotSemTokenTypes.VARIABLE, None),
         TokenKind.OPTION_VALUE: (RobotSemTokenTypes.CONTROL_FLOW, None),
         TokenKind.TEST_NAME: (RobotSemTokenTypes.TESTCASE_NAME, {SemanticTokenModifiers.DECLARATION}),
         TokenKind.KEYWORD_NAME: (RobotSemTokenTypes.KEYWORD_NAME, {SemanticTokenModifiers.DECLARATION}),
@@ -1121,16 +1101,14 @@ class SemanticTokenGenerator:
 
     # --- Legacy-compat emission policy (design D7) ---
 
-    # Variable-family tokens (and whole VAR/FOR options) render atomically:
-    # one token per occurrence, no descent into their sub-structure.
-    _ATOMIC_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset(
-        {
-            TokenKind.VARIABLE,
-            TokenKind.VARIABLE_NOT_FOUND,
-            TokenKind.VARIABLE_NAME,
-            TokenKind.OPTION,
-            TokenKind.OPTION_VALUE,
-        }
+    # Whole options of control structures render atomically: one control-flow
+    # token per option, no descent into their sub-structure.
+    _ATOMIC_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset({TokenKind.OPTION, TokenKind.OPTION_VALUE})
+    # Variables and parameters render only their name (and type hint); the
+    # grammar shows prefix, braces, item access, `=`, patterns, defaults and
+    # inline Python.
+    _VARIABLE_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset(
+        {TokenKind.VARIABLE, TokenKind.VARIABLE_NOT_FOUND, TokenKind.VARIABLE_NAME, TokenKind.PARAMETER}
     )
     # Model-only kinds: carried for model consumers (inline values, debug
     # variable extraction), never rendered — legacy highlights no bare-`$var`
@@ -1335,6 +1313,11 @@ class SemanticTokenGenerator:
         if kind in self._MODEL_ONLY_KINDS:
             return
 
+        if kind in self._VARIABLE_KINDS and token.sub_tokens:
+            for sub in token.sub_tokens:
+                yield from self._render_variable_part(sub, token)
+            return
+
         # Atomic kinds render whole; their sub-structure stays model-only.
         if kind in self._ATOMIC_KINDS:
             info = self._emit_model_token(token)
@@ -1380,6 +1363,27 @@ class SemanticTokenGenerator:
         info = self._emit_model_token(token)
         if info is not None:
             yield info
+
+    def _render_variable_part(self, token: SemanticToken, variable: SemanticToken) -> Iterator[SemTokenInfo]:
+        """Render one sub-token of `variable`: its name with the type and
+        modifiers of the variable, its type hint as `type`, nested variables as
+        variables of their own, and nothing else."""
+        kind = token.kind
+        if kind in self._VARIABLE_KINDS:
+            yield from self._render_model_token(token, emit_comments=False, yield_arguments=False)
+            return
+        if kind is TokenKind.PYTHON_EXPRESSION:
+            return
+        if token.sub_tokens:
+            for sub in token.sub_tokens:
+                yield from self._render_variable_part(sub, variable)
+            return
+        if kind is TokenKind.VARIABLE_BASE:
+            info = self._emit_model_token(variable)
+            if info is not None:
+                yield SemTokenInfo(token.line, token.col_offset, token.length, info.sem_token_type, info.sem_modifiers)
+        elif kind is TokenKind.VARIABLE_TYPE_HINT:
+            yield SemTokenInfo(token.line, token.col_offset, token.length, SemanticTokenTypes.TYPE)
 
     def _iter_run_keyword_sem_tokens(
         self,
@@ -1480,6 +1484,7 @@ class SemanticTokenGenerator:
         col_offset: Optional[int] = None,
         length: Optional[int] = None,
         yield_arguments: bool = False,
+        site: VariableSite = VariableSite.USAGE,
     ) -> Iterator[SemTokenInfo]:
         """Generate semantic token information for Robot Framework tokens.
 
@@ -1491,6 +1496,7 @@ class SemanticTokenGenerator:
             col_offset: Optional column offset override
             length: Optional length override
             yield_arguments: Whether to yield argument tokens
+            site: Where a variable token stands
 
         Yields:
             SemTokenInfo: Semantic token information for LSP client
@@ -1679,37 +1685,8 @@ class SemanticTokenGenerator:
                         col_offset,
                         length,
                     )
-            elif token.type == Token.OPTION:
-                if (
-                    cached_isinstance(node, ExceptHeader) or cached_isinstance(node, WhileHeader)
-                ) and "=" in token.value:
-                    if col_offset is None:
-                        col_offset = token.col_offset
-
-                    name, value = token.value.split("=", 1)
-                    yield SemTokenInfo.from_token(
-                        token,
-                        RobotSemTokenTypes.VARIABLE,
-                        sem_mod,
-                        col_offset,
-                        len(name),
-                    )
-                    yield SemTokenInfo.from_token(
-                        token,
-                        SemanticTokenTypes.OPERATOR,
-                        sem_mod,
-                        col_offset + len(name),
-                        1,
-                    )
-                    yield SemTokenInfo.from_token(
-                        token,
-                        sem_type,
-                        sem_mod,
-                        col_offset + len(name) + 1,
-                        len(value),
-                    )
-                else:
-                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
+            elif token.type in (Token.VARIABLE, Token.ASSIGN):
+                yield from self._generate_variable_sem_tokens(namespace, token, sem_type, sem_mod, site)
             elif (
                 token.type in Token.SETTING_TOKENS and token.value and token.value[0] == "[" and token.value[-1] == "]"
             ):
@@ -1757,33 +1734,37 @@ class SemanticTokenGenerator:
         if token.type in {Token.ARGUMENT, Token.TESTCASE_NAME, Token.KEYWORD_NAME} or (
             token.type == Token.NAME and cached_isinstance(node, VariablesImport, LibraryImport, ResourceImport)
         ):
-            if (
+            if cached_isinstance(node, Arguments):
+                # The name of an argument is a parameter; a default value continues as argument.
+                name, value = split_from_equals(token.value)
+                if name:
+                    yield from self._generate_variable_sem_tokens(
+                        namespace,
+                        Token(Token.VARIABLE, name, token.lineno, token.col_offset),
+                        SemanticTokenTypes.PARAMETER,
+                        None,
+                        VariableSite.DECLARATION,
+                    )
+                token = Token(
+                    token.type,
+                    value or "",
+                    token.lineno,
+                    token.col_offset + len(name) + (1 if value is not None else 0),
+                    token.error,
+                )
+            elif (
                 cached_isinstance(node, Variable) and token.type == Token.ARGUMENT and node.name and node.name[0] == "&"
-            ) or (cached_isinstance(node, Arguments)):
+            ):
                 name, value = split_from_equals(token.value)
                 if value is not None:
                     length = len(name)
 
                     yield SemTokenInfo.from_token(
-                        Token(
-                            ROBOT_NAMED_ARGUMENT if cached_isinstance(node, Variable) else SemanticTokenTypes.PARAMETER,
-                            name,
-                            token.lineno,
-                            token.col_offset,
-                        ),
-                        (
-                            RobotSemTokenTypes.NAMED_ARGUMENT
-                            if cached_isinstance(node, Variable)
-                            else SemanticTokenTypes.PARAMETER
-                        ),
+                        Token(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset),
+                        RobotSemTokenTypes.NAMED_ARGUMENT,
                     )
                     yield SemTokenInfo.from_token(
-                        Token(
-                            ROBOT_OPERATOR,
-                            "=",
-                            token.lineno,
-                            token.col_offset + length,
-                        ),
+                        Token(ROBOT_OPERATOR, "=", token.lineno, token.col_offset + length),
                         SemanticTokenTypes.OPERATOR,
                     )
                     token = Token(
@@ -1793,35 +1774,69 @@ class SemanticTokenGenerator:
                         token.col_offset + length + 1,
                         token.error,
                     )
-                elif cached_isinstance(node, Arguments) and name:
-                    yield SemTokenInfo.from_token(
-                        Token(
-                            ROBOT_NAMED_ARGUMENT,
-                            name,
-                            token.lineno,
-                            token.col_offset,
-                        ),
-                        RobotSemTokenTypes.NAMED_ARGUMENT,
-                    )
-                    token = Token(
-                        token.type,
-                        "",
-                        token.lineno,
-                        token.col_offset + len(name),
-                        token.error,
-                    )
 
+            site = VariableSite.KEYWORD_NAME if token.type == Token.KEYWORD_NAME else VariableSite.USAGE
             for sub_token in ModelHelper.tokenize_variables(
                 token,
                 ignore_errors=True,
                 identifiers="$" if token.type == Token.KEYWORD_NAME else "$@&%",
             ):
-                for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
+                for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node, site=site):
                     yield e
 
         else:
-            for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node):
+            # A whole VARIABLE or ASSIGN cell defines a variable.
+            site = (
+                VariableSite.UNTYPED_DECLARATION if cached_isinstance(node, ExceptHeader) else VariableSite.DECLARATION
+            )
+            for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node, site=site):
                 yield e
+
+    def _generate_variable_sem_tokens(
+        self,
+        namespace: Namespace,
+        token: Token,
+        sem_type: AnyTokenType,
+        sem_mod: Optional[Set[AnyTokenModifier]],
+        site: VariableSite,
+    ) -> Iterator[SemTokenInfo]:
+        """A variable sends its name with `sem_type` and its type hint as `type`;
+        prefix, braces, item access, `=`, patterns, defaults and inline Python
+        are left to the grammar. The parts are split like the semantic model
+        splits them."""
+        position = Position(line=token.lineno - 1, character=token.col_offset)
+
+        def is_defined(name: str) -> bool:
+            return namespace.find_variable(name, position=position) is not None
+
+        sub_tokens = build_variable_sub_tokens(
+            token.value, token.lineno, token.col_offset, site=site, is_defined=is_defined
+        )
+        if not sub_tokens:
+            yield SemTokenInfo.from_token(token, sem_type, sem_mod)
+            return
+        yield from self._iter_variable_name_sem_tokens(sub_tokens, sem_type, sem_mod)
+
+    def _iter_variable_name_sem_tokens(
+        self,
+        sub_tokens: Sequence[SemanticToken],
+        sem_type: AnyTokenType,
+        sem_mod: Optional[Set[AnyTokenModifier]],
+    ) -> Iterator[SemTokenInfo]:
+        for sub in sub_tokens:
+            if sub.kind is TokenKind.VARIABLE:
+                if sub.sub_tokens:
+                    yield from self._iter_variable_name_sem_tokens(sub.sub_tokens, RobotSemTokenTypes.VARIABLE, None)
+                else:
+                    yield SemTokenInfo(sub.line, sub.col_offset, sub.length, RobotSemTokenTypes.VARIABLE)
+            elif sub.kind is TokenKind.PYTHON_EXPRESSION:
+                continue
+            elif sub.sub_tokens:
+                yield from self._iter_variable_name_sem_tokens(sub.sub_tokens, sem_type, sem_mod)
+            elif sub.kind is TokenKind.VARIABLE_BASE:
+                yield SemTokenInfo(sub.line, sub.col_offset, sub.length, sem_type, sem_mod)
+            elif sub.kind is TokenKind.VARIABLE_TYPE_HINT:
+                yield SemTokenInfo(sub.line, sub.col_offset, sub.length, SemanticTokenTypes.TYPE)
 
     def collect_tokens(
         self,

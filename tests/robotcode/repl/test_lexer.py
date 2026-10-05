@@ -19,6 +19,7 @@ from robotcode.repl._pt.lexer import (
     _split_keyword_for_bdd,
     _split_variable,
 )
+from robotcode.robot.utils import RF_VERSION
 
 # `robot.api.Languages` arrived in RF 6.0 — the localisation tests
 # below skip on RF 5 where the API isn't available.
@@ -121,6 +122,7 @@ def test_split_variable_nested_recursively_unwrapped() -> None:
     assert text_parts == ["$", "{", "$", "{", "inner", "}", "}"]
 
 
+@pytest.mark.skipif(RF_VERSION < (7, 3), reason="type hints need Robot Framework 7.3")
 def test_split_variable_with_type_hint() -> None:
     """`${age: int}` → type-separator + type-hint as separate styles."""
     out = list(_split_variable("${age: int}"))

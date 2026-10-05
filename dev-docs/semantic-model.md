@@ -2856,7 +2856,15 @@ has a fine-grained `TokenKind` (header kinds per section, `SETTING_IMPORT`,
 (`BUILTIN`/`EMBEDDED`/`DECLARATION`/`DOCUMENTATION`), all resolved by the
 analyzer at build time. `collect_tokens_from_model()` is a declarative mapper:
 
-- leaf descent (`sub_tokens` recursively; variable-family kinds render atomically),
+- leaf descent (`sub_tokens` recursively; whole `OPTION`s render atomically as
+  one control-flow token, for `VAR`, `FOR`, `WHILE` and `EXCEPT` alike),
+- variables and `[Arguments]` parameters render only their name (`VARIABLE_BASE`,
+  with the type and modifiers of the enclosing variable or parameter) and
+  their type hint (`type`); prefix, braces, item access, `=`, patterns,
+  defaults and inline Python are left to the TextMate grammar. The analyzer
+  splits each variable as Robot Framework does at its site (`VariableSite`:
+  usage, declaration, untyped declaration, keyword name), and the legacy path
+  renders through the same decomposition,
 - static tables `TokenKind → (LSP type, static modifiers)` and
   `TokenModifier → LSP modifier`,
 - a small legacy-compat emission policy keyed only on TokenKind / NodeKind /
