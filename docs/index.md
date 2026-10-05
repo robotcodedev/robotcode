@@ -86,12 +86,12 @@ features:
 ## See RobotCode in Action
 
 
-![Code Completions](/autocomplete1.gif)
-*Code completions for keywords, arguments and variables in the editor.*
+<video src="./images/vscode-code-intelligence.mp4" width="2072" height="1182" autoplay muted loop playsinline aria-label="Writing a test in VS Code with completion, signature help, a hover and a quick fix"></video>
+*Writing a test with completion, signature help, a hover and a quick fix.*
 
 ---
 
-![Running tests](/running_tests.gif)
+<video src="./images/vscode-run-tests.mp4" width="2072" height="1182" autoplay muted loop playsinline aria-label="Running all tests from the test explorer in VS Code, with the failure shown in the editor"></video>
 *Running tests right from the editor.*
 
 

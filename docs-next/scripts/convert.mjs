@@ -537,6 +537,13 @@ function inlineTransforms(line, ctx) {
         : `![${text}](${importImage(href, ctx)}${title})`
       : `[${text}](${resolveLink(href, ctx)}${title})`,
   );
+  // A screen recording (<video src="…">) goes to src/assets/ like an image and is imported, so the page becomes MDX.
+  line = line.replace(/(<video\b[^>]*?\ssrc=)"([^"]+)"/g, (m, start, src) => {
+    if (/^[a-z]+:/i.test(src)) return m;
+    const name = `recording${ctx.recordings.size + 1}`;
+    ctx.recordings.set(name, importImage(src, ctx));
+    return `${start}{${name}}`;
+  });
   // [[KEY]] outside code spans (markdown-it-kbd)
   return line
     .split(/(`[^`]*`)/)
@@ -710,7 +717,7 @@ function firstParagraph(lines) {
 }
 
 // MDX has no HTML comments: <!-- … --> outside code becomes {/* … */}.
-function toMdx(lines, imports) {
+function toMdx(lines, imports, recordings = new Map()) {
   let fence = null;
   const body = lines.map((l) => {
     const f = /^\s*(```+|~~~+)/.exec(l);
@@ -724,9 +731,11 @@ function toMdx(lines, imports) {
     }
     return l.replace(/<!--(.*?)-->/g, "{/*$1*/}");
   });
-  return imports.size
-    ? [`import { ${[...imports].join(", ")} } from "@astrojs/starlight/components";`, "", ...body]
-    : body;
+  const head = [
+    ...(imports.size ? [`import { ${[...imports].join(", ")} } from "@astrojs/starlight/components";`] : []),
+    ...[...recordings].map(([name, file]) => `import ${name} from "${file}";`),
+  ];
+  return head.length ? [...head, "", ...body] : body;
 }
 
 const sourceOf = new Map(); // written page -> its source, for messages
@@ -745,11 +754,12 @@ const movedSections = {}; // page id -> converted lines
 
 function convertPage(rel, page, src) {
   const outBase = path.join(OUT, page.id);
-  const ctx = { rel, page, pageId: page.id, outDir: path.dirname(outBase), imports: new Set() };
+  const ctx = { rel, page, pageId: page.id, outDir: path.dirname(outBase), imports: new Set(), recordings: new Map() };
   let lines = convertLines(src.lines, ctx);
   for (const [to, moved] of Object.entries(src.moved)) {
-    const movedCtx = { ...ctx, pageId: to, outDir: path.join(OUT, to), imports: new Set() };
+    const movedCtx = { ...ctx, pageId: to, outDir: path.join(OUT, to), imports: new Set(), recordings: new Map() };
     movedSections[to] = { lines: convertLines(moved, movedCtx), source: rel };
+    if (movedCtx.recordings.size) fail([`docs/${rel}: a screen recording in a section moved to ${to}`]);
   }
 
   const title = page.title ?? src.fm.title ?? src.h1;
@@ -779,8 +789,13 @@ function convertPage(rel, page, src) {
   if (date) front.lastUpdated = date;
   if (page.notice) lines = [...page.notice, "", ...lines];
 
-  const mdx = ctx.imports.size > 0;
-  writePage(`${outBase}.${mdx ? "mdx" : "md"}`, front, mdx ? toMdx(lines, ctx.imports) : lines, `docs/${rel}`);
+  const mdx = ctx.imports.size > 0 || ctx.recordings.size > 0;
+  writePage(
+    `${outBase}.${mdx ? "mdx" : "md"}`,
+    front,
+    mdx ? toMdx(lines, ctx.imports, ctx.recordings) : lines,
+    `docs/${rel}`,
+  );
   index.push({ id: page.id, title: front.title, description, order: page.order, date: front.date });
 }
 

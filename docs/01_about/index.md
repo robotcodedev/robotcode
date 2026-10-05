@@ -25,7 +25,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 - **Comprehensive Autocompletion:** Say goodbye to tedious typing! RobotCode provides autocompletion for libraries, resources, variables, and keywords, ensuring you always have the right tools at your fingertips. This includes support for local variables, resources, file-based variables (like Python and YAML), and command line variables, both static and dynamic.
 - **Context-Aware Suggestions:** IntelliSense offers context-sensitive suggestions, helping you code faster with fewer errors. It’s perfect for those moments when you can’t quite remember the exact syntax.
 
-![Autocomplete Libraries and Keywords](images/autocomplete1.gif)
+<video src="../images/vscode-code-intelligence.mp4" width="2072" height="1182" autoplay muted loop playsinline aria-label="Writing a test in VS Code with completion, signature help, a hover and a quick fix"></video>
 
 ### Code Navigation
 
@@ -48,7 +48,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 - **Integrated Testing and Debugging:** RobotCode allows you to run and debug your Robot Framework test cases directly from within Visual Studio Code. This tight integration means you can execute tests, set breakpoints, and step through code without leaving the editor.
 - **Real-Time Log Navigation:** While debugging, RobotCode provides a live view of log messages in the debug console, allowing you to quickly identify and navigate to the source of any issues.
 
-![Running Tests](images/running_tests.gif)
+<video src="../images/vscode-run-tests.mp4" width="2072" height="1182" autoplay muted loop playsinline aria-label="Running all tests from the test explorer in VS Code, with the failure shown in the editor"></video>
 
 ### Multi-root Workspace Support
 
