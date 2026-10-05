@@ -206,6 +206,11 @@
   animation-delay: calc(var(--i) * var(--step-delay, 1.2s) + 0.2s);
 }
 
+/* In a panel with slides, only the slide being played shows its steps one by one. */
+.is-armed.is-playing .is-active [data-demo-slide]:not(.is-playing) .rc-step {
+  animation: none;
+}
+
 .is-armed.is-playing [aria-pressed="true"] > .rc-demo-progress {
   animation: rc-progress var(--duration) linear forwards;
 }

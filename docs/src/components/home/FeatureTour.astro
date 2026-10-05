@@ -1,6 +1,6 @@
 ---
-// The home page's feature overview: the features on one side, a window on the other that shows the selected one — a
-// screen recording, a screenshot or a terminal session — played one after another by <rc-demo> (see
+// The home page's feature overview: the features on one side, a window on the other that shows examples of the
+// selected one — screen recordings, screenshots and terminal sessions — played one after another by <rc-demo> (see
 // demo-player.ts). The terminal sessions come from real runs of a small example project, abridged; the screen
 // recordings and the editor screenshots show that example project too.
 import { Icon } from "@astrojs/starlight/components";
@@ -18,46 +18,44 @@ import pycharmInlayHints from "../../assets/screenshots/pycharm-inlayhints.png";
 import pycharmReferences from "../../assets/screenshots/pycharm-references.png";
 import vscodeCodeIntelligence from "../../assets/screenshots/vscode-code-intelligence.mp4";
 import vscodeCompletion from "../../assets/screenshots/vscode-completion.png";
+import vscodeDebugConsole from "../../assets/screenshots/vscode-debug-console.mp4";
+import vscodeDebugFailure from "../../assets/screenshots/vscode-debug-failure.mp4";
 import vscodeDebug from "../../assets/screenshots/vscode-debug.mp4";
+import vscodeDiagnosticsRecording from "../../assets/screenshots/vscode-diagnostics.mp4";
 import vscodeDiagnostics from "../../assets/screenshots/vscode-diagnostics.png";
+import vscodeDocumentationViewer from "../../assets/screenshots/vscode-documentation-viewer.mp4";
+import vscodeFindReferences from "../../assets/screenshots/vscode-find-references.mp4";
+import vscodeGoToDefinition from "../../assets/screenshots/vscode-go-to-definition.mp4";
 import vscodeHover from "../../assets/screenshots/vscode-hover.png";
 import vscodeInlayHints from "../../assets/screenshots/vscode-inlayhints.png";
+import vscodeKeywordsView from "../../assets/screenshots/vscode-keywords-view.mp4";
+import vscodeLogAfterRun from "../../assets/screenshots/vscode-log-after-run.mp4";
+import vscodeProfile from "../../assets/screenshots/vscode-profile.mp4";
 import vscodeReferences from "../../assets/screenshots/vscode-references.png";
+import vscodeRepl from "../../assets/screenshots/vscode-repl.mp4";
+import vscodeRobotToml from "../../assets/screenshots/vscode-robot-toml.mp4";
 import vscodeRunTests from "../../assets/screenshots/vscode-run-tests.mp4";
 
 type TerminalStep =
   | { kind: "command"; prompt?: string; command: string; output?: string[] }
   | { kind: "file"; name: string; content: string[] };
-// A slide of a series: a screenshot, or a 2072×1182 screen recording with its length in seconds.
-type Slide = { editor: string; label: string; alt: string } & (
-  | { image: ImageMetadata }
-  | { video: string; duration: number }
+// An example of a feature: a screenshot, a 2072×1182 screen recording with its length in seconds, or a terminal
+// session. The window title names the editor (or the terminal) and the label of each.
+type Slide = { editor: string; label: string } & (
+  | { image: ImageMetadata; alt: string }
+  | { video: string; duration: number; alt: string }
+  | { terminal: TerminalStep[] }
 );
-type Panel =
-  | {
-      kind: "series";
-      // Slides shown one after another, a screenshot for `seconds`, a recording until it has played once; the
-      // window title names the editor and the label of each.
-      slides: Slide[];
-      seconds?: number;
-    }
-  | {
-      kind: "video";
-      title: string;
-      // A 2072×1182 screen recording, played from the start whenever its panel is shown.
-      src: string;
-      label: string;
-      // The length of the recording, in seconds: the panel stays until it has played once.
-      duration: number;
-    }
-  | { kind: "terminal"; title: string; steps: TerminalStep[] };
 
 type Feature = {
   icon: ComponentProps<typeof Icon>["name"];
   title: string;
   html: string;
   links: [string, string][];
-  panel: Panel;
+  // The examples, shown one after another: a screenshot for `seconds`, a recording until it has played once, a
+  // terminal session until its steps have appeared and stayed a while.
+  slides: Slide[];
+  seconds?: number;
 };
 
 const FEATURES: Feature[] = [
@@ -68,15 +66,56 @@ const FEATURES: Feature[] = [
       "Context-aware completion for keywords (incl. embedded args), variables, libraries and resources. Hover " +
       "docs, go-to-definition, find references, signature help, and live diagnostics — all powered by Robot " +
       `Framework's own parser. Optional <a href="https://robocop.readthedocs.io">Robocop</a> integration adds ` +
-      "further linting and formatting checks on top.",
-    links: [["Feature overview", "/about/"]],
-    panel: {
-      kind: "video",
-      title: "VS Code",
-      src: vscodeCodeIntelligence,
-      label: "Writing a test in VS Code with completion, signature help, a hover and a quick fix",
-      duration: 40.1,
-    },
+      "further linting and formatting checks on top. The Documentation Viewer and the Keywords view show the " +
+      "keywords of your libraries and resource files.",
+    links: [
+      ["Feature overview", "/about/"],
+      ["Documentation Viewer", "/guides/browsing-documentation/#vs-code"],
+    ],
+    slides: [
+      {
+        editor: "VS Code",
+        label: "Writing a test",
+        video: vscodeCodeIntelligence,
+        duration: 40.6,
+        alt: "Writing a test in VS Code with completion, signature help, a hover and a quick fix",
+      },
+      {
+        editor: "VS Code",
+        label: "Documentation Viewer",
+        video: vscodeDocumentationViewer,
+        duration: 24.1,
+        alt: "A click in a keyword's hover opens the Documentation Viewer beside the editor, which links to the data types",
+      },
+      {
+        editor: "VS Code",
+        label: "Go to Definition",
+        video: vscodeGoToDefinition,
+        duration: 8.1,
+        alt: "F12 on a keyword call opens the keyword in its resource file, and F12 there opens the Python method of the library",
+      },
+      {
+        editor: "VS Code",
+        label: "Find References",
+        video: vscodeFindReferences,
+        duration: 12.1,
+        alt: "Shift+F12 lists every call of a keyword in the project, also the one passed to Run Keyword And Expect Error",
+      },
+      {
+        editor: "VS Code",
+        label: "Diagnostics",
+        video: vscodeDiagnosticsRecording,
+        duration: 14.6,
+        alt: "A misspelt keyword call and a test without documentation in the Problems panel, from RobotCode and Robocop",
+      },
+      {
+        editor: "VS Code",
+        label: "Keywords view",
+        video: vscodeKeywordsView,
+        duration: 14.6,
+        alt: "The Keywords view lists the keywords a file imports, and its Insert action puts one into the test",
+      },
+    ],
   },
   {
     icon: "rocket",
@@ -88,25 +127,70 @@ const FEATURES: Feature[] = [
       ["Get started with VS Code", "/getting-started/vscode/"],
       ["Command-line debugging", "/guides/robot-debug/"],
     ],
-    panel: {
-      kind: "series",
-      slides: [
-        {
-          editor: "VS Code",
-          label: "Test Explorer",
-          video: vscodeRunTests,
-          duration: 11.1,
-          alt: "Running all tests from the test explorer in VS Code, with the failure shown in the editor",
-        },
-        {
-          editor: "VS Code",
-          label: "Debugging",
-          video: vscodeDebug,
-          duration: 36.1,
-          alt: "Debugging a test in VS Code: a breakpoint, Step Into and Step Over, and the variables as they change",
-        },
-      ],
-    },
+    slides: [
+      {
+        editor: "VS Code",
+        label: "Test Explorer",
+        video: vscodeRunTests,
+        duration: 11.1,
+        alt: "Running all tests from the test explorer in VS Code, with the failure shown in the editor",
+      },
+      {
+        editor: "VS Code",
+        label: "Debugging",
+        video: vscodeDebug,
+        duration: 36.1,
+        alt: "Debugging a test in VS Code: a breakpoint, Step Into and Step Over, and the variables as they change",
+      },
+      {
+        editor: "VS Code",
+        label: "Stopping at a failure",
+        video: vscodeDebugFailure,
+        duration: 10.1,
+        alt: "Debugging a failing test without a breakpoint stops at the keyword that fails, with the values of its variables",
+      },
+      {
+        editor: "VS Code",
+        label: "Debug Console",
+        video: vscodeDebugConsole,
+        duration: 14.6,
+        alt: "At a breakpoint, a variable and a keyword call typed into the Debug Console are evaluated in the stopped test",
+      },
+      {
+        editor: "VS Code",
+        label: "Log",
+        video: vscodeLogAfterRun,
+        duration: 12.2,
+        alt: "After a test run, its log opens beside the editor",
+      },
+      {
+        editor: "Terminal",
+        label: "robot-debug",
+        terminal: [
+          {
+            kind: "command",
+            command: 'robotcode robot-debug -bl "Tests.Login.Login Works"',
+            output: ["* exception  BuiltIn.Should Be Equal  (resources/shop.resource:19)"],
+          },
+          {
+            kind: "command",
+            prompt: "(rdb)",
+            command: ".where",
+            output: [
+              "> #0  BuiltIn.Should Be Equal         resources/shop.resource:19",
+              "  #1  shop.Welcome Message Should Be  tests/login.robot:16",
+              "  #2  Login Works                     tests/login.robot:11",
+            ],
+          },
+          {
+            kind: "command",
+            prompt: "(rdb)",
+            command: ".print ${greeting}",
+            output: ["${greeting} = 'Welcome back, alice!'"],
+          },
+        ],
+      },
+    ],
   },
   {
     icon: "setting",
@@ -115,32 +199,72 @@ const FEATURES: Feature[] = [
       'A unified <a href="/reference/config/">robot.toml</a> with profiles for dev, staging, CI, OS-specific or ' +
       "browser-specific setups. Editor, CLI and CI all read the same configuration — what works locally works in CI.",
     links: [["Configure your project", "/getting-started/configuration/"]],
-    panel: {
-      kind: "terminal",
-      title: "Terminal",
-      steps: [
-        {
-          kind: "file",
-          name: "robot.toml",
-          content: [
-            'paths = ["tests"]',
-            'python-path = ["libraries"]',
-            "",
-            "[variables]",
-            'BASE_URL = "http://localhost:8080"',
-            'BROWSER = "chromium"',
-            "",
-            "[profiles.ci.extend-variables]",
-            'BASE_URL = "https://staging.shop.example"',
-          ],
-        },
-        {
-          kind: "command",
-          command: "robotcode -p ci profiles show",
-          output: ["[variables]", 'BASE_URL = "https://staging.shop.example"', 'BROWSER = "chromium"'],
-        },
-      ],
-    },
+    slides: [
+      {
+        editor: "Terminal",
+        label: "Profiles",
+        terminal: [
+          {
+            kind: "file",
+            name: "robot.toml",
+            content: [
+              'paths = ["tests"]',
+              'python-path = ["libraries"]',
+              "",
+              "[variables]",
+              'BASE_URL = "http://localhost:8080"',
+              'BROWSER = "chromium"',
+              "",
+              "[profiles.ci.extend-variables]",
+              'BASE_URL = "https://staging.shop.example"',
+            ],
+          },
+          {
+            kind: "command",
+            command: "robotcode -p ci profiles show",
+            output: ["[variables]", 'BASE_URL = "https://staging.shop.example"', 'BROWSER = "chromium"'],
+          },
+        ],
+      },
+      {
+        editor: "VS Code",
+        label: "robot.toml",
+        video: vscodeRobotToml,
+        duration: 12.6,
+        alt: "Completion of a setting's values and the documentation of a setting in robot.toml",
+      },
+      {
+        editor: "VS Code",
+        label: "Selecting a profile",
+        video: vscodeProfile,
+        duration: 14.6,
+        alt: "Selecting the ci profile in VS Code; a test debugged with it uses the profile's BASE_URL",
+      },
+      {
+        editor: "Terminal",
+        label: "CI",
+        terminal: [
+          {
+            kind: "file",
+            name: ".github/workflows/tests.yml",
+            content: [
+              "name: Tests",
+              "on: push",
+              "jobs:",
+              "  tests:",
+              "    runs-on: ubuntu-latest",
+              "    steps:",
+              "      - uses: actions/checkout@v6",
+              "      - uses: actions/setup-python@v6",
+              "        with:",
+              '          python-version: "3.13"',
+              "      - run: pip install robotframework robotcode[runner]",
+              "      - run: robotcode -p ci robot",
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     icon: "seti:shell",
@@ -149,63 +273,178 @@ const FEATURES: Feature[] = [
       "A complete command-line interface for running, discovering, analyzing and inspecting Robot Framework " +
       "projects. Every command is project-aware, JSON-friendly, and CI-ready.",
     links: [["CLI reference", "/reference/cli/"]],
-    panel: {
-      kind: "terminal",
-      title: "Terminal",
-      steps: [
-        {
-          kind: "command",
-          command: "robotcode discover tests -i smoke",
-          output: [
-            "- Tests.Cart.Add Item To Cart (tests/cart.robot:15)",
-            "- Tests.Login.Login Works (tests/login.robot:11)",
-            "- Tests.Login.Logout Works (tests/login.robot:18)",
-            "- Tests.Orders.Order Coffee (tests/orders.robot:14)",
-          ],
-        },
-        {
-          kind: "command",
-          command: "robotcode analyze code",
-          output: [
-            "resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
-            "Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
-          ],
-        },
-        {
-          kind: "command",
-          command: "robotcode results summary",
-          output: ["- Status: ❌ FAIL", "- Total: 13", "- Passed: 12", "- Failed: 1"],
-        },
-      ],
-    },
+    slides: [
+      {
+        editor: "Terminal",
+        label: "Discover tests",
+        terminal: [
+          {
+            kind: "command",
+            command: "robotcode discover tests -i smoke",
+            output: [
+              "- Tests.Cart.Add Item To Cart (tests/cart.robot:15)",
+              "- Tests.Login.Login Works (tests/login.robot:11)",
+              "- Tests.Login.Logout Works (tests/login.robot:18)",
+              "- Tests.Orders.Order Coffee (tests/orders.robot:14)",
+            ],
+          },
+          {
+            kind: "command",
+            command: "robotcode discover tests -btm Risk:high",
+            output: [
+              "- Tests.Cart.Cart Total Adds Up (tests/cart.robot:29)",
+              "- Tests.Login.Login With A Wrong Password Fails (tests/login.robot:26)",
+              "- Tests.Orders.Sold Out Product Cannot Be Ordered (tests/orders.robot:27)",
+            ],
+          },
+        ],
+      },
+      {
+        editor: "Terminal",
+        label: "Analyze code",
+        terminal: [
+          {
+            kind: "command",
+            command: "robotcode analyze code",
+            output: [
+              "resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
+              "Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
+            ],
+          },
+        ],
+      },
+      {
+        editor: "Terminal",
+        label: "Results",
+        terminal: [
+          {
+            kind: "command",
+            command: "robotcode results summary",
+            output: ["- Status: ❌ FAIL", "- Total: 13", "- Passed: 12", "- Failed: 1"],
+          },
+          {
+            kind: "command",
+            command: "robotcode results summary --failed",
+            output: [
+              "- ❌ FAIL Tests.Login.Login Works (tests/login.robot:11)",
+              "  > Welcome back, alice! != Welcome back, Alice!",
+            ],
+          },
+        ],
+      },
+      {
+        editor: "Terminal",
+        label: "Library documentation",
+        terminal: [
+          {
+            kind: "command",
+            command: "robotcode doc keywords ShopLibrary",
+            output: [
+              "Library ShopLibrary",
+              "",
+              "- Log In (user: str, password: str) — Logs user in. Fails if the password is wrong.",
+              "- Log Out () — Logs the current user out.",
+              "- Place Order (product: str, quantity: int = ${1}, express: bool = ${False}) — Places an order …",
+              "- Put In Cart (product: str, quantity: int = ${1}) — Puts quantity items of product into the cart.",
+              "- Search Products (text: str) — Returns the products whose name contains text.",
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     icon: "document",
     title: "Interactive REPL",
     html:
-      "Try keywords interactively with <code>robotcode repl</code>. Great for experimentation, demos, and " +
-      "debugging snippets.",
-    links: [["REPL guide", "/guides/repl/"]],
-    panel: {
-      kind: "terminal",
-      title: "Terminal",
-      steps: [
-        { kind: "command", command: "robotcode repl" },
-        { kind: "command", prompt: ">>>", command: "Import Resource    ${CURDIR}/resources/orders.resource" },
-        {
-          kind: "command",
-          prompt: ">>>",
-          command: "${order}=    Create Order    coffee    quantity=2",
-          output: [
-            "[ INFO ] Ordered 2 x coffee (express: False)",
-            "[ INFO ] ${id} = order-4711",
-            "[ INFO ] ${order} = order-4711",
-          ],
-        },
-        { kind: "command", prompt: ">>>", command: "Should Start With    ${order}    order-" },
-        { kind: "command", prompt: ">>>", command: ".save order.robot", output: ["Wrote order.robot (3 entries)"] },
-      ],
-    },
+      "Try keywords interactively with <code>robotcode repl</code>, in a terminal or in VS Code. Great for " +
+      "experimentation, demos, and debugging snippets; attach the debugger at the prompt to stop inside a keyword " +
+      "and inspect its variables.",
+    links: [
+      ["REPL guide", "/guides/repl/"],
+      ["Debugging at the prompt", "/guides/repl/#debugging-at-the-prompt"],
+    ],
+    slides: [
+      {
+        editor: "Terminal",
+        label: "Keywords of a resource",
+        terminal: [
+          { kind: "command", command: "robotcode repl" },
+          { kind: "command", prompt: ">>>", command: "Import Resource    ${CURDIR}/resources/orders.resource" },
+          {
+            kind: "command",
+            prompt: ">>>",
+            command: "${order}=    Create Order    coffee    quantity=2",
+            output: [
+              "[ INFO ] Ordered 2 x coffee (express: False)",
+              "[ INFO ] ${id} = order-4711",
+              "[ INFO ] ${order} = order-4711",
+            ],
+          },
+          { kind: "command", prompt: ">>>", command: "Should Start With    ${order}    order-" },
+          { kind: "command", prompt: ">>>", command: ".save order.robot", output: ["Wrote order.robot (3 entries)"] },
+        ],
+      },
+      {
+        editor: "Terminal",
+        label: "Browser library",
+        terminal: [
+          { kind: "command", command: "robotcode repl" },
+          { kind: "command", prompt: ">>>", command: "Import Library    Browser" },
+          {
+            kind: "command",
+            prompt: ">>>",
+            command: "New Page    ${BASE_URL}",
+            output: ["[ INFO ] Successfully initialized new page object and opened url: http://localhost:8080"],
+          },
+          {
+            kind: "command",
+            prompt: ">>>",
+            command: 'Fill Text    css=input[aria-label="Search products"]    COFF',
+            output: ["[ INFO ] Fills the text 'COFF' in the given field."],
+          },
+          { kind: "command", prompt: ">>>", command: "Keyboard Key    press    Enter" },
+          {
+            kind: "command",
+            prompt: ">>>",
+            command: "Get Text    css=.product .name",
+            output: ["[ INFO ] Text: ['coffee']"],
+          },
+        ],
+      },
+      {
+        editor: "VS Code",
+        label: "REPL",
+        video: vscodeRepl,
+        duration: 14.6,
+        alt: "RobotCode: Start Terminal REPL opens the REPL in VS Code's terminal, where a library keyword is called",
+      },
+      {
+        editor: "Terminal",
+        label: "Debugger",
+        terminal: [
+          { kind: "command", command: "robotcode repl" },
+          { kind: "command", prompt: ">>>", command: "Import Resource    ${CURDIR}/resources/orders.resource" },
+          { kind: "command", prompt: ">>>", command: ".debug on", output: ["debugger: attached"] },
+          {
+            kind: "command",
+            prompt: ">>>",
+            command: ".break Place Order",
+            output: ["breakpoint 1 at keyword 'Place Order'"],
+          },
+          {
+            kind: "command",
+            prompt: ">>>",
+            command: "${order}=    Create Order    coffee",
+            output: [
+              "[ INFO ] Ordered 1 x coffee (express: False)",
+              "* breakpoint  ShopLibrary.Place Order  (resources/orders.resource:14)",
+            ],
+          },
+          { kind: "command", prompt: "(rdb)", command: ".print ${product}", output: ["${product} = 'coffee'"] },
+        ],
+      },
+    ],
   },
   {
     icon: "laptop",
@@ -214,96 +453,93 @@ const FEATURES: Feature[] = [
       "One Robot Framework language server powers VS Code, JetBrains, Neovim and any LSP-capable editor. Choose " +
       "your IDE — capabilities stay aligned.",
     links: [["Set up your editor", "/getting-started/"]],
-    panel: {
-      kind: "series",
-      seconds: 3,
-      slides: [
-        {
-          editor: "VS Code",
-          label: "Diagnostics",
-          image: vscodeDiagnostics,
-          alt: "A misspelt keyword call and its diagnostic in VS Code",
-        },
-        {
-          editor: "PyCharm",
-          label: "Diagnostics",
-          image: pycharmDiagnostics,
-          alt: "A misspelt keyword call and its diagnostic in PyCharm",
-        },
-        {
-          editor: "Neovim",
-          label: "Diagnostics",
-          image: neovimDiagnostics,
-          alt: "A misspelt keyword call and its diagnostic in Neovim",
-        },
-        {
-          editor: "VS Code",
-          label: "Completion",
-          image: vscodeCompletion,
-          alt: "Completing a keyword call in VS Code, with the documentation of the selected keyword",
-        },
-        {
-          editor: "PyCharm",
-          label: "Completion",
-          image: pycharmCompletion,
-          alt: "Completing a keyword call in PyCharm",
-        },
-        {
-          editor: "Neovim",
-          label: "Completion",
-          image: neovimCompletion,
-          alt: "Completing a keyword call in Neovim",
-        },
-        {
-          editor: "VS Code",
-          label: "Inlay hints",
-          image: vscodeInlayHints,
-          alt: "The argument names and namespaces RobotCode shows next to the keyword calls in VS Code",
-        },
-        {
-          editor: "PyCharm",
-          label: "Inlay hints",
-          image: pycharmInlayHints,
-          alt: "The argument names and namespaces RobotCode shows next to the keyword calls in PyCharm",
-        },
-        {
-          editor: "Neovim",
-          label: "Inlay hints",
-          image: neovimInlayHints,
-          alt: "The argument names RobotCode shows next to the arguments in Neovim",
-        },
-        {
-          editor: "VS Code",
-          label: "References",
-          image: vscodeReferences,
-          alt: "All calls of a keyword in the project, in VS Code's Peek References view",
-        },
-        {
-          editor: "PyCharm",
-          label: "References",
-          image: pycharmReferences,
-          alt: "All calls of a keyword in the project, in PyCharm's Show Usages popup",
-        },
-        {
-          editor: "Neovim",
-          label: "References",
-          image: neovimReferences,
-          alt: "All calls of a keyword in the project, in Neovim's quickfix list",
-        },
-        {
-          editor: "VS Code",
-          label: "Documentation",
-          image: vscodeHover,
-          alt: "The documentation of a keyword, with its arguments, in a VS Code hover",
-        },
-        {
-          editor: "PyCharm",
-          label: "Documentation",
-          image: pycharmHover,
-          alt: "The documentation of a keyword, with its arguments, in PyCharm's Quick Documentation",
-        },
-      ],
-    },
+    seconds: 3,
+    slides: [
+      {
+        editor: "VS Code",
+        label: "Diagnostics",
+        image: vscodeDiagnostics,
+        alt: "A misspelt keyword call and its diagnostic in VS Code",
+      },
+      {
+        editor: "PyCharm",
+        label: "Diagnostics",
+        image: pycharmDiagnostics,
+        alt: "A misspelt keyword call and its diagnostic in PyCharm",
+      },
+      {
+        editor: "Neovim",
+        label: "Diagnostics",
+        image: neovimDiagnostics,
+        alt: "A misspelt keyword call and its diagnostic in Neovim",
+      },
+      {
+        editor: "VS Code",
+        label: "Completion",
+        image: vscodeCompletion,
+        alt: "Completing a keyword call in VS Code, with the documentation of the selected keyword",
+      },
+      {
+        editor: "PyCharm",
+        label: "Completion",
+        image: pycharmCompletion,
+        alt: "Completing a keyword call in PyCharm",
+      },
+      {
+        editor: "Neovim",
+        label: "Completion",
+        image: neovimCompletion,
+        alt: "Completing a keyword call in Neovim",
+      },
+      {
+        editor: "VS Code",
+        label: "Inlay hints",
+        image: vscodeInlayHints,
+        alt: "The argument names and namespaces RobotCode shows next to the keyword calls in VS Code",
+      },
+      {
+        editor: "PyCharm",
+        label: "Inlay hints",
+        image: pycharmInlayHints,
+        alt: "The argument names and namespaces RobotCode shows next to the keyword calls in PyCharm",
+      },
+      {
+        editor: "Neovim",
+        label: "Inlay hints",
+        image: neovimInlayHints,
+        alt: "The argument names RobotCode shows next to the arguments in Neovim",
+      },
+      {
+        editor: "VS Code",
+        label: "References",
+        image: vscodeReferences,
+        alt: "All calls of a keyword in the project, in VS Code's Peek References view",
+      },
+      {
+        editor: "PyCharm",
+        label: "References",
+        image: pycharmReferences,
+        alt: "All calls of a keyword in the project, in PyCharm's Show Usages popup",
+      },
+      {
+        editor: "Neovim",
+        label: "References",
+        image: neovimReferences,
+        alt: "All calls of a keyword in the project, in Neovim's quickfix list",
+      },
+      {
+        editor: "VS Code",
+        label: "Documentation",
+        image: vscodeHover,
+        alt: "The documentation of a keyword, with its arguments, in a VS Code hover",
+      },
+      {
+        editor: "PyCharm",
+        label: "Documentation",
+        image: pycharmHover,
+        alt: "The documentation of a keyword, with its arguments, in PyCharm's Quick Documentation",
+      },
+    ],
   },
 ];
 
@@ -311,19 +547,17 @@ const FEATURES: Feature[] = [
 const STEP_DELAY = 1;
 const HOLD = 4;
 
-const duration = (panel: Panel) =>
-  panel.kind === "terminal"
-    ? panel.steps.length * STEP_DELAY + HOLD
-    : panel.kind === "series"
-      ? panel.slides.reduce((sum, slide) => sum + slideSeconds(panel, slide), 0)
-      : panel.duration;
-type Series = Extract<Panel, { kind: "series" }>;
-const slideSeconds = (panel: Series, slide: Slide) => ("video" in slide ? slide.duration : (panel.seconds ?? 0));
+const slideSeconds = (feature: Feature, slide: Slide) =>
+  "video" in slide
+    ? slide.duration
+    : "terminal" in slide
+      ? slide.terminal.length * STEP_DELAY + HOLD
+      : (feature.seconds ?? 0);
+const duration = (feature: Feature) => feature.slides.reduce((sum, slide) => sum + slideSeconds(feature, slide), 0);
 // A series that shows each feature in several editors sets its dots apart by feature.
-const grouped = (panel: Series) => new Set(panel.slides.map(({ label }) => label)).size < panel.slides.length;
+const grouped = (slides: Slide[]) => new Set(slides.map(({ label }) => label)).size < slides.length;
 // A slide's window title names the editor and what it shows; the slide's dot carries the same name.
 const slideTitle = (slide: Slide) => `${slide.editor} · ${slide.label}`;
-const title = (panel: Panel) => (panel.kind === "series" ? slideTitle(panel.slides[0]) : panel.title);
 
 // Colours the section headers, keys and strings of the TOML file shown.
 const toml = (line: string) =>
@@ -338,22 +572,22 @@ const toml = (line: string) =>
 <rc-demo class="rc-tour not-content" style={`--step-delay: ${STEP_DELAY}s`}>
   <ol class="rc-tour-list">
     {
-      FEATURES.map(({ icon, title, html, links, panel }, index) => (
+      FEATURES.map((feature, index) => (
         <li class="rc-tour-item">
           <button
             type="button"
             data-demo-tab
             aria-pressed={index === 0 ? "true" : "false"}
-            style={`--duration: ${duration(panel)}s`}
+            style={`--duration: ${duration(feature)}s`}
           >
-            <Icon name={icon} class="rc-tour-icon" />
-            <span>{title}</span>
+            <Icon name={feature.icon} class="rc-tour-icon" />
+            <span>{feature.title}</span>
             <span class="rc-demo-progress" aria-hidden="true" />
           </button>
           <div class="rc-tour-body">
-            <p set:html={html} />
+            <p set:html={feature.html} />
             <p class="rc-tour-links">
-              {links.map(([text, href], i) => (
+              {feature.links.map(([text, href], i) => (
                 <>
                   {i > 0 && " · "}
                   <a href={href}>{text}</a>
@@ -369,85 +603,102 @@ const toml = (line: string) =>
   <figure class="rc-window rc-tour-window" data-llms-skip>
     <div class="rc-window-bar">
       <span class="rc-window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="rc-window-title" data-demo-title>{title(FEATURES[0].panel)}</span>
+      <span class="rc-window-title" data-demo-title>{slideTitle(FEATURES[0].slides[0])}</span>
       <PauseButton />
     </div>
     <div class="rc-demo-panels">
       {
-        FEATURES.map(({ title: name, panel }, index) => (
+        FEATURES.map((feature, index) => (
           <div
-            class:list={["rc-tour-panel", `rc-tour-${panel.kind}`, { "is-active": index === 0 }]}
+            class:list={["rc-tour-panel", { "is-active": index === 0 }]}
             data-demo-panel
-            data-title={title(panel)}
-            aria-label={name}
+            data-title={slideTitle(feature.slides[0])}
+            aria-label={feature.title}
           >
-            {panel.kind === "video" ? (
-              <button type="button" class="rc-tour-shot" aria-label={`Enlarge: ${panel.label}`}>
-                <video src={panel.src} width="2072" height="1182" muted loop playsinline preload="metadata" />
-              </button>
-            ) : panel.kind === "series" ? (
-              <>
-                <div class="rc-tour-slides">
-                  {panel.slides.map((slide, slideIndex) => (
-                    <button
-                      type="button"
-                      class:list={["rc-tour-shot", { "is-current": slideIndex === 0 }]}
-                      data-demo-slide
-                      data-title={slideTitle(slide)}
-                      data-slide-seconds={slideSeconds(panel, slide)}
-                      aria-label={`Enlarge: ${slide.alt}`}
-                    >
-                      {"video" in slide ? (
-                        <video src={slide.video} width="2072" height="1182" muted loop playsinline preload="metadata" />
-                      ) : (
-                        <Image
-                          src={slide.image}
-                          alt={slide.alt}
-                          widths={[1036, slide.image.width]}
-                          sizes="(min-width: 60rem) 38rem, 100vw"
-                        />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div class="rc-tour-slide-tabs">
-                  {panel.slides.map((slide, slideIndex) => (
-                    <button
-                      type="button"
-                      class:list={{
-                        "is-group-start":
-                          grouped(panel) && slideIndex > 0 && slide.label !== panel.slides[slideIndex - 1].label,
-                      }}
-                      data-demo-slide-tab
-                      aria-pressed={slideIndex === 0 ? "true" : "false"}
-                      aria-label={slideTitle(slide)}
-                      title={slideTitle(slide)}
-                    ></button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <ol class="rc-term">
-                {panel.steps.map((step, stepIndex) => (
-                  <li class="rc-step" style={`--i: ${stepIndex}`}>
-                    {step.kind === "file" ? (
-                      <div class="rc-term-file">
-                        <span class="rc-term-filename">{step.name}</span>
-                        <pre set:html={step.content.map(toml).join("\n")} />
-                      </div>
+            <div class="rc-tour-slides">
+              {feature.slides.map((slide, slideIndex) =>
+                "terminal" in slide ? (
+                  <div
+                    class:list={["rc-tour-term", { "is-current": slideIndex === 0 }]}
+                    data-demo-slide
+                    data-title={slideTitle(slide)}
+                    data-slide-seconds={slideSeconds(feature, slide)}
+                  >
+                    <ol class="rc-term">
+                      {slide.terminal.map((step, stepIndex) => (
+                        <li class="rc-step" style={`--i: ${stepIndex}`}>
+                          {step.kind === "file" ? (
+                            <div class="rc-term-file">
+                              <span class="rc-term-filename">{step.name}</span>
+                              {step.name.endsWith(".toml") ? (
+                                <pre set:html={step.content.map(toml).join("\n")} />
+                              ) : (
+                                <pre>{step.content.join("\n")}</pre>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <div class="rc-term-command">
+                                <span class="rc-term-prompt">{step.prompt ?? "$"}</span>
+                                <code>{step.command}</code>
+                              </div>
+                              {step.output && <pre>{step.output.join("\n")}</pre>}
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    class:list={["rc-tour-shot", { "is-current": slideIndex === 0 }]}
+                    data-demo-slide
+                    data-title={slideTitle(slide)}
+                    data-slide-seconds={slideSeconds(feature, slide)}
+                    aria-label={`Enlarge: ${slide.alt}`}
+                  >
+                    {"video" in slide ? (
+                      // Only the recording the tour starts with loads with the page; the others load when their
+                      // slide is shown.
+                      <video
+                        src={slide.video}
+                        width="2072"
+                        height="1182"
+                        muted
+                        loop
+                        playsinline
+                        preload={index === 0 && slideIndex === 0 ? "metadata" : "none"}
+                      />
                     ) : (
-                      <>
-                        <div class="rc-term-command">
-                          <span class="rc-term-prompt">{step.prompt ?? "$"}</span>
-                          <code>{step.command}</code>
-                        </div>
-                        {step.output && <pre>{step.output.join("\n")}</pre>}
-                      </>
+                      <Image
+                        src={slide.image}
+                        alt={slide.alt}
+                        widths={[1036, slide.image.width]}
+                        sizes="(min-width: 60rem) 38rem, 100vw"
+                      />
                     )}
-                  </li>
-                ))}
-              </ol>
-            )}
+                  </button>
+                ),
+              )}
+            </div>
+            <div class="rc-tour-slide-tabs">
+              {feature.slides.map((slide, slideIndex) => (
+                <button
+                  type="button"
+                  class:list={{
+                    "is-group-start":
+                      grouped(feature.slides) &&
+                      slideIndex > 0 &&
+                      slide.label !== feature.slides[slideIndex - 1].label,
+                  }}
+                  data-demo-slide-tab
+                  aria-pressed={slideIndex === 0 ? "true" : "false"}
+                  aria-label={slideTitle(slide)}
+                  title={slideTitle(slide)}
+                ></button>
+              ))}
+            </div>
           </div>
         ))
       }
@@ -614,10 +865,6 @@ const toml = (line: string) =>
     height: auto;
   }
 
-  .rc-tour-video .rc-tour-shot {
-    background: #1e1e1e;
-  }
-
   .rc-tour-lightbox {
     width: 100vw;
     max-width: none;
@@ -647,24 +894,33 @@ const toml = (line: string) =>
     box-shadow: 0 1.25rem 3.5rem rgb(0 0 0 / 60%);
   }
 
-  /* A series of screenshots: all in one grid cell. Only the others are hidden; the current one inherits the visibility
-     of its panel, so it stays hidden while another panel is shown. While the demo plays, the current screenshot fades
-     in on top of the previous one, which is hidden once it is covered. */
+  /* The examples of a feature: all in one grid cell, so the window keeps the height of the tallest. Only the others
+     are hidden; the current one inherits the visibility of its panel, so it stays hidden while another panel is shown.
+     While the demo plays, the current example fades in on top of the previous one, which is hidden once it is
+     covered. */
   .rc-tour-slides {
     display: grid;
     flex: 1;
-    background: #14161b;
+  }
+
+  .rc-tour-slides > [data-demo-slide] {
+    grid-area: 1 / 1;
+    min-width: 0;
   }
 
   .rc-tour-slides > .rc-tour-shot {
-    grid-area: 1 / 1;
+    background: #14161b;
+  }
+
+  .rc-tour-slides > .rc-tour-term {
+    background: var(--rc-terminal-bg);
   }
 
   .rc-tour-slides > .is-current {
     z-index: 1;
   }
 
-  .rc-tour-slides > .rc-tour-shot:not(.is-current) {
+  .rc-tour-slides > [data-demo-slide]:not(.is-current) {
     opacity: 0;
     visibility: hidden;
   }
@@ -673,7 +929,7 @@ const toml = (line: string) =>
     transition: opacity 0.6s ease;
   }
 
-  .is-armed .rc-tour-slides > .rc-tour-shot:not(.is-current) {
+  .is-armed .rc-tour-slides > [data-demo-slide]:not(.is-current) {
     transition:
       opacity 0s 0.6s,
       visibility 0s 0.6s;
@@ -691,8 +947,8 @@ const toml = (line: string) =>
   .rc-tour-slide-tabs button {
     display: grid;
     place-items: center;
-    width: 1.4rem;
-    height: 1.4rem;
+    width: 1.5rem;
+    height: 1.5rem;
     padding: 0;
     border: 0;
     border-radius: 999px;

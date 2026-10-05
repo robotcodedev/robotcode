@@ -11,8 +11,9 @@
 // the demo is paused or out of view. A panel with slides ([data-demo-slide], one [data-demo-slide-tab] each) shows
 // them one after another, each for its data-slide-seconds, from the first whenever it is shown, while the demo is
 // not held; the last slide stays until the panel changes. A video in a slide plays only while its slide is shown, from
-// the start. The window title shows the data-title of the slide. Without motion, panels and slides are only switched
-// by hand, the panels show all their steps at once and play no video.
+// the start, and the steps of a slide appear one by one whenever it is shown. The window title shows the data-title
+// of the slide. Without motion, panels and slides are only switched by hand, the panels show all their steps at once
+// and play no video.
 class RcDemo extends HTMLElement {
   #index = 0;
   #panels: HTMLElement[] = [];
@@ -93,7 +94,13 @@ class RcDemo extends HTMLElement {
     const slides = panel.querySelectorAll<HTMLElement>("[data-demo-slide]");
     if (slides.length === 0) return;
     this.#slide = index;
-    slides.forEach((slide, i) => slide.classList.toggle("is-current", i === index));
+    slides.forEach((slide, i) => {
+      slide.classList.toggle("is-current", i === index);
+      slide.classList.remove("is-playing");
+    });
+    // Restarts the step animations of the slide, also when the same slide is selected again.
+    void slides[index].offsetWidth;
+    slides[index].classList.add("is-playing");
     panel
       .querySelectorAll("[data-demo-slide-tab]")
       .forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === index)));
