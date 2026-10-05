@@ -24,7 +24,7 @@ The rest of the release workflow is automatic or handled by the user.
 
 ## Who Reads the Post
 
-- Most readers use RobotCode in VS Code. After an update, the extension's "What's New?" notification opens https://robotcode.io/news/, so they read the post on the website.
+- Most readers use RobotCode in VS Code. After an update, the extension's "What's New?" notification opens https://robotcode.io/news/latest/, which leads to the newest release post, so they read the post on the website.
 - A smaller group uses the plugin for PyCharm and IntelliJ IDEA.
 - Command-line tools such as `discover`, `results`, `robotcode doc` and the REPL are used by fewer, more experienced users.
 
@@ -58,8 +58,9 @@ Readers want to know three things: what will I notice, what can I do now, and do
 4. **Choose what goes in.**
     - Include what users notice or must act on: new features, fixes of released behavior, breaking changes, new minimum versions, required installation steps.
     - Check that users actually see a difference. A commit body says how the code changed, which is not always what users notice; see "Changes Users See" in the writing guide.
-    - Leave out internal refactors, CI and tooling, work on the documentation site itself (build, theme, preview), OpenSpec planning, dependency bumps and synced vendored files. Also leave out fixes for features added after the last tag; those bugs never reached users. A correction of the documentation that closes an issue is a fix and goes into Bug Fixes.
+    - Leave out internal refactors, CI and tooling, work on the documentation site itself (build, theme, preview, single pages), OpenSpec planning, dependency bumps and synced vendored files. Also leave out fixes for features added after the last tag; those bugs never reached users. A correction of the documentation that closes an issue is a fix and goes into Bug Fixes.
     - Leave out cosmetic changes that don't change how anything works, such as new translations of section headers. A fix of visibly wrong output, such as empty lines when output is paged, is not cosmetic; it gets a line in Editor and CLI Polish. If you think a cosmetic change matters to users, ask.
+    - A rebuilt or reorganized website is news for every reader, unlike work on single pages. Give it a chapter of its own with a few paragraphs: why the site changed, as the planning documents give the reason, what is new for readers, and what they must do, such as updating bookmarks when addresses change.
     - Give a deprecation of a rarely used feature one sentence, last in its list, never a section of its own.
     - Mention each change once. A new minimum IDE version goes into Breaking Changes and not again in the chapter for that IDE.
     - If you are unsure whether something matters or whether it is breaking, ask (see Decision Points).
@@ -69,10 +70,11 @@ Readers want to know three things: what will I notice, what can I do now, and do
     2. the headline chapters, such as support for a new Robot Framework version or a big editor feature
     3. other improvements that most editor users notice
     4. the chapter for PyCharm and IntelliJ IDEA
-    5. Editor and CLI Polish, with one-line fixes
-    6. command-line and REPL changes for power users
-    7. Bug Fixes
-    8. Under the Hood, for experimental features that users can opt into
+    5. a rebuilt website, if there is one
+    6. Editor and CLI Polish, with one-line fixes
+    7. command-line and REPL changes for power users
+    8. Bug Fixes
+    9. Under the Hood, for experimental features that users can opt into
 
 6. **Write the chapters.** Read `references/writing-guide.md` before you draft or restructure a post. It explains how each part of the post works: the chapter patterns (breaking changes, support for a new Robot Framework version, editor chapters, polish lists, bug fixes), the wording, and how much space an item gets. It also contains openings that worked and openings the maintainer rejected.
 
@@ -97,8 +99,9 @@ Readers want to know three things: what will I notice, what can I do now, and do
 9. **Update an existing draft.** When the user says that new commits have landed:
     - Read `references/writing-guide.md` (Ordering, Chapter Patterns, Wording) before you add anything.
     - If the next version from step 1 differs from the draft's version, rename the file and update `title:` and `description:`.
-    - Find the commits the post does not cover yet. If the conversation names the commit where the previous pass stopped, start there. Otherwise read the whole range from the tag again and skip what the post already covers. Read the bodies too: `git log --format='%h %ad %s%n%b' --date=short <commit-or-tag>..HEAD`.
+    - Find the commits the post does not cover yet. If the conversation names the commit where the previous pass stopped, start there. If that commit is no longer in the history because commits were rewritten, start at the last commit that both histories share and match the rewritten commits by subject. Otherwise read the whole range from the tag again and skip what the post already covers. Read the bodies too: `git log --format='%h %ad %s%n%b' --date=short <commit-or-tag>..HEAD`.
     - Check new issue links as in step 3. Add only what passes step 4, each item at its place in the existing order. Keep the existing structure unless the user asks to change it.
+    - Check whether a new commit changes what the post already says. A later commit can undo an earlier fix: in v2.8.0, "Opening a Markdown preview no longer activates RobotCode" became wrong when the highlighting of Robot Framework code blocks in the preview made the preview activate it again.
     - Update the lede and the highlights list if a new item belongs there.
     - If the post's `date:` is not today, update it, unless the user gave a release date.
     - Report what you added and what you left out, with a short reason for each omission.
@@ -137,6 +140,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 - Link documentation pages by their path on the site, with the trailing slash (`/guides/repl/#exit-code-and-session-status`). Link issues as `([#123](https://github.com/robotcodedev/robotcode/issues/123))`.
 - Anchors follow Starlight: the heading in lowercase, spaces turned into `-`, other punctuation dropped. `Robot Framework 7.5 Support` becomes `#robot-framework-75-support`, and `In VS Code: the Documentation Viewer` becomes `#in-vs-code-the-documentation-viewer`.
 - Use code blocks only for commands and configuration that users can run. One to three lines are usually enough.
+- No videos in the post. A video that shows how a feature works belongs in the documentation, which the post links.
 - Put something the reader must do into a `caution` aside, with what to do as its title:
 
     ```markdown

@@ -116,7 +116,7 @@ The chapter is called "Robot Framework X.Y Support". It opens with what RobotCod
 - The big RobotCode features that the new version makes possible get subsections, the most visible first. For v2.8.0 these were argument descriptions in hover, signature help and completion, then test metadata.
 - Explain the Robot Framework feature only as far as the reader needs to follow RobotCode's part: one sentence and, if it helps, a short example.
 - Small items go into a final "Also on Robot Framework X.Y" list, ordered by impact, with deprecations last.
-- If users must act, for example by installing a package, use an `IMPORTANT` callout next to the feature it concerns. Name an alternative if there is one: "If you don't want to install it, use the new Documentation Viewer or `robotcode doc` instead: both show the documentation without the `markdown` package."
+- If users must act, for example by installing a package, use a `caution` aside next to the feature it concerns. Name an alternative if there is one: "If you don't want to install it, use the new Documentation Viewer or `robotcode doc` instead: both show the documentation without the `markdown` package."
 - For a known upstream bug that users will run into, say what they will notice and link the upstream issue. Promise nothing beyond the issue's state: "Once a Robot Framework bugfix release includes it, the buttons will appear in the right place."
 - Leave out upstream details that don't change what RobotCode users do. For v2.8.0, a note that older Robot Framework versions cannot read 7.5 result files with test metadata was removed.
 
@@ -137,9 +137,10 @@ Keep changes to the command line, the REPL and `robotcode doc` short: what the t
 
 ### Editor and CLI Polish
 
-One line per fix, saying what the user notices now. No error messages, internals or reasons:
+One short line per fix, saying in a few words what the user notices now. No error messages, internals, reasons or lists of the places where it shows:
 
-> - On Windows, commands no longer fail when a given path is on a different drive than the working directory.
+> - On Windows, paths on another drive no longer break commands.
+> - Two library classes from one Python module are no longer mixed up.
 
 ### Bug Fixes
 
