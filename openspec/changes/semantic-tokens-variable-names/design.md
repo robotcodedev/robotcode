@@ -23,7 +23,7 @@ See proposal.md for the problem. The facts below were checked on 2026-10-05 with
   |---|---|---|
   | Type hint | Since 7.3; `search_variable(..., parse_type=True)` splits at the last `": "` for `$`, `@` and `&`. Only `*** Variables ***`, keyword-call assignments, `VAR`, `FOR` loop variables, `[Arguments]` and embedded arguments in keyword names set it. | Splits at the first `": "`, only for `$`, everywhere and on every version |
   | Embedded pattern | Only in keyword names. Since 7.3 also `name: type:pattern`, by `([^:]+): ([^:]+)(:(.*))?`. | Splits any `$` variable at the first `:` |
-  | Extended syntax | `ExtendedFinder` uses `(.+?)([^\s\w].+)` only when the full name is not found | Always splits by that regular expression |
+  | Extended syntax | Only when a variable is looked up: `ExtendedFinder` uses `(.+?)([^\s\w].+)` after the full name was found neither as a variable nor as a number. Definitions and keyword names keep their names as written. | Always splits by that regular expression |
 
 - **Grammar.** Compared character by character over the 34 `.robot` files of the semantic-token test data, the grammar marks prefix, braces and name for 637 of the 638 `variable` tokens of the legacy path. The exception is `${\n}`, whose `\n` it shows as an escape. It also recognizes the variables of all 101 `[Arguments]` tokens.
 - **Clients:**
@@ -43,7 +43,7 @@ See proposal.md for the problem. The facts below were checked on 2026-10-05 with
   - no VS Code theme styles custom modifiers by default;
   - the grammar already distinguishes `%{…}`.
 - No `declaration` modifier on variable definitions.
-- No change to the grammar, the VS Code extension or the IntelliJ plugin.
+- No change to the grammar or the VS Code extension. The IntelliJ plugin only gets the colour settings of D8.
 - The token legend stays unchanged. `variableBegin`, `variableEnd`, `expressionBegin`, `expressionEnd` and `variableExpression` are no longer sent, but stay in the legend and in the client mappings.
 - The other rules of `semantic-model-token-rendering` (BDD separator, comments, documentation, the remaining legacy special cases) stay there.
 
@@ -64,10 +64,10 @@ Alternatives considered:
 
 `build_variable_sub_tokens()` gets the site as a parameter:
 - **Declaration sites** split off type hints with Robot Framework 7.3 or later, at the last `": "`, for `$`, `@` and `&`.
-- **Keyword names** split off types like declarations, and split off patterns by Robot Framework's rule.
-- **All other sites** split off neither.
+- **Keyword names** split off types and patterns by the rules of Robot Framework's `EmbeddedArgumentParser`.
+- **Usage sites** split off neither, but the extended syntax.
 
-For the extended syntax, the caller says whether the full name resolves. Only then does the decomposition split the base name from the extended part. The analyzer takes that from its own resolution. The legacy path asks `Namespace.find_variable()`, and only for names that match the extended pattern.
+For the extended syntax, the caller passes a check whether a variable with the full name exists. The decomposition splits the base name from the extended part only when that check fails and the full name is no number. The analyzer checks against its own scope. The legacy path asks `Namespace.find_variable()`, and only for names that match the extended pattern.
 
 The version check stays in the decomposition, which belongs to the analysis. The renderer keeps its rule of no version checks.
 
@@ -121,6 +121,46 @@ Alternatives considered:
 
 Alternative considered: split all options into name, `=` and value. It needs a new type decision for the name, and `FOR` and `VAR` already render one token.
 
+### D8: IntelliJ colour settings for parameters and type hints
+
+The plugin maps `parameter` to a new setting "Parameter" and `type` to a new setting "Type hint" on the Robot Framework colour settings page:
+- "Parameter" inherits from the Robot Framework setting "Variable", like "Embedded argument" and "Variable expression". A parameter is a variable, and the grammar shows it as one.
+- "Type hint" inherits from *Language Defaults → Class reference*, because a type hint refers to a type.
+
+Every other token type the server sends already has a Robot Framework setting. Without these two, `parameter` and `type` would fall through to LSP4IJ's keys, which affect all languages. The names in `[Arguments]` would also lose the setting "Named argument" that users could adjust before.
+
+With "Parameter" inheriting from "Variable", the editor and the preview of the settings page show the same default. With *Language Defaults → Parameter*, which most schemes leave at plain text, the editor would keep the grammar's variable look (D9) while the preview showed plain text.
+
+Alternatives considered:
+- **Keep LSP4IJ's keys.** No Robot Framework setting, and the type falls back to *Class name*, which is meant for declarations.
+- **"Parameter" inherits from *Language Defaults → Parameter*.** The preview and the editor disagree, as described above.
+- **Inherit from keys that common schemes colour.** That ties the colours to particular schemes, which the plugin avoids.
+
+### D9: The scheme check applies only where a token refines the grammar
+
+Decision D5 of `intellij-theme-independent-colors` keeps the grammar look whenever a token's key resolves to plain text in the active scheme. That assumes the grammar look is a right fallback for every token. A comparison of the semantic tokens of the 34 test files with the grammar scopes at the same characters shows two groups:
+- **Refining tokens.** The grammar already shows the right category: `variable` (also with `embedded`) and `parameter` on variable names, the headers, `setting`, `settingImport`, `var`, `forSeparator`, test and keyword names, `continuation`, `comment`, `config` and `escape`.
+- **Correcting tokens.** The grammar shows another category at the same characters:
+  - `type`: the grammar shows a variable name;
+  - `namedArgument`: argument text;
+  - `operator`: setting names (`[`, `]`), argument text (`=`) or keyword calls (`.`);
+  - `namespace`: argument text or keyword calls;
+  - `keywordCall`, `keywordCallInner` and `nameCall`: argument text in setup, teardown and template settings and in Run Keyword arguments;
+  - `argument`: keyword calls in template rows and embedded values;
+  - `bddPrefix`: keyword calls;
+  - `controlFlow`: argument text for `ELSE IF` and `AND` in Run Keyword If and for options;
+  - `error`.
+
+The provider applies the check only to refining tokens. A correcting token's key is drawn even when it resolves to plain text, because the grammar look is wrong there. Token types the provider does not list as correcting get the check, so a new type cannot paint plain text over the grammar by accident.
+
+With "Islands Dark", `type`, `namedArgument`, `namespace` and `operator` change visibly: their keys resolve to plain text, so `int`, `level` in `level=INFO`, `Collections` in `Library    Collections` and the brackets of `[Tags]` lose the colour of the grammar's category. The other correcting keys are coloured in the bundled schemes.
+
+The main spec's scenario that kept `BuiltIn` in `BuiltIn.Log` in the keyword call look changes accordingly. D5 assumed that VS Code keeps the grammar look for namespaces. It does not: VS Code draws them in a colour of their own. The JetBrains language defaults have no namespace category, so with *Class reference* at plain text IntelliJ draws them as plain text.
+
+Alternatives considered:
+- **Keep D5 for every token.** Type hints keep the variable colour, named arguments the string colour.
+- **Drop the check.** Variables would turn into plain text in schemes that leave *Instance field* undefined, which was #655.
+
 ## Risks / Trade-offs
 
 - [Clients without a TextMate grammar lose the colour of variable delimiters] → Accepted. They keep the variable names.
@@ -139,7 +179,3 @@ Alternative considered: split all options into name, `=` and value. It needs a n
 ## Migration Plan
 
 Nothing for users to do. Rollback is a revert.
-
-## Open Questions
-
-- Should the IntelliJ plugin offer its own Robot Framework colour settings for `parameter` and `type`, instead of LSP4IJ's defaults? This can be decided after a look at real schemes and does not change what the server sends.

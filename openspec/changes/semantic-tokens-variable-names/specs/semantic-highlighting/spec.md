@@ -64,7 +64,7 @@ This SHALL hold at every site where Robot Framework defines or uses variables:
 The language server SHALL determine the name of a variable as Robot Framework does at that position:
 - A type hint SHALL be split off only with Robot Framework 7.3 or later, at the last `": "`, and only at these sites: declarations in `*** Variables ***`, keyword-call assignments, `VAR`, `FOR` loop variables, `[Arguments]` declarations and embedded arguments in keyword names. Everywhere else `: ` belongs to the name.
 - An embedded-argument pattern SHALL be split off only in keyword names, also after a type hint as in `${count: int:\d+}`.
-- The extended variable syntax SHALL be split off only when no variable with the full name is visible at that position. Then the token covers the base name only.
+- The extended variable syntax SHALL be split off only where a variable is used, and only when neither a visible variable nor a number has the full name. Then the token covers the base name only. Names in definitions and keyword names are taken as they are.
 
 A type hint that is split off SHALL get one `type` token, and its `: ` separator SHALL get none.
 
@@ -77,8 +77,8 @@ A type hint that is split off SHALL get one `type` token, and its `: ` separator
 - **THEN** `count: int` gets one variable token
 
 #### Scenario: Colons in a usage
-- **WHEN** `Log    ${a: b} ${c:d}` is analyzed
-- **THEN** `a: b` and `c:d` get one variable token each
+- **WHEN** `${a}` is defined and `Log    ${a: int} ${a:x}` is analyzed with Robot Framework 7.3 or later
+- **THEN** both get a variable token for `a` only, and neither `int` nor `x` gets a type token or any other token
 
 #### Scenario: Type and pattern in a keyword name
 - **WHEN** the keyword name `Typed ${count: int:\d+} Times` is analyzed with Robot Framework 7.3 or later
