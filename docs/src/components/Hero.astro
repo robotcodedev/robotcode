@@ -81,15 +81,29 @@ const first = pictures[0];
           ‹
         </button>
         <button type="button" class="rc-picture" aria-label={`Open image: ${first.alt}`}>
-          <img
-            src={first.src}
-            srcset={first.srcset}
-            width={first.width}
-            height={first.height}
-            alt={first.alt}
-            decoding="async"
-            draggable="false"
-          />
+          {/* The picture is chosen while the page is parsed, so that the browser requests only that one, early. */}
+          <img width={first.width} height={first.height} alt="" fetchpriority="high" draggable="false" />
+          <script is:inline>
+            (() => {
+              const img = document.currentScript.previousElementSibling;
+              const gallery = img.closest("rc-hero-gallery");
+              const pictures = JSON.parse(gallery.dataset.pictures);
+              const index = Math.floor(Math.random() * pictures.length);
+              gallery.dataset.index = String(index);
+              Object.assign(img, { srcset: pictures[index].srcset, src: pictures[index].src, alt: pictures[index].alt });
+              img.parentElement.setAttribute("aria-label", `Open image: ${pictures[index].alt}`);
+            })();
+          </script>
+          <noscript>
+            <img
+              src={first.src}
+              srcset={first.srcset}
+              width={first.width}
+              height={first.height}
+              alt={first.alt}
+              draggable="false"
+            />
+          </noscript>
         </button>
         <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">
           ›
@@ -102,7 +116,7 @@ const first = pictures[0];
             ‹
           </button>
           <div class="rc-frame">
-            <img src={first.large} alt={first.alt} decoding="async" draggable="false" />
+            <img src={first.large} alt={first.alt} loading="lazy" decoding="async" draggable="false" />
           </div>
           <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">
             ›
@@ -160,7 +174,8 @@ const first = pictures[0];
       dialog.addEventListener("close", () => (document.documentElement.style.overflow = ""));
       for (const element of [picture, this.querySelector<HTMLElement>(".rc-frame")!]) this.#addSwipe(element);
 
-      this.#show(Math.floor(Math.random() * this.#pictures.length));
+      // The inline script next to the picture has chosen it already.
+      this.#show(Number(this.dataset.index ?? 0));
     }
 
     #show(index: number) {
@@ -256,6 +271,11 @@ const first = pictures[0];
     cursor: zoom-in;
     line-height: 0;
     touch-action: pan-y;
+  }
+
+  /* Without JavaScript the picture inside <noscript> is shown instead. */
+  rc-hero-gallery .rc-picture img:not([src]) {
+    display: none;
   }
 
   rc-hero-gallery .rc-picture img {
