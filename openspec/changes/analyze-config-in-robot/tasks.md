@@ -57,8 +57,8 @@
 
 ## 5. Generated files and docs
 
-- [ ] 5.1 Run `hatch run create-json-schema` and `hatch run robotcode config info desc > docs/03_reference/config.md` (CONTRIBUTING.md). Verify with `git diff --exit-code docs/public/schemas/robot.toml.json docs/03_reference/config.md` that neither file changed (D2, D9). Leave `etc/robot.toml.json` alone.
-- [ ] 5.2 In `docs/03_reference/cli.md`, add one sentence to the `language-server` package entry: the package does not include the `analyze` command, and `pip install robotcode[languageserver,analyze]` (or `robotcode[all]`) installs both. In `.github/copilot-instructions.md`, remove the `analyze → language_server` edge from the package dependency graph and `analyze` from the sentence "`language_server` depends on …". Verify with `npm run docs:build`.
+- [ ] 5.1 Run `hatch run create-json-schema` and `hatch run create-config-docs` (CONTRIBUTING.md). Verify with `git diff --exit-code docs/public/schemas/robot.toml.json docs/src/content/docs/reference/config.md` that neither file changed (D2, D9). Leave `etc/robot.toml.json` alone.
+- [ ] 5.2 In `docs/src/content/docs/reference/cli.md`, add one sentence to the `language-server` package entry: the package does not include the `analyze` command, and `pip install robotcode[languageserver,analyze]` (or `robotcode[all]`) installs both. In `.github/copilot-instructions.md`, remove the `analyze → language_server` edge from the package dependency graph and `analyze` from the sentence "`language_server` depends on …". Verify with `npm run docs:build`.
 
 ## 6. Verification
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines which commands and options the generated CLI reference `docs/03_reference/cli.md` documents and in which order, so that it describes the command line that `robotcode --help` shows to users and regenerating it only changes what the command line changed.
+Defines which commands and options the generated CLI reference `docs/src/content/docs/reference/cli.md` documents and in which order, so that it describes the command line that `robotcode --help` shows to users and regenerating it only changes what the command line changed.
 
 ## Requirements
 

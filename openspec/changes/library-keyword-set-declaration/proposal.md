@@ -69,7 +69,7 @@ Builds on `library-loading-robustness`: each argument set of an `args` library i
 - `packages/language_server/src/robotcode/language_server/robotframework/parts/hover.py`: the marker in the library import hover. The same package's `keywords_treeview.py` and `completion.py`: lookups without arguments use the default entry.
 - Docs:
   - an author-facing page on the attribute, including how to use it with `Remote`;
-  - the cache section of `docs/03_reference/analyzing-code.md`;
+  - the cache section of `docs/src/content/docs/guides/analyzing-code.md`;
   - the descriptions of `ignored-libraries` / `ignore-arguments-for-library` in `packages/robot/src/robotcode/robot/config/analyze_config.py`, where `analyze-config-in-robot` moves the analysis part of the configuration model with `CacheConfig`, with `config.md` and the robot.toml JSON schema regenerated.
 - Tests on RF 5.0 to 7.5:
   - the static resolution of import arguments, with `resolve_args` and the arguments of variable files unchanged;

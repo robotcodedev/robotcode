@@ -60,7 +60,7 @@
   - `LibraryIndexConfig(BaseOptions)`: a docstring that describes the section, `libraries: Optional[Dict[str, List[str]]]` and `extend_libraries` (alias `extend-libraries`), each with a description and a TOML example under `[tool.robotcode-doc]`;
   - `get_library_index_config(robot_config: RobotConfig) -> LibraryIndexConfig`, which returns `robot_config.tool["robotcode-doc"]` when that is a `LibraryIndexConfig` and `LibraryIndexConfig()` otherwise.
 
-  Add `"robotcode-doc": LibraryIndexConfig` to `BUILTIN_TOOL_CONFIG_CLASSES` in `packages/robot/src/robotcode/robot/config/loader.py`. No `hooks.py` registers the section. Add `robotcode_doc: Optional[LibraryIndexConfig]` (alias `robotcode-doc`, description `LibraryIndexConfig.__doc__`) to the `ToolConfig` dataclass of `scripts/create_robot_toml_json_schema.py`, next to `robotcode_analyze`. Regenerate the schema and the reference with `hatch run create-json-schema` and `hatch run robotcode config info desc > docs/03_reference/config.md`, and note the commands in the commit.
+  Add `"robotcode-doc": LibraryIndexConfig` to `BUILTIN_TOOL_CONFIG_CLASSES` in `packages/robot/src/robotcode/robot/config/loader.py`. No `hooks.py` registers the section. Add `robotcode_doc: Optional[LibraryIndexConfig]` (alias `robotcode-doc`, description `LibraryIndexConfig.__doc__`) to the `ToolConfig` dataclass of `scripts/create_robot_toml_json_schema.py`, next to `robotcode_analyze`. Regenerate the schema and the reference with `hatch run create-json-schema` and `hatch run create-config-docs`, and note the commands in the commit.
 
   Verify in a new `tests/robotcode/robot/config/test_library_index_config.py`. Write the configuration files to `tmp_path`, load them with `load_robot_config_from_path(...)` without `extra_tools`, and read the section with `get_library_index_config`:
   - `[tool.robotcode-doc.libraries]` in `robot.toml` and `[tool.robotcode-doc.extend-libraries]` in `.robot.toml` combine to all entries;
@@ -97,7 +97,7 @@
   - when doc-cli's mode selection chooses the browser: fill the TUI sidebar with the groups and open a selected entry through the same code path as a command-line target, with the project root as base directory (D7);
   - `-k`, `--list`, `--search`, `--search-regex` or an `--output` directory without targets: keep doc-cli's usage error (exit code 2).
 
-  Build the index with the root folder, the profile, the `exclude_patterns` of the `AnalyzeConfig` from `get_analyze_config` and the languages that doc-cli already loads, and with the tool section of 4.2 (D5, D8). Say in the command's help text what it does without targets, and regenerate `docs/03_reference/cli.md` with `hatch run create-cmd-line-docs` (keep only the hunks of this command, as `CONTRIBUTING.md` describes).
+  Build the index with the root folder, the profile, the `exclude_patterns` of the `AnalyzeConfig` from `get_analyze_config` and the languages that doc-cli already loads, and with the tool section of 4.2 (D5, D8). Say in the command's help text what it does without targets, and regenerate `docs/src/content/docs/reference/cli.md` with `hatch run create-cmd-line-docs` (keep only the hunks of this command, as `CONTRIBUTING.md` describes).
 
   Verify in doc-cli's CLI test module with a `tmp_path` project and a fake distribution whose module raises on import:
   - `robotcode doc` through a pipe prints the three expected sections, and the module is not imported;
@@ -151,12 +151,12 @@
 
 ## 8. Documentation and agent skill
 
-- [ ] 8.1 Only if Q3 is confirmed as recommended: write `docs/03_reference/library-entry-points.md` for library authors with the content of D12, including `pyproject.toml` examples and that RobotCode ranks declared entries first in import completion. Link it from the `robotcode doc` page and add it to the list in `docs/03_reference/index.md`. Add the page to the page map of `docs-next/scripts/convert.mjs` (explains a setup with narrative, so `guides/library-entry-points`, label "Library Entry Points", order 150, a one-sentence description; see `docs-next/README.md`). Verify with `npm run docs:build` and `npm run docs-next:build`.
+- [ ] 8.1 Only if Q3 is confirmed as recommended: write `docs/src/content/docs/guides/library-entry-points.md` for library authors with the content of D12, including `pyproject.toml` examples and that RobotCode ranks declared entries first in import completion. Link it from the `robotcode doc` page and declare `title`, `description` and `sidebar.order` in its frontmatter (it explains a setup with narrative, so it is a guide: label "Library Entry Points", order 150, a one-sentence description; see "Writing Documentation Pages" in `CONTRIBUTING.md`). Verify with `npm run docs:build`.
 - [ ] 8.2 Extend the `robotcode doc` page of doc-cli with a section on the listing without targets:
   - what the groups contain;
   - that nothing is imported;
   - how project resources are chosen (per Q2);
-  - project libraries: the tool section (name per Q1) with `libraries` and `extend-libraries`, module and file names, arguments, and that the section is not per profile. Link its entry in `docs/03_reference/config.md`.
+  - project libraries: the tool section (name per Q1) with `libraries` and `extend-libraries`, module and file names, arguments, and that the section is not per profile. Link its entry in `docs/src/content/docs/reference/config.md`.
 
   If Q3 places the convention document outside RobotCode's docs, mention the completion ranking in this section instead, since the docs have no page on completion. Verify with `npm run docs:build`.
 - [ ] 8.3 In `/home/daniel/develop/robot/robotframework-agent-plugins` (`plugins/robotcode/skills/robotcode/SKILL.md`, the documentation lookup that doc-cli switched to `robotcode doc`), add that `robotcode doc` without targets lists the available libraries and resources. Then re-sync the vendored copy with `hatch run build:sync-chat-plugin`. Verify with `hatch run build:sync-chat-plugin --check`.

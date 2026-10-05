@@ -47,11 +47,11 @@ Builds on `doc-cli` (the command, its output modes and the TUI). It also depends
 - VS Code (`vscode-doc-browser`): the index view in the webview sources under `vscode-client/documentationBrowser/`, and its request in `vscode-client/extension/documentationBrowser.ts`.
 - The tool section in the configuration schema:
   - `scripts/create_robot_toml_json_schema.py` gets the section next to `robotcode-analyze`, because the script uses neither the plugin hook nor the built-in tool sections;
-  - `docs/public/schemas/robot.toml.json` and `docs/03_reference/config.md` are regenerated.
+  - `docs/public/schemas/robot.toml.json` and `docs/src/content/docs/reference/config.md` are regenerated.
 - Docs:
   - the page for library authors on the entry-point convention;
   - the `robotcode doc` page from `doc-cli` (listing without targets);
-  - `docs/03_reference/cli.md`, regenerated for the help text of `robotcode doc`.
+  - `docs/src/content/docs/reference/cli.md`, regenerated for the help text of `robotcode doc`.
 - The robotcode skill in `robotframework-agent-plugins` and its vendored copy under `chat-plugins/`: `robotcode doc` without targets.
 - Tests on RF 5.0 to 7.5, Linux, Windows and macOS. Fake `*.dist-info` directories under `tmp_path` stand in for installed packages, so nothing is installed into the environments.
 - No change to the IntelliJ plugin. The completion ranking reaches it through LSP.

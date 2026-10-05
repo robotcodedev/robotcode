@@ -14,13 +14,25 @@ The site SHALL be the one published at https://robotcode.io and SHALL replace th
 - **WHEN** a reader opens `https://robotcode.io/03_reference/config`
 - **THEN** the site's not-found page is returned
 
-#### Scenario: What's new from the VS Code extension
-- **WHEN** the VS Code extension opens `https://robotcode.io/news/` after an update
-- **THEN** the news post list is shown with the newest post first
-
 #### Scenario: Edit link
 - **WHEN** a reader opens `https://robotcode.io/getting-started/neovim/`
 - **THEN** the page links to `docs/src/content/docs/getting-started/neovim.mdx` in the GitHub repository
+
+### Requirement: Newest release notes at a fixed address
+
+The site SHALL serve `/news/latest/`, which SHALL lead to the newest post tagged `release` of the build, so that a link to the newest release notes never has to change. The "What's New?" notification of the VS Code extension SHALL open it.
+
+#### Scenario: What's new from the VS Code extension
+- **WHEN** a reader selects "What's New?" in the notification that the VS Code extension shows after an update
+- **THEN** the newest release post is shown
+
+#### Scenario: New release post
+- **WHEN** a post tagged `release` with a newer date than all other posts is added and the site is built
+- **THEN** `/news/latest/` leads to that post, also without JavaScript
+
+#### Scenario: Other news
+- **WHEN** a post of another kind, such as `tips`, is newer than every release post
+- **THEN** `/news/latest/` still leads to the newest release post
 
 ### Requirement: Generated reference pages
 
@@ -75,6 +87,22 @@ The demo windows of the home page — the window of the feature tour and the win
 - **THEN** it contains the descriptions of the features and the abilities of an agent from the home page
 - **AND** it contains none of the terminal sessions and conversations of the demo windows
 
+### Requirement: Optimized images, screen recordings and stable static files
+
+Images shown on pages SHALL be emitted through the build's image optimization with width and height attributes; image files that no page references SHALL NOT be published. Screen recordings SHALL be shown as videos with width and height attributes that play by themselves, muted and in a loop. Files served unchanged at fixed URLs — the favicon, the Open Graph image and `/schemas/robot.toml.json` — SHALL keep their URLs.
+
+#### Scenario: Screenshot on the Neovim page
+- **WHEN** `/getting-started/neovim/` is built
+- **THEN** its screenshot is served from an optimized image file with width and height attributes
+
+#### Scenario: Screen recordings on the VS Code page
+- **WHEN** `/getting-started/vscode/` is built
+- **THEN** its screen recordings are videos with width and height attributes that play by themselves, muted and in a loop
+
+#### Scenario: JSON schema URL
+- **WHEN** an editor requests `/schemas/robot.toml.json`
+- **THEN** it receives the current JSON schema for `robot.toml`
+
 ## MODIFIED Requirements
 
 ### Requirement: Home page
@@ -117,3 +145,11 @@ Below the hero the home page SHALL show, in this order, the feature tour, the AI
 #### Scenario: Open source
 - **WHEN** a reader follows the open-source note in the hero
 - **THEN** the open-source section is shown with the license, a link to the GitHub repository, a link to Support & Contribute, the sponsoring options and the supporters
+
+## REMOVED Requirements
+
+### Requirement: Optimized images and stable static files
+
+**Reason**: Its scenario expects screenshots on `/getting-started/vscode/`, which shows screen recordings as videos since the switch (design D8).
+
+**Migration**: Replaced by "Optimized images, screen recordings and stable static files", which keeps the image and static file rules and adds the recordings.

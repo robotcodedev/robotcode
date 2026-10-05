@@ -38,5 +38,5 @@ Depends on `support-rf75` (Markdown resource extensions, Libdoc guard, `rf75` en
 - `packages/runner/src/robotcode/runner/cli/discover/discover.py`: line remapping, `files` filter.
 - `vscode-client/extension/languageclientsmanger.ts`, `testcontrollermanager.ts`, `debugmanager.ts`, `languageToolsManager.ts`, `keywordsTreeViewProvider.ts`, `package.json` (setting, activation events, enablement/menus).
 - `intellij-client/src/main/resources/META-INF/plugin.xml`, `src/main/kotlin/.../testing/RobotCodeTestManager.kt` (and optionally `EditorNotificationProvider.kt`).
-- Docs: new page under `docs/`; `docs/03_reference/discovering-tests.md` (`lineno` semantics for embedded suites, `files`); `docs/03_reference/cli.md` regenerated for the changed `discover files` help.
+- Docs: new page under `docs/src/content/docs/`; `docs/src/content/docs/guides/discovering-tests.md` (`lineno` semantics for embedded suites, `files`); `docs/src/content/docs/reference/cli.md` regenerated for the changed `discover files` help.
 - Tests: extraction unit and RF-parity tests, `test_document_cache_helper.py`, namespace/import tests, new LS regression data files (`embedded_markdown.robot.md`, `embedded_rest.robot.rst`) with baselines, discover and analyze acceptance tests; manual checklist for the clients.
