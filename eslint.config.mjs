@@ -24,6 +24,8 @@ export default [
       "**/js",
       "**/build/",
       "**/intellij-client/",
+      // The git-ignored scratch space; ESLint does not read .gitignore.
+      "**/playground/",
     ],
   },
   { files: ["**/*.{ts,tsx}"] },
