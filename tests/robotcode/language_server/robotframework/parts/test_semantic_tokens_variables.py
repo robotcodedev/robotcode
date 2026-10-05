@@ -5,6 +5,7 @@ the legacy path (flag off) and the SemanticModel renderer (flag on).
 """
 
 import itertools
+import threading
 from pathlib import Path
 from typing import Any, Iterator, List, Tuple
 
@@ -34,6 +35,8 @@ SemToken = Tuple[str, str, Tuple[str, ...]]
 @pytest.fixture(scope="module", params=[False, True], ids=["legacy", "model"])
 def protocol(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory) -> Iterator[Any]:
     root = tmp_path_factory.mktemp("semantic_tokens_variables")
+    # outside the workspace, so the workspace scan at startup never reads a file while it is written
+    files = tmp_path_factory.mktemp("semantic_tokens_variables_files")
     protocol = RobotLanguageServerProtocol(RobotLanguageServer())
     protocol._initialize(
         ClientCapabilities(),
@@ -50,17 +53,27 @@ def protocol(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFa
     if request.param:
         settings[RobotCodeConfig.__config_section__]["experimental"] = {"semantic_model": True}
     protocol.workspace.settings = settings
+
+    diagnostics_end = threading.Event()
+
+    def on_diagnostics_end(sender: Any) -> None:
+        diagnostics_end.set()
+
+    protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
     protocol._initialized(InitializedParams())
+    diagnostics_end.wait(120)
+    protocol.diagnostics.workspace_diagnostics_started_event.wait(300)
+    protocol.diagnostics.in_get_workspace_diagnostics_event.wait(300)
     try:
-        yield protocol, root, request.param
+        yield protocol, files, request.param
     finally:
         protocol._shutdown()
 
 
 def _tokens(protocol: Any, text: str) -> List[List[SemToken]]:
     """Semantic tokens of `text`, grouped by line (index 0 is line 1)."""
-    lsp, root, semantic_model = protocol
-    path = Path(root, f"test_{next(_file_counter)}.robot")
+    lsp, files, semantic_model = protocol
+    path = Path(files, f"test_{next(_file_counter)}.robot")
     path.write_text(text, encoding="utf-8")
     document = lsp.documents.get_or_open_document(path, "robotframework")
     namespace = lsp.documents_cache.get_namespace(document)
