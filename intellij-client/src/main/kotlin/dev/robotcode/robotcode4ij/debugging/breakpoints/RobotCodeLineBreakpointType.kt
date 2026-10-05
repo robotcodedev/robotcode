@@ -3,6 +3,8 @@ package dev.robotcode.robotcode4ij.debugging.breakpoints
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
+import dev.robotcode.robotcode4ij.RobotResourceFileType
+import dev.robotcode.robotcode4ij.RobotSuiteFileType
 
 class RobotCodeLineBreakpointType : XLineBreakpointType<RobotCodeLineBreakpointProperties>(ID, NAME) {
     companion object {
@@ -15,6 +17,6 @@ class RobotCodeLineBreakpointType : XLineBreakpointType<RobotCodeLineBreakpointP
     }
     
     override fun canPutAt(file: VirtualFile, line: Int, project: Project): Boolean {
-        return true
+        return file.fileType == RobotSuiteFileType || file.fileType == RobotResourceFileType
     }
 }
