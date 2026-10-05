@@ -25,6 +25,8 @@ tasks_header: List[str] = []
 keywords_header: List[str] = []
 comments_header: List[str] = []
 documentation_setting: List[str] = []
+library_setting: List[str] = []
+arguments_setting: List[str] = []
 
 for k in get_available_languages():
     lang = Language.from_name(k)
@@ -75,6 +77,16 @@ for k in get_available_languages():
         if v not in documentation_setting:
             documentation_setting.append(v)
 
+    if lang.library_setting:
+        v = lang.library_setting.lower()
+        if v not in library_setting:
+            library_setting.append(v)
+
+    if lang.arguments_setting:
+        v = lang.arguments_setting.lower()
+        if v not in arguments_setting:
+            arguments_setting.append(v)
+
     # Terms deprecated by Robot Framework (7.5 or newer) are still accepted, so they
     # stay in the grammar: `{deprecated term: (new term, version)}`.
     if RF_VERSION >= (7, 5):
@@ -87,9 +99,19 @@ for k in get_available_languages():
                 ("keywords_header", keywords_header),
                 ("comments_header", comments_header),
                 ("documentation_setting", documentation_setting),
+                ("library_setting", library_setting),
+                ("arguments_setting", arguments_setting),
             ):
                 if getattr(lang, attribute) == new_term and old_term.lower() not in terms:
                     terms.append(old_term.lower())
+
+# Terms of older Robot Framework versions that newer versions no longer accept. RobotCode supports these
+# versions, so the grammar keeps the terms.
+for old_term, terms in (
+    ("sleutelwoorden", keywords_header),  # Dutch, Robot Framework 6.0 to 7.0
+):
+    if old_term not in terms:
+        terms.append(old_term)
 
 template = Template(Path("syntaxes/robotframework.tmLanguage.template.json").read_text(encoding="utf-8"))
 
@@ -101,10 +123,41 @@ headers = {
     "keywords_header": "|".join(keywords_header),
     "comments_header": "|".join(comments_header),
     "documentation_setting": "|".join(documentation_setting),
+    "library_setting": "|".join(library_setting),
+    "arguments_setting": "|".join(arguments_setting),
 }
 
 # lines that continue a setting, test, task or keyword: `...` continuations, comments and empty lines
 continuation = r"(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$)"
+
+
+def json_lines(*items: str) -> str:
+    return ",\n".join(f"        {item}" for item in items)
+
+
+# a file with sections, such as a .robot or .resource file
+suite = {
+    "top_patterns": json_lines(
+        *(
+            f'{{ "include": "#{rule}" }}'
+            for rule in (
+                "comment_line",
+                "settings_section",
+                "variables_section",
+                "testcases_section",
+                "tasks_section",
+                "keywords_section",
+                "comments_section",
+                "section",
+                "block_comment",
+            )
+        )
+    ),
+    "indent_quantifier": "",
+    "name": "Robot Framework",
+    "file_types": json_lines('"robotframework"', '"robot"'),
+    "aliases": json_lines('"robot"', '"robotframework"'),
+}
 
 # Markdown lists and block quotes consume their prefix before the code block content is matched, so the
 # grammar for the Markdown code block injection also matches right after that prefix and continues blocks
@@ -114,6 +167,7 @@ for path, values in (
     (
         "syntaxes/robotframework.tmLanguage.json",
         {
+            **suite,
             "scope_name": "source.robotframework",
             "line_start": "^",
             "line_start_indented": "^",
@@ -123,10 +177,26 @@ for path, values in (
     (
         "syntaxes/robotframework-markdown.tmLanguage.json",
         {
+            **suite,
             "scope_name": "source.robotframework-markdown",
             "line_start": r"(?:^|\\G(?<=^[ \\t>]*))",
             "line_start_indented": r"(?:^|\\G(?<=^[ \\t>]*)[ \\t]*)",
             "block_continuation": rf'"while": "(?:^|\\G(?<=^[ \\t>]*))(?={continuation})"',
+        },
+    ),
+    # REPL scripts and notebook cells hold only statements, which need no indentation
+    (
+        "syntaxes/robotframework-repl.tmLanguage.json",
+        {
+            "top_patterns": json_lines('{ "include": "#comment_line" }', '{ "include": "#block_statements" }'),
+            "indent_quantifier": "?",
+            "name": "Robot Framework REPL",
+            "file_types": json_lines('"robotframework-repl"', '"robot-repl"'),
+            "aliases": json_lines('"robot-repl"', '"robotframework-repl"'),
+            "scope_name": "source.robotframework-repl",
+            "line_start": "^",
+            "line_start_indented": "^",
+            "block_continuation": f'"end": "^(?!{continuation})"',
         },
     ),
 ):
