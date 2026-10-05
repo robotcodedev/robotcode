@@ -245,7 +245,7 @@ VS Code has no key for its *Source Action…* menu, and RobotCode does not defin
 
 ```json
 {
-  "key": "ctrl+shift+.",
+  "key": "ctrl+shift+[Period]",
   "command": "editor.action.sourceAction",
   "when": "editorTextFocus"
 }
