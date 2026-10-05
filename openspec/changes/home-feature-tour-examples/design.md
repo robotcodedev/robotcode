@@ -51,7 +51,9 @@ The step animation is tied to `.is-playing .is-active`. For a slide it must rest
 
 - The pause, hover and hidden states keep holding the steps as today.
 - Under reduced motion a terminal slide shows all its steps, as terminal panels do now.
-- The window keeps one size for all slides: the terminal slide fills the 2072×1182 area of its series on a dark background, like a terminal panel today.
+- The window keeps one size for all slides, because the slides share one grid cell. A terminal slide has the window's terminal background, as terminal panels had, so that it stays readable in the light theme. Only screenshots and recordings get the dark background.
+- A terminal session is kept no taller than a recording, about 14 lines at the home page's width, so the window does not grow.
+- The dots that select an example are 24 px buttons, the minimum target size Lighthouse checks. The first feature now has dots, so they are visible and checked on load.
 
 ### D3: Recordings load when their slide is shown
 
@@ -81,18 +83,18 @@ If a re-recording differs from the old one in more than the overlay, the old fil
 
 ### D6: New VS Code scenes
 
-Each new scene is a scene file of its own in `playground/robotcode-demo/vscode/`, aims for 8–15 s and resets its files and window like scenes 1–3. The examples per feature are the ones the spec lists.
+Each new scene is a scene file of its own in `playground/robotcode-demo/vscode/` (`scene5.js` to `scene14.js`), lasts 8–15 s and starts from `ctx.resetTo` in `scene5.js`. That helper closes the editors, removes breakpoints and test results, and sets the inlay hints. It also clicks once into the editor, because the context menu of a run icon leaves a hover behind that keeps other hovers away. The examples per feature are the ones the spec lists. Where a scene ended up different from the plan, the reason is given below.
 
-- **Go to Definition**: F12 on a keyword call in a test jumps into `libraries/ShopLibrary.py`.
-- **Find References**: Shift+F12 on a user keyword shows its calls across files.
-- **Diagnostics**: the Problems panel shows the `Submit Ordr` error together with Robocop's findings, and a quick fix is applied.
-- **Keywords view**: the view in the Explorer, then Insert Keyword into the editor.
-- **Stopping at a failure**: debugging `Login Works` without a breakpoint stops at its failing keyword, because "Uncaught Failed Keywords" is the default exception filter. The variables are shown.
-- **Debug Console**: at a breakpoint, a keyword is typed and run, and its result is shown.
-- **Log after a run**: with `robotcode.run.openOutputAfterRun: "log"`, a run from the test explorer opens `log.html` in VS Code.
-- **`robot.toml` schema**: completion of a setting and a hover with its description. This needs Even Better TOML in the harness, mapped to the checkout's `docs/public/schemas/robot.toml.json` so the texts are current.
-- **Profile in VS Code**: Select Configuration Profiles picks `ci`, and a test explorer run uses it, which shows in the run output.
-- **REPL in VS Code**: the command Start Terminal REPL opens the prompt in the terminal panel, and a keyword is called there.
+- **Go to Definition**: F12 on `Create Order` in a test opens the keyword in `orders.resource`, and F12 on `Place Order` there opens `place_order` in `libraries/ShopLibrary.py`.
+- **Find References**: Shift+F12 on `Open Shop As` opens the peek view, which steps into `cart.robot` and `login.robot`. Its tree also shows the call passed to `Run Keyword And Expect Error`. The preview of that call is not selected, because the narrow preview cuts the line off.
+- **Diagnostics**: a new test with a misspelt keyword call gets RobotCode's error and Robocop's warnings (missing documentation, unused variable). Ctrl+Shift+M opens the Problems panel with both sources, and correcting the call removes the error. No quick fix is applied: Robocop's findings have none, and the only one for the error, Create Keyword, is in the first recording.
+- **Keywords view**: Ctrl+Shift+E shows the view, a resource is expanded, and its inline Insert action puts a keyword into a test. Signature help then shows the argument, and a value is typed.
+- **Stopping at a failure**: Debug Test on `Login Works` without a breakpoint stops at `Should Be Equal` in `shop.resource`, because "Uncaught Failed Keywords" is the default exception filter. The exception widget and the inline values show the two greetings.
+- **Debug Console**: at a breakpoint in `Order Coffee`, Ctrl+Shift+Y opens the Debug Console. There `${order}` and `Order Status    ${order}` are evaluated.
+- **Log after a run**: with `robotcode.run.openOutputAfterRun: "log"`, Run Test opens the log beside the editor in VS Code's browser. Scrolling in it is left out, because the browser's content does not receive Playwright's input.
+- **`robot.toml` schema**: Ctrl+Space offers the values of `console`, and a hover over `output-dir` shows its documentation. Even Better TOML in the harness is mapped to the checkout's `docs/public/schemas/robot.toml.json`, and its status bar entry, which shows the schema's path, is hidden.
+- **Profile in VS Code**: the command palette's Select Configuration Profiles picks `ci`, and Debug Test then stops at a breakpoint in `Open Shop As`. There the inline value shows the profile's `BASE_URL`. A plain run was not used, because its output shows no logged values. The status bar's language status was not used either, because it shows RobotCode's version, which is still 2.7.0 until the release.
+- **REPL in VS Code**: the command palette's Start Terminal REPL opens `robotcode repl` in the terminal panel, and a library keyword is called there. The harness terminal is bash with a prompt without user or host name and with the example project's environment active, as the Python extension would activate it. The REPL's banner shows RobotCode's version.
 
 ### D7: Terminal sessions come from `capture.sh`
 
@@ -104,8 +106,8 @@ Each new scene is a scene file of its own in `playground/robotcode-demo/vscode/`
   - `results summary` after a run
   - `doc ShopLibrary`
 - **Run and debug**: `robot-debug` on `Login Works`, reusing the agent conversation's capture: stop at the failure, then `.where` and `.print`.
-- **REPL**: the Browser library at the shop page, reusing the conversation's capture. The debugger session uses `repl --break "Create Order"`, then `Import Resource`, a call of `Create Order` that stops at `(rdb)`, then `.where` and `.continue`.
-- **Configuration**: the CI example is a file step showing `.github/workflows/tests.yml` of the demo project, which runs `robotcode -p ci robot`.
+- **REPL**: the Browser library at the shop page, reusing the conversation's capture. The debugger session attaches at the prompt: `Import Resource`, `.debug on`, `.break Place Order`, then a call of `Create Order` stops at `(rdb)` inside it, and `.print ${product}` shows the argument. `repl --break "Create Order"` was not used, because it stops at the call in the prompt, where `${product}` does not exist yet.
+- **Configuration**: the CI example is a file step showing `.github/workflows/tests.yml` of the demo project, which runs `robotcode -p ci robot`. A local run of the same command is left out, because it would make the session taller than a recording.
 
 ### D8: Texts and links
 
