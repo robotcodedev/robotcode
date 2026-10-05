@@ -32,6 +32,19 @@ const CLIENT_DISPOSE_TIMEOUT = 5000;
 const CLIENT_SLEEP_DURATION = 500;
 const LANGUAGE_CLIENT_PREFIX = "$robotCode:";
 
+// the packages of Robot Framework and RobotCode, not the libraries and tools named after them
+const ROBOT_PACKAGE = String.raw`(?:robotframework|robotcode)`;
+// a requirement string such as `"robotframework>=7.0"`, or a Poetry style key such as `robotframework = "^7.0"`
+const ROBOT_DEPENDENCY_IN_PYPROJECT = new RegExp(
+  String.raw`["']\s*${ROBOT_PACKAGE}\s*(?:\[[^\]]*\])?\s*(?:[<>=!~;@]|["'])|^\s*["']?${ROBOT_PACKAGE}["']?\s*=`,
+  "im",
+);
+const ROBOT_REQUIREMENT = new RegExp(String.raw`^\s*${ROBOT_PACKAGE}\s*(?:\[[^\]]*\])?\s*(?:[<>=!~;@#]|$)`, "im");
+// what the search for Robot Framework files skips: like Robot Framework, names that start with `.` or `_` and `CVS`
+// folders, and also folders of other tools that can be large
+const ROBOT_FILES_SEARCH_EXCLUDE = "{**/.*,**/_*,**/CVS,**/node_modules,**/target,**/build,**/dist,**/venv}";
+const ROBOT_FILES_SEARCH_TIMEOUT = 5000;
+
 export function toVsCodeRange(range: Range): vscode.Range {
   return new vscode.Range(
     new vscode.Position(range.start.line, range.start.character),
@@ -828,12 +841,8 @@ export class LanguageClientsManager {
 
     if (uri === undefined) {
       for (const f of vscode.workspace.workspaceFolders || []) {
-        const robotFiles = await vscode.workspace.findFiles(
-          new vscode.RelativePattern(f, `**/*.{${this.fileExtensions.join(",")}}}`),
-          undefined,
-          1,
-        );
-        if (robotFiles.length > 0) {
+        // a folder with an open Robot Framework document gets its client anyway
+        if (!folders.has(f) && (await this.isRobotProject(f).catch(() => false))) {
           folders.add(f);
         }
       }
@@ -850,6 +859,57 @@ export class LanguageClientsManager {
         // do noting
       }
     }
+  }
+
+  /**
+   * Whether a workspace folder is a Robot Framework project: it has a `robot.toml` or `.robot.toml`, a
+   * `pyproject.toml` or `requirements.txt` that depends on Robot Framework or RobotCode, or Robot Framework files
+   * outside the folders that the search skips. A search that takes too long counts as no files; the client then
+   * starts with the first opened Robot Framework document.
+   */
+  private async isRobotProject(folder: vscode.WorkspaceFolder): Promise<boolean> {
+    const read = async (name: string): Promise<string> => {
+      try {
+        return new TextDecoder().decode(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(folder.uri, name)));
+      } catch {
+        return "";
+      }
+    };
+
+    const names = new Set((await vscode.workspace.fs.readDirectory(folder.uri)).map(([name]) => name));
+    if (names.has("robot.toml") || names.has(".robot.toml")) return true;
+    const pyproject = names.has("pyproject.toml") ? await read("pyproject.toml") : "";
+    if (ROBOT_DEPENDENCY_IN_PYPROJECT.test(pyproject.replace(/^\s*#.*$/gm, ""))) return true;
+    const requirements = names.has("requirements.txt") ? await read("requirements.txt") : "";
+    if (ROBOT_REQUIREMENT.test(requirements)) return true;
+
+    const cancellation = new vscode.CancellationTokenSource();
+    const timeout = setTimeout(() => cancellation.cancel(), ROBOT_FILES_SEARCH_TIMEOUT);
+    let files: vscode.Uri[] = [];
+    let timedOut = false;
+    try {
+      files = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(folder, `**/*.{${this.fileExtensions.join(",")}}`),
+        new vscode.RelativePattern(folder, ROBOT_FILES_SEARCH_EXCLUDE),
+        1,
+        cancellation.token,
+      );
+    } catch (error) {
+      if (!cancellation.token.isCancellationRequested) throw error;
+    } finally {
+      timedOut = cancellation.token.isCancellationRequested;
+      clearTimeout(timeout);
+      cancellation.dispose();
+    }
+    if (timedOut) {
+      this.outputChannel.appendLine(
+        `Searching Robot Framework files in workspace folder '${folder.name}' took too long, ` +
+          "its language server starts with the first opened Robot Framework document.",
+      );
+      return false;
+    }
+
+    return files.length > 0;
   }
 
   public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {
