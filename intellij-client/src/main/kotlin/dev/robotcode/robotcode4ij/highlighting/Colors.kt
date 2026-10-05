@@ -60,6 +60,10 @@ object Colors {
         createTextAttributesKey("ROBOTFRAMEWORK_EMBEDDED_ARGUMENT", VARIABLE)
     val NAMED_ARGUMENT: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_NAMED_ARGUMENT", DefaultLanguageHighlighterColors.PARAMETER)
+    val PARAMETER: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_PARAMETER", VARIABLE)
+    val TYPE_HINT: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_TYPE_HINT", DefaultLanguageHighlighterColors.CLASS_REFERENCE)
     
     val LINE_COMMENT: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_LINE_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)

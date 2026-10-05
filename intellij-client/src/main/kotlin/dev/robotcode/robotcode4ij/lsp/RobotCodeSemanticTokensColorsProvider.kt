@@ -11,7 +11,7 @@ import com.redhat.devtools.lsp4ij.features.semanticTokens.DefaultSemanticTokensC
 import dev.robotcode.robotcode4ij.highlighting.Colors
 import java.util.concurrent.ConcurrentHashMap
 
-private val mapping by lazy {
+internal val semanticTokenKeys by lazy {
     mapOf(
         "header" to Colors.HEADER,
         "headerKeyword" to Colors.HEADER,
@@ -34,6 +34,8 @@ private val mapping by lazy {
         "nameCall" to Colors.NAME_CALL,
         "argument" to Colors.ARGUMENT,
         "namedArgument" to Colors.NAMED_ARGUMENT,
+        "parameter" to Colors.PARAMETER,
+        "type" to Colors.TYPE_HINT,
         "variable" to Colors.VARIABLE,
         "variable,embedded" to Colors.EMBEDDED_ARGUMENT,
         "variableExpression" to Colors.VARIABLE_EXPRESSION,
@@ -50,6 +52,25 @@ private val mapping by lazy {
     )
 }
 
+/**
+ * Token types that correct what the grammar shows at their place, for example a type hint that the grammar shows as
+ * part of the variable name. They are drawn even when their key looks like plain text, because the grammar look
+ * belongs to another category there. All other token types only refine the grammar look.
+ */
+internal val correctingTokenTypes = setOf(
+    "type",
+    "namedArgument",
+    "namespace",
+    "operator",
+    "keywordCall",
+    "keywordCallInner",
+    "nameCall",
+    "argument",
+    "bddPrefix",
+    "controlFlow",
+    "error",
+)
+
 private val reportedUnknownTokenTypes = ConcurrentHashMap.newKeySet<String>()
 
 /**
@@ -64,6 +85,14 @@ internal fun isDefinedByScheme(key: TextAttributesKey, scheme: EditorColorsSchem
         && attributes != scheme.getAttributes(HighlighterColors.TEXT)
 }
 
+/**
+ * Returns [key] if a token of [tokenType] is drawn with it in [scheme]: a correcting token always, a refining token
+ * only when the scheme defines something for its key. Otherwise the token keeps the grammar highlighting.
+ */
+internal fun drawnKey(tokenType: String, key: TextAttributesKey, scheme: EditorColorsScheme): TextAttributesKey? {
+    return if (tokenType in correctingTokenTypes || isDefinedByScheme(key, scheme)) key else null
+}
+
 class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvider() {
     override fun getTextAttributesKey(
         tokenType: String, tokenModifiers: MutableList<String>, file: PsiFile
@@ -72,7 +101,7 @@ class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvide
         if (tokenModifiers.isNotEmpty()) {
             tokenTypeAndModifiers += ",${tokenModifiers.joinToString(",")}"
         }
-        val result = mapping[tokenTypeAndModifiers] ?: mapping[tokenType] ?: super.getTextAttributesKey(
+        val result = semanticTokenKeys[tokenTypeAndModifiers] ?: semanticTokenKeys[tokenType] ?: super.getTextAttributesKey(
             tokenType,
             tokenModifiers,
             file
@@ -85,7 +114,6 @@ class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvide
             return null
         }
         
-        // like VS Code: only draw what the color scheme defines, otherwise keep the grammar highlighting
-        return if (isDefinedByScheme(result, EditorColorsManager.getInstance().globalScheme)) result else null
+        return drawnKey(tokenType, result, EditorColorsManager.getInstance().globalScheme)
     }
 }

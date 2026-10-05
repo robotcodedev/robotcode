@@ -6,7 +6,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class ColorsTest : BasePlatformTestCase() {
     
-    private val variableParts = listOf(Colors.VARIABLE_EXPRESSION, Colors.EMBEDDED_ARGUMENT)
+    private val variableParts = listOf(Colors.VARIABLE_EXPRESSION, Colors.EMBEDDED_ARGUMENT, Colors.PARAMETER)
     
     private val braces = listOf(
         Colors.VARIABLE_BEGIN,
@@ -32,6 +32,7 @@ class ColorsTest : BasePlatformTestCase() {
             assertSame(key.externalName, DefaultLanguageHighlighterColors.BRACKETS, key.fallbackAttributeKey)
         }
         assertSame(DefaultLanguageHighlighterColors.KEYWORD, Colors.BDD_PREFIX.fallbackAttributeKey)
+        assertSame(DefaultLanguageHighlighterColors.CLASS_REFERENCE, Colors.TYPE_HINT.fallbackAttributeKey)
     }
     
     fun testKeysLookLikeTheirFallbackInEveryScheme() {

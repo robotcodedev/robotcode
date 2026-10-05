@@ -26,6 +26,8 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         AttributesDescriptor("Argument", Colors.ARGUMENT),
         AttributesDescriptor("Embedded argument", Colors.EMBEDDED_ARGUMENT),
         AttributesDescriptor("Named argument", Colors.NAMED_ARGUMENT),
+        AttributesDescriptor("Parameter", Colors.PARAMETER),
+        AttributesDescriptor("Type hint", Colors.TYPE_HINT),
         AttributesDescriptor("Variable", Colors.VARIABLE),
         AttributesDescriptor("Variable expression", Colors.VARIABLE_EXPRESSION),
         AttributesDescriptor("Variable begin", Colors.VARIABLE_BEGIN),
@@ -108,13 +110,14 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         
         A Test With Vars
             VAR  ${'$'}{var1}  value1
+            VAR  ${'$'}{count: <type_hint>int</type_hint>}  1
             VAR  @{var2}  value2   value3
             VAR  &{var2}  v2=value2   v3=value3
             Do Something  with=A Value
 
         *** Keywords ***
         Open Application
-            [Arguments]  ${'$'}{url}
+            [Arguments]  ${'$'}{<parameter>url</parameter>}
             Open Browser  ${'$'}{url}
 
         Close Application
@@ -141,7 +144,8 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         """.trimIndent()
     }
     
-    override fun getAdditionalHighlightingTagToDescriptorMap(): MutableMap<String, TextAttributesKey>? {
-        return null
+    // the colours of these settings come from semantic highlighting, which the preview does not run
+    override fun getAdditionalHighlightingTagToDescriptorMap(): MutableMap<String, TextAttributesKey> {
+        return mutableMapOf("parameter" to Colors.PARAMETER, "type_hint" to Colors.TYPE_HINT)
     }
 }
