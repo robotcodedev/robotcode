@@ -2,14 +2,14 @@
 
 ### Requirement: Home page
 
-The home page SHALL show the product name, the tagline, a subline chosen at random on each load, one picture of the RobotCode artwork chosen at random on each load, the actions Get Started, Install VS Code, Install JetBrains, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, which leads to the open-source section. Previous and next buttons and a horizontal swipe on the picture SHALL switch to the neighbouring picture. Clicking the picture SHALL open an enlarged view that closes on a click or Escape and in which the left and right arrow keys switch pictures.
+The home page SHALL show the product name, the tagline, a subline chosen at random on each load, one picture of the RobotCode artwork chosen at random on each load, the actions Get Started, VS Code Extension, JetBrains Plugin, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, which leads to the open-source section. Previous and next buttons and a horizontal swipe on the picture SHALL switch to the neighbouring picture. Clicking the picture SHALL open an enlarged view that closes on a click or Escape and in which the left and right arrow keys switch pictures.
 
 Below the hero the home page SHALL show, in this order, the feature tour, the AI agents section, the RoboCon 2024 tutorial video, the latest news and the open-source section. The feature tour SHALL list Code intelligence; Run, debug & test explorer; One config everywhere; Powerful CLI; Interactive REPL; and Multi-IDE, same core as feature cards, each with its description and links to the pages that cover it, next to a demo window that shows examples of the selected feature. The AI agents section SHALL describe what an AI agent does with the RobotCode skill, name the agents it works with, link to the setup guide `/guides/ai-agents/` and show conversations of an agent working through `robotcode`. The latest news SHALL list the three newest posts, newest first, with date, title and description, and link to all news. The open-source section SHALL state the license, link to the GitHub repository, to Support & Contribute and to the sponsoring options, and show the supporters. The home page SHALL show no edit link and no last-change date. On a viewport of 1366×768 or larger, the beginning of the feature tour SHALL be visible without scrolling.
 
 #### Scenario: Random picture
 - **WHEN** the home page is loaded
 - **THEN** one picture of the RobotCode artwork is shown next to the product name
-- **AND** the actions Get Started, Install VS Code and Install JetBrains are offered
+- **AND** the actions Get Started, VS Code Extension and JetBrains Plugin are offered
 
 #### Scenario: Browsing the pictures
 - **WHEN** a reader swipes left on the picture, or clicks it and presses the right arrow key
