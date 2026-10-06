@@ -7,7 +7,11 @@ import sys
 def update_sys_path(path_to_add: str, strategy: str) -> None:
     if path_to_add not in sys.path and pathlib.Path(path_to_add).is_dir():
         if any(p for p in pathlib.Path(path_to_add).iterdir() if p.suffix == ".pth"):
+            old_sys_path = list(sys.path)
             site.addsitedir(path_to_add)
+            if strategy == "useBundled":
+                # addsitedir appends, which would let packages from the environment win over the bundled ones
+                sys.path[:] = [p for p in sys.path if p not in old_sys_path] + old_sys_path
             return
 
         if strategy == "useBundled":
