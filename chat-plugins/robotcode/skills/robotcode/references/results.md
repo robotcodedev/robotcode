@@ -87,7 +87,7 @@ robotcode results log --max-depth 2                              # show keyword 
 robotcode results log --failed --keyword-info                    # add each keyword's [Documentation]/[Tags]/[Timeout]
 robotcode results log --suite-info                               # add suite-level metadata to the tree
 robotcode results log --failed --extract /tmp/artefacts          # write referenced screenshots / base64 blobs out
-robotcode results log --execution-messages                       # also include parser/discovery `<errors>` section
+robotcode results log --execution-messages                       # also the `<errors>` messages from outside the tests (imports, parsing)
 ```
 
 Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `report.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed. `--max-depth N` is your friend on deeply nested suites: it collapses everything below level `N` to a child-count summary. For deeper inspection add `--keyword-info` (each keyword's `[Documentation]`/`[Tags]`/`[Timeout]`) or `--suite-info` (suite-level metadata). For HTML-rich messages, `pip install robotcode-runner[html]` improves conversion quality.
