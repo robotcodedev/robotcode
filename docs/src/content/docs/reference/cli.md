@@ -2877,7 +2877,7 @@ robotcode results stats [OPTIONS]
 
 Print headline counts and overall status for a finished run.
 
-Pass `--failed` to also list failed tests above the counts. Filter options
+Pass `--failed` to also list failed tests below the counts. Filter options
 narrow what is counted.
 
 Examples:
@@ -2959,7 +2959,7 @@ robotcode results summary [OPTIONS]
 
 - `--failed / --no-failed`
 
-   Include the list of failed tests (with messages) above the counts table.  [default: no-failed]
+   Include the list of failed tests (with messages) below the counts table.  [default: no-failed]
 
 
 - `--full-paths / --no-full-paths`

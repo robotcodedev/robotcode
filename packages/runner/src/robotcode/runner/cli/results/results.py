@@ -306,7 +306,7 @@ def results() -> None:
     "show_failed",
     default=False,
     show_default=True,
-    help="Include the list of failed tests (with messages) above the counts table.",
+    help="Include the list of failed tests (with messages) below the counts table.",
 )
 @FULL_PATHS_OPTION
 @pass_application
@@ -330,7 +330,7 @@ def summary(
     """\
     Print headline counts and overall status for a finished run.
 
-    Pass `--failed` to also list failed tests above the counts.
+    Pass `--failed` to also list failed tests below the counts.
     Filter options narrow what is counted.
 
     \b
