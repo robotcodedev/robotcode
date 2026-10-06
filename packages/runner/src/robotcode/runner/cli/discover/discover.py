@@ -300,7 +300,7 @@ class Collector(SuiteVisitor):
                 name=suite.name,
                 longname=suite.longname,
                 uri=str(Uri.from_path(absolute_path)) if absolute_path else None,
-                source=str(suite.source),
+                source=str(suite.source) if suite.source else None,
                 rel_source=get_rel_source(suite.source),
                 range=(
                     Range(

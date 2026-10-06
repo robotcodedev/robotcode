@@ -64,3 +64,14 @@ def test_suites_carry_source_field(json_discover: JsonRunner, flat_suite: Path) 
     flat = [s for s in data["items"] if s["name"] == "Flat"]
     assert flat, "expected the Flat suite item"
     assert Path(flat[0]["source"]).name == "flat.robot"
+
+
+def test_suites_top_suite_of_several_files_has_no_source(
+    json_discover: JsonRunner, text_discover: CliRunner, flat_suite: Path, tagged_suite: Path
+) -> None:
+    """Two files make a top suite without a file of its own: it has no source, not the text "None"."""
+    data = json_discover("suites", str(flat_suite), suite_path=tagged_suite)
+    top = next(item for item in data["items"] if item["name"] == "Flat & Tagged")
+    assert top.get("source") is None
+    result = text_discover("suites", str(flat_suite), suite_path=tagged_suite)
+    assert "- **Flat & Tagged**\n" in result.stdout
