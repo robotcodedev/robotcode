@@ -52,13 +52,28 @@ git clone --depth 1 https://github.com/robotcodedev/robotframework-agent-plugins
 cp -r robotframework-agent-plugins/plugins/robotcode/skills/robotcode ~/.claude/skills/
 ```
 
-Other agents have analogous skill directories — consult their docs. The trade-off is that updates won't flow through `plugin marketplace update`; you re-pull manually.
+Other agents have analogous skill directories — consult their docs. The trade-off is that updates won't flow through `plugin marketplace update`; you re-pull manually. To get the skill for a specific `robotcode` release, add `--branch robotcode--v<version>` to the clone.
+
+## Match your robotcode version
+
+The skill describes the commands and options of a specific `robotcode` release, and every `robotcode` release has a matching tag `robotcode--v<version>`. Installing without a ref gives you the plugin for the latest release.
+
+If your project uses an older `robotcode` (check with `robotcode --version`), pin the marketplace to the matching tag. For example, for `robotcode` 2.7.0 in Claude Code:
+
+```sh
+claude plugin marketplace add robotcodedev/robotframework-agent-plugins#robotcode--v2.7.0
+claude plugin install robotcode@robotframework-agent-plugins
+```
+
+See [Versions and pinning](../../README.md#versions-and-pinning) for the command in other agents and for switching between versions.
 
 ## Updating
 
 ```sh
 claude plugin marketplace update   # or your agent's equivalent
 ```
+
+A marketplace pinned to a tag doesn't update. To move to another `robotcode` version, switch the tag as described in [Match your robotcode version](#match-your-robotcode-version).
 
 The marketplace [`robotcodedev/robotframework-agent-plugins`](https://github.com/robotcodedev/robotframework-agent-plugins) is the source of truth. Pull requests welcome — see the marketplace [CONTRIBUTING notes](../../README.md#contributing).
 

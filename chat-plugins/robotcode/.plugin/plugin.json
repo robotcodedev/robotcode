@@ -1,6 +1,6 @@
 {
 	"name": "robotcode",
-	"version": "1.0.0",
+	"version": "2.8.0",
 	"description": "Agent skill that teaches AI coding agents to drive robotcode properly in Robot Framework projects",
 	"author": {
 		"name": "Daniel Biehl",

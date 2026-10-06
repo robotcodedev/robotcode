@@ -18,7 +18,7 @@ description: >-
 license: Apache-2.0
 compatibility: Runs from the project's Python environment with robotcode installed (Robot Framework 5.0+).
 metadata:
-  version: "1.0.0"
+  version: "2.8.0"
 ---
 
 # robotcode CLI
