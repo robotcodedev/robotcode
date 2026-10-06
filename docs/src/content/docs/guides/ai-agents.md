@@ -73,6 +73,25 @@ copilot plugin install robotcode@robotframework-agent-plugins
 
 See the [marketplace README](https://github.com/robotcodedev/robotframework-agent-plugins#install-per-agent) for the exact commands per agent, and for agents that load skill folders directly without a marketplace.
 
+### Matching your RobotCode version
+
+Installed this way, the plugin matches the latest **RobotCode** release. Every release is also tagged `robotcode--v<version>`, so a project that stays on an older version can pin the plugin to the matching tag. Check the version with `robotcode --version`, then add the marketplace with that tag:
+
+```sh
+# Claude Code
+claude plugin marketplace add robotcodedev/robotframework-agent-plugins#robotcode--v2.7.0
+
+# GitHub Copilot CLI
+copilot plugin marketplace add robotcodedev/robotframework-agent-plugins#robotcode--v2.7.0
+
+# Codex
+codex plugin marketplace add robotcodedev/robotframework-agent-plugins --ref robotcode--v2.7.0
+```
+
+In VS Code, append the tag to the entry in `chat.plugins.marketplaces`, for example `"robotcodedev/robotframework-agent-plugins#robotcode--v2.7.0"`. Then install the plugin as usual.
+
+A pinned marketplace receives no updates. To move to another version, remove the marketplace, add it again with the new tag, and reinstall the plugin.
+
 ### Adding the marketplace from VS Code
 
 To use the marketplace version in VS Code's Copilot Chat (instead of, or alongside, the bundled plugin), the extension provides two Command Palette commands that edit the user-level `chat.plugins.marketplaces` setting for you:
@@ -151,7 +170,7 @@ Explicit flags and environment variables always win over auto-detection, so you 
 
 **The agent writes a `.robot` file when you only wanted it to *do* something** — try a keyword or check a locator with no test yet. Tell it not to write a test and to use the REPL instead ("don't write a test, just run it live"); it can save the session as a test afterwards if you ask. See [Interactive Robot Framework REPL](/guides/repl/). (If a test already exists, you want the debugger above, not the REPL.)
 
-**A marketplace install behaves differently from the bundled VS Code plugin.** The two copies are versioned independently: the bundled one ships with the extension, the marketplace one updates through your agent's `plugin marketplace update`. If behavior diverges, update the marketplace copy — and make sure you aren't running both at once (see [Avoiding duplicates](#avoiding-duplicates)).
+**A marketplace install behaves differently from the bundled VS Code plugin.** The bundled copy always matches the extension's version. The marketplace copy matches the latest RobotCode release, or the tag you pinned it to, and updates through your agent's `plugin marketplace update`. If behavior diverges, update the marketplace copy or [pin it to your version](#matching-your-robotcode-version) — and make sure you aren't running both at once (see [Avoiding duplicates](#avoiding-duplicates)).
 
 ## See also
 
