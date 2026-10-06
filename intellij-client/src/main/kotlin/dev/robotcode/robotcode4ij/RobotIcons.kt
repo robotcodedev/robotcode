@@ -12,9 +12,6 @@ class RobotIcons {
         
         @JvmField
         val RobotCode = IconManager.getInstance().getIcon("/images/robotcode.svg", Companion::class.java.classLoader)
-        
-        @JvmField
-        val Robot = IconManager.getInstance().getIcon("/images/suite.robot", Companion::class.java.classLoader)
     }
     
 }

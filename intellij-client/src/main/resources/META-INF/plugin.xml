@@ -94,13 +94,9 @@
 			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointType"/>
 		<xdebugger.breakpointType
 			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointType"/>
-		<!-- TODO - Add exception breakpoints -->
 
 		<internalFileTemplate name="Robot Suite File"/>
 		<internalFileTemplate name="Robot Resource File"/>
-
-		<!--		<testStatusListener implementation="dev.robotcode.robotcode4ij.testing.RobotCodeTestStatusListener"/>-->
-		<!--		<testActionProvider implementation="dev.robotcode.robotcode4ij.testing.RobotCodeTestActionProvider"/>-->
 
 		<statusBarWidgetFactory implementation="dev.robotcode.robotcode4ij.editor.RobotCodeStatusBarWidgetFactory"
 								id="dev.robotcode.robotcode4ij.editor.RobotCodeStatusBarWidget"/>
@@ -145,9 +141,4 @@
 		</group>
 
 	</actions>
-
-	<applicationListeners>
-		<listener class="dev.robotcode.robotcode4ij.listeners.RobotCodeApplicationActivationListener"
-				  topic="com.intellij.openapi.application.ApplicationActivationListener"/>
-	</applicationListeners>
 </idea-plugin>
