@@ -1302,7 +1302,8 @@ def files(
     # `get_rel_source` produces paths relative to the project root rather
     # than to whatever the caller's process cwd happens to be.
     with app.chdir(root_folder):
-        search_paths = set(
+        # Without duplicates, in the given order: the files come out in the order of the paths.
+        search_paths = dict.fromkeys(
             (
                 (
                     [*(app.config.default_paths if app.config.default_paths else ())]

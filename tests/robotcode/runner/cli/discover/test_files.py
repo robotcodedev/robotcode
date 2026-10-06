@@ -72,3 +72,11 @@ def test_files_text_format_lists_paths(robotcode_cli: CliRunner, files_tree: Pat
     assert "sub1.robot" in result.stdout
     # Italic-label convention for the count footer.
     assert "_Total:_" in result.stdout
+
+
+def test_files_keeps_the_order_of_the_given_paths(robotcode_cli: CliRunner, flat_suite: Path) -> None:
+    """Several paths are walked in the order given, without duplicates, the same on every run."""
+    suites = flat_suite.parent
+    order = ["tagged.robot", "flat.robot", "tasks.robot", "tagged.robot", "metadata.robot"]
+    files = _files_json(robotcode_cli, *(str(suites / name) for name in order[:-1]), suite_path=suites / order[-1])
+    assert [Path(p).name for p in files] == ["tagged.robot", "flat.robot", "tasks.robot", "metadata.robot"]
