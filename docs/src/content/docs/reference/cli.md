@@ -63,17 +63,17 @@ pip install robotcode
 This command installs only the main package. For specific functionality, additional packages can be installed as needed:
 
 ```bash
-pip install robotcode[runner]
-pip install robotcode[analyze]
-pip install robotcode[debugger]
-pip install robotcode[repl]
-pip install robotcode[languageserver]
+pip install "robotcode[runner]"
+pip install "robotcode[analyze]"
+pip install "robotcode[debugger]"
+pip install "robotcode[repl]"
+pip install "robotcode[languageserver]"
 ```
 
 To install all packages, including optional dependencies, use:
 
 ```bash
-pip install robotcode[all]
+pip install "robotcode[all]"
 ```
 
 This includes additional tools, such as [`robocop`](https://robocop.readthedocs.io) for linting and formatting, which further enhance the development experience with Robot Framework.

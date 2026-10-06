@@ -57,7 +57,7 @@ Multi-word options use hyphens in `robot.toml` (e.g., `--outputdir` becomes `out
 
 To see all available options:
 - Run `robot --help` for standard Robot Framework options
-- Run `robotcode config info` for RobotCode-specific options
+- Run `robotcode config info list` to list every `robot.toml` setting, and `robotcode config info desc <setting>` to describe one
 - Check the [Configuration Reference](/reference/config/) documentation
 
 ## Working with Profiles
@@ -149,7 +149,7 @@ variables = { RETRIES = 3 }
 To execute tests, install the `robotcode-runner` package:
 
 ```bash
-pip install robotcode[runner]
+pip install "robotcode[runner]"
 ```
 
 Common test execution commands:
@@ -178,7 +178,7 @@ paths = ["tests"]
 
 ```
 
-then it is not needed to give specific paths at the commandline, just type:
+then it is not needed to give specific paths at the command line, just type:
 
 ```bash
 # run all tests
@@ -197,7 +197,7 @@ By default, when merging profiles, list and dictionary settings are completely r
 ```toml
 # Default settings
 variables = { BROWSER = "chrome", TIMEOUT = "20s" }
-include = ["smoke"]
+includes = ["smoke"]
 
 [profiles.api]
 # Completely replaces the default variables
@@ -206,16 +206,16 @@ variables = { API_KEY = "123456" }  # BROWSER and TIMEOUT are removed
 [profiles.extended]
 # Adds to the default variables
 extend-variables = { API_KEY = "123456" }  # Results in {BROWSER = "chrome", TIMEOUT = "20s", API_KEY = "123456"}
-extend-include = ["api"]  # Results in ["smoke", "api"]
+extend-includes = ["api"]  # Results in ["smoke", "api"]
 ```
 
 Settings that support the `extend-` prefix include:
 - `variables`
-- `include` / `exclude`
+- `includes` / `excludes`
 - `python-path`
 - `metadata`
 
-and many more, see the [`robot.toml` reference](/reference/config/) for all posibilities.
+and many more, see the [`robot.toml` reference](/reference/config/) for all possibilities.
 
 ## Configuration Loading Order
 

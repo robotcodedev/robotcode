@@ -10,7 +10,7 @@ sidebar:
 The `robotcode discover` command comes from the optional **`runner`** package. If it isn't installed yet, add it:
 
 ```bash
-pip install robotcode[runner]   # or: pip install robotcode[all]
+pip install "robotcode[runner]"   # or: pip install "robotcode[all]"
 ```
 :::
 
@@ -129,18 +129,26 @@ robotcode discover all --include smoke      # restrict to a tag
 
 Sample output:
 
-```
-Suite: MyProject (tests/)
-    Suite: MyProject.Login (tests/login/)
-        Test: MyProject.Login.Bad Password (tests/login/test_login.robot:14)
-            Tags: regression, smoke
-        Test: MyProject.Login.Good Password (tests/login/test_login.robot:22)
-            Tags: smoke
+```markdown
+# All
 
-Statistics:
-  - Suites: 4
-  - Suites with tests: 3
-  - Tests: 18
+- **MyProject**
+  - **MyProject.Login** (`tests/login/test_login.robot`)
+    - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+      - _Tags:_ `regression`, `smoke`
+      - _Metadata:_ Author: Hans Müller, Issue: 4409
+    - **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
+      - _Tags:_ `smoke`
+      - _Metadata:_ Issue: 4410
+  - **MyProject.Checkout** (`tests/checkout/test_checkout.robot`)
+    - **MyProject.Checkout.Empty Cart** (`tests/checkout/test_checkout.robot:8`)
+…
+
+## Statistics
+
+- _Suites:_ 4
+- _Suites with tests:_ 3
+- _Tests:_ 18
 ```
 
 ### Flag reference
@@ -149,7 +157,7 @@ Statistics:
 |---|---|
 | `--show-tags / --no-show-tags` | Show or hide the `Tags:` line under each test/task. **Default: on.** |
 | `--show-metadata / --no-show-metadata` | Show or hide a `Metadata:` line (`name: value, …`) under each test/task that has `[Metadata]` (Robot Framework 7.5+). **Default: on.** |
-| `--full-paths / --no-full-paths` | Absolute source paths. Default: relative to cwd. |
+| `--full-paths / --no-full-paths` | Absolute source paths. Default: relative to the project root. |
 | `--search TEXT` / `--search-regex PATTERN` | Prune the tree to tests matching the pattern; surviving tests keep their full ancestor chain. See [Search](#search). |
 | `-bl NAME` / `-ebl NAME` | Include/exclude tests, tasks or suites by exact long name. See [Robot-native filters](#robot-native-filters). |
 | *any standard `robot` flag* | `--include`, `--exclude`, `--suite`, `--test`, `--variable`, `--pythonpath`, … passed through to the discovery pipeline. |
@@ -173,10 +181,19 @@ robotcode discover tests path/to/suite.robot    # one suite only
 
 Sample output:
 
-```
-Test: MyProject.Login.Bad Password (tests/login/test_login.robot:14)
-Test: MyProject.Login.Good Password (tests/login/test_login.robot:22)
-Test: MyProject.Checkout.Empty Cart (tests/checkout/test_checkout.robot:8)
+```markdown
+# Tests
+
+- **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+- **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
+- **MyProject.Checkout.Empty Cart** (`tests/checkout/test_checkout.robot:8`)
+…
+
+## Statistics
+
+- _Suites:_ 4
+- _Suites with tests:_ 3
+- _Tests:_ 18
 ```
 
 ### Flag reference
@@ -194,7 +211,7 @@ Tasks defined with `*** Tasks ***` are intentionally **not** in this list — us
 
 ## `tasks` — flat list of tasks
 
-`tasks` is the RPA twin of `tests`: one row per task. The TEXT output and flag set mirror `tests`; only the row label differs (`Task: …`).
+`tasks` is the RPA twin of `tests`: one row per task. The TEXT output and flag set mirror `tests`; only the heading differs (`# Tasks`).
 
 ```bash
 robotcode discover tasks
@@ -214,10 +231,19 @@ robotcode discover suites --include smoke    # only suites with a smoke test
 
 Sample output:
 
-```
-MyProject (tests/)
-MyProject.Login (tests/login/)
-MyProject.Checkout (tests/checkout/)
+```markdown
+# Suites
+
+- **MyProject**
+- **MyProject.Login** (`tests/login/test_login.robot`)
+- **MyProject.Checkout** (`tests/checkout/test_checkout.robot`)
+- **MyProject.Search** (`tests/search/test_search.robot`)
+
+## Statistics
+
+- _Suites:_ 4
+- _Suites with tests:_ 3
+- _Tests:_ 18
 ```
 
 A suite with no surviving tests after filtering disappears from the list — `--include smoke` against a suite where nothing is tagged `smoke` will drop that suite.
@@ -235,12 +261,20 @@ robotcode discover tags --not-normalized    # keep the original tag spelling
 
 Sample output (`--tests`):
 
-```
-smoke
-    Test: MyProject.Login.Good Password (tests/login/test_login.robot:22)
-    Test: MyProject.Login.Bad Password (tests/login/test_login.robot:14)
-regression
-    Test: MyProject.Login.Bad Password (tests/login/test_login.robot:14)
+```markdown
+# Tags
+
+- **regression**
+  - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+- **smoke**
+  - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+  - **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
+
+## Statistics
+
+- _Suites:_ 4
+- _Suites with tests:_ 3
+- _Tests:_ 18
 ```
 
 ### Flag reference
@@ -328,10 +362,14 @@ robotcode discover files --search "checkout"      # filename substring filter
 
 Sample output:
 
-```
-tests/login/test_login.robot
-tests/login/resources/login_keywords.resource
-tests/checkout/test_checkout.robot
+```markdown
+# Files
+
+- `tests/login/test_login.robot`
+- `tests/checkout/test_checkout.robot`
+- `tests/search/test_search.robot`
+
+_Total:_ 3 file(s)
 ```
 
 Files under directories ignored by `.gitignore` / `.robotignore` are excluded automatically. Use this when you need to feed a list of files into another tool (linter, formatter, custom pre-commit hook) and want exactly the set Robot would walk.
@@ -340,7 +378,7 @@ Files under directories ignored by `.gitignore` / `.robotignore` are excluded au
 
 | Flag | Effect |
 |---|---|
-| `--full-paths / --no-full-paths` | Absolute paths. Default: relative to cwd. |
+| `--full-paths / --no-full-paths` | Absolute paths. Default: relative to the project root. |
 | `--search TEXT` / `--search-regex PATTERN` | Filter by path/filename substring or regex. |
 
 ## `info` — environment and version
@@ -354,13 +392,16 @@ robotcode --format json discover info
 
 TEXT output:
 
-```
-robotVersionString: 7.4.2
-robotcodeVersionString: 1.6.0
-pythonVersionString: 3.13.2
-executable: .venv/bin/python
-platform: linux
-system: Linux
+```markdown
+# Info
+
+- _Robot Framework:_ 7.5
+- _RobotCode:_ 2.7.0
+- _Python:_ 3.13.12
+- _Executable:_ .venv/bin/python
+- _Machine:_ x86_64
+- _Platform:_ linux
+- _System:_ Linux
 …
 ```
 
@@ -508,7 +549,7 @@ An unparseable regex (e.g. `[unclosed`) yields a usage error pinpointing where t
 - **TEXT output is markdown.** On a coloured TTY the markdown is rendered to themed ANSI via `rich` (and paged if longer than your terminal); on pipes or with `--no-color` the raw markdown goes through verbatim — paste it into a PR description, a Slack message, or feed it straight to an LLM.
 - **Quote your globs.** `--suite "*.Login.*"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem first.
 - **`-bl` is for exact names, `-t` is for patterns.** When you copy a test long-name out of another tool's output, `-bl` is usually what you want — no need to escape glob characters.
-- **Pre-filter before piping into `robot`.** `robotcode discover tests --include smoke -f json | jq -r '.items[].longname'` gives you a stable list of long names you can hand back to `robotcode robot -bl ...` for sharded CI runs.
+- **Pre-filter before piping into `robot`.** `robotcode -f json discover tests --include smoke | jq -r '.items[].longname'` gives you a stable list of long names you can hand back to `robotcode robot -bl ...` for sharded CI runs.
 - **Parse errors don't stop discovery.** Files with syntax errors still appear in the tree; their problems land in the [`diagnostics`](#diagnostics) field. Pipe through `--format json` and check `.diagnostics` for build-time gating.
 
 ---
@@ -589,7 +630,7 @@ Per subcommand:
 - **`tests`** / **`tasks`** — `items` is a flat list of `test` / `task` entries respectively.
 - **`suites`** — `items` is a flat list of `suite` entries (no children — drill into the source files separately if you want per-suite tests).
 
-`diagnostics` and `filtersApplied` are both optional and absent when empty / unused.
+`filtersApplied` is optional and absent when unused. `diagnostics` is always present — an empty object `{}` when nothing fired.
 
 `supportsParseInclude` is `true` when the project's Robot Framework version supports the `--parseinclude` (`-I`) option (RF ≥ 6.1). It is a property of the discovery environment, not of any single item, so it lives on the result envelope. Editor integrations use it to decide whether to pass `-I` when running a subset of tests. Omitted (treat as `false`) for RF < 6.1.
 
@@ -601,7 +642,7 @@ Per subcommand:
     "bug1": [ /* TestItems carrying this tag */ ],
     "smoke": [ /* … */ ]
   },
-  "filtersApplied": { "include": ["smoke"] }
+  "filtersApplied": { "search": "Login" }
 }
 ```
 
@@ -645,18 +686,18 @@ Field notes:
 ]
 ```
 
-`files` is a plain JSON array of path strings — relative to cwd by default, absolute with `--full-paths`. No wrapper object, no per-file metadata. If you need richer info, use `discover all` and walk the tree.
+`files` is a plain JSON array of path strings — relative to the project root by default, absolute with `--full-paths`. No wrapper object, no per-file metadata. If you need richer info, use `discover all` and walk the tree.
 
 ### `info` JSON
 
 ```json
 {
-  "robotVersionString": "7.4.2",
+  "robotVersionString": "7.5",
   "robotEnv": {
     "ROBOT_OPTIONS": "--include smoke"
   },
-  "robotcodeVersionString": "1.6.0",
-  "pythonVersionString": "3.13.2",
+  "robotcodeVersionString": "2.7.0",
+  "pythonVersionString": "3.13.12",
   "executable": ".venv/bin/python",
   "machine": "x86_64",
   "processor": "x86_64",
@@ -693,7 +734,7 @@ Field notes:
 
 - `severity` follows LSP's enum: `1` = Error, `2` = Warning, `3` = Information, `4` = Hint.
 - A file whose parser failed entirely still contributes whatever tests Robot could recover; the unrecoverable parts come through here.
-- `diagnostics` is omitted when nothing fired.
+- `diagnostics` is an empty object `{}` when nothing fired.
 
 ### `filtersApplied`
 

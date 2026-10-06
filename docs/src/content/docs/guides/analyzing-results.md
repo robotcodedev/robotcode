@@ -10,7 +10,7 @@ sidebar:
 The `robotcode results` command comes from the optional **`runner`** package. If it isn't installed yet, add it:
 
 ```bash
-pip install robotcode[runner]   # or: pip install robotcode[all]
+pip install "robotcode[runner]"   # or: pip install "robotcode[all]"
 ```
 :::
 
@@ -78,13 +78,13 @@ In order, `robotcode results` looks for:
 
 1. An explicit `-o/--output PATH` argument.
    - If `PATH` is a regular file, it's used directly.
-   - If `PATH` is a directory, the newest `output.xml` or `output.json` inside is picked. Useful when CI writes timestamped output directories.
-2. The output file resolved from your active `robot.toml` profile (`output_dir` / `output` settings).
-3. The most recent `output.xml` / `output.json` in the working directory.
+   - If `PATH` is a directory, steps 2 and 3 search inside that directory instead of the project root. Useful when CI writes timestamped output directories.
+2. The output file resolved from your active `robot.toml` profile (`output-dir` / `output` settings): first exactly that file (`output.xml` by default); only if it doesn't exist, the newest timestamped variant of it (`output-*.xml` for the default name, as `--timestampoutputs` writes them), then `output.json` and the newest `output-*.json` in the same directory.
+3. `output.xml`, then `output.json` in the project root.
 
-If none of those produce a file, the command exits with a clear error (`Result file not found …` or `No result file found in …`). If the file exists but cannot be parsed (corrupted XML, premature termination of the run), you get `failed to parse <path>: …` with the underlying parser error.
+If none of those produce a file, the command exits with an error that lists every path it tried (`No result file found. Searched: …`); an explicit `PATH` that doesn't exist gives `Result file not found: …`. If the file exists but cannot be parsed (corrupted XML, premature termination of the run), you get `failed to parse <path>: …` with the underlying parser error.
 
-Both `output.xml` and `output.json` are supported; `robotcode results` picks the right parser automatically based on the file. (`output.json` is the RF 7.0+ opt-in format you get by passing `--output something.json` to `robotcode robot` or setting `output_format = "json"` in your profile.)
+Both `output.xml` and `output.json` are supported; `robotcode results` picks the right parser automatically based on the file. (`output.json` is the RF 7.0+ opt-in format: Robot Framework writes JSON when the output file name ends in `.json`, so you get it by passing `--output output.json` to `robotcode robot` or setting `output = "output.json"` in your profile.)
 
 :::caution[Result files with test metadata need Robot Framework 7.5 to read]
 `robotcode results` reads result files with the Robot Framework version installed in your environment. A result file written by Robot Framework 7.5 or newer that contains test-level `[Metadata]` cannot be read by Robot Framework 7.4 or older — neither by `robotcode results` nor by `rebot`. The command then fails with `failed to parse <path>: … Incompatible child element 'meta' for 'test'.` — for an `output.json` read with Robot Framework 7.2–7.4 the underlying error is `… 'robot.result.TestCase' object does not have attribute 'metadata'` instead. In both cases `robotcode results` adds a hint that names the cause:
@@ -139,25 +139,28 @@ Use the positive forms (`--pager`, `--color`) to *force* either feature even whe
 robotcode results summary
 ```
 
-Output is a short block with the overall status, the test counts, the wall-clock time, and (with `--failed`) the list of failed tests above it.
+Output is a short block with the overall status, the test counts, the wall-clock time, and (with `--failed`) the list of failed tests below it.
 
-```text
-Failures (2):
-FAIL    MyProject.Login.Bad Password (tests/login/test_login.robot:42)
-        AssertionError: Expected 'Login failed' but got 'Internal error'
-FAIL    MyProject.Checkout.Empty Cart (tests/checkout/test_empty.robot:11)
-        TimeoutError: keyword 'Open Cart' did not complete in 5s
+```markdown
+# Summary — results/output.xml
 
-Summary: results/output.xml
-  - Status:   FAIL
-  - Total:    42
-  - Passed:   37
-  - Failed:   2
-  - Skipped:  3
-  - Started:  2026-05-15 08:11:02
-  - Ended:    2026-05-15 08:12:25
-  - Elapsed:  1m 23s
-  - Messages: 318 INFO, 7 WARN, 2 FAIL
+- _Status:_ ❌ **FAIL**
+- _Total:_ 42
+- _Passed:_ 37
+- _Failed:_ 2
+- _Skipped:_ 3
+- _Started:_ 2026-10-05 23:50:52
+- _Ended:_ 2026-10-05 23:52:16
+- _Elapsed:_ 1 min 23.4 s
+- _Messages:_ 2 FAIL, 7 WARN
+- _Execution messages:_ 4 WARN
+
+## Failures (2)
+
+- ❌ **FAIL** MyProject.Login.Bad Password (`tests/login/test_login.robot:42`)
+  > AssertionError: Expected 'Login failed' but got 'Internal error'
+- ❌ **FAIL** MyProject.Checkout.Empty Cart (`tests/checkout/test_empty.robot:11`)
+  > TimeoutError: keyword 'Open Cart' did not complete in 5s
 ```
 
 ### Useful flags
@@ -165,7 +168,7 @@ Summary: results/output.xml
 | Flag | Purpose |
 |---|---|
 | `--failed` | Append the list of failed tests, each with its message and source location |
-| `--full-paths` | Show absolute source paths instead of paths relative to the working directory |
+| `--full-paths` | Show absolute source paths instead of paths relative to the project root |
 
 Filter flags (`--status`, `-i`, `-e`, `-s`, `-t`, `-bl`, `-ebl`) and `--search` work here too and narrow the underlying test set **before** the counts are computed. See [Filters](#filters) and [Search](#search).
 
@@ -278,9 +281,9 @@ With `--raw-html` the conversion is skipped — the original HTML markup is pres
 
 Both flags add **structured metadata** to the log output and are independent — you can pass either or both. They default to off so the standard `log` view stays compact.
 
-**`--keyword-info`** — for every executed `KEYWORD` / `SETUP` / `TEARDOWN`, the keyword's own `[Documentation]`, `[Tags]` and `[Timeout]` (taken from the keyword definition, not the call) are emitted. In TEXT the renderer prints them as indented `[Documentation] / [Tags] / [Timeout]` lines under the keyword header; in JSON they appear as `doc` / `tags` / `timeout` keys on the matching body-item entry. Fields whose underlying setting is empty are dropped, so `BuiltIn.Log` (which has a docstring but no tags) shows only `doc`.
+**`--keyword-info`** — for every executed `KEYWORD` / `SETUP` / `TEARDOWN`, the keyword's own `[Documentation]`, `[Tags]` and `[Timeout]` (taken from the keyword definition, not the call) are emitted. In TEXT the renderer prints them as nested `_[Documentation]_` / `_[Tags]_` / `_[Timeout]_` bullets under the keyword's bullet; in JSON they appear as `doc` / `tags` / `timeout` keys on the matching body-item entry. Fields whose underlying setting is empty are dropped, so `BuiltIn.Log` (which has a docstring but no tags) shows only `doc`.
 
-**`--suite-info`** — tests get grouped under one `Suite:` header per parent suite. The header carries the suite's `fullName`, source path, executed status, plus the suite's `Documentation` (with `...` continuation lines for multi-line docs) and one `[Metadata]` line per key. In JSON, `LogResult.suites` is populated with one entry per surviving suite, and every test gains a `suite` field cross-referencing the parent suite by `fullName`.
+**`--suite-info`** — tests get grouped under one `## Suite:` header per parent suite. The header carries the suite's `fullName`, source path and executed status; below it follow the suite's `Documentation` as a `>` quote (one `>` line per line of the documentation) and one `- _Name:_ value` bullet per `Metadata` key. In JSON, `LogResult.suites` is populated with one entry per surviving suite, and every test gains a `suite` field cross-referencing the parent suite by `fullName`.
 
 Combine both for a maximal view that mirrors the structure of the original `.robot` files:
 
@@ -290,23 +293,33 @@ robotcode results log --suite-info --keyword-info
 
 Example TEXT output:
 
-```
-Suite: MyProject.Login (tests/login.robot) PASS
-  [Documentation] Exercises the login flow against the staging environment.
-  [Metadata] OwnerTeam = identity-squad
+```markdown
+# Log
 
-  Test: MyProject.Login.Bad Password (tests/login.robot:42) FAIL
-    [SETUP] Open Browser    PASS
-      [Documentation] Launches a fresh Chromium with our shared profile.
-      [Tags] browser    setup
-      ...
+## Suite: MyProject.Login (`tests/login/test_login.robot`) ❌ **FAIL**
+> Exercises the login flow against the staging environment.
+
+- _OwnerTeam:_ identity-squad
+
+…
+
+### Test: MyProject.Login.Bad Password (`tests/login/test_login.robot:42`) ❌ **FAIL** _(23:51:01 · 1 ms)_
+
+_Metadata:_ Issue: 4409
+
+> AssertionError: Expected 'Login failed' but got 'Internal error'
+
+- **[SETUP]** **Open Browser** ✅ **PASS** _(23:51:01 · 0 ms)_
+  - _[Documentation]_ Launches a fresh Chromium with our shared profile.
+  - _[Tags]_ `browser` `setup`
+…
 ```
 
 ### Recipes
 
 ```bash
 # Drill into one failing test
-robotcode results log -bl MyProject.Login.Bad_Password
+robotcode results log -bl "MyProject.Login.Bad Password"
 
 # Walk only the FAIL-level messages of every failed test
 robotcode results log --failed --level FAIL
@@ -335,21 +348,27 @@ robotcode results stats --by suite
 robotcode results stats --by tag --by suite      # two sections, in the requested order
 ```
 
-Output:
+Output (`--by tag --by suite`):
 
-```text
-By Tag:
-    NAME              TOTAL  PASS  FAIL  SKIP  ELAPSED
-    regression          24    19     5     0    4m 12s
-    smoke               18    18     0     0    47s
-    slow                 7     5     1     1    2m 03s
-    bug-1842            2      0     2     0    8s
+```markdown
+# Stats
 
-By Suite:
-    NAME                                  TOTAL  PASS  FAIL  SKIP  ELAPSED
-    MyProject.Checkout                      14    10     4     0    3m 11s
-    MyProject.Login                         12    12     0     0    1m 02s
-    MyProject.Search                         8     7     0     1    52s
+## By Tag
+
+| Name       | Total | Pass | Fail | Skip |      Elapsed |
+| ---------- | ----: | ---: | ---: | ---: | -----------: |
+| regression |    34 |   29 |    2 |    3 |  1 min 9.3 s |
+| bug-1842   |     2 |    0 |    2 |    0 |         1 ms |
+| smoke      |    10 |    9 |    1 |    0 |      14.01 s |
+| slow       |     8 |    8 |    0 |    0 | 1 min 23.3 s |
+
+## By Suite
+
+| Name               | Total | Pass | Fail | Skip | Elapsed |
+| ------------------ | ----: | ---: | ---: | ---: | ------: |
+| MyProject.Login    |    12 |   11 |    1 |    0 | 16.01 s |
+| MyProject.Checkout |    14 |   12 |    1 |    1 | 34.01 s |
+| MyProject.Search   |    16 |   14 |    0 |    2 | 33.32 s |
 ```
 
 ### Flag reference
@@ -599,8 +618,8 @@ A few rules hold across every subcommand:
   "status": "FAIL",
   "counts": { "total": 42, "passed": 37, "failed": 2, "skipped": 3, "notRun": 0 },
   "elapsedSeconds": 83.4,
-  "startTime": "2026-05-15T08:11:02",
-  "endTime": "2026-05-15T08:12:25",
+  "startTime": "2026-05-15T08:11:02.183025",
+  "endTime": "2026-05-15T08:12:25.583025",
   "failed": [
     {
       "name": "Bad Password",
@@ -611,20 +630,20 @@ A few rules hold across every subcommand:
       "tags": ["smoke"],
       "metadata": { "Issue": "4409" },
       "elapsedSeconds": 0.234,
-      "startTime": "2026-05-15T08:11:04",
+      "startTime": "2026-05-15T08:11:04.906118",
       "source": "tests/login/test_login.robot",
       "relSource": "tests/login/test_login.robot",
       "lineno": 42
     }
   ],
-  "messagesCount": { "INFO": 318, "WARN": 7, "FAIL": 2 }
+  "messagesCount": { "WARN": 7, "FAIL": 2 }
 }
 ```
 
 Field notes:
 
 - `failed` only appears when `--failed` was passed. Its entries have the same shape as the `tests[]` entries of [`show`](#show-json), including `metadata`.
-- `messagesCount` aggregates log messages by level (`TRACE` / `DEBUG` / `INFO` / `WARN` / `ERROR` / `FAIL`). Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
+- `messagesCount` counts the `WARN`, `ERROR` and `FAIL` log messages by level; other levels are not counted. Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
 - `executionMessagesCount` (parser / discovery errors that fired outside of test execution) appears **only** when there were any.
 - `filtersApplied` (see [below](#filtersapplied)) appears when any filter was passed.
 
@@ -644,15 +663,15 @@ Field notes:
       "tags": ["smoke", "regression"],
       "metadata": { "Issue": "4409", "Owner Team": "core" },
       "elapsedSeconds": 0.234,
-      "startTime": "2026-05-15T08:11:04",
+      "startTime": "2026-05-15T08:11:04.906118",
       "source": "tests/login/test_login.robot",
       "lineno": 42
     }
   ],
   "truncated": 0,
   "elapsedSeconds": 83.4,
-  "startTime": "2026-05-15T08:11:02",
-  "endTime": "2026-05-15T08:12:25"
+  "startTime": "2026-05-15T08:11:02.183025",
+  "endTime": "2026-05-15T08:12:25.583025"
 }
 ```
 
@@ -679,7 +698,7 @@ Field notes:
       "source": "tests/login/test_login.robot",
       "lineno": 42,
       "elapsedSeconds": 0.234,
-      "startTime": "2026-05-15T08:11:04",
+      "startTime": "2026-05-15T08:11:04.906118",
       "suite": "MyProject.Login",
       "metadata": { "Issue": "4409", "Owner Team": "core" }
     }
@@ -693,7 +712,7 @@ Field notes:
       "metadata": { "OwnerTeam": "identity-squad" },
       "source": "tests/login.robot",
       "elapsedSeconds": 12.7,
-      "startTime": "2026-05-15T08:11:02"
+      "startTime": "2026-05-15T08:11:02.190455"
     }
   ],
   "executionMessages": [ /* only with --execution-messages */ ],

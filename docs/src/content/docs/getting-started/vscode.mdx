@@ -13,12 +13,12 @@ import recording2 from "../../../assets/screenshots/python-create-env.mp4";
 import recording3 from "../../../assets/screenshots/robotcode-first-test-case.mp4";
 
 
-Let's explore how you can enhance your development experience with RobotCode - Robot Framework for Visual Studio Code. We'll walk you through the steps of installing the RobotCode extension, configuring your environment, and ensuring smooth functionality. Get ready to unleash the power of RobotCode and Robot Framework in no time!
+Let's explore how you can enhance your development experience with the RobotCode - Robot Framework Support extension for Visual Studio Code. We'll walk you through the steps of installing the RobotCode extension, configuring your environment, and ensuring smooth functionality. Get ready to unleash the power of RobotCode and Robot Framework in no time!
 
 
 ## Tutorial Video
 
-If you prefer to watch a video tutorial, check out the following video that covers installing, setting up and using RobotCode in Visual Studio Code. Also check out the following video I gave at RoboCon 2024:
+If you prefer to watch a video tutorial, check out the tutorial I gave at RoboCon 2024, which covers installing, setting up and using RobotCode in Visual Studio Code:
 
 <YouTubeVideo id="7Uad_250YuI" title="RobotCode tutorial at RoboCon 2024" />
 
@@ -30,7 +30,7 @@ To install RobotCode and set up your Robot Framework project in Visual Studio Co
 <Steps>
 
 1. Open Visual Studio Code.
-2. Go to the **Extensions** tab by pressing <kbd>CONTROL+SHIFT+X</kbd> or <kbd>COMMAND+SHIFT+X</kbd> on Mac
+2. Go to the **Extensions** tab by pressing <kbd>CONTROL+SHIFT+X</kbd> or <kbd>COMMAND+SHIFT+X</kbd> on Mac.
 3. Search for **RobotCode** and install the [RobotCode - Robot Framework Support](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) extension. This will also install the **Python** and **Python Debugger** extensions.
 4. *(Recommended)* Install the **Even Better TOML** extension for better handling of `.toml` files, which will be useful when configuring your project settings in the [Configuration](/getting-started/configuration/) section.
 
@@ -50,7 +50,7 @@ To ensure a consistent development environment for everyone working on this proj
 
 </Steps>
 
-<video src={recording1} width="320" height="550" autoplay muted loop playsinline aria-label="RobotCode"></video>
+<video src={recording1} width="320" height="550" autoplay muted loop playsinline aria-label="Adding the RobotCode extension to the workspace recommendations"></video>
 
 
 </details>
@@ -58,13 +58,13 @@ To ensure a consistent development environment for everyone working on this proj
 See also the VS Code documentation on [how to work with extensions](https://code.visualstudio.com/docs/editor/extension-marketplace).
 
 
-## Setup a Robot Framework Project
+## Set up a Robot Framework Project
 
 First you need to open your project folder in Visual Studio Code. You can do this by selecting **File > Open Folder** menu and navigating to the root folder of your project. If you don't have a project folder yet, you can also create a new folder in the "Open Folder" dialog.
 
 It is a good style to manage your project dependencies in a `requirements.txt` file. This file lists all the Python packages required for your project, including Robot Framework and any other dependencies you may need. This file can be used to install all the dependencies at once, ensuring that your project runs consistently across different environments.
 
-:::tip[Note]
+:::note
 However, it's important to note that there are alternative and better methods for setting up a Robot Framework project. Tools like [Hatch](https://hatch.pypa.io/) or [Poetry](https://python-poetry.org/)  offer additional features and flexibility for managing project dependencies and environments.
 :::
 
@@ -113,15 +113,14 @@ A virtual environment is a self-contained directory that contains a Python insta
 
 Using a virtual environment is beneficial for several reasons:
 - Dependency management: By creating a virtual environment, you can easily manage and install project-specific dependencies without affecting other Python projects or the system-wide Python installation.
-- Version control: Including the virtual environment directory in your project's version control system ensures that all developers working on the project have the same environment setup, avoiding compatibility issues.
 - Reproducibility: With a virtual environment, you can recreate the exact environment in which your project was developed, making it easier to reproduce and debug issues.
 
-More informations about virtual environments can be found in the [Python documentation](https://docs.python.org/3/library/venv.html).
+More information about virtual environments can be found in the [Python documentation](https://docs.python.org/3/library/venv.html).
 
 
 </details>
 
-There are several ways to create a virtual Python environment and managing you project and project dependencies, depending on your preference and workflow. Below, we use the standard builtin python methods and describe two ways for creating a virtual environment: the "VSCode way" and the "Python way".
+There are several ways to create a virtual Python environment and manage your project and its dependencies, depending on your preference and workflow. Below, we use the standard built-in Python methods and describe two ways for creating a virtual environment: the "VSCode way" and the "Python way".
 Some other good options to manage your Robot Framework/Python environment are [hatch](https://hatch.pypa.io/), [poetry](https://python-poetry.org/) or [pipenv](https://pipenv.pypa.io/en/latest/)
 
 <Tabs>
@@ -167,21 +166,21 @@ Open a Terminal in VSCode and ensure you are in the root folder of your project.
     <TabItem label="Windows PowerShell/pwsh">
 
     ```shell
-    myenv\Scripts\activate.ps1
+    .venv\Scripts\Activate.ps1
     ```
 
     </TabItem>
     <TabItem label="Windows CMD">
 
     ```shell
-    myenv\Scripts\activate.cmd
+    .venv\Scripts\activate.bat
     ```
 
     </TabItem>
     <TabItem label="Mac/Linux">
 
     ```shell
-    source myenv/bin/activate
+    source .venv/bin/activate
     ```
 
     </TabItem>
@@ -200,7 +199,6 @@ Open a Terminal in VSCode and ensure you are in the root folder of your project.
 
 :::tip
 Remember to include the virtual environment directory `.venv` in your project's `.gitignore` file to avoid committing unnecessary files to your version control system.
-"""
 :::
 
 ## Selecting the Python Interpreter
@@ -243,9 +241,9 @@ First Test Case
 ```
 
 
-To run this test file, press the green play button next to the `First Test Case` keyword in the code.
+To run this test file, press the green play button next to the `First Test Case` test case in the code.
 You should see the `Hello world` output displayed in the **Debug Console** of Visual Studio Code.
 
-<video src={recording3} width="600" height="180" autoplay muted loop playsinline aria-label="RobotCode"></video>
+<video src={recording3} width="600" height="180" autoplay muted loop playsinline aria-label="Running the first test case with the play button next to it"></video>
 
-And that's it! If you have any questions or run into issues, check out the RobotCode documentation or join our community in slack for support. Happy coding!
+And that's it! If you have any questions or run into issues, check out the [guides](/guides/) or join our community on [Slack #robotcode](https://slack.robotframework.org/) for support. Happy coding!

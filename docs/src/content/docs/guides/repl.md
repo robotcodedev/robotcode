@@ -10,7 +10,7 @@ sidebar:
 The `robotcode repl` and `robotcode robot-debug` commands come from the optional **`repl`** package. If it isn't installed yet, add it:
 
 ```bash
-pip install robotcode[repl]   # or: pip install robotcode[all]
+pip install "robotcode[repl]"   # or: pip install "robotcode[all]"
 ```
 :::
 
@@ -117,17 +117,17 @@ Log To Console    answer is ${x}
 
 Two backends, no platform-specific caveats:
 
-- **`prompt-toolkit`** (default) — rich line editor with candidate popup, syntax highlighting, signature toolbar, Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor movement, persistent history, fullscreen doc viewer with mouse + search.
+- **`prompt-toolkit`** (default on an interactive terminal) — rich line editor with candidate popup, syntax highlighting, signature toolbar, Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor movement, persistent history, fullscreen doc viewer with mouse + search.
 - **`plain`** — basic prompt fallback. No history, no completion, no popup. Active when you select it explicitly (`--plain` / `--backend=plain`), when stdin isn't an interactive terminal (piped input, heredoc, redirected file, CI), or when AI-agent detection falls back to it.
 
 ### Picking a specific input backend
 
-The REPL uses the `prompt-toolkit` backend by default. Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
+By default (`auto`) the REPL picks the backend itself. Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
 
 | Value | Effect |
 | ----- | ------ |
 | `auto` (default) | prompt-toolkit on an **interactive terminal**; on piped/redirected stdin (`echo … \| robotcode repl`, heredocs, CI) — or inside a recognised AI agent — it falls back to `plain` automatically. |
-| `prompt-toolkit` | Use the rich editor backend (same as `auto`; explicit form for clarity in scripts). |
+| `prompt-toolkit` | Always use the rich editor backend — unlike `auto`, it does not fall back to `plain` on piped/redirected stdin or inside an AI agent. |
 | `plain` | Bypass the editor layer and fall back to a basic prompt. |
 
 #### Disabling all enhancements (AI agents, automation)
@@ -387,7 +387,9 @@ robotcode repl -P ./libs -P ./vendor/python-libs
 
 `-P` accepts the same `PATH` strings as `robot --pythonpath`.
 
-> **Heads-up for Robot Framework < 7.4.** Bare relative paths in the BuiltIn import keywords `Import Resource` / `Import Library` / `Import Variables` (e.g. `Import Resource    foo/my.resource`) only resolve against the directory of the importing file starting with RF 7.4. On older RF versions these keywords look the path up via the module search path only, so a bare relative form will fail with `Resource file '…' does not exist.` On those versions, either prefix the path with `${CURDIR}/` (e.g. `Import Resource    ${CURDIR}/foo/my.resource`) or put the directory on the module search path. On RF 7.4+ the bare form just works.
+:::caution[Heads-up for Robot Framework < 7.4]
+Bare relative paths in the BuiltIn import keywords `Import Resource` / `Import Library` / `Import Variables` (e.g. `Import Resource    foo/my.resource`) only resolve against the directory of the importing file starting with RF 7.4. On older RF versions these keywords look the path up via the module search path only, so a bare relative form will fail with `Resource file '…' does not exist.` On those versions, either prefix the path with `${CURDIR}/` (e.g. `Import Resource    ${CURDIR}/foo/my.resource`) or put the directory on the module search path. On RF 7.4+ the bare form just works.
+:::
 
 ## Pre-seeding variables
 
@@ -436,7 +438,9 @@ The whole session runs as a single internal test. Settings that would deselect o
 
 Pass one or more **REPL scripts** to execute their content before the prompt. Each is read as a **test-case body** — the same syntax as the prompt itself: just keyword calls and control structures, one entry per line. These scripts conventionally use the `.robotrepl` (or `.robotscript`) extension, which the RobotCode VS Code extension highlights as REPL input.
 
-> **These are REPL scripts, not full `.robot` suites.** Because the content runs as the body of a single implicit test, section headers like `*** Settings ***` or `*** Test Cases ***` are **not** allowed — a file containing them fails with `No keyword with name '*** Settings ***' found`. Import libraries and resources from inside the body with the `Import Library` / `Import Resource` keywords instead of a Settings section.
+:::note[These are REPL scripts, not full `.robot` suites]
+Because the content runs as the body of a single implicit test, section headers like `*** Settings ***` or `*** Test Cases ***` are **not** allowed — a file containing them fails with `No keyword with name '*** Settings ***' found`. Import libraries and resources from inside the body with the `Import Library` / `Import Resource` keywords instead of a Settings section.
+:::
 
 ```bash
 robotcode repl setup.robotrepl                  # execute, then exit

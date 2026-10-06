@@ -137,7 +137,7 @@ nvim
 <TabItem label="Windows CMD">
 
 ```cmd
-.venv\Scripts\activate.cmd
+.venv\Scripts\activate.bat
 nvim
 ```
 
@@ -190,7 +190,8 @@ local function get_python_path()
   local pythonpath = project_site_packages
   if vim.env.PYTHONPATH then
     -- Preserve original PYTHONPATH if already set by some other plugin
-    pythonpath = project_site_packages .. ":" .. vim.env.PYTHONPATH
+    local separator = vim.fn.has("win32") == 1 and ";" or ":"
+    pythonpath = project_site_packages .. separator .. vim.env.PYTHONPATH
   end
   return pythonpath
 end

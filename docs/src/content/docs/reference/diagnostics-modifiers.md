@@ -43,7 +43,7 @@ General form:
 Additional rules:
 
 - Codes are matched case-insensitively and normalized internally, so `VariableNotFound` and `variable-not-found` are treated the same.
-- Action names are also case-insensitive; `warn` = `warning`, `info` = `information`.
+- The `robotcode:` marker and the action names are lowercase; `IGNORE[...]` or `Warn[...]` are not recognized. `warn` = `warning`, `info` = `information`.
 - In global configuration (for example `robot.toml`) you can use `"*"` as a wildcard to match all remaining diagnostics (for example `hint = ["*"]`).
 - Inline `# robotcode:` modifiers on a specific line always override global configuration from `robot.toml` or CLI settings.
 - If several modifiers affect the same line and code, the nearest one wins: inline (end-of-line) > indented block > top-level file comment > global/CLI settings. Within one comment the rightmost action for the same code wins.
@@ -52,7 +52,7 @@ Additional rules:
 
 - Every diagnostic emitted by RobotCode carries a `code` field (LSP `Diagnostic.code`). That value is exactly what you put into `ignore[...]`, `warn[...]`, etc.
 - Core analyzers define their codes in `robotcode.robot.diagnostics.errors.Error` (for example `VariableNotFound`, `KeywordNotFound`, `MultipleKeywords`).
-- The simplest way to read the code is in your editor’s Problems/Diagnostics view or in the CLI output of `robotcode analyze`, where the code appears in brackets before the message (e.g. `[W] KeywordNotFound: ...`).
+- The simplest way to read the code is in your editor’s Problems/Diagnostics view or in the CLI output of `robotcode analyze code`, where the severity appears in brackets and the code follows it (e.g. `[ERROR] KeywordNotFound: ...`).
 - Custom analyzer plugins may emit additional codes; you handle them the same way via modifiers.
 
 Common codes (core analyzer)
@@ -69,10 +69,9 @@ Example CLI output (showing `code` before the message)
 
 ```bash
 $ robotcode analyze code tests/example.robot
-[W] KeywordNotFound: Some Undefined Keyword
-    at tests/example.robot:5:5
-[E] VariableNotFound: Variable '${missing}' not found
-    at tests/example.robot:6:11
+tests/example.robot:5:5: [ERROR] KeywordNotFound: No keyword with name 'Some Undefined Keyword' found.
+tests/example.robot:6:14: [ERROR] VariableNotFound: Variable '${missing}' not found.
+Files: 1, Errors: 2, Warnings: 0, Infos: 0, Hints: 0 (in 0.91s)
 ```
 
 
@@ -232,12 +231,12 @@ Another Test
 - **Consider code review:** Because modifiers change the analysis results, they should be part of code review and consciously approved.
 
 
-### Configuration via `robot.toml`
+## Configuration via `robot.toml`
 
 Global diagnostic modifiers are usually configured in the
 `[tool.robotcode-analyze.modifiers]` section of a TOML configuration file,
 typically the workspace-level `robot.toml` or the local `.robot.toml` file (see
-[config.md](/reference/config/) for details).
+the [`robot.toml` reference](/reference/config/) for details).
 
 ```toml
 [tool.robotcode-analyze.modifiers]
@@ -256,21 +255,24 @@ hint = ["*"]
 
 - `ignore`, `error`, `warning`, `information`, `hint` are lists of diagnostic
     codes that are merged into the global modifier configuration.
-- If you want to **add** to existing lists without replacing them (for example when an extension provides defaults), use the matching `extend-*` keys, e.g. `extend-warning = ["variable-not-found"]`. See [config.md](/reference/config/) for the full set.
+- If you want to **add** to existing lists without replacing them (for example when an extension provides defaults), use the matching `extend-*` keys, e.g. `extend-warning = ["variable-not-found"]`. See the [`robot.toml` reference](/reference/config/) for the full set.
 - You can use `"*"` as a wildcard to match all remaining diagnostics if needed.
 
-RobotCode tools such as the analyzer, runner and CLI commands read these values
+The `analyze code` command and the language server read these values
 from the configured TOML files and pass them as defaults into the diagnostics
 modifier engine. Inline `# robotcode:` modifiers in `.robot` files are then
 applied on top and always win for the affected line or block.
 
-### Overriding via editor / language server settings
+## Adding rules via editor / language server settings
 
 In addition to TOML configuration, the language server can also receive
 equivalent diagnostic modifier settings from the editor (for example VS Code
 `settings.json`). These modifier lists are combined with the values from
-`[tool.robotcode-analyze.modifiers]` and provide a convenient way to override
-or tweak project defaults per workspace or per developer.
+`[tool.robotcode-analyze.modifiers]` and provide a convenient way to add rules
+per workspace or per developer. The combined lists are checked in a fixed order,
+`ignore` first, then `error`, `warning`, `information` and `hint`, so a code that
+is in several lists gets the first of them. An editor setting can therefore not
+take back an `ignore` or lower an `error` that `robot.toml` sets.
 
 In VS Code the corresponding settings live under the
 `robotcode.analysis.diagnosticModifiers.*` keys, for example:
@@ -293,4 +295,5 @@ Typical scenarios are:
 
 - keep the canonical, shared configuration in `robot.toml`, and
 - use editor settings only to temporarily relax or tighten certain rules
-        (for example on a CI agent or for a specific developer machine).
+        (for example on a specific developer machine). `robotcode analyze code`,
+        for example in CI, does not read editor settings.

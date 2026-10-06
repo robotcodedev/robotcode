@@ -34,10 +34,10 @@ The `*** Variables ***` section is a fundamental component of Robot files for de
 
 - **Suite Scope:** All variables defined here automatically receive suite scope and are available throughout the file.
 
-- **Import order decides:** For variables with identical names:
-  - The first found definition takes precedence
-  - This applies to both definitions in the current suite and in imported resource files
-  - For nested resource imports (when Resource A imports Resource B), the same rule applies: The first read definition wins
+- **Own definitions first, then import order:** For variables with identical names:
+  - A definition in the suite's own `*** Variables ***` section takes precedence over one from an imported resource or variable file, regardless of the import order
+  - Among imported resource and variable files, the definition from the file imported first takes precedence
+  - For nested resource imports (when Resource A imports Resource B), the same rule applies: A's own `*** Variables ***` section wins over B's
 
 - **Strategic overriding:** This property can be deliberately used, for example:
   - To control test behavior in different environments
@@ -253,7 +253,8 @@ The following points explain why RobotCode sometimes does not recognize variable
 RobotCode deliberately follows a cautious approach to variable recognition, partly due to technical limitations regarding complexity and performance. It only marks a variable as valid if it is explicitly defined in one of the following ways:
 
 - As a command line parameter
-- In a `*** Variables ***` section
+- In a `*** Variables ***` section, of the file itself or of an imported resource file
+- In an imported variable file
 - In the currently analyzable scope (such as keyword arguments or local variables)
 
 All other variables are consistently marked as `VariableNotFound` - even if they might exist at runtime. This conservative strategy is not merely a technical limitation but a deliberate design principle that offers significant advantages for test quality and maintenance:
@@ -410,19 +411,19 @@ Get Configuration Value
 
 **Pattern: Safe variable access with Get Variable Value**
 
-Robot Framework 5.0+ provides `Get Variable Value` for safe variable access:
+Robot Framework's BuiltIn keyword `Get Variable Value` gives safe variable access. Give the variable name in escaped form (`$API_URL` or `\${API_URL}`), as Robot Framework recommends: with the normal form `${API_URL}`, RobotCode reports `VariableNotFound` when the variable isn't defined.
 
 ```robot
 *** Test Cases ***
 Safe Variable Access
     # Get variable with default if not exists
-    ${url}=    Get Variable Value    ${API_URL}    https://default.example.com
+    ${url}=    Get Variable Value    $API_URL    https://default.example.com
 
     # Check nested variables safely
-    ${timeout}=    Get Variable Value    ${CONFIG.timeout}    30
+    ${timeout}=    Get Variable Value    $CONFIG.timeout    30
 
     # Use None as default to check existence
-    ${optional_var}=    Get Variable Value    ${OPTIONAL_SETTING}    ${None}
+    ${optional_var}=    Get Variable Value    $OPTIONAL_SETTING    ${None}
     IF    $optional_var is not None
         Log    Optional setting is: ${optional_var}
     END
@@ -467,7 +468,7 @@ These quick fixes help maintain clean, analyzable code while resolving variable 
 
 ### Using RETURN Statements (RF 5.0+)
 
-The `RETURN` statement (Robot Framework 5.0+) provide the cleanest way to pass data between keywords without relying on suite or global variables. This approach makes your code more maintainable and helps RobotCode understand the data flow.
+The `RETURN` statement (Robot Framework 5.0+) provides the cleanest way to pass data between keywords without relying on suite or global variables. This approach makes your code more maintainable and helps RobotCode understand the data flow.
 
 In older Robot Framework versions there was a `[Return]` setting that allowed declaring a fixed return value for a keyword; it did not support conditional returns and was deprecated in Robot Framework 7.0. Use the more flexible `RETURN` statement (introduced in RF 5.0), which supports conditional returns and can be used inside IF/FOR constructs.
 
@@ -669,8 +670,9 @@ Test With Clear Data Flow
 
 3. **Refactoring Support:**
    - Rename variable (F2)
-   - Extract variable
-   - Inline variable
+   - Assign keyword result to variable
+   - Extract keyword
+   - Surround with TRY...EXCEPT
 
 #### Common Patterns Reference
 

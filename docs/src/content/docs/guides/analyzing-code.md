@@ -10,7 +10,7 @@ sidebar:
 The `robotcode analyze` command comes from the optional **`analyze`** package. If it isn't installed yet, add it:
 
 ```bash
-pip install robotcode[analyze]   # or: pip install robotcode[all]
+pip install "robotcode[analyze]"   # or: pip install "robotcode[all]"
 ```
 :::
 
@@ -102,7 +102,7 @@ You can also turn this on permanently in `robot.toml`:
 
 ```toml
 [tool.robotcode-analyze.code]
-collect_unused = true
+collect-unused = true
 ```
 
 ## Severities and diagnostic modifiers
@@ -182,7 +182,7 @@ Valid mask values: `error`, `warn` (alias `warning`), `info` (alias `information
 
 ```toml
 [tool.robotcode-analyze.code]
-exit_code_mask = ["warn", "info", "hint"]   # CI fails only on errors
+exit-code-mask = ["warn", "info", "hint"]   # CI fails only on errors
 ```
 
 Any non-zero exit means something was reported, which is what makes a CI step fail by default. To branch on a specific severity, test the corresponding bit — in bash:
@@ -367,8 +367,10 @@ robotcode analyze cache info     # where the cache lives and how big it is
 robotcode analyze cache list     # what's cached
 robotcode analyze cache path     # print the cache directory
 robotcode analyze cache clear    # remove it (e.g. after changing ignored-libraries)
-robotcode analyze cache prune    # drop stale entries only
+robotcode analyze cache prune    # delete the whole cache directory, for every Python/RF version
 ```
+
+`prune` refuses while another process uses the cache; `--force` deletes it anyway.
 
 Clearing the cache is the usual fix after changing cache-affecting settings such as `ignore-arguments-for-library`.
 
@@ -383,8 +385,8 @@ global-library-search-order = ["MyPreferredLibrary"]
 load-library-timeout = 30
 
 [tool.robotcode-analyze.code]
-collect_unused = true
-exit_code_mask = ["warn", "info", "hint"]
+collect-unused = true
+exit-code-mask = ["warn", "info", "hint"]
 
 [tool.robotcode-analyze.modifiers]
 ignore = ["VariableNotFound"]

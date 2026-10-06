@@ -100,7 +100,7 @@ RobotCode declares a dependency on [LSP4IJ](https://plugins.jetbrains.com/plugin
 For CI pipelines, the command line, or LSP-compatible editors like Neovim, Sublime Text, or Helix, install RobotCode from PyPI. The base `robotcode` package is only the CLI core; the actual commands live in extras such as `runner`, `analyze`, `debugger`, `languageserver`, and `repl`:
 
 ```bash
-pip install robotcode[runner,analyze]
+pip install "robotcode[runner,analyze]"
 ```
 
 Pick the extras that match your use case — see the [CLI reference](https://robotcode.io/reference/cli/) for the available packages and how to install them.

@@ -9,8 +9,7 @@ import recording1 from "../../assets/screenshots/vscode-code-intelligence.mp4";
 import recording2 from "../../assets/screenshots/vscode-run-tests.mp4";
 
 
-**RobotCode**
-Is a set of tools and extensions and plugins for working with [Robot Framework](https://robotframework.org/) in different IDEs, editors and on the command line.
+**RobotCode** is a set of tools, extensions and plugins for working with [Robot Framework](https://robotframework.org/) in different IDEs, editors and on the command line.
 
 
 **Built on Robot Framework Core**
@@ -20,12 +19,12 @@ RobotCode is based on the Robot Framework Core and uses its parser, ensuring com
 RobotCode is built on the Language Server Protocol (LSP), a modern standard for implementing language support across multiple editors and IDEs. This ensures a seamless and responsive user experience, while making it easier to maintain compatibility with evolving IDE features.
 
 **Extensions for Visual Studio Code and the IntelliJ Platform**
-RobotCode is available for Visual Studio Code, IntelliJ Platform. This ensures that you can use the same features and tools across different IDEs and editors.
+RobotCode is available for Visual Studio Code and the IntelliJ Platform. This ensures that you can use the same features and tools across different IDEs and editors.
 Because the extensions are based on the same codebase, you can expect the same level of quality and features across all platforms.
-(Because it is based on the Language Server Protocol, it is also possible to use it in other editors that support the LSP, like Neovim, Sublime Text, and more.)
+(Because it is based on the Language Server Protocol, it is also possible to use it in other editors that support the LSP, like Neovim.)
 
 **Powerful Command Line Tools**
-RobotCode extends the Robot Framework CLI with enhanced tools for test execution, code analysis and debugging. It supports [`robot.toml`](/reference/) configurations, integrates a Debug Adapter Protocol (DAP) compatible debugger, and provides an interactive REPL environment for experimenting with Robot Framework commands. Modular and flexible, these tools streamline your workflow for both development and production.
+RobotCode extends the Robot Framework CLI with enhanced tools for test execution, code analysis and debugging. It supports [`robot.toml`](/reference/config/) configurations, integrates a Debug Adapter Protocol (DAP) compatible debugger, and provides an interactive REPL environment for experimenting with Robot Framework commands. Modular and flexible, these tools streamline your workflow for both development and production.
 
 ## Key Features
 
@@ -54,7 +53,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 
 ### Running and Debugging
 
-- **Integrated Testing and Debugging:** RobotCode allows you to run and debug your Robot Framework test cases directly from within Visual Studio Code. This tight integration means you can execute tests, set breakpoints, and step through code without leaving the editor.
+- **Integrated Testing and Debugging:** RobotCode allows you to run and debug your Robot Framework test cases directly from within Visual Studio Code, PyCharm or IntelliJ IDEA. This tight integration means you can execute tests, set breakpoints, and step through code without leaving the editor.
 - **Real-Time Log Navigation:** While debugging, RobotCode provides a live view of log messages in the debug console, allowing you to quickly identify and navigate to the source of any issues.
 
 <video src={recording2} width="2072" height="1182" autoplay muted loop playsinline aria-label="Running all tests from the test explorer in VS Code, with the failure shown in the editor"></video>
@@ -81,7 +80,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 
 ### Configure your Robot Framework environment with `robot.toml`
 
-- **Flexible Configuration Options:** RobotCode supports the use of [`robot.toml`](/reference/) configuration files, allowing you to customize your Robot Framework environment with ease. Define settings for test execution in the development, production, or testing environments, and switch between configurations effortlessly.
+- **Flexible Configuration Options:** RobotCode supports the use of [`robot.toml`](/reference/config/) configuration files, allowing you to customize your Robot Framework environment with ease. Define settings for test execution in the development, production, or testing environments, and switch between configurations effortlessly.
 - **Consistent Environment Management:** By using `robot.toml`, you can ensure that your Robot Framework settings are consistent across different projects and environments, reducing the risk of errors and simplifying the development process.
 - **Version Control Integration:** Store your `robot.toml` files in version control systems like Git, enabling you to share configurations with your team and maintain a history of changes over time.
 - **CI/CD Pipeline Integration**: Use `robot.toml` to define your test execution settings in CI/CD pipelines, ensuring that your tests run consistently across different environments and platforms.

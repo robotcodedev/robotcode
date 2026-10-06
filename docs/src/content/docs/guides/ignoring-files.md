@@ -11,7 +11,7 @@ When RobotCode looks at a project — discovering suites, running static analysi
 By default RobotCode honours your `.gitignore`. But Robot Framework's own built-in exclusion (applied when it collects suites to run) only skips dotted, underscored, and `CVS/` names — far too little for a modern repository, where the directories that actually slow things down (`node_modules`, virtual environments, build output, large test-data folders) are none of those. A `.robotignore` fills that gap. Just as importantly, it lets you decide what RobotCode skips *independently* of what you keep out of version control — the two are rarely the same question, as explained [below](#robotignore-and-gitignore).
 
 :::tip[Works everywhere, no setup]
-`.robotignore` is honoured by the language server in the editor as well as by the `robotcode discover` and `robotcode analyze` commands — the same ignore rules are applied wherever RobotCode walks your files. There is nothing to install or enable — drop the file in and it takes effect.
+`.robotignore` is honoured by the language server in the editor as well as by the `robotcode discover`, `robotcode analyze` and `robotcode robot` commands — the same ignore rules are applied wherever RobotCode walks your files. There is nothing to install or enable — drop the file in and it takes effect.
 :::
 
 ## Quick start
@@ -26,10 +26,10 @@ By default RobotCode honours your `.gitignore`. But Robot Framework's own built-
    **/generated/
    ```
 
-3. Confirm the result. `robotcode discover files` prints exactly the set of files RobotCode loads *after* applying your ignore rules, so you can see at a glance whether a directory really dropped out:
+3. Confirm the result. `robotcode discover files` prints exactly the set of files RobotCode loads *after* applying your ignore rules, so you can see at a glance whether a directory really dropped out. Run it in the project root with `.` (or without an argument when `robot.toml` sets `paths`):
 
    ```bash
-   robotcode discover files
+   robotcode discover files .
    ```
 
 If a path you expected to disappear is still listed — or one you need has gone missing — tweak the pattern and run the command again. You are editing a plain text file, so there is no cache to clear: the next time you run the command, it walks with the new rules. (In the editor, saving a `.robotignore` reloads the language server automatically — see [Reloading](#reloading).)
@@ -160,6 +160,7 @@ A `.robotignore` is honoured everywhere RobotCode walks the file system — the 
 
 - **Test and suite discovery** — [`robotcode discover`](/guides/discovering-tests/) and the editor's Test Explorer. Excluded directories don't appear in the discovered tree, which keeps both the CLI output and the Test Explorer focused on real suites.
 - **Static code analysis** — [`robotcode analyze`](/guides/analyzing-code/). Excluded files are never analysed by `robotcode analyze`, so they produce no diagnostics in a lint run.
+- **Test runs** — `robotcode robot`. Suites in excluded files and directories are left out of the run, which a plain `robot` run doesn't do.
 - **The language server** — diagnostics, completion, and namespace resolution in the editor. Excluded files are never loaded, so they don't contribute keywords or variables and don't slow the editor down.
 
 ## Verifying what's ignored
@@ -168,7 +169,7 @@ When a pattern doesn't behave the way you expect, don't guess — ask RobotCode.
 
 ```bash
 # every file RobotCode currently considers
-robotcode discover files
+robotcode discover files .
 
 # narrow it down to one area while you tune patterns
 robotcode discover files ./tests

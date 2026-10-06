@@ -130,28 +130,28 @@ project/
 │   │   └── orders.resource            # Order API endpoints
 │   ├── functional/
 │   │   ├── users.resource             # User domain keywords
-│   │   ├── customers.resource         # Customer domain keywords
+│   │   └── customers.resource         # Customer domain keywords
 │   ├── ui/
 │   │   ├── login.resource             # Login page interactions
 │   │   ├── customers.resource         # Customer page interactions
 │   │   └── common_elements.resource   # Shared UI elements
 │   └── common/
 │       ├── test_data.resource         # Test data generation
-│       └── utilities.resource         # General helper keywords
+│       └── utility.resource           # General helper keywords
 └── tests/
     ├── api/
     │   └── customer_api_tests.robot   # Imports only api/customers.resource
     ├── business/
-    │   └── contracts.robot            # Imports only ui/login.resource
+    │   └── contracts.robot            # Imports functional/* and common/test_data
     └── ui_tests/
-        └── login_tests.robot          # Imports only ui/login.resource
+        └── login_tests.robot          # Imports ui/login, ui/customers and common/test_data
 ```
 
-In this structure, each test file imports only the specific resources it needs, avoiding a global import file. Note: Robot Framework resolves Resource imports relative to the importing file (or via absolute paths). PYTHONPATH applies to Python libraries, not resource files. RobotCode can configure analysis and discovery paths via robot.toml.
+In this structure, each test file imports only the specific resources it needs, avoiding a global import file. Note: Robot Framework resolves Resource imports relative to the importing file (or via absolute paths). A resource it doesn't find there is searched in the module search path, so the imports below work once `resources/` is on the Python path (`--pythonpath resources`, or `python-path = ["resources"]` in `robot.toml`, which RobotCode's analysis uses too).
 
 Your suite settings can look like this:
 
-```robot title="login.robot"
+```robot title="login_tests.robot"
 *** Settings ***
 Resource          ui/login.resource
 Resource          ui/customers.resource
@@ -288,7 +288,7 @@ Library    RequestsLibrary
 Get Customer Details
     [Arguments]    ${customer_id}
     ${response}=    GET    ${API_URL}/customers/${customer_id}
-    [Return]    ${response.json()}
+    RETURN    ${response.json()}
 ```
 
 </TabItem>

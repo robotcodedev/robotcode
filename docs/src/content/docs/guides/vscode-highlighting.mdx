@@ -1,5 +1,5 @@
 ---
-title: Customizing Visual Studio Code for using RobotCode
+title: Customizing Robot Framework Highlighting in VS Code
 description: Add token color rules to VS Code settings.json to set font styles for Robot Framework keywords, test case names, section headers and documentation.
 sidebar:
   label: VS Code Highlighting
@@ -37,21 +37,15 @@ See the difference:
 "editor.tokenColorCustomizations": {
     "textMateRules": [
         {
-            "scope": "variable.function.keyword-call.inner.robotframework",
+            "scope": "entity.name.function.keyword-call.inner.robotframework",
             "settings": {
                 "fontStyle": "italic"
             }
         },
         {
-            "scope": "variable.function.keyword-call.robotframework",
+            "scope": "entity.name.function.keyword-call.robotframework",
             "settings": {
                 //"fontStyle": "bold"
-            }
-        },
-        {
-            "scope": "string.unquoted.embeddedArgument.robotframework",
-            "settings": {
-                "fontStyle": "italic"
             }
         },
         {
@@ -79,7 +73,7 @@ See the difference:
             }
         },
         {
-            "scope": "keyword.other.header.setting.robotframework",
+            "scope": "keyword.other.header.settings.robotframework",
             "settings": {
                 "fontStyle": "bold underline"
             }
@@ -103,19 +97,13 @@ See the difference:
             }
         },
         {
-            "scope": "keyword.other.header.setting.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
             "scope": "keyword.other.header.comment.robotframework",
             "settings": {
                 "fontStyle": "bold italic underline"
             }
         },
         {
-            "scope": "string.unquoted.escape.robotframework",
+            "scope": "source.robotframework constant.character.escape",
             "settings": {
                 //"foreground": "#FF0000",
             }
@@ -128,6 +116,9 @@ See the difference:
         "*.documentation:robotframework": {
             "fontStyle": "italic",
             //"foreground": "#aaaaaa"
+        },
+        "*.embedded:robotframework": {
+            "fontStyle": "italic"
         }
     }
 }

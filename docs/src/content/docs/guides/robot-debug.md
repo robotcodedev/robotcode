@@ -10,7 +10,7 @@ sidebar:
 The `robotcode robot-debug` command (and the `robotcode repl` shell) come from the optional **`repl`** package. If it isn't installed yet, add it:
 
 ```bash
-pip install robotcode[repl]   # or: pip install robotcode[all]
+pip install "robotcode[repl]"   # or: pip install "robotcode[all]"
 ```
 :::
 
@@ -95,7 +95,9 @@ Login
 
 `Breakpoint` is the only keyword from `robotcode.repl.Repl` meant for your own suites — `Repl` and `Exit` are used internally and aren't called by hand.
 
-> **Plain backend for non-interactive runs.** On an interactive terminal the debug prompt gives you completion, history, and highlighting at the stop. When you feed it from a pipe, a script, or CI, the default `auto` backend falls back automatically to a plain prompt (or pass `--plain` explicitly). See [Picking a specific input backend](/guides/repl/#picking-a-specific-input-backend).
+:::note[Plain backend for non-interactive runs]
+On an interactive terminal the debug prompt gives you completion, history, and highlighting at the stop. When you feed it from a pipe, a script, or CI, the default `auto` backend falls back automatically to a plain prompt (or pass `--plain` explicitly). See [Picking a specific input backend](/guides/repl/#picking-a-specific-input-backend).
+:::
 
 ## At a stop
 
@@ -170,14 +172,14 @@ Breakpoints are referenced by the stable number shown in `.breakpoints`. A **con
 
 ```
 (rdb) .break Process Item
-Breakpoint 1 at keyword 'Process Item'
+breakpoint 1 at keyword 'Process Item'
 (rdb) .commands 1
-Enter commands for breakpoint 1, one per line; `end` to finish:
+enter commands for breakpoint 1, one per line; `end` to finish:
 (com) silent
 (com) .print ${item}
 (com) .continue
 (com) end
-Breakpoint 1: 3 command(s)
+breakpoint 1: 3 command(s)
 ```
 
 Now every hit on `Process Item` prints `${item}` and runs on without pausing. (Graphical gutter logpoints are a feature of the VS Code / DAP debugger; in the CLI, `.breakpoints` shows a `logpoint` flag for any breakpoint that carries one.)

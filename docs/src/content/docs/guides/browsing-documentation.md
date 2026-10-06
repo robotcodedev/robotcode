@@ -10,7 +10,7 @@ sidebar:
 The `robotcode doc` command comes from the optional **`repl`** package. If it isn't installed yet, add it:
 
 ```bash
-pip install robotcode[repl]   # or: pip install robotcode[all]
+pip install "robotcode[repl]"   # or: pip install "robotcode[all]"
 ```
 :::
 
@@ -124,7 +124,7 @@ The headings get the anchors GitHub gives them, so the index, the table of conte
 
 ### JSON
 
-With the global `--format json` (or `json-indent`), `lib` prints one object:
+With the global `--format json` (or `json_indent`), `lib` prints one object:
 
 | Field | Content |
 |---|---|
