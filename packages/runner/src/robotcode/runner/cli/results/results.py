@@ -16,7 +16,7 @@ All subcommands respect the global `-f/--format` option:
 import re
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 import click
 from robot.api import SuiteVisitor
@@ -41,7 +41,6 @@ from robot.result import (
     TryBranch,
     While,
 )
-from robot.result.executionerrors import ExecutionErrors
 from robot.result.model import BodyItem, StatusMixin
 from robot.utils import normalize
 
@@ -347,6 +346,8 @@ def summary(
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
+        # Before the tree filters, which would turn the copies of filtered-out messages into execution messages.
+        execution_messages = _execution_messages(execution)
 
         filters_active = bool(
             status_filters
@@ -377,8 +378,8 @@ def summary(
         )
         counts = _collect_counts(execution.suite)
         failed = _collect_failures(execution.suite) if show_failed else None
-        exec_msg_counts = _count_execution_messages(execution.errors)
-        msg_counts = _count_all_messages(execution)
+        exec_msg_counts = _count_execution_messages(execution_messages)
+        msg_counts = _count_all_messages(execution.suite, execution_messages)
 
         data = SummaryResult(
             file=_make_file_info(path),
@@ -678,7 +679,10 @@ def show(
     "show_execution_messages",
     default=False,
     show_default=True,
-    help=("Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated)."),
+    help=(
+        "Also show the messages of output.xml's `<errors>` section that come from outside the tests, "
+        "such as parsing and import errors."
+    ),
 )
 @click.option(
     "--keyword-info/--no-keyword-info",
@@ -755,6 +759,8 @@ def log(
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
+        # Before the tree filters, which would turn the copies of filtered-out messages into execution messages.
+        execution_messages = _execution_messages(execution) if show_execution_messages else []
 
         status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
         matcher = make_search_matcher(search_substring, search_regex)
@@ -784,7 +790,7 @@ def log(
 
         exec_messages: Optional[List[LogEntry]] = None
         if show_execution_messages:
-            exec_messages = _collect_execution_messages(execution.errors, raw_html=raw_html) or None
+            exec_messages = _collect_execution_messages(execution_messages, raw_html=raw_html) or None
 
         extracted_count = 0
         extract_abs: Optional[Path] = None
@@ -1677,12 +1683,40 @@ def _collect_failures(suite: TestSuite) -> List[TestResultItem]:
     return [_make_test_item(t, message_chars=0) for t in _iter_all_tests(suite) if t.status == "FAIL"]
 
 
-def _count_execution_messages(errors: Optional[ExecutionErrors]) -> Dict[str, int]:
-    """Count execution.errors messages grouped by level. Returns empty dict if none."""
-    if errors is None:
-        return {}
+class _LoggedMessages(ResultVisitor):
+    """Collect the WARN/ERROR messages of a result tree by the key Robot Framework links them with."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.keys: Set[Tuple[Any, ...]] = set()
+
+    def visit_message(self, msg: Message) -> None:
+        if (msg.level or "").upper() in ("WARN", "ERROR"):
+            self.keys.add(_message_key(msg))
+
+
+def _message_key(msg: Message) -> Tuple[Any, ...]:
+    return (msg.message, msg.level, msg.timestamp)
+
+
+def _execution_messages(execution: Result) -> List[Message]:
+    """The messages of `output.xml`'s <errors> section that come from outside the tests, such as parsing and
+    import errors.
+
+    Robot Framework also copies every WARN and ERROR message logged by a test or keyword into <errors> and links the
+    copy to its original by message, level and timestamp. Those copies are left out here, matched the same way.
+    Call this before the suite tree is filtered."""
+    if execution.errors is None:
+        return []
+    logged = _LoggedMessages()
+    execution.suite.visit(logged)
+    return [m for m in execution.errors.messages if _message_key(m) not in logged.keys]
+
+
+def _count_execution_messages(messages: List[Message]) -> Dict[str, int]:
+    """Count execution messages grouped by level. Returns empty dict if none."""
     counts: Dict[str, int] = {}
-    for m in errors.messages:
+    for m in messages:
         level = (m.level or "INFO").upper()
         counts[level] = counts.get(level, 0) + 1
     return counts
@@ -1701,24 +1735,21 @@ class _MessageCounter(ResultVisitor):
             self.counts[level] = self.counts.get(level, 0) + 1
 
 
-def _count_all_messages(execution: Result) -> Dict[str, int]:
-    """Tally WARN/ERROR/FAIL across parser/discovery AND test runtime messages."""
+def _count_all_messages(suite: TestSuite, execution_messages: List[Message]) -> Dict[str, int]:
+    """Tally WARN/ERROR/FAIL across the test runtime messages and the execution messages, each message once."""
     counter = _MessageCounter()
-    # Parser / discovery errors live next to the suite tree, not inside it.
-    for m in execution.errors.messages:
+    for m in execution_messages:
         counter.visit_message(m)
     # Runtime messages — the visitor handles all suite/test/keyword traversal.
-    execution.suite.visit(counter)
+    suite.visit(counter)
     return counter.counts
 
 
-def _collect_execution_messages(errors: Optional[ExecutionErrors], *, raw_html: bool = False) -> List[LogEntry]:
-    """Collect parser/discovery messages from `output.xml`'s <errors> section
-    as LogEntry items, preserving order and individual timestamps."""
-    if errors is None:
-        return []
+def _collect_execution_messages(messages: List[Message], *, raw_html: bool = False) -> List[LogEntry]:
+    """Collect execution messages (see `_execution_messages`) as LogEntry items, preserving order and individual
+    timestamps."""
     out: List[LogEntry] = []
-    for m in errors.messages:
+    for m in messages:
         level = (m.level or "INFO").upper()
         text = m.message or ""
         is_html = bool(m.html)

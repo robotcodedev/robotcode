@@ -152,8 +152,8 @@ Output is a short block with the overall status, the test counts, the wall-clock
 - _Started:_ 2026-10-05 23:50:52
 - _Ended:_ 2026-10-05 23:52:16
 - _Elapsed:_ 1 min 23.4 s
-- _Messages:_ 2 FAIL, 7 WARN
-- _Execution messages:_ 4 WARN
+- _Messages:_ 2 FAIL, 4 WARN
+- _Execution messages:_ 1 WARN
 
 ## Failures (2)
 
@@ -248,7 +248,7 @@ A test's `[Metadata]` (Robot Framework 7.5+) is printed directly under its heade
 | `--max-depth N` | Collapse keyword bodies deeper than `N` levels. Default: `0` (unlimited). |
 | `--extract DIR` | Decode embedded `data:` URIs and copy externally-referenced files into `DIR`. |
 | `--raw-html` | Keep the original HTML markup in log messages. No artefact decoding happens in this mode. |
-| `--execution-messages` | Include parser/discovery errors that fired before the run (library import failures, syntax errors, …). |
+| `--execution-messages` | Include the messages Robot Framework reports outside the tests (library import failures, syntax errors, …). |
 | `--keyword-info` | Print each executed keyword's `[Documentation]`, `[Tags]` and `[Timeout]` under its header (and add them to the JSON entry). Off by default; see [`--keyword-info` and `--suite-info`](#--keyword-info-and---suite-info). |
 | `--suite-info` | Group tests under suite headers showing the suite name, source, `Documentation` and `Metadata` (and add a `suites` array plus per-test `suite` ref to the JSON). Off by default. |
 | `--timestamps` | Show per-message timestamps. |
@@ -636,15 +636,16 @@ A few rules hold across every subcommand:
       "lineno": 42
     }
   ],
-  "messagesCount": { "WARN": 7, "FAIL": 2 }
+  "messagesCount": { "WARN": 4, "FAIL": 2 },
+  "executionMessagesCount": { "WARN": 1 }
 }
 ```
 
 Field notes:
 
 - `failed` only appears when `--failed` was passed. Its entries have the same shape as the `tests[]` entries of [`show`](#show-json), including `metadata`.
-- `messagesCount` counts the `WARN`, `ERROR` and `FAIL` log messages by level; other levels are not counted. Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
-- `executionMessagesCount` (parser / discovery errors that fired outside of test execution) appears **only** when there were any.
+- `messagesCount` counts the `WARN`, `ERROR` and `FAIL` messages by level, each message once: those logged in tests and keywords plus the execution messages; other levels are not counted. Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
+- `executionMessagesCount` counts the messages of the `<errors>` section that come from outside the tests, such as parsing and import errors. Robot Framework also copies the warnings and errors logged in tests into `<errors>`; those copies are not counted here. It appears **only** when there were any.
 - `filtersApplied` (see [below](#filtersapplied)) appears when any filter was passed.
 
 ### `show` JSON

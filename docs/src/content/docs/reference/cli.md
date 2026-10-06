@@ -2589,7 +2589,7 @@ robotcode results log [OPTIONS]
 
 - `--execution-messages / --no-execution-messages`
 
-   Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated).  [default: no-execution-messages]
+   Also show the messages of output.xml's `<errors>` section that come from outside the tests, such as parsing and import errors.  [default: no-execution-messages]
 
 
 - `--keyword-info / --no-keyword-info`

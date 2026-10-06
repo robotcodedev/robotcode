@@ -114,3 +114,18 @@ def test_summary_default_includes_rel_source(json_result: JsonRunner, basic_outp
     failed = data["failed"]
     assert failed
     assert get_field(failed[0], "relSource", "rel_source") is not None
+
+
+def test_summary_counts_each_message_once(json_result: JsonRunner, errors_output: Path) -> None:
+    """Robot Framework copies a runtime warning into `<errors>`; the copy is not counted again, and only the import
+    error from outside the tests is an execution message."""
+    data = json_result("summary", output_path=errors_output)
+    assert get_field(data, "messagesCount", "messages_count") == {"ERROR": 1, "WARN": 1}
+    assert get_field(data, "executionMessagesCount", "execution_messages_count") == {"ERROR": 1}
+
+
+def test_summary_filtered_out_warning_is_no_execution_message(json_result: JsonRunner, errors_output: Path) -> None:
+    """The copy of a warning from a test the filter leaves out does not turn into an execution message."""
+    data = json_result("summary", "-bl", "Errors.Working Test", output_path=errors_output)
+    assert get_field(data, "messagesCount", "messages_count") == {"ERROR": 1}
+    assert get_field(data, "executionMessagesCount", "execution_messages_count") == {"ERROR": 1}

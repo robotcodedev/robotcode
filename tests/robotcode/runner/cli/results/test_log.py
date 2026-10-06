@@ -651,3 +651,11 @@ def test_log_artifact_full_paths_uses_file_uri(
         ).stdout
     )
     assert "](file://" in out
+
+
+def test_log_execution_messages_leave_out_runtime_warnings(json_result: JsonRunner, errors_output: Path) -> None:
+    """`--execution-messages` lists the import error, not the copy of the warning the test logged."""
+    data = json_result("log", "--execution-messages", output_path=errors_output)
+    messages = data.get("executionMessages") or data.get("execution_messages") or []
+    assert [m["level"] for m in messages] == ["ERROR"]
+    assert "NonexistentLibraryName" in messages[0]["text"]
