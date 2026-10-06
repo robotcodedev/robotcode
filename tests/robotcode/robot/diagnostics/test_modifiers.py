@@ -34,6 +34,12 @@ from robotcode.robot.diagnostics.diagnostics_modifier import (
             "  ignore[message1, message2] hint[message3, message4] garbage ",
             {ModifierAction.IGNORE: ["message1", "message2"], ModifierAction.HINT: ["message3", "message4"]},
         ),
+        (
+            "ignore[message1] warn[message2] ignore[message3]",
+            {ModifierAction.IGNORE: ["message1", "message3"], ModifierAction.WARNING: ["message2"]},
+        ),
+        ("ignore[message1] warn[message1]", {ModifierAction.WARNING: ["message1"]}),
+        ("ignore[message1] warn[message1] ignore[message1]", {ModifierAction.IGNORE: ["message1"]}),
     ],
 )
 def test_disabler_parser_should_work(text: str, expected_action_and_codes: Dict[ModifierAction, List[str]]) -> None:

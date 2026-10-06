@@ -98,13 +98,19 @@ class ModifiersVisitor(Visitor):
             action_str = m.group("action")
             action = ModifierAction.from_str(action_str)
             messages = m.group("codes")
-            result[action] = (
+            codes = (
                 [m.strip().translate(_translation_table).lower() for m in messages.split(",")]
                 if messages is not None
                 else ["*"]
             )
+            for code in codes:
+                # A code belongs to the rightmost action that names it, also when an action appears more than once.
+                for other_codes in result.values():
+                    if code in other_codes:
+                        other_codes.remove(code)
+                result.setdefault(action, []).append(code)
 
-        return result
+        return {action: codes for action, codes in result.items() if codes}
 
     def _handle_statement_comments(self, node: Statement) -> None:
         first_comment = True
