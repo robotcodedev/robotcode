@@ -52,9 +52,9 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
         super.stop()
         inputStream = null
         outputStream = null
-        clientSocket!!.close()
+        clientSocket?.close()
         clientSocket = null
-        serverSocket!!.close()
+        serverSocket?.close()
         serverSocket = null
         
     }
