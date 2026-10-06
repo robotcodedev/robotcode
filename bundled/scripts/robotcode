@@ -1,2 +1,2 @@
-#! /bin/bash
-python3 $ROBOTCODE_BUNDLED_ROBOTCODE_MAIN "$@"
+#!/usr/bin/env sh
+exec python3 "$ROBOTCODE_BUNDLED_ROBOTCODE_MAIN" "$@"
