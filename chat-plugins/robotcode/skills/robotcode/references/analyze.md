@@ -1,6 +1,6 @@
 # Static analysis — `robotcode analyze code`
 
-`robotcode analyze code [PATHS]` parses the project's `.robot` and `.resource` files, resolves their imports, libraries, and variables, and reports diagnostics — **without executing anything**. It catches what a plain text scan can't, because resolution runs with the project's installed Robot Framework, `robot.toml`, and active profiles. Comes from the optional **`analyze`** package (`pip install robotcode[analyze]`, or `[all]`).
+`robotcode analyze code [PATHS]` parses the project's `.robot` and `.resource` files, resolves their imports, libraries, and variables, and reports diagnostics — **without executing anything**. It catches what a plain text scan can't, because resolution runs with the project's installed Robot Framework, `robot.toml`, and active profiles. Comes from the optional **`analyze`** package (`pip install "robotcode[analyze]"`, or `[all]`).
 
 Reach for it on "find issues", "check my robot code", "any undefined keywords / wrong arguments?", "are there unused keywords or variables?", and as a pre-commit / CI gate before running.
 

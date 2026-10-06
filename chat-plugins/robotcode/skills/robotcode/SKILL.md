@@ -108,7 +108,7 @@ Use these often:
 
 - `-p, --profile <name>` — select a profile globally for `config`, `profiles`, `discover`, `analyze`, `results`, `doc`, and `robot`. **Repeatable** — pass it several times (`-p ci -p docker`) to merge profiles, and each `<name>` is a glob (`-p "ci*"` selects every matching profile). See [Configuration & profiles](#configuration--profiles) for merge order.
 - `-r, --root <dir>` — override project-root detection only when needed.
-- `--format {text|json|json-indent|toml}` — request structured output where supported (global; goes before the subcommand).
+- `--format {text|json|json_indent|toml}` — request structured output where supported (global; goes before the subcommand).
 - `-d, --dry` — print what would happen.
 
 ## Output formats (`--format`)

@@ -33,7 +33,7 @@ Five subcommands share a consistent option surface — auto-discovering the outp
 
 All five emit text or JSON:
 
-- **`summary`** — headline counts; add `--failed` to list failing tests above the counts
+- **`summary`** — headline counts; add `--failed` to list failing tests below the counts
 - **`show`** — one line per test (status, name, source, first failure-message line)
 - **`log`** — full execution tree for matching tests (keywords, control flow, messages)
 - **`stats`** — aggregate by `tag` / `suite` / `status`
@@ -45,7 +45,7 @@ Reaching for `xmllint`, `grep` on `output.xml`, opening the file with a generic 
 
 ```bash
 robotcode results summary                                       # auto-discover the output file
-robotcode results summary --failed                              # list every failing test above the totals
+robotcode results summary --failed                              # list every failing test below the totals
 robotcode results summary -i smoke --status fail                # combine tag + status filters
 robotcode results summary --search TimeoutError                 # full-text search across name/message/keywords/logs
 robotcode results summary -bl "MyProject.Login.Login Works"     # exact-match by full longname

@@ -99,7 +99,7 @@ variables = { ENVIRONMENT = "production", API_URL = "https://api.example.com" }
 - **`inherits`** — pull in other profiles by name: `inherits = ["base"]` (string or list).
 - **`hidden` / `enabled`** — `hidden = true` keeps a profile out of listings; `enabled.if = "<python expression>"` (e.g. `enabled.if = "platform.system() == 'Windows'"`) switches it on conditionally.
 - **`precedence`** — a number (default `0`); when several profiles merge, the higher-precedence one wins a conflicting scalar key.
-- **`extend-` prefix** — within a merge a plain key **replaces** the accumulated value, while its `extend-` twin **appends** to it. Supported on `variables`, `include` / `exclude`, `python-path`, `metadata`, and more (check `config info`).
+- **`extend-` prefix** — within a merge a plain key **replaces** the accumulated value, while its `extend-` twin **appends** to it. Supported on `variables`, `includes` / `excludes`, `python-path`, `metadata`, and more (check `config info`).
 - **`default-profiles`** — which profile(s) apply when no `--profile` is given.
 
 ### Selecting and inspecting profiles
@@ -116,7 +116,7 @@ Merge order: default (top-level) settings first → profiles by ascending `prece
 
 ### See a profile's effect on a run — without running
 
-`discover` applies the resolved configuration too, so it previews exactly what a profile changes: which tests/suites are selected, and how their longnames and tags come out after the profile's `paths`, `include` / `exclude`, and name transforms.
+`discover` applies the resolved configuration too, so it previews exactly what a profile changes: which tests/suites are selected, and how their longnames and tags come out after the profile's `paths`, `includes` / `excludes`, and name transforms.
 
 ```bash
 robotcode --profile ci discover tests          # the tests this profile would run
@@ -142,7 +142,7 @@ extend-variables = { ENVIRONMENT = "development" }   # adds to base, doesn't rep
 [profiles.ci]
 inherits = ["base"]
 extend-variables = { ENVIRONMENT = "ci" }
-extend-include = ["smoke"]                            # adds to any inherited includes
+extend-includes = ["smoke"]                           # adds to any inherited includes
 
 # Platform-conditional profile
 [profiles.windows]
@@ -152,7 +152,7 @@ variables = { DRIVER_PATH = "C:\\drivers" }
 
 ## Gotchas
 
-- **`extend-` vs. plain replaces silently.** A profile's plain `variables = { … }` *replaces* the inherited/default variables (the others are dropped); use `extend-variables` to add. Same for `include`, `python-path`, `metadata`, etc.
+- **`extend-` vs. plain replaces silently.** A profile's plain `variables = { … }` *replaces* the inherited/default variables (the others are dropped); use `extend-variables` to add. Same for `includes`, `python-path`, `metadata`, etc.
 - **Config changes longnames.** `paths` and name-transform settings change suite/test *names* from what the files literally say — so select a single test by its `discover` / `results` **longname** (`-bl`), never by its file path. See [debugging.md](debugging.md).
 - **CLI overrides config.** Flags on the command line win over `robot.toml`; use them to narrow a one-off run, not as a substitute for the config.
 - **`config show` is the merged result, so it includes the user-global defaults.** A setting that isn't in the project's `robot.toml` / `pyproject.toml` is usually one of those user-level defaults (source #1 above) rather than something the project sets. `config show -s` (each file's own contribution) and `config files` show which file each setting comes from, which attributes any setting to its layer.

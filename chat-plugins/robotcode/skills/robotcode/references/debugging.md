@@ -36,7 +36,7 @@ Beyond post-mortem analysis, `robot-debug` also makes a tight **inner loop while
 - **`robotcode robot-debug`** (alias `run-debug`) — debug a run, scoped however you need: narrow it to a single test with `-t`/`-bl` (the usual case when debugging one failure), to a suite or tag, or run the lot. Takes the **full [`robotcode robot`](../SKILL.md) option set** (paths, `-v`, `-i`/`-e`/`-s`/`-t`, `--profile`, …) plus the trigger flags below.
 - **`robotcode repl`** — the *same* debugger is available in the [REPL](repl.md), but it **starts detached**: attach it with `.debug on` or `--debugger-attached` (passing `--break …` attaches too). Arm a breakpoint up front with `--break …`, or interactively at the prompt with `.break` (a keyword name *or* a `file:line`, no restart); running a keyword that reaches it drops you into the same `(rdb)` prompt. Use it to debug a keyword while you build it up — see [repl.md](repl.md#debugging-from-the-repl).
 
-Both come from the optional **`repl`** extra. `Error: No such command 'robot-debug'` means it's missing — see [install.md](install.md) (`pip install robotcode[repl]`, or `[all]`).
+Both come from the optional **`repl`** extra. `Error: No such command 'robot-debug'` means it's missing — see [install.md](install.md) (`pip install "robotcode[repl]"`, or `[all]`).
 
 ## How a debug session works
 
