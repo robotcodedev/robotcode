@@ -54,7 +54,7 @@ def do_something(value, *items, flag=False):
 ROBOT_FORMAT_LIBRARY_MARKDOWN = (
     "### Library *GoldenRobotLib*\n\n|  |  |\n| :--- | :--- |\n| **Library Scope:** | GLOBAL |\n\n\n"
     "#### Introduction\n\nA library documented in the Robot format.\n\n\n"
-    "- [First section](#first-section)\n- [Second section](#second-section)\n\n\n"
+    "- [First section](#first-section)\n  - [Nested](#nested)\n- [Second section](#second-section)\n\n\n"
     "## First section\n\nUses [Second section](#second-section) and `Do Something`.\n\n\n"
     "### Nested\n\nText with **bold**.\n\n\n## Second section\n\nMore text.\n"
 )

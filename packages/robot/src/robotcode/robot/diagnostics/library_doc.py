@@ -1907,11 +1907,7 @@ class LibraryDoc:
 
                 if self.doc_format == ROBOT_DOC_FORMAT:
                     doc = MarkDownFormatter(_name_linker(targets, link_resolver)).format(self.doc)
-
-                    if "%TOC%" in doc:
-                        doc = self._add_toc(doc, only_doc)
-
-                    result.write(doc)
+                    result.write(replace_toc(doc, self._get_toc_sections(only_doc)))
 
                 elif self.doc_format == REST_DOC_FORMAT:
                     result.write(convert_from_rest(self.doc))
@@ -2081,8 +2077,7 @@ class LibraryDoc:
     ) -> str:
         if self.doc_format == ROBOT_DOC_FORMAT:
             doc = MarkDownFormatter(_name_linker(targets, link_resolver)).format(self.doc)
-            if "%TOC%" in doc:
-                doc = self._add_toc(doc, only_doc=False)
+            doc = replace_toc(doc, self._get_toc_sections(only_doc=False))
         elif self.doc_format == REST_DOC_FORMAT:
             doc = convert_from_rest(self.doc)
         elif self.doc_format == MARKDOWN_DOC_FORMAT:
@@ -2137,10 +2132,6 @@ class LibraryDoc:
 
         return str(RE_INLINE_LINK.sub(repl, text))
 
-    def _add_toc(self, doc: str, only_doc: bool = True) -> str:
-        toc = self._create_toc(doc, only_doc)
-        return "\n".join(line if line.strip() != "%TOC%" else toc for line in doc.splitlines())
-
     def _get_toc_sections(self, only_doc: bool = True) -> List[str]:
         """The sections a full rendering has besides the ones of the introduction."""
         entries: List[str] = []
@@ -2152,12 +2143,6 @@ class LibraryDoc:
             if self.types:
                 entries.append("Data types")
         return entries
-
-    def _create_toc(self, doc: str, only_doc: bool = True) -> str:
-        entries = re.findall(r"^##\s+(.+)", doc, flags=re.MULTILINE)
-        entries.extend(self._get_toc_sections(only_doc))
-
-        return "\n".join(f"- [{entry}](#{slugify(entry)})" for entry in entries)
 
 
 def var_repr(value: Any) -> str:

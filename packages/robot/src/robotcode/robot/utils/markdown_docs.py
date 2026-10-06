@@ -231,8 +231,13 @@ def section_anchors(text: str, section: str, level: int = 2) -> List[Tuple[str, 
 
 
 def render_toc(text: str, extra_entries: Iterable[str] = ()) -> str:
-    """A table of contents of the `##` and `###` headings as a nested list."""
-    entries = [(level - 2, title) for level, title in iter_headings(text) if level in (2, 3)]
+    """A table of contents of the two highest heading levels of `text` as a nested list.
+
+    The levels are relative, so a documentation whose sections start at `###` gets two levels too.
+    """
+    headings = list(iter_headings(text))
+    levels = sorted({level for level, _ in headings})[:2]
+    entries = [(levels.index(level), title) for level, title in headings if level in levels]
     entries.extend((0, entry) for entry in extra_entries)
 
     return "\n".join(f"{'  ' * level}- [{_without_links(title)}](#{slugify(title)})" for level, title in entries)

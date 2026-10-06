@@ -553,3 +553,11 @@ def test_render_toc_writes_links_of_a_heading_as_their_text() -> None:
     assert render_toc("## Using [Do Thing](#do-thing)\n### Plain") == (
         "- [Using Do Thing](#using-do-thing)\n  - [Plain](#plain)"
     )
+
+
+def test_render_toc_takes_the_two_highest_levels_of_the_text() -> None:
+    text = "### First\n\n#### Nested one\n\n##### Too deep\n\n### Second"
+
+    assert render_toc(text, extra_entries=["Keywords"]) == (
+        "- [First](#first)\n  - [Nested one](#nested-one)\n- [Second](#second)\n- [Keywords](#keywords)"
+    )
