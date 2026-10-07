@@ -1,0 +1,17 @@
+# Tasks
+
+## 1. Restored references to imports
+
+- [ ] 1.1 Create `tests/robotcode/language_server/robotframework/parts/test_namespace_cache_restore.py` with the five cases of the proposal, as described in design.md ("Tests"). It opens each suite without a version, closes it, opens it again from the cache (checked with a spy on `Namespace.from_data`), and compares the entries and locations of `namespace_references`. Verify that the test fails for the five cases on the current code.
+- [ ] 1.2 Add a test to `tests/robotcode/robot/diagnostics/test_namespace_data.py`: two entries of the same library with different import positions get different keys in `to_data`. Adjust the comment on the key format in `test_to_data_converts_namespace_references`. Verify that the new test fails on the current code.
+- [ ] 1.3 In `namespace.py`, build the key of a `namespace_references` entry with one function used by `to_data` and `from_data`, from the fields named in design.md. In `from_data`, look the keys up among the entries of `libraries`, `resources`, `variables_imports` and `import_entries`. Verify that the tests of 1.1 and 1.2 pass and that `test_namespace_data.py` stays green.
+
+## 2. Integration
+
+- [ ] 2.1 Run `hatch run test:test` and verify that every Robot Framework environment is green.
+- [ ] 2.2 Run `hatch run lint:all` and verify that ruff and mypy report nothing.
+- [ ] 2.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+## Workflow follow-up
+
+- Archive the change after the maintainer's review; the archive creates the main spec `namespace-cache`.
