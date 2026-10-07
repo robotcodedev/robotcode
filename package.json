@@ -761,6 +761,12 @@
             "markdownDescription": "Do not offer keywords tagged `robot:private` that are defined in another file, including private library keywords. When disabled, they are offered marked as `private` and sorted after the other keywords.",
             "scope": "resource"
           },
+          "robotcode.completion.hideDeprecatedKeywords": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Do not offer deprecated keywords, wherever they are defined. When disabled, they are offered struck through and sorted after the other keywords.",
+            "scope": "resource"
+          },
           "robotcode.inlayHints.parameterNames": {
             "type": "boolean",
             "default": true,

@@ -904,14 +904,19 @@ class CompletionCollector(ModelHelper):
     def _is_foreign_private(self, kw: KeywordDoc) -> bool:
         return private_keyword_call_message(kw, self.namespace.source) is not None
 
+    def _is_hidden(self, kw: KeywordDoc, private: bool) -> bool:
+        return (private and self.config.hide_private_keywords) or (
+            kw.is_deprecated and self.config.hide_deprecated_keywords
+        )
+
     @staticmethod
     def _private_label_details(private: bool) -> Optional[CompletionItemLabelDetails]:
         return CompletionItemLabelDetails(description="private") if private else None
 
     @staticmethod
     def _keyword_sort_text(prefix: str, kw: KeywordDoc, private: bool) -> str:
-        """Other keywords first, then the shown private keywords of other files."""
-        rank = 1 if private else 0
+        """Other keywords first, then deprecated ones, then the shown private keywords of other files."""
+        rank = 2 if private else 1 if kw.is_deprecated else 0
         return f"{prefix}{rank}_{kw.name}"
 
     def create_keyword_completion_items(
@@ -994,7 +999,7 @@ class CompletionCollector(ModelHelper):
                             if kw.is_error_handler:
                                 continue
                             private = self._is_foreign_private(kw)
-                            if private and self.config.hide_private_keywords:
+                            if self._is_hidden(kw, private):
                                 continue
                             result.append(
                                 CompletionItem(
@@ -1003,6 +1008,7 @@ class CompletionCollector(ModelHelper):
                                     kind=CompletionItemKind.FUNCTION,
                                     detail=f"{CompleteResultKind.KEYWORD.value} "
                                     f"{f'({kw.libname})' if kw.libname is not None else ''}",
+                                    deprecated=kw.is_deprecated,
                                     sort_text=self._keyword_sort_text("019_", kw, private),
                                     insert_text_format=(
                                         InsertTextFormat.PLAIN_TEXT if not kw.is_embedded else InsertTextFormat.SNIPPET
@@ -1044,7 +1050,7 @@ class CompletionCollector(ModelHelper):
                                 if kw.is_error_handler:
                                     continue
                                 private = self._is_foreign_private(kw)
-                                if private and self.config.hide_private_keywords:
+                                if self._is_hidden(kw, private):
                                     continue
 
                                 result.append(
@@ -1054,6 +1060,7 @@ class CompletionCollector(ModelHelper):
                                         kind=CompletionItemKind.FUNCTION,
                                         detail=f"{CompleteResultKind.KEYWORD.value} "
                                         f"{f'({kw.libname})' if kw.libname is not None else ''}",
+                                        deprecated=kw.is_deprecated,
                                         sort_text=self._keyword_sort_text("019_", kw, private),
                                         insert_text_format=(
                                             InsertTextFormat.PLAIN_TEXT
@@ -1098,7 +1105,7 @@ class CompletionCollector(ModelHelper):
             ):
                 continue
             private = self._is_foreign_private(kw)
-            if private and self.config.hide_private_keywords:
+            if self._is_hidden(kw, private):
                 continue
 
             result.append(
