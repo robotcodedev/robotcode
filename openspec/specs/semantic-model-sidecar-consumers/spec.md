@@ -45,7 +45,8 @@ When `namespace.semantic_model` is set, `selection_range.py` SHALL derive variab
 - **THEN** both responses contain identical range hierarchies
 
 ### Requirement: Inline values and debug variable extraction use the model when available
-When `namespace.semantic_model` is set, `inline_value.py` and `debugging_utils.py` SHALL obtain `(range, VariableDefinition)` pairs from the model — the shared candidate extraction (bare-`$var` condition refs from pre-computed `PYTHON_VARIABLE_REF` sub-tokens) plus `model.find_variable()` resolved at the debugger's stopped location (matching legacy visibility semantics, including column-aware visibility on defining lines) — without calling any `ModelHelper` method on the model path. When the model is absent, the legacy path SHALL be used unchanged.
+
+When `namespace.semantic_model` is set, `inline_value.py` and `debugging_utils.py` SHALL obtain `(range, VariableDefinition)` pairs from the model — the shared candidate extraction (bare-`$var` condition refs from pre-computed `PYTHON_VARIABLE_REF` sub-tokens) plus `model.find_variable()` resolved at the debugger's stopped location (matching legacy visibility semantics, including column-aware visibility on defining lines) — without calling any `ModelHelper` method on the model path.
 
 #### Scenario: Identical inline values under both flag states
 - **WHEN** inline values are computed for the same document and stopped location under both flag states
@@ -61,3 +62,11 @@ After this change, within the nine touched files, `ModelHelper` methods SHALL on
 #### Scenario: Model path never touches ModelHelper
 - **WHEN** the feature flag is on and selection range, inline value, and debug variable extraction are exercised
 - **THEN** no `ModelHelper` method is called in those code paths (verifiable via test instrumentation or code review of the branch structure)
+
+### Requirement: Inline values without a model use the legacy path
+
+When the model is absent, `inline_value.py` and `debugging_utils.py` SHALL use the legacy path unchanged.
+
+#### Scenario: No semantic model
+- **WHEN** no semantic model is built for a document and inline values are computed at a stop
+- **THEN** the legacy path computes them as before

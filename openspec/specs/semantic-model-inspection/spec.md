@@ -11,7 +11,8 @@ developer/diagnostic CLI command; not a user-facing feature.
 ## Requirements
 
 ### Requirement: SemanticModel JSON serializer
-The `semantic_analyzer` package SHALL provide a read-only serializer that converts a built `SemanticModel` into a JSON-compatible dict containing the complete model content: the block tree (every block with kind, class name, line range, block-specific fields, header, and body), the flat statement list in document order (every statement with kind, class name, statement-specific fields, and its full token tree including recursive sub-tokens with kind, value, position, length, and modifiers), the file-level `VariableScope` layers (command-line, own, imported, builtin), and per-`DefinitionBlock` local variables with their visibility lines. Resolved references (keyword docs, library entries, variable definitions) SHALL be serialized as compact stubs (name, type/class, source, position), not as full object dumps. Serialization SHALL NOT mutate the model.
+
+The `semantic_analyzer` package SHALL provide a read-only serializer that converts a built `SemanticModel` into a JSON-compatible dict containing the complete model content. Resolved references (keyword docs, library entries, variable definitions) SHALL be serialized as compact stubs (name, type/class, source, position), not as full object dumps. Serialization SHALL NOT mutate the model.
 
 #### Scenario: Complete statement and token content
 - **WHEN** `model_to_dict` is called on the `SemanticModel` of an analyzed file containing keyword calls with argument cells that embed variables
@@ -37,7 +38,8 @@ The serialized dump SHALL be deterministic: serializing the same file with the s
 - **THEN** the stub's source is `<external>/<basename>` and contains no machine-specific path
 
 ### Requirement: Hidden dump-model CLI command
-The `robotcode analyze` command group SHALL provide a subcommand `dump-model <file>` that is hidden from help output via the existing `show_hidden_arguments` pattern. The command SHALL build the namespace for the given file using the same configuration path as `robotcode analyze code` (robot.toml, profiles, `-v`/`-V`/`-P` overrides), SHALL force the semantic-model build regardless of the experimental flag's configured value, SHALL run analysis, and SHALL emit the JSON dump to stdout or, with `-o <output>`, to the given file. The command SHALL exit non-zero when the file cannot be analyzed or no semantic model was built. The JSON format is a developer/diagnostic surface without stability guarantees.
+
+The `robotcode analyze` command group SHALL provide a subcommand `dump-model <file>` that is hidden from help output via the existing `show_hidden_arguments` pattern. The command SHALL exit non-zero when the file cannot be analyzed or no semantic model was built. The JSON format is a developer/diagnostic surface without stability guarantees.
 
 #### Scenario: Dump to stdout
 - **WHEN** `robotcode analyze dump-model path/to/suite.robot` is run in a project where the experimental semantic-model flag is not enabled
@@ -50,3 +52,19 @@ The `robotcode analyze` command group SHALL provide a subcommand `dump-model <fi
 #### Scenario: File cannot be analyzed
 - **WHEN** `robotcode analyze dump-model` is invoked with a path that does not exist or is not an analyzable Robot Framework file
 - **THEN** the command reports an error and exits with a non-zero code
+
+### Requirement: Content of the SemanticModel dump
+
+The dump SHALL contain the block tree (every block with kind, class name, line range, block-specific fields, header, and body), the flat statement list in document order (every statement with kind, class name, statement-specific fields, and its full token tree including recursive sub-tokens with kind, value, position, length, and modifiers), the file-level `VariableScope` layers (command-line, own, imported, builtin), and per-`DefinitionBlock` local variables with their visibility lines.
+
+#### Scenario: Parts of the dump
+- **WHEN** `model_to_dict` is called on the `SemanticModel` of an analyzed file with a keyword that defines a local variable
+- **THEN** the dump contains the block tree, the statements in document order, the four `VariableScope` layers, and the local variable of the keyword with its visibility line
+
+### Requirement: What dump-model builds and writes
+
+The `dump-model` command SHALL build the namespace for the given file using the same configuration path as `robotcode analyze code` (robot.toml, profiles, `-v`/`-V`/`-P` overrides), SHALL force the semantic-model build regardless of the experimental flag's configured value, SHALL run analysis, and SHALL emit the JSON dump to stdout or, with `-o <output>`, to the given file.
+
+#### Scenario: Python path override
+- **WHEN** `robotcode analyze dump-model -P lib path/to/suite.robot` is run for a suite that imports `Library    MyLib` from `lib`
+- **THEN** the command prints the JSON dump of the file's `SemanticModel` and exits with code 0

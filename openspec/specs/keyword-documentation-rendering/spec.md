@@ -11,9 +11,6 @@ Defines how RobotCode renders keyword and library documentation across its surfa
 When a keyword has documented arguments, the rendered keyword documentation SHALL show the argument table with an additional column for the descriptions, so that every argument is named once, with its type, its default value and its description.
 - An argument without a description SHALL have an empty description cell.
 - A name that the documentation describes without being an argument of the keyword SHALL get a row of its own, with its name and its description and the other cells empty.
-- A description SHALL be written into its cell as one line: a line break within a paragraph SHALL become a space, and each further paragraph and each list item SHALL start a new line within the cell (`<br>`). A `|` in a description SHALL be escaped, so that every row has the same number of cells.
-
-A keyword without argument descriptions SHALL keep the argument table without the description column. When a return description exists it SHALL be shown with the return type (`**Return Type**: \`T\` — description`, or `**Returns**: description` without a type); on the full page, the names in `T` link to their data types by the requirement "Data types" of `library-documentation-markdown`. Raised exceptions SHALL be listed with their descriptions. Outside the full-page documentation of `library-documentation-markdown`, keywords whose documentation is not in Markdown format and has no argument, return or raises description SHALL render exactly as before, except for the corrections of the requirement "Robot-format tables and links convert to valid Markdown" and, in VS Code, the links of the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`.
 
 #### Scenario: Standard-library keyword on RF 7.5
 - **WHEN** the hover for `Log` (BuiltIn) is shown on RF 7.5
@@ -60,7 +57,7 @@ Signature help SHALL show, for the active parameter, its description followed by
 
 ### Requirement: Markdown reference links are resolved
 
-In documentation declared as Markdown, reference-style links (`[Name]`, `[Name][]`, `[text][Name]`) whose target is a keyword of the same library, a type used by the library, a section of the library introduction or one of Libdoc's default targets (introduction, importing, keywords) SHALL NOT be rendered as literal brackets. In hover, signature help and completion, in the output of `robotcode doc keywords` and `robotcode doc keyword`, and in the `doc` and `short_doc` fields of the JSON output of `robotcode doc` they SHALL be rendered as inline code; in VS Code, in hover, signature help, completion and the tooltips of the Keywords view, they SHALL be links to the Documentation Viewer by the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`. In full-document views (REPL `.doc`, `robotcode doc lib` and `browse`, Markdown documentation view) they SHALL be rendered as in-document links, where a reference to a type links to the type's heading in the `Data types` section, by the requirement "Data types" of `library-documentation-markdown`. In the REPL keyword view they SHALL be rendered as navigable keyword links. Reference definitions declared in the library introduction SHALL be applied to keyword documentation. Links inside code spans and fenced code blocks, images and unknown targets SHALL be left unchanged. Matching SHALL ignore case and spaces, as Libdoc does.
+In documentation declared as Markdown, reference-style links (`[Name]`, `[Name][]`, `[text][Name]`) whose target is a keyword of the same library, a type used by the library, a section of the library introduction or one of Libdoc's default targets (introduction, importing, keywords) SHALL NOT be rendered as literal brackets. Links inside code spans and fenced code blocks, images and unknown targets SHALL be left unchanged. Matching SHALL ignore case and spaces, as Libdoc does.
 
 #### Scenario: Keyword reference in a hover
 - **WHEN** the hover for `Log` is shown on RF 7.5 to a language client other than the VS Code extension
@@ -93,7 +90,7 @@ In documentation declared as Markdown, reference-style links (`[Name]`, `[Name][
 
 ### Requirement: Markdown library introductions are normalised
 
-For libraries documented in Markdown, a `%TOC%` line in the introduction SHALL be replaced by a two-level table of contents of the introduction's headings; ATX headings SHALL be shifted one level down (`#` → `##`) as Robot-format headings are today; GitHub-style admonitions (`> [!NOTE]`, `> [!WARNING]`, …) SHALL be rendered as block quotes with a bold label; fenced code, tables and raw HTML SHALL be left unchanged. The backtick auto-linking applied to Robot-format documentation SHALL NOT be applied to Markdown documentation.
+For libraries documented in Markdown, a `%TOC%` line in the introduction SHALL be replaced by a two-level table of contents of the introduction's headings; ATX headings SHALL be shifted one level down (`#` → `##`) as Robot-format headings are today; GitHub-style admonitions (`> [!NOTE]`, `> [!WARNING]`, …) SHALL be rendered as block quotes with a bold label; fenced code, tables and raw HTML SHALL be left unchanged.
 
 #### Scenario: BuiltIn library hover on RF 7.5
 - **WHEN** the hover for the `BuiltIn` library import is shown on RF 7.5
@@ -105,7 +102,7 @@ For libraries documented in Markdown, a `%TOC%` line in the introduction SHALL b
 
 ### Requirement: Robot-format tables and links convert to valid Markdown
 
-When documentation in Robot Framework's format is converted to Markdown, on every surface and every supported Robot Framework version, a `|` inside the content of a table cell SHALL be escaped, so that every table row keeps the number of cells Robot Framework gives it. No link target SHALL contain the escaped `\#`: links converted from Robot-format links and URLs, and the links from backtick names to headings of the same documentation, SHALL be written with `#`. Link texts and all other text SHALL be converted as before, apart from the names in single backticks that the full page links (requirement "Names in Robot-format documentation" of `library-documentation-markdown`) and, in VS Code, the links of the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`, which replace these links there.
+When documentation in Robot Framework's format is converted to Markdown, on every surface and every supported Robot Framework version, a `|` inside the content of a table cell SHALL be escaped, so that every table row keeps the number of cells Robot Framework gives it. No link target SHALL contain the escaped `\#`: links converted from Robot-format links and URLs, and the links from backtick names to headings of the same documentation, SHALL be written with `#`.
 
 #### Scenario: Pipe inside a table cell
 - **WHEN** the hover for `Should Match Regexp` (BuiltIn) is shown on RF 6.1
@@ -135,3 +132,67 @@ Links to headings within library documentation, such as the table of contents th
 #### Scenario: Library hover with a table of contents
 - **WHEN** the hover for a `DateTime` import is shown on RF 7.5 in a language client other than the VS Code extension
 - **THEN** its table of contents links `` `TODAY` and `NOW` `` to `#today-and-now`
+
+### Requirement: Description cells of the argument table
+
+A description SHALL be written into its cell as one line: a line break within a paragraph SHALL become a space, and each further paragraph and each list item SHALL start a new line within the cell (`<br>`). A `|` in a description SHALL be escaped, so that every row has the same number of cells. A keyword without argument descriptions SHALL keep the argument table without the description column.
+
+#### Scenario: Line break within a paragraph
+- **WHEN** a keyword documents an argument with the paragraph "The first line" followed by the line "of the description"
+- **THEN** its description cell shows "The first line of the description" on one line
+
+### Requirement: Return and raises descriptions
+
+When a return description exists it SHALL be shown with the return type (`**Return Type**: \`T\` — description`, or `**Returns**: description` without a type); on the full page, the names in `T` link to their data types by the requirement "Data types" of `library-documentation-markdown`. Raised exceptions SHALL be listed with their descriptions.
+
+#### Scenario: Return description without a return type
+- **WHEN** a keyword without a return type documents a `Returns:` section on RF 7.5
+- **THEN** the rendered documentation shows `**Returns**:` followed by the description
+
+### Requirement: Keywords without descriptions render as before
+
+Outside the full-page documentation of `library-documentation-markdown`, keywords whose documentation is not in Markdown format and has no argument, return or raises description SHALL render exactly as before, except for the corrections of the requirement "Robot-format tables and links convert to valid Markdown" and, in VS Code, the links of the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`.
+
+#### Scenario: reStructuredText keyword without sections
+- **WHEN** the hover of a keyword of a library in reStructuredText format without Google-style sections is shown on RF 7.5 in a language client other than the VS Code extension
+- **THEN** it renders exactly as before, apart from the corrections of the requirement "Robot-format tables and links convert to valid Markdown"
+
+### Requirement: Reference links in keyword views
+
+In hover, signature help and completion, in the output of `robotcode doc keywords` and `robotcode doc keyword`, and in the `doc` and `short_doc` fields of the JSON output of `robotcode doc`, resolved reference links SHALL be rendered as inline code; in VS Code, in hover, signature help, completion and the tooltips of the Keywords view, they SHALL be links to the Documentation Viewer by the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`.
+
+#### Scenario: Keyword reference in the keyword documentation command
+- **WHEN** `robotcode doc keyword BuiltIn Log` is run on RF 7.5
+- **THEN** `[Set Log Level]` is rendered as `` `Set Log Level` ``
+
+### Requirement: Reference links in full-document views
+
+In full-document views (REPL `.doc`, `robotcode doc lib` and `browse`, Markdown documentation view), resolved reference links SHALL be rendered as in-document links, where a reference to a type links to the type's heading in the `Data types` section, by the requirement "Data types" of `library-documentation-markdown`. In the REPL keyword view they SHALL be rendered as navigable keyword links.
+
+#### Scenario: Keyword reference in the REPL documentation
+- **WHEN** `.doc BuiltIn` is shown in the REPL on RF 7.5
+- **THEN** `[Set Log Level]` is an in-document link to the heading of `Set Log Level`
+
+### Requirement: Reference definitions of the library introduction
+
+Reference definitions declared in the library introduction SHALL be applied to keyword documentation.
+
+#### Scenario: Definition from the introduction
+- **WHEN** the introduction of a Markdown library defines `[docs]: https://example.com/docs` and a keyword documentation uses `[docs]`
+- **THEN** the keyword hover renders `docs` as a link to `https://example.com/docs`
+
+### Requirement: No backtick auto-linking in Markdown documentation
+
+The backtick auto-linking applied to Robot-format documentation SHALL NOT be applied to Markdown documentation.
+
+#### Scenario: Keyword name in backticks
+- **WHEN** a keyword documentation of a Markdown library contains `` `Log` `` and is shown on the full page
+- **THEN** `Log` is rendered as inline code, not as a link
+
+### Requirement: Other Robot-format text converts as before
+
+Link texts and all other text SHALL be converted as before, apart from the names in single backticks that the full page links (requirement "Names in Robot-format documentation" of `library-documentation-markdown`) and, in VS Code, the links of the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`, which replace these links there.
+
+#### Scenario: Link text
+- **WHEN** a Robot-format keyword documentation contains `[http://example.com|example]`
+- **THEN** the rendered documentation contains the link `[example](http://example.com)`

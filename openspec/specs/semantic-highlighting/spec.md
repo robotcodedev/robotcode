@@ -11,17 +11,7 @@ Defines which semantic tokens the RobotCode language server sends for Robot Fram
 For every variable reference and every variable definition, the language server SHALL send exactly one semantic token per variable name, carrying the type and the modifiers the analysis computed for that variable. It SHALL NOT send tokens for:
 - the prefix (`$`, `@`, `&`, `%`) and the braces;
 - item-access brackets and literal item content;
-- the `=` of an assignment;
-- type-hint separators, default values of environment variables and embedded-argument patterns;
-- inline Python expressions (`${{ }}`), neither for their delimiters nor for their content.
-
-This SHALL hold at every site where Robot Framework defines or uses variables:
-- declarations in `*** Variables ***`;
-- keyword-call assignments, including several targets and item assignments such as `${DICT}[key]=`;
-- `VAR`, `FOR` loop variables and `EXCEPT ... AS` targets;
-- `[Arguments]` declarations;
-- embedded arguments in keyword names, and embedded argument values in keyword calls;
-- usages in arguments and settings, including nested variables, item access and environment variables.
+- the `=` of an assignment.
 
 #### Scenario: Declarations in the Variables section
 - **WHEN** the line `${PAGE_OBJECT}    ${NONE}` in a `*** Variables ***` section is analyzed
@@ -61,12 +51,7 @@ This SHALL hold at every site where Robot Framework defines or uses variables:
 
 ### Requirement: Variable names end where Robot Framework ends them
 
-The language server SHALL determine the name of a variable as Robot Framework does at that position:
-- A type hint SHALL be split off only with Robot Framework 7.3 or later, at the last `": "`, and only at these sites: declarations in `*** Variables ***`, keyword-call assignments, `VAR`, `FOR` loop variables, `[Arguments]` declarations and embedded arguments in keyword names. Everywhere else `: ` belongs to the name.
-- An embedded-argument pattern SHALL be split off only in keyword names, also after a type hint as in `${count: int:\d+}`.
-- The extended variable syntax SHALL be split off only where a variable is used, and only when neither a visible variable nor a number has the full name. Then the token covers the base name only. Names in definitions and keyword names are taken as they are.
-
-A type hint that is split off SHALL get one `type` token, and its `: ` separator SHALL get none.
+The language server SHALL determine the name of a variable as Robot Framework does at that position. A type hint SHALL be split off only with Robot Framework 7.3 or later, at the last `": "`, and only at these sites: declarations in `*** Variables ***`, keyword-call assignments, `VAR`, `FOR` loop variables, `[Arguments]` declarations and embedded arguments in keyword names. Everywhere else `: ` belongs to the name.
 
 #### Scenario: Type hint in an assignment
 - **WHEN** `${count: int}=    Get Count` is analyzed with Robot Framework 7.3 or later
@@ -111,3 +96,56 @@ The language server SHALL send `variable` tokens only for variable names. An opt
 #### Scenario: EXCEPT option
 - **WHEN** `EXCEPT    x    type=glob    AS    ${err}` is analyzed
 - **THEN** `type=glob` gets one control-flow token and `err` gets a variable token
+
+### Requirement: No tokens for type-hint separators, defaults, patterns and inline Python
+
+The language server SHALL NOT send semantic tokens for type-hint separators, default values of environment variables and embedded-argument patterns, nor for inline Python expressions (`${{ }}`), neither for their delimiters nor for their content.
+
+#### Scenario: Environment variable with a path as default value
+- **WHEN** `Log    %{HOME=/tmp}` is analyzed
+- **THEN** `HOME` gets a variable token, and `%{`, `=`, `/tmp` and `}` get no token
+
+### Requirement: Variable tokens where Robot Framework defines variables
+
+One token per variable name, and no token for the parts around it, SHALL be sent at every site where Robot Framework defines variables:
+- declarations in `*** Variables ***`;
+- keyword-call assignments, including several targets and item assignments such as `${DICT}[key]=`;
+- `VAR`, `FOR` loop variables and `EXCEPT ... AS` targets;
+- `[Arguments]` declarations;
+- embedded arguments in keyword names.
+
+#### Scenario: FOR loop variable
+- **WHEN** `FOR    ${item}    IN    @{LIST}` is analyzed
+- **THEN** `item` and `LIST` get variable tokens, and `${`, `@{` and `}` get no token
+
+### Requirement: Variable tokens where Robot Framework uses variables
+
+One token per variable name, and no token for the parts around it, SHALL also be sent where Robot Framework uses variables: embedded argument values in keyword calls, and usages in arguments and settings, including nested variables, item access and environment variables.
+
+#### Scenario: Variable in a setting
+- **WHEN** `[Setup]    Log    ${MESSAGE}` is analyzed
+- **THEN** `MESSAGE` gets a variable token, and `${` and `}` get no token
+
+### Requirement: Tokens of a type hint
+
+A type hint that is split off SHALL get one `type` token, and its `: ` separator SHALL get none.
+
+#### Scenario: Type hint in VAR
+- **WHEN** `VAR    ${name: str}    x` is analyzed with Robot Framework 7.3 or later
+- **THEN** `str` gets one type token and `: ` gets no token
+
+### Requirement: Embedded-argument patterns are split off in keyword names only
+
+An embedded-argument pattern SHALL be split off from a variable name only in keyword names, also after a type hint as in `${count: int:\d+}`.
+
+#### Scenario: Pattern in a keyword name
+- **WHEN** the keyword name `Count ${n:\d+} Items` is analyzed
+- **THEN** `n` gets a variable token and `\d+` gets no token
+
+### Requirement: Extended variable syntax is split off at usages only
+
+The extended variable syntax SHALL be split off from a variable name only where a variable is used, and only when neither a visible variable nor a number has the full name. Then the token covers the base name only. Names in definitions and keyword names are taken as they are.
+
+#### Scenario: Full name that is defined
+- **WHEN** `${OBJ}` and `${OBJ.attr}` are both defined and `Log    ${OBJ.attr}` is analyzed
+- **THEN** `OBJ.attr` gets one variable token

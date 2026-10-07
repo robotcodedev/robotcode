@@ -8,7 +8,7 @@ Defines how RobotCode loads library and variable file imports for the analysis: 
 
 ### Requirement: Loading stops when the load timeout expires
 
-RobotCode SHALL end the process that loads a library or variable file for the analysis when the configured load timeout expires (`load-library-timeout`, default 10 seconds). The load SHALL return a timeout error right after the timeout, without waiting for the library or variable file to finish, and no code of the library or variable file SHALL keep running in that process afterwards. The import SHALL report that loading timed out after the configured number of seconds, with the code `LibraryTimeoutError` for a library and `VariablesTimeoutError` for a variable file (for a library that Robot Framework imports by default, such as `BuiltIn`, the analysed file reports it), in the language server and in `robotcode analyze code`. A load that finishes within the timeout SHALL behave as before.
+RobotCode SHALL end the process that loads a library or variable file for the analysis when the configured load timeout expires (`load-library-timeout`, default 10 seconds). The load SHALL return a timeout error right after the timeout, without waiting for the library or variable file to finish, and no code of the library or variable file SHALL keep running in that process afterwards. A load that finishes within the timeout SHALL behave as before.
 
 #### Scenario: Library that blocks at import
 - **WHEN** a suite imports a library whose module blocks for 60 seconds at import and `load-library-timeout` is 2
@@ -42,7 +42,7 @@ When a library or variable file ends the process that loads it, for example with
 
 ### Requirement: A timed-out load is kept until the library changes
 
-A load that timed out SHALL be kept as the result of that import in the same way as the result of a load that failed with an error, which RobotCode keeps while an analysed file imports the library or variable file: other files and later analyses in the same session (a language server run, or one `robotcode analyze code` run) that import the same library or variable file with arguments that resolve to the same values SHALL get that result without a new load. A library SHALL be loaded again when a file in the directory of its source changes (for a package: in its package directory; for a library RobotCode cannot find without loading it: on the Python path), a variable file when the file itself changes (only when RobotCode knows its path without loading it), and both in a new session, for example after the language server restarts because the configuration changed or because of Clear Cache and Restart. A timed-out result SHALL NOT be written to the disk cache, and the analysis of files that depend on it SHALL NOT be written to the namespace cache.
+A load that timed out SHALL be kept as the result of that import in the same way as the result of a load that failed with an error, which RobotCode keeps while an analysed file imports the library or variable file: other files and later analyses in the same session (a language server run, or one `robotcode analyze code` run) that import the same library or variable file with arguments that resolve to the same values SHALL get that result without a new load.
 
 #### Scenario: Two suites import the same blocking library
 - **WHEN** two suites import the same library with the same arguments in one `robotcode analyze code` run and loading it times out
@@ -63,7 +63,7 @@ A load that timed out SHALL be kept as the result of that import in the same way
 
 ### Requirement: A load without the import's arguments is reported
 
-When RobotCode loads a library with the arguments of its import and that load fails, because the arguments cannot be resolved or do not match the library's arguments or because initializing the library fails, RobotCode SHALL still load the library without arguments and use the keywords of that load, as before. For an import in the analysed file it SHALL report, in addition to the original error, an information diagnostic `LibraryLoadedWithoutArguments` on the import, saying that the keywords shown come from loading the library without arguments because loading it with the import's arguments failed. The diagnostic SHALL NOT be reported when the load without arguments fails too, when the import has no arguments, or when RobotCode does not load the library with the import's arguments at all, for example because `ignore-arguments-for-library` makes it load the library without arguments on purpose.
+For an import in the analysed file whose library RobotCode loads without arguments because loading it with the import's arguments failed, RobotCode SHALL report, in addition to the original error, an information diagnostic `LibraryLoadedWithoutArguments` on the import, saying that the keywords shown come from loading the library without arguments because loading it with the import's arguments failed.
 
 #### Scenario: Initializing the library fails
 - **WHEN** a suite has `Library    StrictLib.py    bogus` and `StrictLib.__init__` raises `ValueError` for `bogus`
@@ -89,7 +89,7 @@ When RobotCode loads a library with the arguments of its import and that load fa
 
 ### Requirement: Each set of import arguments has its own stored documentation
 
-RobotCode SHALL keep the documentation of a library or variable file in its disk cache per set of import arguments, resolved with the variables RobotCode knows for the import. An import whose arguments differ from those of a stored entry SHALL be loaded with its own arguments, and its errors SHALL be reported, also when documentation of the same library or variable file with other arguments is stored and also after a restart, without clearing the cache. Each argument set that loads without errors SHALL be served from the disk cache in later sessions. A library that matches `ignore-arguments-for-library` is loaded without arguments and SHALL have one stored entry.
+RobotCode SHALL keep the documentation of a library or variable file in its disk cache per set of import arguments, resolved with the variables RobotCode knows for the import. An import whose arguments differ from those of a stored entry SHALL be loaded with its own arguments, and its errors SHALL be reported, also when documentation of the same library or variable file with other arguments is stored and also after a restart, without clearing the cache.
 
 #### Scenario: Argument added to a library without arguments
 - **WHEN** `Library    NoArgumentLib.py` was analysed and stored in the disk cache and the import is changed to `Library    NoArgumentLib.py    extra`
@@ -106,3 +106,51 @@ RobotCode SHALL keep the documentation of a library or variable file in its disk
 #### Scenario: Arguments ignored on purpose keep one entry
 - **WHEN** a library matches `ignore-arguments-for-library` and is imported with arguments
 - **THEN** it is loaded without arguments and stored under one entry without the arguments
+
+### Requirement: A timed-out load is reported
+
+The import SHALL report that loading timed out after the configured number of seconds, with the code `LibraryTimeoutError` for a library and `VariablesTimeoutError` for a variable file (for a library that Robot Framework imports by default, such as `BuiltIn`, the analysed file reports it), in the language server and in `robotcode analyze code`.
+
+#### Scenario: Code of a timed-out variable file
+- **WHEN** a suite has `Variables    slow_vars.py` whose module blocks for 60 seconds and `load-library-timeout` is 2
+- **THEN** the import is reported with the code `VariablesTimeoutError`
+
+### Requirement: When a timed-out load is repeated
+
+A library SHALL be loaded again when a file in the directory of its source changes (for a package: in its package directory; for a library RobotCode cannot find without loading it: on the Python path), a variable file when the file itself changes (only when RobotCode knows its path without loading it), and both in a new session, for example after the language server restarts because the configuration changed or because of Clear Cache and Restart.
+
+#### Scenario: The variable file changes
+- **WHEN** loading a variable file imported by its path timed out in the language server and the variable file is then saved
+- **THEN** the variable file is loaded again for the next analysis
+
+### Requirement: Timed-out results are not cached
+
+A timed-out result SHALL NOT be written to the disk cache, and the analysis of files that depend on it SHALL NOT be written to the namespace cache.
+
+#### Scenario: Disk cache after a timeout
+- **WHEN** loading a library times out
+- **THEN** no entry for that load is written to the disk cache
+
+### Requirement: A library whose import arguments fail is loaded without them
+
+When RobotCode loads a library with the arguments of its import and that load fails, because the arguments cannot be resolved or do not match the library's arguments or because initializing the library fails, RobotCode SHALL still load the library without arguments and use the keywords of that load, as before.
+
+#### Scenario: Keywords after too many arguments
+- **WHEN** a suite has `Library    StrictLib.py    a    b    c` and `StrictLib` accepts at most one argument
+- **THEN** the keywords of `StrictLib` are found in the suite
+
+### Requirement: When no LibraryLoadedWithoutArguments is reported
+
+The diagnostic `LibraryLoadedWithoutArguments` SHALL NOT be reported when the load without arguments fails too, when the import has no arguments, or when RobotCode does not load the library with the import's arguments at all, for example because `ignore-arguments-for-library` makes it load the library without arguments on purpose.
+
+#### Scenario: Import without arguments that fails
+- **WHEN** a library is imported without arguments and loading it fails
+- **THEN** no `LibraryLoadedWithoutArguments` diagnostic is reported
+
+### Requirement: Stored entries per argument set
+
+Each argument set that loads without errors SHALL be served from the disk cache in later sessions. A library that matches `ignore-arguments-for-library` is loaded without arguments and SHALL have one stored entry.
+
+#### Scenario: Next session
+- **WHEN** a library imported with the argument `a` loaded without errors in one session
+- **THEN** the next session gets its documentation for `a` from the disk cache without a new load

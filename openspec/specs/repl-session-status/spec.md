@@ -10,8 +10,6 @@ Defines the status of a `robotcode repl` session: the result of the session test
 
 The session test that `robotcode repl` writes to `output.xml`, `log.html` and `report.html` SHALL have status FAIL when at least one input statement — a keyword call or a control structure — failed during the session without being handled, and PASS otherwise. The test message SHALL be Robot Framework's combined failure message for the unhandled failures. This SHALL apply to interactive and non-interactive sessions alike, and the output files SHALL remain valid.
 
-A failure SHALL count as handled when it does not propagate to the REPL, for example inside `TRY`/`EXCEPT`, `Run Keyword And Expect Error` or `Run Keyword And Ignore Error`. `Skip` and `Pass Execution` SHALL NOT count as failures. As in Robot Framework, failures continued before `Pass Execution` SHALL count, while a statement that ends in `Skip` SHALL NOT count as a failure even when failures were continued before it. Statements evaluated at a debugger stop (the `(rdb)` prompt) SHALL NOT affect the session test status.
-
 #### Scenario: Failing keyword followed by successful input
 - **WHEN** `Fail    boom` and then `Log    after` are entered in a session run with `-o output.xml`
 - **THEN** `after` is logged
@@ -76,7 +74,7 @@ A session SHALL be non-interactive when standard input is not a terminal, or whe
 
 ### Requirement: Status-based exit code can be overridden
 
-`robotcode repl` SHALL accept `--statusrc` and `--nostatusrc`. With `--statusrc`, the session SHALL exit with code 1 when the session test failed, also in interactive sessions. With `--nostatusrc`, the session SHALL exit with code 0 regardless of failures, also in non-interactive sessions. When the status-based exit code is switched off by configuration — `no-status-rc = true` in `robot.toml` or `--nostatusrc` in `ROBOT_OPTIONS` — the session SHALL exit with code 0 regardless of failures. A configuration that switches it on (`no-status-rc = false`, `--statusrc` in `ROBOT_OPTIONS`) SHALL NOT change the rules for interactive and non-interactive sessions. The options on the `robotcode repl` command line SHALL take precedence over the configuration. The session test status SHALL NOT be affected by any of these settings.
+`robotcode repl` SHALL accept `--statusrc` and `--nostatusrc`. With `--statusrc`, the session SHALL exit with code 1 when the session test failed, also in interactive sessions. With `--nostatusrc`, the session SHALL exit with code 0 regardless of failures, also in non-interactive sessions. The options on the `robotcode repl` command line SHALL take precedence over the configuration. The session test status SHALL NOT be affected by any of these settings.
 
 #### Scenario: Force the exit code in an interactive session
 - **WHEN** `robotcode repl --statusrc` runs in a terminal and a keyword fails before the user ends the session
@@ -127,3 +125,27 @@ Errors that occur before or outside the session, such as invalid options or unre
 #### Scenario: Invalid option in the profile
 - **WHEN** the active profile contains an option that the installed Robot Framework version does not accept
 - **THEN** the process exits with code 252 as before
+
+### Requirement: Failures that do not fail the session test
+
+A failure SHALL count as handled when it does not propagate to the REPL, for example inside `TRY`/`EXCEPT`, `Run Keyword And Expect Error` or `Run Keyword And Ignore Error`. `Skip` and `Pass Execution` SHALL NOT count as failures. As in Robot Framework, failures continued before `Pass Execution` SHALL count, while a statement that ends in `Skip` SHALL NOT count as a failure even when failures were continued before it.
+
+#### Scenario: Expected error
+- **WHEN** `Run Keyword And Expect Error    *    Fail    boom` is entered and the session has no other failures
+- **THEN** the session test has status PASS
+
+### Requirement: Debugger stops do not change the session test
+
+Statements evaluated at a debugger stop (the `(rdb)` prompt) SHALL NOT affect the session test status.
+
+#### Scenario: Failure at a debugger stop with output files
+- **WHEN** a session run with `-o output.xml` stops at a breakpoint, a failing keyword is evaluated at the `(rdb)` prompt, and the session has no other failures
+- **THEN** the session test in `output.xml` has status PASS
+
+### Requirement: Exit code switched by the configuration
+
+When the status-based exit code is switched off by configuration — `no-status-rc = true` in `robot.toml` or `--nostatusrc` in `ROBOT_OPTIONS` — the session SHALL exit with code 0 regardless of failures. A configuration that switches it on (`no-status-rc = false`, `--statusrc` in `ROBOT_OPTIONS`) SHALL NOT change the rules for interactive and non-interactive sessions.
+
+#### Scenario: Suppress the exit code via ROBOT_OPTIONS
+- **WHEN** `ROBOT_OPTIONS` contains `--nostatusrc` and a failing keyword is piped into `robotcode repl`
+- **THEN** the process exits with code 0

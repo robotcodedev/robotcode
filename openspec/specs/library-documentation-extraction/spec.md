@@ -8,7 +8,7 @@ Defines what RobotCode extracts from library and resource keyword documentation 
 
 ### Requirement: Tags declared in documentation are extracted
 
-RobotCode SHALL treat tags declared in keyword documentation — the `Tags:` section of a Python keyword docstring and of a resource keyword's `[Documentation]` — as keyword tags, merged with tags declared via `[Tags]` or `robot_tags`. A keyword whose merged tags contain `robot:private` SHALL be private. In resource keywords a documentation tag written as `-name` SHALL remove `name` from the merged tags on Robot Framework ≥ 7.4 (the first version whose Libdoc does so; older versions keep it literally); in library keywords it SHALL be kept literally. The `Tags:` section SHALL NOT appear in the rendered documentation text, in any form the installed Robot Framework recognises (every `Tags:` section on RF ≥ 7.5, a trailing `Tags:` line on older versions). Tags and privacy SHALL be the ones Robot Framework's own Libdoc reports for the installed version, identical on RF 7.4 and RF 7.5.
+RobotCode SHALL treat tags declared in keyword documentation — the `Tags:` section of a Python keyword docstring and of a resource keyword's `[Documentation]` — as keyword tags, merged with tags declared via `[Tags]` or `robot_tags`. A keyword whose merged tags contain `robot:private` SHALL be private. Tags and privacy SHALL be the ones Robot Framework's own Libdoc reports for the installed version, identical on RF 7.4 and RF 7.5.
 
 #### Scenario: Library keyword docstring with a Tags section
 - **WHEN** a Python keyword's docstring ends with `Tags: alpha, beta` and the library is documented on RF 7.4 and on RF 7.5
@@ -76,7 +76,7 @@ A keyword without a return annotation SHALL report no return type on every suppo
 
 ### Requirement: Libdoc HTML for Markdown-documented libraries needs the optional markdown package
 
-Generating Libdoc HTML through RobotCode (the documentation web view and `robotcode libdoc`) SHALL work for libraries documented in Markdown when the `markdown` package is installed in the user's environment. The package is optional in Robot Framework and SHALL NOT be a dependency of RobotCode's packages or part of the bundled editor extensions, as for `docutils` and reStructuredText. Without it the request SHALL fail with Robot Framework's message naming the missing module instead of an unhandled failure.
+Generating Libdoc HTML through RobotCode (the documentation web view and `robotcode libdoc`) SHALL work for libraries documented in Markdown when the `markdown` package is installed in the user's environment. Without it the request SHALL fail with Robot Framework's message naming the missing module instead of an unhandled failure.
 
 #### Scenario: Documentation web view with markdown installed
 - **WHEN** the HTML documentation of `Collections` is requested on RF 7.5 in an environment where `markdown` is installed
@@ -88,7 +88,7 @@ Generating Libdoc HTML through RobotCode (the documentation web view and `robotc
 
 ### Requirement: Google-style sections become structured documentation
 
-On Robot Framework ≥ 7.5 RobotCode SHALL separate the `Args:`, `Returns:` and `Raises:` sections (with the section names Robot Framework accepts) from a keyword's documentation into per-argument descriptions, a return description and a list of raised exceptions with descriptions, for library keywords and for resource keywords, without modifying Robot Framework's objects. The remaining documentation text SHALL no longer contain those sections. On older versions the documentation text SHALL stay unchanged and the structured fields SHALL be empty. A description for an argument the keyword does not have (for example a name accepted through `**kwargs`) SHALL NOT cause an error and SHALL be kept with the argument descriptions.
+On Robot Framework ≥ 7.5 RobotCode SHALL separate the `Args:`, `Returns:` and `Raises:` sections (with the section names Robot Framework accepts) from a keyword's documentation into per-argument descriptions, a return description and a list of raised exceptions with descriptions, for library keywords and for resource keywords, without modifying Robot Framework's objects. The remaining documentation text SHALL no longer contain those sections.
 
 #### Scenario: Library keyword with Google-style sections
 - **WHEN** a Python keyword `paint(shade, *items)` documents `Args:` for `shade` and `*items`, `Returns:` and `Raises: ValueError` and the library is documented on RF 7.5
@@ -109,7 +109,7 @@ On Robot Framework ≥ 7.5 RobotCode SHALL separate the `Args:`, `Returns:` and 
 
 ### Requirement: Argument types resolve to type documentation
 
-For every keyword argument and for the return type, RobotCode SHALL record the mapping from the used type names to the names of the corresponding type documentation, as Robot Framework's Libdoc computes it (Robot Framework ≥ 6.1), and SHALL use it to look up type documentation for signature help and completion. An argument typed with an alias of an enum or TypedDict SHALL resolve to that enum's or TypedDict's documentation, and a standard type whose documentation name differs from the type name (`int` → `integer`, `str` → `string`) SHALL resolve as well.
+For every keyword argument and for the return type, RobotCode SHALL record the mapping from the used type names to the names of the corresponding type documentation, as Robot Framework's Libdoc computes it (Robot Framework ≥ 6.1), and SHALL use it to look up type documentation for signature help and completion.
 
 #### Scenario: Aliased enum argument
 - **WHEN** a library defines `type Shade = Color` for an `Enum` `Color` and a keyword argument `shade: Shade`, on RF 7.5 with Python 3.12 or newer
@@ -119,3 +119,51 @@ For every keyword argument and for the return type, RobotCode SHALL record the m
 #### Scenario: Standard type name differs from documentation name
 - **WHEN** signature help is requested for a library keyword argument annotated `int` on RF 6.1 or newer
 - **THEN** the `integer` type documentation is shown
+
+### Requirement: Negated documentation tags
+
+In resource keywords a documentation tag written as `-name` SHALL remove `name` from the merged tags on Robot Framework ≥ 7.4 (the first version whose Libdoc does so; older versions keep it literally); in library keywords it SHALL be kept literally.
+
+#### Scenario: Negated tag in a library keyword
+- **WHEN** a Python keyword's docstring ends with `Tags: -keep, other` and the library is documented on RF 7.5
+- **THEN** the keyword's tags contain `-keep` and `other`
+
+### Requirement: Tags section is removed from the documentation text
+
+The `Tags:` section SHALL NOT appear in the rendered documentation text, in any form the installed Robot Framework recognises (every `Tags:` section on RF ≥ 7.5, a trailing `Tags:` line on older versions).
+
+#### Scenario: Trailing Tags line on an older version
+- **WHEN** a resource keyword's `[Documentation]` ends with the line `Tags: alpha` after an empty row and is rendered on RF 7.4
+- **THEN** the rendered documentation contains no `Tags:` line
+
+### Requirement: The markdown package stays optional
+
+The package is optional in Robot Framework and SHALL NOT be a dependency of RobotCode's packages or part of the bundled editor extensions, as for `docutils` and reStructuredText.
+
+#### Scenario: Installing RobotCode
+- **WHEN** `robotcode` is installed with pip into an environment without `markdown`
+- **THEN** `markdown` is not installed with it
+
+### Requirement: Google-style sections before Robot Framework 7.5
+
+On Robot Framework versions older than 7.5 the documentation text SHALL stay unchanged and the structured fields SHALL be empty.
+
+#### Scenario: Resource keyword on an older version
+- **WHEN** a resource keyword's `[Documentation]` contains `Args:` with `${name}: Who to greet.` on RF 7.4
+- **THEN** the documentation text still contains the `Args:` section and no argument description exists
+
+### Requirement: Descriptions of names that are no arguments
+
+A description for an argument the keyword does not have (for example a name accepted through `**kwargs`) SHALL NOT cause an error and SHALL be kept with the argument descriptions.
+
+#### Scenario: Name accepted through kwargs
+- **WHEN** a keyword `configure(**options)` documents `Args:` for `timeout` on RF 7.5
+- **THEN** no error is reported and the description of `timeout` is kept with the argument descriptions
+
+### Requirement: Aliases and standard type names resolve
+
+An argument typed with an alias of an enum or TypedDict SHALL resolve to that enum's or TypedDict's documentation, and a standard type whose documentation name differs from the type name (`int` → `integer`, `str` → `string`) SHALL resolve as well.
+
+#### Scenario: String argument
+- **WHEN** signature help is requested for a library keyword argument annotated `str` on RF 6.1 or newer
+- **THEN** the `string` type documentation is shown

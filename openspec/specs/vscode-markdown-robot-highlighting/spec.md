@@ -8,7 +8,7 @@ Defines how VS Code's Markdown preview and the Documentation Viewer highlight Ro
 
 ### Requirement: Robot Framework code blocks are highlighted in Markdown views
 
-In VS Code's Markdown preview and in the Documentation Viewer, a fenced code block whose language is `robotframework` or `robot`, in any letter case, SHALL be highlighted with Robot Framework's syntax. Section headers, test and keyword names, keyword calls, settings, control structures, variables, comments and numbers SHALL get the colors that the Markdown preview gives these kinds of tokens in other languages, in light, dark and high-contrast themes. The text of the code SHALL stay unchanged. Code blocks of other languages SHALL be highlighted as before.
+In VS Code's Markdown preview and in the Documentation Viewer, a fenced code block whose language is `robotframework` or `robot`, in any letter case, SHALL be highlighted with Robot Framework's syntax. The text of the code SHALL stay unchanged. Code blocks of other languages SHALL be highlighted as before.
 
 #### Scenario: Robot code block in the Markdown preview
 - **WHEN** a Markdown file contains a `robot` code block with `*** Test Cases ***`, the test `My Test` and the line `    Log    ${x}    # note`, and the file is shown in the Markdown preview
@@ -29,3 +29,11 @@ When RobotCode is activated because a Markdown preview opens, it SHALL NOT start
 #### Scenario: Markdown preview in a workspace without Robot Framework files
 - **WHEN** a workspace contains only Markdown files and the user opens the Markdown preview of one of them
 - **THEN** the Robot Framework code blocks in it are highlighted, and no RobotCode language server runs
+
+### Requirement: Colors of Robot Framework code in Markdown views
+
+Section headers, test and keyword names, keyword calls, settings, control structures, variables, comments and numbers in a Robot Framework code block SHALL get the colors that the Markdown preview gives these kinds of tokens in other languages, in light, dark and high-contrast themes.
+
+#### Scenario: High-contrast theme
+- **WHEN** a Markdown file with a `robot` code block containing a section header, a test name, a keyword call, a variable and a comment is shown in the Markdown preview with a high-contrast theme
+- **THEN** each of them is highlighted in a color of that theme other than the plain text

@@ -8,7 +8,7 @@ Defines how tests and tasks are selected by their metadata (Robot Framework ≥ 
 
 ### Requirement: Metadata entries of a test
 
-A test or task SHALL be matched by its metadata entries: for every metadata item with a name, one entry `Name:Line` for every line of its value that is not empty, or a single entry `Name:` when the value has no such line. Cells of one `[Metadata]` row, which Robot Framework joins into one line, SHALL NOT be split. The metadata of the test's suites SHALL NOT be part of its entries. A test without metadata, and every test when the installed Robot Framework is older than 7.5, SHALL have no entries. Values SHALL be used as the model holds them: `robot`, `robot-debug` and `discover` see them before variables are replaced, `results` after.
+A test or task SHALL be matched by its metadata entries: for every metadata item with a name, one entry `Name:Line` for every line of its value that is not empty, or a single entry `Name:` when the value has no such line. Cells of one `[Metadata]` row, which Robot Framework joins into one line, SHALL NOT be split. The metadata of the test's suites SHALL NOT be part of its entries.
 
 #### Scenario: Multi-line value
 - **WHEN** a test has `[Metadata]    Issue    4409` continued with `...    5769` on the next line
@@ -34,7 +34,7 @@ A test or task SHALL be matched by its metadata entries: for every metadata item
 
 ### Requirement: Metadata patterns
 
-A metadata pattern SHALL consist of one or more terms `NAME:VALUE` combined with the operators `AND`, `OR` and `NOT`. An operator SHALL be recognised only as a word of its own: `AND`, `OR` or `NOT` in upper case, with whitespace or the start or end of the pattern on both sides. Everything else, including `AND`, `OR` and `NOT` inside a word or in lower case, SHALL belong to a term. A term SHALL match a test when it matches one of the test's entries; `*`, `?` and `[…]` SHALL work as in tag patterns, and case, spaces and underscores SHALL be ignored on both sides, so the name part compares as Robot Framework compares metadata names. The operators SHALL combine terms as in Robot Framework's tag patterns: `AND` binds before `OR` and `NOT` last, so `A NOT B NOT C` matches when `A` matches and neither `B` nor `C` does, and a pattern starting with `NOT` matches every test that does not match the rest. A term without `:`, and an operator without a term on both sides (apart from a leading `NOT`), SHALL make the pattern invalid; a command given an invalid pattern SHALL fail with an error that names the pattern, and select, run or list nothing.
+A metadata pattern SHALL consist of one or more terms `NAME:VALUE` combined with the operators `AND`, `OR` and `NOT`. An operator SHALL be recognised only as a word of its own: `AND`, `OR` or `NOT` in upper case, with whitespace or the start or end of the pattern on both sides. Everything else, including `AND`, `OR` and `NOT` inside a word or in lower case, SHALL belong to a term.
 
 #### Scenario: Terms combined with AND
 - **WHEN** a test has `Issue: 4409` and `Author: Hans Müller`
@@ -78,7 +78,7 @@ A metadata pattern SHALL consist of one or more terms `NAME:VALUE` combined with
 
 ### Requirement: Selecting tests by metadata in runs and discovery
 
-`robot`, `robot-debug` and every `discover` command SHALL accept `-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN`, each any number of times. With `--by-test-metadata` only tests matching at least one of its patterns SHALL remain; with `--exclude-by-test-metadata` every test matching one of its patterns SHALL be removed. Both SHALL narrow the selection of every other option — Robot's `--include`, `--exclude`, `--suite` and `--test`, and RobotCode's `--by-longname`, `--exclude-by-longname` and `--search` — so a test remains only if it passes all of them. Suites without remaining tests SHALL be removed as with `--by-longname`. `robot-debug` SHALL pass the options on to the run it debugs.
+`robot`, `robot-debug` and every `discover` command SHALL accept `-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN`, each any number of times. With `--by-test-metadata` only tests matching at least one of its patterns SHALL remain; with `--exclude-by-test-metadata` every test matching one of its patterns SHALL be removed. `robot-debug` SHALL pass the options on to the run it debugs.
 
 #### Scenario: Discover by metadata
 - **WHEN** `robotcode discover tests --by-test-metadata Issue:4409` runs on a suite where one test has `Issue: 4409`, one `Issue: 4410` and one no metadata
@@ -118,7 +118,7 @@ A metadata pattern SHALL consist of one or more terms `NAME:VALUE` combined with
 
 ### Requirement: Stand-alone pre-run modifiers
 
-The package `robotcode-modifiers` SHALL provide the pre-run modifiers `robotcode.modifiers.ByTestMetadata` and `robotcode.modifiers.ExcludedByTestMetadata`. They SHALL take metadata patterns as arguments and select like `--by-test-metadata` and `--exclude-by-test-metadata`. They SHALL work with plain `robot --prerunmodifier`, where the arguments are separated from the name with `;` because patterns contain `:`, and in the `pre-run-modifiers` setting of `robot.toml`. Given an invalid pattern, they SHALL report the error and select no test; Robot Framework SHALL NOT end up running the suite without them.
+The package `robotcode-modifiers` SHALL provide the pre-run modifiers `robotcode.modifiers.ByTestMetadata` and `robotcode.modifiers.ExcludedByTestMetadata`. They SHALL take metadata patterns as arguments and select like `--by-test-metadata` and `--exclude-by-test-metadata`. They SHALL work with plain `robot --prerunmodifier`, where the arguments are separated from the name with `;` because patterns contain `:`, and in the `pre-run-modifiers` setting of `robot.toml`.
 
 #### Scenario: Plain robot
 - **WHEN** `robot --prerunmodifier "robotcode.modifiers.ByTestMetadata;Issue:4409"` runs the suite with `robotcode-modifiers` installed
@@ -135,7 +135,7 @@ The package `robotcode-modifiers` SHALL provide the pre-run modifiers `robotcode
 
 ### Requirement: Metadata index
 
-`robotcode discover metadata` SHALL list, by name, the metadata of the discovered tests and tasks and, in a separate section, the metadata of the discovered suites, including metadata given to Robot with `--metadata`. Both sections SHALL be built from entries as defined for tests, applied to each test's or suite's own metadata; the test section therefore lists exactly what `--by-test-metadata` can select, and suite metadata SHALL NOT be selectable by it. Names Robot Framework treats as the same SHALL be one name, and values the patterns do not tell apart SHALL be one value; each SHALL be shown in the first spelling found, and names and values SHALL be sorted. The text output SHALL list only the names; `--values` SHALL add the values of each name, and `--tests`, `--tasks` and `--suites` SHALL add the tests, tasks or suites under each value, or under each name without `--values`. The JSON output SHALL map every name to its values and every value to the items that have it, test and task metadata under `metadata` and suite metadata under `suiteMetadata`, independent of these flags. Robot's options, `--by-longname`, `--by-test-metadata`, `--search` and their exclusions SHALL narrow the discovered tests and suites before the index is built.
+`robotcode discover metadata` SHALL list, by name, the metadata of the discovered tests and tasks and, in a separate section, the metadata of the discovered suites, including metadata given to Robot with `--metadata`. Both sections SHALL be built from entries as defined for tests, applied to each test's or suite's own metadata; the test section therefore lists exactly what `--by-test-metadata` can select, and suite metadata SHALL NOT be selectable by it.
 
 #### Scenario: Names
 - **WHEN** a suite has tests with `Issue: 4409`, with `Owner Team: core` and `Issue: 4410`, and with a two-line `Description`, and `robotcode discover metadata` runs
@@ -169,7 +169,7 @@ The package `robotcode-modifiers` SHALL provide the pre-run modifiers `robotcode
 
 ### Requirement: Metadata selection with older Robot Framework
 
-With Robot Framework older than 7.5 installed, `--by-test-metadata`, `--exclude-by-test-metadata` and `discover metadata` SHALL NOT be listed in `--help`. They SHALL still be accepted: no test has metadata there, so `--by-test-metadata` selects no test, `--exclude-by-test-metadata` removes none, and `discover metadata` lists only the suite metadata. The generated CLI reference SHALL mark them as needing Robot Framework 7.5, as the requirement of `cli-reference-generation` on version-dependent commands and options describes.
+With Robot Framework older than 7.5 installed, `--by-test-metadata`, `--exclude-by-test-metadata` and `discover metadata` SHALL NOT be listed in `--help`. They SHALL still be accepted: no test has metadata there, so `--by-test-metadata` selects no test, `--exclude-by-test-metadata` removes none, and `discover metadata` lists only the suite metadata.
 
 #### Scenario: Help on RF 7.4
 - **WHEN** `robotcode robot --help`, `robotcode discover tests --help` and `robotcode results show --help` run on RF 7.4
@@ -185,3 +185,99 @@ With Robot Framework older than 7.5 installed, `--by-test-metadata`, `--exclude-
 - **WHEN** `robotcode discover metadata --values` runs on RF 7.4 on a suite with `Metadata    Version    1.0`
 - **THEN** the suite section lists `Version` with `1.0`
 - **AND** no test metadata is listed
+
+### Requirement: Tests without metadata entries
+
+A test without metadata, and every test when the installed Robot Framework is older than 7.5, SHALL have no metadata entries.
+
+#### Scenario: Metadata on Robot Framework 7.4
+- **WHEN** a test has `[Metadata]    Issue    4409` and the installed Robot Framework is 7.4
+- **THEN** `--by-test-metadata "Issue:*"` does not select it
+
+### Requirement: Values of metadata entries
+
+Metadata values SHALL be used as the model holds them: `robot`, `robot-debug` and `discover` see them before variables are replaced, `results` after.
+
+#### Scenario: Variable in a value during discovery
+- **WHEN** a test has `[Metadata]    Build    ${BUILD}` and `robotcode discover tests --by-test-metadata 'Build:${BUILD}'` runs
+- **THEN** the test is listed
+
+### Requirement: Matching a metadata term
+
+A term SHALL match a test when it matches one of the test's entries; `*`, `?` and `[…]` SHALL work as in tag patterns, and case, spaces and underscores SHALL be ignored on both sides, so the name part compares as Robot Framework compares metadata names.
+
+#### Scenario: Wildcard and case
+- **WHEN** a test has `Issue: 4409`
+- **THEN** `issue:44?9` selects it
+
+### Requirement: Operators in metadata patterns
+
+The operators SHALL combine terms as in Robot Framework's tag patterns: `AND` binds before `OR` and `NOT` last, so `A NOT B NOT C` matches when `A` matches and neither `B` nor `C` does, and a pattern starting with `NOT` matches every test that does not match the rest.
+
+#### Scenario: Pattern starting with NOT
+- **WHEN** test A has `Issue: 1` and test B has `Issue: 2`
+- **THEN** `NOT Issue:1` selects B and not A
+
+### Requirement: Invalid metadata patterns
+
+A term without `:`, and an operator without a term on both sides (apart from a leading `NOT`), SHALL make the pattern invalid; a command given an invalid pattern SHALL fail with an error that names the pattern, and select, run or list nothing.
+
+#### Scenario: Trailing operator in discovery
+- **WHEN** `robotcode discover tests --by-test-metadata "Issue:4409 OR"` runs
+- **THEN** the command fails with an error that names the pattern and lists no test
+
+### Requirement: Metadata selection narrows the other selections
+
+`--by-test-metadata` and `--exclude-by-test-metadata` SHALL narrow the selection of every other option — Robot's `--include`, `--exclude`, `--suite` and `--test`, and RobotCode's `--by-longname`, `--exclude-by-longname` and `--search` — so a test remains only if it passes all of them. Suites without remaining tests SHALL be removed as with `--by-longname`.
+
+#### Scenario: Combined with a test name
+- **WHEN** two tests have `Issue: 4409`, one of them is named `Login Works`, and `robotcode discover tests --test "Login Works" --by-test-metadata Issue:4409` runs
+- **THEN** only `Login Works` is listed
+
+### Requirement: Invalid patterns in the stand-alone modifiers
+
+Given an invalid pattern, the stand-alone pre-run modifiers SHALL report the error and select no test; Robot Framework SHALL NOT end up running the suite without them.
+
+#### Scenario: Invalid pattern for the selecting modifier
+- **WHEN** `robot --prerunmodifier "robotcode.modifiers.ByTestMetadata;Issue"` runs the suite
+- **THEN** an error naming the pattern `Issue` is reported and no test is executed
+
+### Requirement: Names and values in the metadata index
+
+In the metadata index, names Robot Framework treats as the same SHALL be one name, and values the patterns do not tell apart SHALL be one value; each SHALL be shown in the first spelling found, and names and values SHALL be sorted.
+
+#### Scenario: Spellings of a name and a value
+- **WHEN** one test has `Owner Team: core`, a later one `owner_team: Core`, and `robotcode discover metadata --values` runs
+- **THEN** one name `Owner Team` is listed, with the one value `core`
+
+### Requirement: Text output of the metadata index
+
+The text output of `robotcode discover metadata` SHALL list only the names; `--values` SHALL add the values of each name, and `--tests`, `--tasks` and `--suites` SHALL add the tests, tasks or suites under each value, or under each name without `--values`.
+
+#### Scenario: Tests without values
+- **WHEN** `robotcode discover metadata --tests` runs
+- **THEN** each name is followed by the tests that have it, without values
+
+### Requirement: JSON output of the metadata index
+
+The JSON output of `robotcode discover metadata` SHALL map every name to its values and every value to the items that have it, test and task metadata under `metadata` and suite metadata under `suiteMetadata`, independent of the flags `--values`, `--tests`, `--tasks` and `--suites`.
+
+#### Scenario: JSON with flags
+- **WHEN** `robotcode --format json discover metadata --values --tests` runs
+- **THEN** the output is the same as without `--values` and `--tests`
+
+### Requirement: Narrowing the metadata index
+
+Robot's options, `--by-longname`, `--by-test-metadata`, `--search` and their exclusions SHALL narrow the discovered tests and suites before the metadata index is built.
+
+#### Scenario: Excluded metadata
+- **WHEN** only one test has `Owner Team: core` and `robotcode discover metadata --exclude-by-test-metadata "Owner Team:*"` runs
+- **THEN** `Owner Team` is not listed
+
+### Requirement: CLI reference marks metadata selection as Robot Framework 7.5
+
+The generated CLI reference SHALL mark `--by-test-metadata`, `--exclude-by-test-metadata` and `discover metadata` as needing Robot Framework 7.5, as the requirement of `cli-reference-generation` on version-dependent commands and options describes.
+
+#### Scenario: Option in the CLI reference
+- **WHEN** the CLI reference is generated
+- **THEN** `--by-test-metadata` is marked as needing Robot Framework 7.5

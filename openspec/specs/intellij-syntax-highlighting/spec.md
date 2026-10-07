@@ -61,7 +61,6 @@ The IntelliJ plugin SHALL NOT ship its own colours for Robot Framework tokens. E
 ### Requirement: Token classes inherit from matching general language colours
 
 Each Robot Framework colour setting SHALL inherit from the general language colour that matches the category the VS Code extension gives the token, so that the plugin makes no assumption about any particular colour scheme:
-- keyword calls, test case names and keyword names inherit from *Function declaration*, so keyword calls look like keyword and test case names;
 - variables inherit from *Instance field*;
 - arguments inherit from *String*;
 - section headers, settings, control flow, `VAR` and BDD prefixes inherit from *Keyword*.
@@ -88,12 +87,6 @@ Whether and how a general language colour is coloured is up to the colour scheme
 
 The name of a variable SHALL have the variable look, and that look SHALL NOT change when semantic highlighting from the language server is applied on top of the grammar-based highlighting.
 
-The delimiters of a variable are brackets, not part of its name. Each delimiter SHALL have its own Robot Framework colour setting that inherits from a general language colour for brackets, and the grammar-based highlighting SHALL draw it with that setting:
-- "Variable begin" and "Variable end" (`${`, `@{`, `&{`, `%{`, `}` and the `$` of a bare `$name` in an expression), as well as "Expression begin" and "Expression end" (`${{`, `}}`), inherit from *Braces*;
-- "Variable index begin" and "Variable index end" (the brackets of an item assignment such as `${DICT}[key]=`) inherit from *Brackets*.
-
-The delimiters SHALL keep that look when semantic highlighting is applied.
-
 #### Scenario: Variables section (issue #655)
 - **WHEN** the line `${PAGE_OBJECT}    ${NONE}` in a `*** Variables ***` section is shown
 - **THEN** `PAGE_OBJECT` and `NONE` have the variable look before and after semantic highlighting is applied
@@ -113,10 +106,6 @@ The delimiters SHALL keep that look when semantic highlighting is applied.
 ### Requirement: Semantic highlighting only adds what the colour scheme defines
 
 Semantic highlighting from the language server SHALL change a token only in those text attributes (foreground, background, font style, effects such as underline or strikethrough) that its colour setting brings from the active colour scheme, from the user, or from a general language colour it inherits from.
-
-Where a token only refines what the grammar-based highlighting already shows, it SHALL keep its grammar-based look if nothing along that chain defines more than the plain-text look. This applies to variables, including embedded argument values, parameters, section headers, settings, `VAR`, `FOR` separators, test and keyword names, continuation markers, comments, language configuration lines and escapes. It matches how VS Code combines semantic and grammar-based styles.
-
-Where a token corrects what the grammar-based highlighting shows, its colour setting SHALL apply even if it resolves to the plain-text look, because the grammar-based look belongs to another category there. This applies to type hints, named arguments, namespaces, operators, keyword calls, BDD prefixes, arguments, control-flow words and options, and errors. A token type the plugin does not list as correcting SHALL be treated as refining.
 
 A change of the colour scheme, or of a colour setting, SHALL take effect in open files without reopening them.
 
@@ -164,12 +153,7 @@ Some grammar scopes have no Robot Framework colour setting, for example the Pyth
 
 Every semantic token type and modifier combination the RobotCode language server sends SHALL map to a Robot Framework colour setting or to a general language colour:
 - language configuration lines (for example `Language: German` before the first section) SHALL get the comment colour;
-- escape sequences in import names SHALL get the escape colour;
-- embedded argument values in keyword calls SHALL get the embedded argument setting, which by default inherits the variable colour. For a variable as the value, that is its name;
-- the names of arguments declared in `[Arguments]` SHALL get the "Parameter" setting, which inherits from the Robot Framework setting "Variable";
-- type hints of variables SHALL get the "Type hint" setting, which inherits from the general language colour *Class reference*.
-
-A token type the plugin does not know SHALL be left to the grammar-based highlighting, and SHALL NOT write a log entry for every token of that type.
+- escape sequences in import names SHALL get the escape colour.
 
 #### Scenario: Language configuration line
 - **WHEN** a file starting with `Language: German` is shown
@@ -198,3 +182,61 @@ A token type the plugin does not know SHALL be left to the grammar-based highlig
 #### Scenario: Unknown token type
 - **WHEN** the language server sends a token type the plugin has no mapping for
 - **THEN** the grammar-based colour stays, and the IDE log gets at most one entry for that type
+
+### Requirement: Keyword calls and names inherit from Function declaration
+
+Keyword calls, test case names and keyword names SHALL inherit from *Function declaration*, so keyword calls look like keyword and test case names.
+
+#### Scenario: Name settings on the colour settings page
+- **WHEN** the user selects "Test case name" and then "Keyword name" on the Robot Framework colour settings page of an unmodified scheme
+- **THEN** both inherit from the language default *Function declaration*
+
+### Requirement: Variable delimiters look like brackets
+
+The delimiters of a variable are brackets, not part of its name. Each delimiter SHALL have its own Robot Framework colour setting that inherits from a general language colour for brackets, and the grammar-based highlighting SHALL draw it with that setting. The delimiters SHALL keep that look when semantic highlighting is applied.
+
+#### Scenario: Delimiters in a keyword call
+- **WHEN** `Log    ${name}` is shown and semantic highlighting has been applied
+- **THEN** `${` has the "Variable begin" look and `}` has the "Variable end" look
+
+### Requirement: Colour settings of the variable delimiters
+
+The colour settings of the variable delimiters SHALL inherit as follows:
+- "Variable begin" and "Variable end" (`${`, `@{`, `&{`, `%{`, `}` and the `$` of a bare `$name` in an expression), as well as "Expression begin" and "Expression end" (`${{`, `}}`), inherit from *Braces*;
+- "Variable index begin" and "Variable index end" (the brackets of an item assignment such as `${DICT}[key]=`) inherit from *Brackets*.
+
+#### Scenario: Index delimiter on the colour settings page
+- **WHEN** the user selects "Variable index begin" on the Robot Framework colour settings page of an unmodified scheme
+- **THEN** it inherits from the language default *Brackets*
+
+### Requirement: Refining tokens keep the grammar-based look
+
+Where a token only refines what the grammar-based highlighting already shows, it SHALL keep its grammar-based look if nothing along that chain defines more than the plain-text look. This applies to variables, including embedded argument values, parameters, section headers, settings, `VAR`, `FOR` separators, test and keyword names, continuation markers, comments, language configuration lines and escapes. It matches how VS Code combines semantic and grammar-based styles.
+
+#### Scenario: Parameter with an undefined colour
+- **WHEN** the active scheme defines nothing for "Parameter", "Variable" and *Instance field*, and a keyword with `[Arguments]    ${count}` is shown
+- **THEN** `count` keeps the variable look it gets from the grammar after semantic highlighting is applied
+
+### Requirement: Correcting tokens apply their colour setting
+
+Where a token corrects what the grammar-based highlighting shows, its colour setting SHALL apply even if it resolves to the plain-text look, because the grammar-based look belongs to another category there. This applies to type hints, named arguments, namespaces, operators, keyword calls, BDD prefixes, arguments, control-flow words and options, and errors. A token type the plugin does not list as correcting SHALL be treated as refining.
+
+#### Scenario: Keyword call with a plain-text colour
+- **WHEN** the active scheme gives *Function declaration* no colour of its own, and `Log    message` is shown
+- **THEN** `Log` has the plain-text look after semantic highlighting is applied
+
+### Requirement: Colour settings of embedded arguments, parameters and type hints
+
+Embedded argument values in keyword calls SHALL get the embedded argument setting, which by default inherits the variable colour. For a variable as the value, that is its name. The names of arguments declared in `[Arguments]` SHALL get the "Parameter" setting, which inherits from the Robot Framework setting "Variable". Type hints of variables SHALL get the "Type hint" setting, which inherits from the general language colour *Class reference*.
+
+#### Scenario: Type hint by default
+- **WHEN** neither "Type hint" nor *Class reference* is changed in a scheme that colours *Class reference*, and `${count: int}=    Set Variable    1` is shown with Robot Framework 7.3 or later
+- **THEN** `int` has the class reference colour
+
+### Requirement: Unknown token types are left to the grammar
+
+A token type the plugin does not know SHALL be left to the grammar-based highlighting, and SHALL NOT write a log entry for every token of that type.
+
+#### Scenario: Many tokens of an unknown type
+- **WHEN** the language server sends many tokens of a type the plugin has no mapping for in one file
+- **THEN** each keeps its grammar-based colour, and the IDE log gets at most one entry for that type

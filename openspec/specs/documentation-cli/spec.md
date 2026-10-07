@@ -12,11 +12,7 @@ Defines the `robotcode doc` command group, which shows the documentation of one 
 
 - a library name, such as a standard library, a module or `module.Class`;
 - the path of a library file;
-- the path of a resource file with an extension Robot Framework accepts for resource imports in the installed version, including Markdown resource files on RF 7.5;
-- the path of a suite file, a file with a test case or task section: the keywords of its keyword section are documented under the suite's name with the type `SUITE`, as Libdoc has documented suite files since RF 6.0;
-- the path of a suite initialization file, a file named `__init__`, case ignored, with a suite file extension, such as `__init__.robot`: the keywords of its keyword section are documented under the name Robot Framework gives the suite of its directory, with the type `SUITE`, on every supported Robot Framework version, as Libdoc has documented `__init__.robot` since RF 6.0.
-
-Import arguments, when given, SHALL follow Libdoc's form `Name::arg1::arg2`; resource and suite files take none, and import arguments given to them SHALL be an error. An empty name SHALL be a usage error. Whether the TARGET is a file or a library SHALL be decided after the variables in its name are resolved. A backslash in the TARGET, in its name or in its import arguments, SHALL be part of the text, not an escape character. A library name that exists as a path SHALL be made absolute before it is imported, as Libdoc does, so a directory is imported as a library in the same way as by Libdoc.
+- the path of a resource file with an extension Robot Framework accepts for resource imports in the installed version, including Markdown resource files on RF 7.5.
 
 #### Scenario: Directory as target
 - **WHEN** `robotcode doc lib Mysuite` is run in a directory that contains the directory `Mysuite`
@@ -63,7 +59,7 @@ Import arguments, when given, SHALL follow Libdoc's form `Name::arg1::arg2`; res
 
 ### Requirement: Targets resolve with the project configuration
 
-Each call SHALL load its target anew. It SHALL apply the environment variables, python path, languages, variables and variable files of the `robot.toml` configuration and the selected profiles, together with the command's options `-v/--variable`, `-V/--variablefile`, `-P/--pythonpath` and `--language`. The languages of the repeatable `--language` SHALL be added to those of the configuration. On Robot Framework 6.0 and newer, resource and suite files SHALL be read in these languages, as `robot` reads them. Robot Framework 5.0 has no language support: there, a language from the configuration or from `--language` SHALL be rejected with Robot Framework's error for the option, no documentation SHALL be written, and the exit code SHALL NOT be 0. Variables in the TARGET name and in its import arguments SHALL be resolved with these variables. `--base-dir` SHALL set the directory for `${CURDIR}` and for relative paths in TARGET; its default is the directory the command was started in. Paths given to `-o`, `-V` and `-P` SHALL be relative to the directory the command was started in. Neither the analysis settings of `[tool.robotcode-analyze]` nor any cache SHALL be involved. The command SHALL NOT create the output, log, report or debug files of the configuration or their directories. What variable files print SHALL go to standard error.
+Each call SHALL load its target anew. It SHALL apply the environment variables, python path, languages, variables and variable files of the `robot.toml` configuration and the selected profiles, together with the command's options `-v/--variable`, `-V/--variablefile`, `-P/--pythonpath` and `--language`. Variables in the TARGET name and in its import arguments SHALL be resolved with these variables.
 
 #### Scenario: Python path from the configuration
 - **WHEN** `robot.toml` sets `python-path = ["lib"]`, `lib/MyLib.py` defines the library `MyLib`, and `robotcode doc keywords MyLib` is run in the subdirectory `tests/` of the project
@@ -108,7 +104,7 @@ Each call SHALL load its target anew. It SHALL apply the environment variables, 
 
 ### Requirement: Failing loads abort
 
-When the target cannot be found, imported or initialised, can only be loaded without the given import arguments, or is a library whose keywords cannot be read, the command SHALL write no documentation. It SHALL report the error on standard error and exit with a non-zero code. For a file that can be read neither as a resource file nor as a suite file, the error SHALL be Robot Framework's error for it as a resource file, as in Libdoc. Other load errors, such as a keyword that cannot be created, SHALL be reported on standard error while everything else is documented, and the exit code SHALL then be 0. So SHALL the errors and warnings Robot Framework reports while it loads the target, each once and in the format of the command's own messages.
+When the target cannot be found, imported or initialised, can only be loaded without the given import arguments, or is a library whose keywords cannot be read, the command SHALL write no documentation. It SHALL report the error on standard error and exit with a non-zero code. For a file that can be read neither as a resource file nor as a suite file, the error SHALL be Robot Framework's error for it as a resource file, as in Libdoc.
 
 #### Scenario: Unknown library
 - **WHEN** `robotcode doc lib NoSuchLib` is run
@@ -146,7 +142,7 @@ When the target cannot be found, imported or initialised, can only be loaded wit
 
 ### Requirement: Markdown output
 
-Without `--format` or with `--format text`, the subcommands `lib`, `keywords` and `keyword` SHALL write Markdown through RobotCode's terminal output. It is rendered on a colour terminal, and written as raw Markdown with `--no-color`, in a pipe and in an AI-agent session. It is paged according to `--pager/--no-pager`. With `-o/--output FILE`, the Markdown SHALL be written to FILE instead, as UTF-8 with `\n` line endings on every platform, and a missing directory of FILE SHALL be created. `-o` together with any `--format` other than `text` SHALL be a usage error.
+Without `--format` or with `--format text`, the subcommands `lib`, `keywords` and `keyword` SHALL write Markdown through RobotCode's terminal output. It is rendered on a colour terminal, and written as raw Markdown with `--no-color`, in a pipe and in an AI-agent session. It is paged according to `--pager/--no-pager`.
 
 #### Scenario: Piped output
 - **WHEN** `robotcode doc lib Collections` is run with standard output piped
@@ -171,7 +167,7 @@ With the global `--format json` or `json-indent`, `robotcode doc lib TARGET` SHA
 - `keywords`: one entry per keyword, in the order of the page and without private keywords;
 - `types`: one entry per data type, in the order of the page.
 
-Each keyword entry SHALL have `name`, `anchor` (the anchor of its heading in `markdown`), `args` (its arguments as one line of text), `short_doc` (the first paragraph of its documentation), `tags` and `doc` (its documentation as Markdown). Each type entry SHALL have `name` and `anchor`, the anchor of its heading in `markdown`, to which the links to the type in `markdown` point. Every field SHALL be present in every object. `keywords` and `keyword` SHALL print an object with the same fields except `markdown` and `types`, whose `keywords` holds only the keywords they select.
+Every field SHALL be present in every object.
 
 #### Scenario: Library as JSON
 - **WHEN** `robotcode --format json doc lib Collections` is run on RF 7.5
@@ -185,7 +181,7 @@ Each keyword entry SHALL have `name`, `anchor` (the anchor of its heading in `ma
 
 ### Requirement: Keyword overview
 
-`robotcode doc keywords TARGET` SHALL list every keyword of the page, in the order of the page, each with its name, its arguments and the first paragraph of its documentation. With PATTERN arguments, only keywords whose name contains one of the patterns SHALL be listed. `*` and `?` SHALL work as wildcards; case and spaces SHALL be ignored as in Libdoc's `list`, and underscores SHALL be ignored as well. With `--tag TAG`, which can be repeated, only keywords with a tag that matches one of the given tags as a whole SHALL be listed, with `*` and `?` as wildcards and ignoring case, spaces and underscores. When no keyword is selected, the output SHALL say so and the exit code SHALL be 0.
+`robotcode doc keywords TARGET` SHALL list every keyword of the page, in the order of the page, each with its name, its arguments and the first paragraph of its documentation. With PATTERN arguments, only keywords whose name contains one of the patterns SHALL be listed. `*` and `?` SHALL work as wildcards; case and spaces SHALL be ignored as in Libdoc's `list`, and underscores SHALL be ignored as well. When no keyword is selected, the output SHALL say so and the exit code SHALL be 0.
 
 #### Scenario: Substring
 - **WHEN** `robotcode doc keywords Collections dictionary` is run
@@ -205,7 +201,7 @@ Each keyword entry SHALL have `name`, `anchor` (the anchor of its heading in `ma
 
 ### Requirement: Keyword documentation
 
-`robotcode doc keyword TARGET NAME …` SHALL show the full documentation of every keyword that one of the names selects. A name SHALL select the keywords whose name matches it exactly or as a pattern with `*` and `?`; case and spaces SHALL be ignored as in Libdoc's `show`, and underscores SHALL be ignored as well. A name SHALL also select every keyword with embedded arguments whose name pattern matches it. After the keywords, the output SHALL document the data types that their arguments use. A name that selects no keyword SHALL be reported on standard error together with similar keyword names, and the exit code SHALL NOT be 0. The keywords that the other names select SHALL still be shown.
+`robotcode doc keyword TARGET NAME …` SHALL show the full documentation of every keyword that one of the names selects. A name SHALL select the keywords whose name matches it exactly or as a pattern with `*` and `?`; case and spaces SHALL be ignored as in Libdoc's `show`, and underscores SHALL be ignored as well. A name SHALL also select every keyword with embedded arguments whose name pattern matches it.
 
 #### Scenario: Exact name
 - **WHEN** `robotcode doc keyword Collections get_match_count` is run
@@ -243,3 +239,115 @@ When standard input and standard output are terminals and the session is not an 
 #### Scenario: Pipe
 - **WHEN** `robotcode doc browse Collections` is run with standard output piped
 - **THEN** no viewer opens and the output is the raw Markdown of the page
+
+### Requirement: Suite file as target
+
+A TARGET SHALL also be the path of a suite file, a file with a test case or task section: the keywords of its keyword section are documented under the suite's name with the type `SUITE`, as Libdoc has documented suite files since RF 6.0.
+
+#### Scenario: Suite file with a task section
+- **WHEN** `robotcode doc keywords tasks/cleanup.robot` is run for a file with a task section and the keyword `Clean Up`
+- **THEN** the overview lists `Clean Up`
+
+### Requirement: Suite initialization file as target
+
+A TARGET SHALL also be the path of a suite initialization file, a file named `__init__`, case ignored, with a suite file extension, such as `__init__.robot`: the keywords of its keyword section are documented under the name Robot Framework gives the suite of its directory, with the type `SUITE`, on every supported Robot Framework version, as Libdoc has documented `__init__.robot` since RF 6.0.
+
+#### Scenario: Initialization file as JSON
+- **WHEN** `robotcode --format json doc lib 01__my_suite/__init__.robot` is run for an initialization file with the keyword `Init Kw`
+- **THEN** the object has the `type` `SUITE` and lists `Init Kw`
+
+### Requirement: Import arguments of a target
+
+Import arguments, when given, SHALL follow Libdoc's form `Name::arg1::arg2`; resource and suite files take none, and import arguments given to them SHALL be an error. An empty name SHALL be a usage error.
+
+#### Scenario: Empty name
+- **WHEN** `robotcode doc lib ''` is run
+- **THEN** the command fails with a usage error
+
+### Requirement: How a target is read
+
+Whether the TARGET is a file or a library SHALL be decided after the variables in its name are resolved. A backslash in the TARGET, in its name or in its import arguments, SHALL be part of the text, not an escape character. A library name that exists as a path SHALL be made absolute before it is imported, as Libdoc does, so a directory is imported as a library in the same way as by Libdoc.
+
+#### Scenario: Path built from a variable
+- **WHEN** `robotcode doc keywords -v DIR:resources '${DIR}/common.resource'` is run
+- **THEN** the overview lists the keywords of the resource file `common`
+
+### Requirement: Languages of the documented files
+
+The languages of the repeatable `--language` SHALL be added to those of the configuration. On Robot Framework 6.0 and newer, resource and suite files SHALL be read in these languages, as `robot` reads them. Robot Framework 5.0 has no language support: there, a language from the configuration or from `--language` SHALL be rejected with Robot Framework's error for the option, no documentation SHALL be written, and the exit code SHALL NOT be 0.
+
+#### Scenario: Language on Robot Framework 5.0
+- **WHEN** `robotcode doc keywords --language de deutsch.resource` is run on RF 5.0
+- **THEN** Robot Framework's error for the option is reported, no documentation is written, and the exit code is not 0
+
+### Requirement: Paths relative to the start directory
+
+`--base-dir` SHALL set the directory for `${CURDIR}` and for relative paths in TARGET; its default is the directory the command was started in. Paths given to `-o`, `-V` and `-P` SHALL be relative to the directory the command was started in.
+
+#### Scenario: Base directory
+- **WHEN** `robotcode doc lib --base-dir resources common.resource` is run in the project root
+- **THEN** the page of `common` is shown
+
+### Requirement: No side effects of the configuration
+
+Neither the analysis settings of `[tool.robotcode-analyze]` nor any cache SHALL be involved. The command SHALL NOT create the output, log, report or debug files of the configuration or their directories. What variable files print SHALL go to standard error.
+
+#### Scenario: Log file of the configuration
+- **WHEN** `robot.toml` sets `log = "results/log.html"` and `robotcode doc lib Collections` is run
+- **THEN** neither `results/log.html` nor the directory `results` is created
+
+### Requirement: Load errors that do not abort
+
+Other load errors, such as a keyword that cannot be created, SHALL be reported on standard error while everything else is documented, and the exit code SHALL then be 0. So SHALL the errors and warnings Robot Framework reports while it loads the target, each once and in the format of the command's own messages.
+
+#### Scenario: Warning while loading
+- **WHEN** Robot Framework warns about a resource file while `robotcode doc keywords` loads it
+- **THEN** the warning appears once on standard error, the overview lists the keywords, and the exit code is 0
+
+### Requirement: Markdown output to a file
+
+With `-o/--output FILE`, the Markdown SHALL be written to FILE instead, as UTF-8 with `\n` line endings on every platform, and a missing directory of FILE SHALL be created. `-o` together with any `--format` other than `text` SHALL be a usage error.
+
+#### Scenario: Output file with the JSON format
+- **WHEN** `robotcode --format json doc lib -o collections.md Collections` is run
+- **THEN** the command fails with a usage error
+
+### Requirement: Keyword and type entries in JSON
+
+Each keyword entry SHALL have `name`, `anchor` (the anchor of its heading in `markdown`), `args` (its arguments as one line of text), `short_doc` (the first paragraph of its documentation), `tags` and `doc` (its documentation as Markdown). Each type entry SHALL have `name` and `anchor`, the anchor of its heading in `markdown`, to which the links to the type in `markdown` point.
+
+#### Scenario: Fields of a keyword entry
+- **WHEN** `robotcode --format json doc lib Collections` is run
+- **THEN** every keyword entry has `name`, `anchor`, `args`, `short_doc`, `tags` and `doc`
+
+### Requirement: JSON of selected keywords
+
+`keywords` and `keyword` SHALL print an object with the same fields except `markdown` and `types`, whose `keywords` holds only the keywords they select.
+
+#### Scenario: Keyword overview as JSON
+- **WHEN** `robotcode --format json doc keywords Collections dictionary` is run
+- **THEN** the object has no `markdown` and no `types`, and its `keywords` holds only keywords with `dictionary` in their name
+
+### Requirement: Keyword overview filtered by tag
+
+With `--tag TAG`, which can be repeated, only keywords with a tag that matches one of the given tags as a whole SHALL be listed, with `*` and `?` as wildcards and ignoring case, spaces and underscores.
+
+#### Scenario: Tag pattern
+- **WHEN** two resource keywords are tagged `smoke login` and `smoke logout`, and `robotcode doc keywords common.resource --tag 'SMOKE*'` is run
+- **THEN** both keywords are listed
+
+### Requirement: Data types of the documented keywords
+
+After the keywords, `robotcode doc keyword` SHALL document the data types that their arguments use.
+
+#### Scenario: Data type used by two keywords
+- **WHEN** two keywords of a library take an argument of the `Enum` `Color` and `robotcode doc keyword` selects both on RF 6.1 or newer
+- **THEN** the output documents both keywords, followed by `Color`
+
+### Requirement: Names without a matching keyword
+
+A name that selects no keyword SHALL be reported on standard error together with similar keyword names, and the exit code SHALL NOT be 0. The keywords that the other names select SHALL still be shown.
+
+#### Scenario: One of two names without a match
+- **WHEN** `robotcode doc keyword Collections "Get Match Count" "Get Match Cont"` is run
+- **THEN** the output documents `Get Match Count`, standard error reports that no keyword matches `Get Match Cont`, and the exit code is not 0

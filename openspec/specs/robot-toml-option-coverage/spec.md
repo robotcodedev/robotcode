@@ -8,7 +8,7 @@ Guarantees that `robot.toml` accepts the console and libdoc option values that R
 
 ### Requirement: Custom console loggers are accepted
 
-The `console` option SHALL accept the built-in console names `verbose`, `dotted`, `quiet` and `none` and any other string, which is passed to Robot Framework unchanged as a custom console class or module (`MyConsole`, `path/to/Console.py:arg`). The value `skipped`, which no Robot Framework version accepts, SHALL NOT be listed as a valid value. The JSON schema for `robot.toml` SHALL reflect this. The top-level `console` and `quiet` options SHALL apply to `robot` only and SHALL NOT be passed to `rebot`.
+The `console` option SHALL accept the built-in console names `verbose`, `dotted`, `quiet` and `none` and any other string, which is passed to Robot Framework unchanged as a custom console class or module (`MyConsole`, `path/to/Console.py:arg`). The value `skipped`, which no Robot Framework version accepts, SHALL NOT be listed as a valid value. The JSON schema for `robot.toml` SHALL reflect this.
 
 #### Scenario: Custom console class in robot.toml
 - **WHEN** `robot.toml` contains `console = "MyConsole.py:arg"` and `robotcode robot` is run on RF 7.5
@@ -70,3 +70,11 @@ The `robot.toml` option model, the JSON schema published for editors and the con
 - **WHEN** the model, schema and reference are regenerated
 - **THEN** the schema still uses property names such as `console-colors` and `doc-format`
 - **AND** the reference documents the same values as the schema
+
+### Requirement: Console options apply to robot only
+
+The top-level `console` and `quiet` options SHALL apply to `robot` only and SHALL NOT be passed to `rebot`.
+
+#### Scenario: Top-level quiet and rebot
+- **WHEN** `robot.toml` contains `quiet = true` and `robotcode rebot output.xml` is run
+- **THEN** no `--quiet` option is passed to `rebot`
