@@ -2,6 +2,8 @@ package dev.robotcode.robotcode4ij.configuration
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.getProjectDataPath
 
 /**
  * The settings below the `robotcode` key that the language server reads with `workspace/configuration`.
@@ -52,13 +54,13 @@ data class RobotCodeServerSettings(
         val robot: AnalysisRobot = AnalysisRobot(),
         val diagnosticModifiers: AnalysisDiagnosticModifiers = AnalysisDiagnosticModifiers(),
         val findUnusedReferences: Boolean = false,
-        val diagnosticMode: String = "openFilesOnly",
-        val progressMode: String = "off",
+        val diagnosticMode: String = DiagnosticMode.OPEN_FILES_ONLY.value,
+        val progressMode: String = ProgressMode.OFF.value,
         val referencesCodeLens: Boolean = false
     )
 
     data class AnalysisCache(
-        val saveLocation: String = "workspaceStorage",
+        val saveLocation: String = CacheSaveLocation.WORKSPACE_STORAGE.value,
         val ignoredLibraries: List<String> = emptyList(),
         val ignoredVariables: List<String> = emptyList(),
         val ignoreArgumentsForLibrary: List<String> = emptyList(),
@@ -86,16 +88,20 @@ data class RobotCodeServerSettings(
     )
 
     data class Workspace(
-        val excludePatterns: List<String> = listOf(
-            ".hatch/",
-            ".venv/",
-            "node_modules/",
-            ".pytest_cache/",
-            "__pycache__/",
-            ".mypy_cache/",
-            ".robotcode_cache/"
-        )
-    )
+        val excludePatterns: List<String> = DEFAULT_EXCLUDE_PATTERNS
+    ) {
+        companion object {
+            val DEFAULT_EXCLUDE_PATTERNS = listOf(
+                ".hatch/",
+                ".venv/",
+                "node_modules/",
+                ".pytest_cache/",
+                "__pycache__/",
+                ".mypy_cache/",
+                ".robotcode_cache/"
+            )
+        }
+    }
 
     data class DocumentationServer(
         val startPort: Int = 3100,
@@ -109,6 +115,37 @@ data class RobotCodeServerSettings(
     data class Experimental(
         val semanticModel: Boolean = false
     )
+
+    /**
+     * A choice of a setting with fixed choices, where [value] is the string the server reads. The first choice is the
+     * default.
+     */
+    interface Choice {
+        val value: String
+    }
+
+    enum class DiagnosticMode(override val value: String) : Choice {
+        OPEN_FILES_ONLY("openFilesOnly"),
+        WORKSPACE("workspace")
+    }
+
+    enum class ProgressMode(override val value: String) : Choice {
+        OFF("off"),
+        SIMPLE("simple"),
+        DETAILED("detailed")
+    }
+
+    enum class CacheSaveLocation(override val value: String) : Choice {
+        WORKSPACE_STORAGE("workspaceStorage"),
+        WORKSPACE_FOLDER("workspaceFolder")
+    }
+}
+
+/**
+ * The choice stored as [value], or the default when [value] is none of the choices.
+ */
+inline fun <reified E> choiceOf(value: String?): E where E : Enum<E>, E : RobotCodeServerSettings.Choice {
+    return enumValues<E>().firstOrNull { it.value == value } ?: enumValues<E>().first()
 }
 
 /**
@@ -117,6 +154,10 @@ data class RobotCodeServerSettings(
 object RobotCodeServerSettingsMapper {
     // Without serializeNulls, so settings without a value, such as the header style, are left out.
     private val gson = Gson()
+
+    fun toJsonTree(project: Project): JsonObject {
+        return toJsonTree(RobotCodeProjectConfiguration.getInstance(project).state)
+    }
 
     /**
      * The settings from the settings pages; every setting without a control keeps its default.
@@ -134,6 +175,45 @@ object RobotCodeServerSettingsMapper {
                 inlayHints = RobotCodeServerSettings.InlayHints(
                     parameterNames = state.inlayHintsParameterNames,
                     namespaces = state.inlayHintsNamespaces
+                ),
+                analysis = RobotCodeServerSettings.Analysis(
+                    cache = RobotCodeServerSettings.AnalysisCache(
+                        saveLocation = choiceOf<RobotCodeServerSettings.CacheSaveLocation>(
+                            state.analysisCacheSaveLocation
+                        ).value,
+                        ignoredLibraries = entries(state.analysisCacheIgnoredLibraries),
+                        ignoredVariables = entries(state.analysisCacheIgnoredVariables),
+                        ignoreArgumentsForLibrary = entries(state.analysisCacheIgnoreArgumentsForLibrary)
+                    ),
+                    robot = RobotCodeServerSettings.AnalysisRobot(
+                        globalLibrarySearchOrder = entries(state.analysisRobotGlobalLibrarySearchOrder),
+                        loadLibraryTimeout = state.analysisRobotLoadLibraryTimeout.takeIf { it > 0 }
+                    ),
+                    diagnosticModifiers = RobotCodeServerSettings.AnalysisDiagnosticModifiers(
+                        ignore = entries(state.analysisDiagnosticModifiersIgnore),
+                        error = entries(state.analysisDiagnosticModifiersError),
+                        warning = entries(state.analysisDiagnosticModifiersWarning),
+                        information = entries(state.analysisDiagnosticModifiersInformation),
+                        hint = entries(state.analysisDiagnosticModifiersHint)
+                    ),
+                    findUnusedReferences = state.analysisFindUnusedReferences,
+                    diagnosticMode = choiceOf<RobotCodeServerSettings.DiagnosticMode>(
+                        state.analysisDiagnosticMode
+                    ).value,
+                    progressMode = choiceOf<RobotCodeServerSettings.ProgressMode>(state.analysisProgressMode).value,
+                    referencesCodeLens = state.analysisReferencesCodeLens
+                ),
+                robocop = RobotCodeServerSettings.Robocop(
+                    enabled = state.robocopEnabled,
+                    ignoreGitDir = state.robocopIgnoreGitDir,
+                    configFile = state.robocopConfigFile?.takeIf { it.isNotBlank() },
+                    ignoreFileConfig = state.robocopIgnoreFileConfig
+                ),
+                workspace = RobotCodeServerSettings.Workspace(
+                    excludePatterns = entries(state.workspaceExcludePatterns)
+                ),
+                experimental = RobotCodeServerSettings.Experimental(
+                    semanticModel = state.experimentalSemanticModel
                 )
             )
         )
@@ -141,5 +221,27 @@ object RobotCodeServerSettingsMapper {
 
     fun toJsonTree(settings: RobotCodeServerSettings): JsonObject {
         return JsonObject().apply { add("robotcode", gson.toJsonTree(settings)) }
+    }
+
+    /**
+     * The initialization options of the `initialize` request: the storage folder of the project, which the server keeps
+     * its analysis cache in unless the cache location is the project folder, the Python path and environment variables
+     * that the server applies before it checks Robot Framework, and the settings tree.
+     */
+    fun toInitializationOptions(project: Project): JsonObject {
+        val settings = toJsonTree(project)
+        val robot = settings.getAsJsonObject("robotcode").getAsJsonObject("robot")
+        return JsonObject().apply {
+            addProperty("storageUri", project.getProjectDataPath("robotcode").toUri().toString())
+            add("pythonPath", robot["pythonPath"].deepCopy())
+            add("env", robot["env"].deepCopy())
+            add("settings", settings)
+        }
+    }
+
+    // The settings pages store trimmed entries without blank ones; a blank entry from an edited settings file would
+    // reach the server as it is.
+    private fun entries(list: List<String>): List<String> {
+        return list.map { it.trim() }.filter { it.isNotEmpty() }
     }
 }

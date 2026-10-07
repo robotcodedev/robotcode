@@ -3,9 +3,11 @@ package dev.robotcode.robotcode4ij.lsp
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.server.LanguageServerLogErrorHandler
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettingsMapper
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
@@ -33,10 +35,9 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
             thisLogger().error(error)
     }
     
-    // TODO: Implement this method
-    // override fun getInitializationOptions(rootUri: VirtualFile?): Any {
-    //     return null
-    // }
+    override fun getInitializationOptions(rootUri: VirtualFile?): Any {
+        return RobotCodeServerSettingsMapper.toInitializationOptions(project)
+    }
     
     override fun start() {
         serverSocket = ServerSocket(0)
