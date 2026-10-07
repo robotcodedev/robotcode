@@ -4,6 +4,8 @@ export interface OutlineEntry {
   id: string;
   title: string;
   kind: "keyword" | "type" | "heading";
+  // The subsections of a section of the introduction.
+  children?: OutlineEntry[];
 }
 
 export interface OutlineSection {
@@ -14,6 +16,7 @@ export interface OutlineSection {
   static?: boolean;
 }
 
+const INTRODUCTION = "Introduction";
 const KEYWORDS = "Keywords";
 const DATA_TYPES = "Data types";
 // A click on an image map's area reaches neither our link handler nor VS Code's, which handle only `a`.
@@ -127,16 +130,27 @@ export function buildOutline(main: HTMLElement, page: PageMessage): OutlineSecti
 
   const sections: OutlineSection[] = [];
   let section: OutlineSection | undefined;
+  // The headings the next one can belong to, the nearest last: a heading belongs to the nearest shallower one.
+  let parents: { level: number; children: OutlineEntry[] }[] = [];
 
-  for (const heading of main.querySelectorAll<HTMLElement>("h2, h3")) {
-    if (heading.tagName === "H2") {
+  for (const heading of main.querySelectorAll<HTMLElement>("h2, h3, h4, h5, h6")) {
+    const level = Number(heading.tagName.slice(1));
+    if (level === 2) {
       // Headings without an id, such as raw HTML headings, are left out, together with their entries.
       section = heading.id ? { id: heading.id, title: headingText(heading), children: [] } : undefined;
       if (section !== undefined) sections.push(section);
-    } else if (section !== undefined && heading.id) {
-      const kind = section.title === KEYWORDS ? "keyword" : section.title === DATA_TYPES ? "type" : "heading";
-      section.children.push({ id: heading.id, title: heading.dataset.name ?? headingText(heading), kind });
+      parents = section !== undefined ? [{ level, children: section.children }] : [];
+      continue;
     }
+    // Below the entries of `Importing`, `Keywords` and `Data types`, headings belong to their documentation.
+    const introduction = section?.title === INTRODUCTION;
+    if (section === undefined || !heading.id || (level > 3 && !introduction)) continue;
+
+    while (parents[parents.length - 1].level >= level) parents.pop();
+    const kind = section.title === KEYWORDS ? "keyword" : section.title === DATA_TYPES ? "type" : "heading";
+    const entry: OutlineEntry = { id: heading.id, title: heading.dataset.name ?? headingText(heading), kind };
+    parents[parents.length - 1].children.push(entry);
+    if (introduction) parents.push({ level, children: (entry.children = []) });
   }
   return sections;
 }

@@ -75,18 +75,12 @@ vscode-toolbar-button[aria-disabled="true"] {
   align-items: center;
   gap: 4px;
   height: 22px;
+  /* Indented by the depth of the entry, by the default indent of VS Code's trees. */
+  padding-left: calc(4px + var(--depth, 0) * 8px);
   padding-right: 8px;
   cursor: pointer;
   white-space: nowrap;
   outline: none;
-}
-
-.outline .row.level-1 {
-  padding-left: 4px;
-}
-
-.outline .row.level-2 {
-  padding-left: 28px;
 }
 
 .outline .row .label {

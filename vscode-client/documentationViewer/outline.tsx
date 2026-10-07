@@ -6,9 +6,11 @@ import { OutlineEntry, OutlineSection } from "./page";
 interface Row {
   id: string;
   title: string;
-  level: 1 | 2;
+  depth: number;
   icon: string;
   section: OutlineSection;
+  // The row the entry belongs to.
+  parent?: string;
   expanded?: boolean;
 }
 
@@ -18,31 +20,35 @@ const ICONS: Record<OutlineEntry["kind"], string> = {
   heading: "symbol-key",
 };
 
-// The visible rows: an h2 stays while it or one of its entries matches; branches are open while a filter is set.
+// The visible rows: an entry stays while it or one of the entries below it matches; branches are open while a
+// filter is set.
 function visibleRows(sections: OutlineSection[], filter: string, collapsed: Set<string>): Row[] {
   const match = filter ? createMatcher(filter) : undefined;
-  const rows: Row[] = [];
 
-  for (const section of sections) {
-    const children = match ? section.children.filter((c) => match(c.title)) : section.children;
-    if (match && children.length === 0 && !match(section.title)) continue;
+  const rowsOf = (
+    entry: OutlineSection | OutlineEntry,
+    depth: number,
+    section: OutlineSection,
+    parent: string | undefined,
+  ): Row[] => {
+    const children = entry.children ?? [];
+    const expanded = match !== undefined || !collapsed.has(entry.id);
+    const below = expanded ? children.flatMap((child) => rowsOf(child, depth + 1, section, entry.id)) : [];
+    if (match && below.length === 0 && !match(entry.title)) return [];
 
-    const expanded = match !== undefined || !collapsed.has(section.id);
-    rows.push({
-      id: section.id,
-      title: section.title,
-      level: 1,
-      icon: "symbol-namespace",
+    const row: Row = {
+      id: entry.id,
+      title: entry.title,
+      depth,
+      icon: "kind" in entry ? ICONS[entry.kind] : "symbol-namespace",
       section,
-      expanded: section.children.length > 0 ? expanded : undefined,
-    });
-    if (expanded) {
-      for (const child of children) {
-        rows.push({ id: child.id, title: child.title, level: 2, icon: ICONS[child.kind], section });
-      }
-    }
-  }
-  return rows;
+      parent,
+      expanded: children.length > 0 ? expanded : undefined,
+    };
+    return [row, ...below];
+  };
+
+  return sections.flatMap((section) => rowsOf(section, 1, section, undefined));
 }
 
 export interface OutlineProps {
@@ -120,7 +126,7 @@ export function Outline({ sections, filter, collapsed, selected, onChoose, onTog
         break;
       case "ArrowLeft":
         if (row.expanded === true && !filter) onToggle(row.id);
-        else if (row.level === 2) moveTo(rows.findIndex((r) => r.id === row.section.id));
+        else if (row.parent !== undefined) moveTo(rows.findIndex((r) => r.id === row.parent));
         break;
       case "Home":
         moveTo(0);
@@ -162,9 +168,10 @@ export function Outline({ sections, filter, collapsed, selected, onChoose, onTog
         <div
           key={row.id}
           data-id={row.id}
-          class={`row level-${row.level}${row.id === selected ? " selected" : ""}`}
+          class={`row${row.id === selected ? " selected" : ""}`}
+          style={{ "--depth": row.depth - 1 }}
           role="treeitem"
-          aria-level={row.level}
+          aria-level={row.depth}
           aria-expanded={row.expanded}
           aria-selected={row.id === selected}
           tabIndex={index === focusedIndex ? 0 : -1}
@@ -174,15 +181,13 @@ export function Outline({ sections, filter, collapsed, selected, onChoose, onTog
             onChoose(row.id, row.section);
           }}
         >
-          {row.level === 1 && (
-            <span
-              class={`twistie codicon ${row.expanded === undefined ? "" : row.expanded ? "codicon-chevron-down" : "codicon-chevron-right"}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (row.expanded !== undefined && !filter) onToggle(row.id);
-              }}
-            />
-          )}
+          <span
+            class={`twistie codicon ${row.expanded === undefined ? "" : row.expanded ? "codicon-chevron-down" : "codicon-chevron-right"}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (row.expanded !== undefined && !filter) onToggle(row.id);
+            }}
+          />
           <span class={`codicon codicon-${row.icon}`} />
           <span class="label">{row.title}</span>
         </div>

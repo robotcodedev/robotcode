@@ -285,10 +285,10 @@ In a workspace with more than one folder, the toolbar shows the name of the view
 
 ### Outline and filter
 
-The outline on the left lists the sections of the page, its keywords and its data types. Clicking an entry or pressing `Enter` shows its heading.
+The outline on the left lists the sections of the page as a tree: below `Introduction` its sections and their subsections, below `Importing`, `Keywords` and `Data types` their entries. Clicking an entry or pressing `Enter` shows its heading.
 
-- `↑` and `↓` move through the entries, `→` and `←` open and close a section, `Home`, `End`, `Page Up` and `Page Down` move by more, and typing jumps to the next entry whose title starts with what you typed.
-- The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. A section stays while it or one of its entries matches.
+- `↑` and `↓` move through the entries, `→` opens an entry or moves to the first entry below it, `←` closes an entry or moves to the entry it belongs to, `Home`, `End`, `Page Up` and `Page Down` move by more, and typing jumps to the next entry whose title starts with what you typed.
+- The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. An entry stays while it or one of the entries below it matches.
 
 ### Links, back and forward
 
