@@ -7,7 +7,7 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.13.1"
+  generatedBy: "1.14.1"
 ---
 
 Enter explore mode. Think deeply. Visualize freely. Follow the conversation wherever it goes.
@@ -129,7 +129,7 @@ openspec list --json
 
 This tells you:
 - If there are active changes
-- Their names, schemas, and status
+- Their names and task status
 - What the user might be working on
 
 That is the *change* list - work in flight. It does not include the project's durable capabilities, so list those too:

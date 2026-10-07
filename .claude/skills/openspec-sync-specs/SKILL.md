@@ -7,7 +7,7 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.13.1"
+  generatedBy: "1.14.1"
 ---
 
 Sync delta specs from a change to main specs.

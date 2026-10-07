@@ -7,7 +7,7 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.13.1"
+  generatedBy: "1.14.1"
 ---
 
 Start a new change using the experimental artifact-driven approach.

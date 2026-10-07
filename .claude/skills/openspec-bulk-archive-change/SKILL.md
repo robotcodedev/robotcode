@@ -7,7 +7,7 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.13.1"
+  generatedBy: "1.14.1"
 ---
 
 Archive multiple completed changes in a single operation.
@@ -42,7 +42,7 @@ In both branches, never create the root as a side effect: do not run `openspec i
 2. **Prompt for change selection**
 
    Ask the user to choose changes (multi-select):
-   - Show each change with its schema
+   - Show each change name and task status from the list output
    - Include an option for "All changes"
    - Allow any number of selections (1+ works, 2+ is the typical use case)
 
@@ -75,17 +75,24 @@ In both branches, never create the root as a side effect: do not run `openspec i
 
 3. **Batch validation - gather status for all selected changes**
 
+   Run `openspec list --json` once with the same selected-root flags for task
+   progress. If the lookup fails, returns invalid JSON, or omits any selected
+   change, contains a duplicate selected change, or returns invalid counts,
+   report the problem and stop before syncing or archiving the batch.
+
    For each selected change, collect:
 
    a. **Artifact status** - Run `openspec status --change "<name>" --json`
       - Parse `schemaName`, `artifacts`, `planningHome`, `changeRoot`, `artifactPaths`, and `actionContext`
       - Note which artifacts are `done` vs other states
 
-   b. **Task completion** - Read `artifactPaths.tasks.existingOutputPaths` from status JSON
-      - Complete means the checkbox holds only `x`/`X`, ignoring spacing
-        (`- [ x]` is complete); every other marker is incomplete (`- [ ]`,
-        `- []`, and unfamiliar ones such as `- [~]` or `- [-]`)
-      - If no tasks file exists, note as "No tasks"
+   b. **Task completion** - Find the `changes` entry from the list response whose `name` exactly matches this change
+      - Require nonnegative integer `totalTasks` and `completedTasks`, with `completedTasks <= totalTasks`
+      - Incomplete tasks = `totalTasks - completedTasks`
+      - The CLI resolves the schema's tracked task files, including custom artifact names, output paths, and globs
+      - Do not infer task completion from artifact status, an artifact id of `tasks`, or the absence of a top-level `tasks.md`
+      - The CLI counts only `x`/`X` checkbox markers as complete; other markers remain incomplete
+      - If `totalTasks` is zero, note as "No tasks"
 
    c. **Delta specs** - Check `artifactPaths.specs.existingOutputPaths` from status JSON
       - List which capability specs exist
@@ -200,6 +207,8 @@ In both branches, never create the root as a side effect: do not run `openspec i
 
    a. **Sync included delta specs**:
       - Run the `openspec-sync-specs` workflow inline (agent-driven intelligent merge) only for changes with entries in `includedDeltas`, passing only the included delta paths and explicitly instructing it to ignore that change's `excludedDeltas`. Wait for it to finish.
+      - If the sync reports any stop or blocking condition, treat the sync as failed. Stop processing that change immediately. Before continuing to the next change, record this change's outcome as Failed in the batch results, including the sync blocking/error condition.
+      - Do not perform the post-sync content comparison and do not move its `changeRoot`; leave the change intact.
       - For conflicts, apply in resolved order.
       - Pass that change's fetched specs-rule snapshot into inline sync; inline
         sync must reuse it without fetching instructions again
@@ -214,7 +223,7 @@ In both branches, never create the root as a side effect: do not run `openspec i
       - Verify that main specs are updated:
         - ADDED requirements present
         - MODIFIED requirements carrying scenario and description changes named in the delta, with their other scenarios intact
-        - REMOVED requirements gone — and where this sync retired a capability (removed its last requirement, leaving `## Requirements` empty), its main spec deleted rather than left empty; a spec the sync deliberately kept and reported is also a match
+        - REMOVED requirements gone — and where this sync retired a capability (removed its last requirement, leaving `## Requirements` empty), its main spec deleted rather than left empty.
         - RENAMED requirements present under the new name and absent under the old one
       - Do not verify delta specs in `excludedDeltas`; they are intentionally left unsynced.
       - If sync failed or any capability does not match verification, report what differs and fail/skip moving that change's `changeRoot` — do not archive that change. `changeRoot` remains intact.
