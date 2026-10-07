@@ -32,7 +32,7 @@ See proposal.md for the problem. The facts below were checked on 2026-10-07.
 - No change to hover, signature help or the documentation pages; the latter already leave private keywords out.
 - No setting in IntelliJ's settings page in this change; it comes with `intellij-settings-pages`.
 - The REPL's own completion, which draws on the running session, is not touched.
-- The lists after a library or resource name do not mark deprecated keywords, unlike the list without a prefix. That stays as it is.
+- The lists after a library or resource name do not mark deprecated keywords, unlike the list without a prefix. That is the job of `completion-deprecated-keywords`.
 
 ## Decisions
 
@@ -55,7 +55,7 @@ Alternatives considered:
 ### D2: Completion filters, marks and sorts in the three lists
 
 - In each of the three lists, a keyword for which D1 returns a message is skipped while `hide_private_keywords` is on.
-- While it is off, the keyword is added with `labelDetails.description = "private"`. Its sort text puts it after the other keywords of the same list and before the next group, for example `021_` instead of `020_` in the list without a prefix. LSP has no tag for private items, and the server already announces `labelDetailsSupport`.
+- While it is off, the keyword is added with `labelDetails.description = "private"`. Its sort text puts it after the other keywords of the same list and before the next group: it gets the last rank of the sort key that `completion-deprecated-keywords` defines (D1 there), for example `020_2_` instead of `020_0_` in the list without a prefix. LSP has no tag for private items, and the server already announces `labelDetailsSupport`.
 - The kind (`FUNCTION`), `detail` and the text edit stay as they are.
 
 Alternative considered: putting "private" into `detail`. VS Code shows `detail` only for the selected item, so the mark would not be visible in the list.
