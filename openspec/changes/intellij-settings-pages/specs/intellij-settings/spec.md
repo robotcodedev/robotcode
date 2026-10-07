@@ -8,12 +8,12 @@ Defines the Robot Framework settings pages of the IntelliJ plugin and the settin
 
 ### Requirement: Robot Framework settings node with an Editing page
 
-The IntelliJ plugin SHALL provide a "Robot Framework" node under Settings | Languages & Frameworks for every project, with an "Editing" sub-page. The node's own page SHALL say what the RobotCode settings cover and that most project configuration lives in `robot.toml`. No RobotCode settings page SHALL show a work-in-progress notice or a field that has no effect. Every setting SHALL have a description in plain text, without markdown syntax.
+The IntelliJ plugin SHALL provide a "Robot Framework" node under Settings | Languages & Frameworks for every project, with an "Editing" sub-page. While the node has no settings of its own, its page SHALL list its sub-pages instead of showing text. No RobotCode settings page SHALL show a work-in-progress notice or a field that has no effect. Every setting SHALL have a description in plain text, without markdown syntax.
 
 #### Scenario: Opening the settings
 
 - **WHEN** the user opens Settings | Languages & Frameworks | Robot Framework
-- **THEN** the page explains what the RobotCode settings cover, the Editing sub-page is listed below the node, and neither page shows a work-in-progress notice or the former "Arguments" and "Mode" fields
+- **THEN** the page lists the Editing sub-page, the tree shows the Editing sub-page below the node, and neither page shows a work-in-progress notice or the former "Arguments" and "Mode" fields
 
 #### Scenario: Searching for a setting
 
@@ -32,7 +32,7 @@ The plugin SHALL answer the language server's `workspace/configuration` requests
 #### Scenario: Defaults of a project without RobotCode settings
 
 - **WHEN** the settings tree of a project without stored RobotCode settings is compared with VS Code's defaults for the same keys
-- **THEN** both are equal, apart from `robotcode.documentationServer.startOnDemand`, which is `true`
+- **THEN** both are equal, apart from `robotcode.documentationServer.startOnDemand`, which is `true`, and `robotcode.inlayHints.parameterNames` and `robotcode.inlayHints.namespaces`, which are `false`
 
 #### Scenario: Default exclude patterns
 
@@ -50,7 +50,7 @@ Values in the `robotcode` settings tree SHALL have the types the server parses: 
 
 ### Requirement: Exceptions in the settings tree
 
-The only exception to VS Code's defaults in the `robotcode` settings tree SHALL be `robotcode.documentationServer.startOnDemand`, which is always `true` because the plugin has no documentation viewer. Settings that only the clients use, for example for the debugger, runs, profiles or the language server process, SHALL NOT be part of the tree.
+The only exceptions to VS Code's defaults in the `robotcode` settings tree SHALL be `robotcode.documentationServer.startOnDemand`, which is always `true` because the plugin has no documentation viewer, and the two inlay hint flags, which are `false` unless the user switches them on. Settings that only the clients use, for example for the debugger, runs, profiles or the language server process, SHALL NOT be part of the tree.
 
 #### Scenario: Documentation server on demand
 
@@ -64,7 +64,7 @@ The only exception to VS Code's defaults in the `robotcode` settings tree SHALL 
 
 ### Requirement: Completion settings take effect
 
-The Editing page SHALL offer "Filter default language" and "Header style", and the language server SHALL use their values after the user applies them. The header style SHALL be sent only when it is not blank. Otherwise the server uses its default: `*** {name} ***` from Robot Framework 6 on, and `*** {name}s ***` before.
+The Editing page SHALL offer "Filter default language", "Header style", "Hide private keywords" and "Hide deprecated keywords", and the language server SHALL use their values after the user applies them. The header style SHALL be sent only when it is not blank. Otherwise the server uses its default: `*** {name} ***` from Robot Framework 6 on, and `*** {name}s ***` before.
 
 #### Scenario: Custom header style
 
@@ -81,19 +81,29 @@ The Editing page SHALL offer "Filter default language" and "Header style", and t
 - **WHEN** "Filter default language" is on and a suite file starts with `Language: German`
 - **THEN** section header completion offers the German headers, such as `*** Testfälle ***`, and no English ones
 
-### Requirement: Inlay hints are on by default
+#### Scenario: Showing private keywords
 
-The inlay hints for parameter names and for namespaces SHALL be on by default, as in VS Code and on the language server. Each SHALL be possible to switch off on the Editing page. The Editing page SHALL point to Settings | Editor | Inlay Hints, where the display of the hints can be switched off as well.
+- **WHEN** the user switches off "Hide private keywords", applies, and completes a keyword in a suite that imports a resource file with a private keyword
+- **THEN** completion offers the private keyword, marked as private
+
+#### Scenario: Hiding deprecated keywords
+
+- **WHEN** the user switches on "Hide deprecated keywords" and applies
+- **THEN** keyword completion offers no deprecated keywords
+
+### Requirement: Inlay hints are off by default
+
+The inlay hints for parameter names and for namespaces SHALL be off by default, unlike in VS Code and on the language server: IntelliJ shows inlay hints all the time once they are on, and has no mode that shows them only while a key is held, as VS Code can. Each SHALL be possible to switch on from the Editing page. The Editing page SHALL point to Settings | Editor | Inlay Hints, where the display of the hints can be switched off as well.
 
 #### Scenario: Project without RobotCode settings
 
 - **WHEN** a project without stored RobotCode settings shows a keyword call with positional arguments, such as `Should Be Equal    ${a}    ${b}`
-- **THEN** the editor shows the parameter names of the arguments as inlay hints
+- **THEN** the editor shows no inlay hints
 
-#### Scenario: Switching parameter names off
+#### Scenario: Switching parameter names on
 
-- **WHEN** the user switches off "Parameter names" on the Editing page and applies
-- **THEN** the editor shows no parameter name hints, and namespace hints are still shown
+- **WHEN** the user switches on "Parameter names" on the Editing page and applies
+- **THEN** the editor shows the parameter names of the arguments as inlay hints, and no namespace hints
 
 ### Requirement: Stored settings stay valid
 
