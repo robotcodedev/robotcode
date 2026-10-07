@@ -1,0 +1,71 @@
+{
+  "robotcode": {
+    "completion": {
+      "filterDefaultLanguage": false,
+      "hidePrivateKeywords": true,
+      "hideDeprecatedKeywords": false
+    },
+    "inlayHints": {
+      "parameterNames": false,
+      "namespaces": false
+    },
+    "robot": {
+      "args": [],
+      "paths": [],
+      "pythonPath": [],
+      "env": {},
+      "languages": [],
+      "variables": {},
+      "variableFiles": [],
+      "outputDir": "",
+      "mode": "default"
+    },
+    "analysis": {
+      "cache": {
+        "saveLocation": "workspaceStorage",
+        "ignoredLibraries": [],
+        "ignoredVariables": [],
+        "ignoreArgumentsForLibrary": [],
+        "cacheNamespaces": true
+      },
+      "robot": {
+        "globalLibrarySearchOrder": []
+      },
+      "diagnosticModifiers": {
+        "ignore": [],
+        "error": [],
+        "warning": [],
+        "information": [],
+        "hint": []
+      },
+      "findUnusedReferences": false,
+      "diagnosticMode": "openFilesOnly",
+      "progressMode": "off",
+      "referencesCodeLens": false
+    },
+    "robocop": {
+      "enabled": true,
+      "ignoreGitDir": false,
+      "ignoreFileConfig": false
+    },
+    "workspace": {
+      "excludePatterns": [
+        ".hatch/",
+        ".venv/",
+        "node_modules/",
+        ".pytest_cache/",
+        "__pycache__/",
+        ".mypy_cache/",
+        ".robotcode_cache/"
+      ]
+    },
+    "documentationServer": {
+      "startPort": 3100,
+      "endPort": 3199,
+      "startOnDemand": true
+    },
+    "experimental": {
+      "semanticModel": false
+    }
+  }
+}

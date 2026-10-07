@@ -72,7 +72,12 @@
 		<projectConfigurable parentId="language"
 							 provider="dev.robotcode.robotcode4ij.configuration.RobotCodeProjectSettingsConfigurableProvider"
 							 id="dev.robotcode.robotcode4ij.projectsettings"
-							 displayName="Robot Framework"
+							 key="settings.robotframework.displayName"
+							 nonDefaultProject="true"/>
+		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
+							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeEditingConfigurable"
+							 id="dev.robotcode.robotcode4ij.projectsettings.editing"
+							 key="settings.editing.displayName"
 							 nonDefaultProject="true"/>
 
 		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.configuration.RobotCodeColorSettingsPage"/>
