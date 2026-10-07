@@ -8,7 +8,7 @@ Defines the sidebar of RobotCode's documentation viewer for the page of a librar
 
 ### Requirement: Sidebar with the outline of a library page
 
-When the documentation viewer shows the page of a library, resource file or suite file, from `robotcode doc browse` or from `.doc` in the REPL or at a `robot-debug` stop, pressing `s` SHALL show a sidebar with the outline of the page: every level-2 heading of the page and, below each of them, its level-3 headings, in the order of the page. For the page of a library these are the introduction with its sections, `Importing`, `Keywords` with every keyword, and `Data types` with every data type, as far as the page has them. The sidebar SHALL be hidden when the viewer opens. Other documents of the viewer, such as `.help`, `.kw` and `.source`, SHALL have no sidebar, and `s` SHALL have no effect there.
+When the documentation viewer shows the page of a library, resource file or suite file, from `robotcode doc browse` or from `.doc` in the REPL or at a `robot-debug` stop, pressing `s` SHALL show a sidebar with the outline of the page: every level-2 heading of the page, below each of them its level-3 headings, and below each section of the introduction its subsections, to any depth, in the order of the page and indented by their depth. The sidebar SHALL be hidden when the viewer opens.
 
 #### Scenario: Keywords of a library
 - **WHEN** `robotcode doc browse Collections` runs in an interactive terminal and `s` is pressed
@@ -24,11 +24,15 @@ When the documentation viewer shows the page of a library, resource file or suit
 
 ### Requirement: Filter while typing
 
-The sidebar SHALL have a filter field that has the focus while the sidebar is being used. Typing SHALL narrow the entries to those whose text contains the filter text, with `*` and `?` as wildcards and case, spaces and underscores ignored, as the patterns of `robotcode doc keywords` select keywords. A level-2 entry SHALL stay listed while it or one of its level-3 entries matches. An empty filter SHALL list every entry. The up and down keys SHALL move the selection through the listed entries, and the list SHALL scroll to show the selected entry. The mouse wheel over the list SHALL scroll the list without changing the selection.
+The sidebar SHALL have a filter field that has the focus while the sidebar is being used. Typing SHALL narrow the entries to those whose text contains the filter text, with `*` and `?` as wildcards and case, spaces and underscores ignored, as the patterns of `robotcode doc keywords` select keywords. An entry SHALL stay listed while it or one of the entries below it matches. An empty filter SHALL list every entry.
 
 #### Scenario: Part of a name
 - **WHEN** the sidebar of the `Collections` page is open and `dict` is typed
 - **THEN** every listed level-3 entry contains `dict`, `Keywords` stays listed above the matching keywords, and `Append To List` is not listed
+
+#### Scenario: Subsection
+- **WHEN** `sub a1` is typed into the filter of the page of a library whose introduction has the section `Section A` with the subsection `Sub A1`
+- **THEN** `Introduction`, `Section A` and `Sub A1` are listed
 
 #### Scenario: Wildcard and underscores
 - **WHEN** `get*list` or `get_from_list` is typed into the filter of the `Collections` page
@@ -79,3 +83,27 @@ While the sidebar stands beside the page, `Esc` on the page SHALL hide the sideb
 #### Scenario: Two Esc on the page
 - **WHEN** the sidebar stands beside the page of `Collections` in a terminal with 120 columns, the focus is on the page, and `Esc` is pressed twice
 - **THEN** the first `Esc` hides the sidebar and the second closes the viewer
+
+### Requirement: Entries of the sidebar outline of a library page
+
+For the page of a library, the entries of the sidebar outline are the introduction with its sections and their subsections, `Importing`, `Keywords` with every keyword, and `Data types` with every data type, as far as the page has them. Keywords, data types and the entries of `Importing` SHALL have no entries below them.
+
+#### Scenario: Subsections of the introduction
+- **WHEN** the sidebar is opened for a library whose introduction has the section `= Section A =` with the subsection `== Sub A1 ==`
+- **THEN** the sidebar lists `Sub A1` below `Section A`, indented one step further
+
+### Requirement: Documents without a sidebar
+
+Other documents of the viewer than the page of a library, resource file or suite file, such as `.help`, `.kw` and `.source`, SHALL have no sidebar, and `s` SHALL have no effect there.
+
+#### Scenario: Help of the REPL
+- **WHEN** `.help` is shown in the viewer and `s` is pressed
+- **THEN** no sidebar is shown
+
+### Requirement: Moving through the filtered sidebar
+
+The up and down keys SHALL move the selection through the listed entries of the sidebar, and the list SHALL scroll to show the selected entry. The mouse wheel over the list SHALL scroll the list without changing the selection.
+
+#### Scenario: Down key after filtering
+- **WHEN** `dict` is typed into the filter of the `Collections` page and the down key is pressed
+- **THEN** the selection moves to the next listed entry
