@@ -16,12 +16,17 @@ See proposal.md for the motivation. The state that shapes the approach:
 - **Validation API:** `RuntimeConfigurationError` and `RuntimeConfigurationWarning` have unannotated constructors `(String, Runnable)` whose `Runnable` becomes the fix. `ConfigurationQuickFix` is `@ApiStatus.Experimental` in 2026.1.
 - **The Python Interpreter page** has the configurable id `com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable`, both in PyCharm and in the Python plugin for IntelliJ IDEA (`python-ce` plugin.xml). PyCharm's own interpreter quick fixes open it by that id.
 - **SDK lookup:** `com.jetbrains.python.sdk.PythonSdkUtil.findPythonSdk(Module)` (unannotated) returns a module's Python SDK, including one inherited from the project.
+- **How VS Code detects a Robot Framework project** (`languageclientsmanger.ts`, `isRobotProject`): a workspace folder qualifies with a `robot.toml` or `.robot.toml`, a `pyproject.toml` that matches `ROBOT_DEPENDENCY_IN_PYPROJECT` after comment lines are removed, a `requirements.txt` that matches `ROBOT_REQUIREMENT` (both for the packages `robotframework` and `robotcode`), or a Robot Framework file found by a search that skips `.*`, `_*`, `CVS`, `node_modules`, `target`, `build`, `dist` and `venv` and gives up after 5 seconds.
+- **Personal settings:** the plugin has only the shared state component today. `intellij-extra-args` and `intellij-profiles` plan the personal component `RobotCodePersonalConfiguration` (state name `RobotCodePersonalSettings`, `StoragePathMacros.WORKSPACE_FILE`); whichever change lands first creates it.
+- **The "Robot Framework" settings page:** `intellij-settings-pages` plans the parent page with the shared settings, and `intellij-profiles` adds personal rows to it.
+- **One language server per project:** LSP4IJ starts one instance per server definition and project, and its maintainer calls several instances "not trivial" (lsp4ij#1352). One server per module therefore waits for workspace folder support in the RobotCode language server.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- One interpreter choice per project that the language server, discovery, the profile list and new run configurations share.
+- One interpreter choice per project that the language server, discovery, the profile list and new run configurations share, without guessing when several modules qualify.
+- No waiting for the index in projects with one module or with a remembered choice.
 - Problems of a run configuration visible before Run, without duplicating PyCharm's interpreter check and without blocking the IDE.
 
 **Non-Goals:**
@@ -33,32 +38,48 @@ See proposal.md for the motivation. The state that shapes the approach:
 
 ## Decisions
 
-### The module that holds the Robot Framework project
+### One module, the remembered choice, then detection
 
-All robotcode processes start in the project folder, and robotcode takes the folder with `robot.toml` or `.robot.toml` above its working directory as the project root. So:
+The plugin resolves the interpreter in this order:
 
-1. When the project folder has a `robot.toml` or `.robot.toml`, the module that contains the project folder holds the Robot Framework project.
-2. Otherwise, the module that contains the Robot Framework suite and resource files holds it. When several modules contain such files, the plugin takes the one that contains the project folder, otherwise the first of them in the order of module names, so that the choice is stable.
-3. A module counts only with a Python SDK (`PythonSdkUtil.findPythonSdk`). Without such a module, the project SDK follows, and then the first module that has a Python SDK, which is today's rule.
+1. When exactly one module has a Python SDK (`PythonSdkUtil.findPythonSdk`, which includes an inherited project SDK), that module is used at once. This covers the usual PyCharm project and needs no index.
+2. When several modules have one and the personal component names one of them, that module is used at once.
+3. Otherwise the plugin detects the Robot Framework projects among those modules:
+   - the content roots' `robot.toml`, `.robot.toml`, `pyproject.toml` and `requirements.txt` are read through the VFS, with the same patterns as the VS Code client;
+   - the Robot Framework files are found with `FileTypeIndex.containsFileOfType` for the suite and resource file types in each module's content scope, in a `smartReadAction`.
+
+   With exactly one result the module is used and written to the personal component. With none the first module that has a Python SDK is used, which is today's rule, and nothing is stored. With several, nothing is used yet; see the next decision.
+
+Only the first opening of a project with several modules waits for the index. The resolved module and the reason go to idea.log.
+
+The plugin resolves again when the stored module no longer exists or no longer has a Python SDK, and on the workspace model changes that `intellij-environment-check` watches. It does not ask again because a second module gets Robot Framework files later: a stored choice stays until the user changes it.
 
 Alternatives:
-- Only the module of the project folder: this does not fix #489 when the project folder is not a module's content root or belongs to a module without Robot Framework.
-- The module of the file in the editor: one language server serves the whole project, so the interpreter would change with the active file.
-- A RobotCode interpreter setting: VS Code deprecated `robotcode.python`, and the analysis decided against it because the SDK model covers the need.
+- Breaking a tie by the module of the project folder and then by module name, as this plan proposed before: it guesses, and a wrong guess starts the language server with an interpreter without Robot Framework, which is #489 again.
+- One language server per module, registered at runtime through LSP4IJ's `LanguageServersRegistry`: public but undocumented API for a case that LSP4IJ does not support (lsp4ij#1352).
+- A path setting for the interpreter, like VS Code's deprecated `robotcode.python`: the module choice keeps the SDK model of the IDE as the source of the interpreter.
+
+### Several Robot Framework modules: ask, start nothing meanwhile
+
+When the detection finds several modules, the plugin shows a sticky notification that names them, with one action per module, and the editor banner on Robot Framework files says the same with the same actions. Choosing a module writes it to the personal component, closes the notification, refreshes the banners and starts the language server and discovery through the restart path. Until then, LSP4IJ's `isEnabled` returns false and discovery does not run, so nothing starts with an interpreter that may lack Robot Framework.
+
+Alternative: starting with the first candidate and offering a switch. That starts processes with an interpreter the user did not choose, which may fail for the same reason as #489.
+
+### The choice is personal and shown on the settings page
+
+The chosen module is a module name in `RobotCodePersonalConfiguration` (`.idea/workspace.xml`). This change creates the component if neither `intellij-extra-args` nor `intellij-profiles` has done so, or adds its field. The "Robot Framework" page shows a personal row "Module for RobotCode" with the modules that have a Python SDK, only while there are several. Applying another module restarts the language server and discovery through the restart path.
+
+Alternative: the shared `robotcodeSettings.xml`. The module structure is shared, but the decision follows D2: what one user picks should not change a file under version control.
 
 ### The choice is part of the environment state
 
-The environment service computes the choice in the background, in a `smartReadAction` with `FileTypeIndex.containsFileOfType` per module scope, and keeps it together with the identity of the chosen interpreter. It computes the choice again on the workspace model changes it already watches, and when the project is marked as using Robot Framework, that is, when its first Robot Framework file is opened. Every consumer reads the cached choice. Before the first choice exists, they see no result, as before the first check. The log line names the interpreter and the step that chose it.
+The environment service of `intellij-environment-check` keeps the resolved module, or "waiting for a choice", together with the identity of the chosen interpreter, and resolves it in the background. Every consumer reads the cached result. Before the first result exists, they see no result, as before the first check.
 
 Alternative: resolving on every request. LSP4IJ's `isEnabled` and the banner need an answer without index access or waiting.
 
 ### New configurations start with the chosen interpreter
 
-The default of the run-configuration rework, the first module that has a Python SDK, becomes the choice:
-- if the choice came from a module, the configuration gets that module with "use module SDK";
-- if it came from the project SDK, the configuration gets that SDK as its interpreter.
-
-This applies to the template that the factory creates and to the defaults that configurations from earlier versions receive. A configuration that stores a module or an interpreter keeps it. Without a choice yet, the platform's default stays.
+The default of the run-configuration rework, the first module that has a Python SDK, becomes the chosen module, with "use module SDK". This applies to the template that the factory creates and to the defaults that configurations from earlier versions receive. A configuration that stores a module or an interpreter keeps it. Without a choice yet, the platform's default stays.
 
 Alternative: setting the module in the producer for each gutter run. Users who choose an interpreter in the template would then be overruled.
 
@@ -83,9 +104,11 @@ Alternatives:
 
 ## Risks / Trade-offs
 
-- [Robot Framework files in several modules with different interpreters] → One language server serves the project, so the plugin takes one interpreter and logs which one and why. Runs can choose their interpreter per configuration.
+- [Robot Framework files in several modules with different interpreters] → One language server serves the project with the chosen module's interpreter, and files of other modules are analysed with it. Runs can choose their interpreter per configuration. One server per module waits for workspace folder support in the language server.
+- [The user ignores the notification] → The banner on every Robot Framework file keeps asking, and the settings page offers the choice as well.
 - [The validation runs before a check has finished] → The editor validates again on the next change, and the start of a run waits for a missing result anyway.
-- [The choice needs smart mode for its index step] → Before smart mode, consumers see no result yet; the environment check starts once the choice exists.
+- [The first opening of a project with several modules waits for the index] → Only that case uses the index; projects with one module and later openings with a stored choice start at once.
+- [The patterns for `pyproject.toml` and `requirements.txt` drift from the VS Code client] → The Kotlin patterns name the VS Code constants they copy, and their unit tests cover dependency tables, extras, version specifiers and comment lines.
 - [The staleness warning compares with a discovery model that may be outdated] → It is a warning only and does not keep the run from starting.
 
 ## Migration Plan
