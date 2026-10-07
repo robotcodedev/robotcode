@@ -95,8 +95,7 @@ def _references(protocol: RobotLanguageServerProtocol, document: TextDocument, l
     result = protocol.robot_references.collect(
         protocol.robot_references, document, _on_import(line), ReferenceContext(include_declaration=False)
     )
-    # an import of the same library is found as an import and as a reference, VS Code shows it once
-    return sorted({r.range.start.line for r in result or [] if Uri(r.uri).to_path().name == "suite.robot"})
+    return sorted(r.range.start.line for r in result or [] if Uri(r.uri).to_path().name == "suite.robot")
 
 
 def test_the_hover_of_an_import_shows_its_own_library(

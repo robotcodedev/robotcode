@@ -26,6 +26,7 @@ from robotcode.robot.diagnostics.entities import (
     ResourceEntry,
     VariableDefinition,
     VariableDefinitionType,
+    VariablesEntry,
 )
 from robotcode.robot.diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
@@ -329,19 +330,21 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     def _find_library_import_references_in_file(self, doc: TextDocument, library_doc: LibraryDoc) -> List[Location]:
         namespace = self.parent.documents_cache.get_namespace(doc)
 
-        result: List[Location] = []
-        for lib_entry in namespace.libraries.values():
-            if (
-                lib_entry.import_source == str(doc.uri.to_path())
-                and lib_entry.library_doc.source_or_origin == library_doc.source_or_origin
-                and lib_entry.library_doc.name == library_doc.name
-            ):
-                result.append(Location(str(doc.uri), lib_entry.import_range))
+        # every import statement, also one of a library that is already imported
+        result: List[Location] = [
+            Location(str(doc.uri), lib_entry.import_range)
+            for lib_entry in namespace.import_entries.values()
+            if not isinstance(lib_entry, (ResourceEntry, VariablesEntry))
+            and lib_entry.import_source == str(doc.uri.to_path())
+            and lib_entry.library_doc.source_or_origin == library_doc.source_or_origin
+            and lib_entry.library_doc.name == library_doc.name
+        ]
 
+        # the analysis also keeps a repeated import as a reference of the first one
         references = namespace.namespace_references
         for k, v in references.items():
             if not k.alias and k.library_doc == library_doc:
-                result.extend(v)
+                result.extend(location for location in v if location not in result)
 
         return result
 
@@ -415,17 +418,20 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     def _find_resource_import_references_in_file(self, doc: TextDocument, entry: ResourceEntry) -> List[Location]:
         namespace = self.parent.documents_cache.get_namespace(doc)
 
-        result: List[Location] = []
-        for lib_entry in namespace.resources.values():
-            if (
-                lib_entry.import_source == str(doc.uri.to_path())
-                and lib_entry.library_doc.source == entry.library_doc.source
-            ):
-                result.append(Location(str(doc.uri), lib_entry.import_range))
+        # every import statement, also one of a resource file that is already imported
+        result: List[Location] = [
+            Location(str(doc.uri), lib_entry.import_range)
+            for lib_entry in namespace.import_entries.values()
+            if isinstance(lib_entry, ResourceEntry)
+            and lib_entry.import_source == str(doc.uri.to_path())
+            and lib_entry.library_doc.source == entry.library_doc.source
+        ]
 
+        # the calls with the resource's name as prefix, in every file that imports the resource
         references = namespace.namespace_references
-        if entry in references:
-            result.extend(references[entry])
+        for k, v in references.items():
+            if isinstance(k, ResourceEntry) and k.library_doc.source == entry.library_doc.source:
+                result.extend(location for location in v if location not in result)
 
         return result
 
@@ -448,12 +454,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
         if not name_token:
             return None
 
-        entries = namespace.resources
+        # the entry of this statement, also of a repeated import of the resource file
         entry = next(
             (
                 v
-                for v in entries.values()
-                if v.import_source == namespace.source and v.import_range == range_from_token(name_token)
+                for v in namespace.import_entries.values()
+                if isinstance(v, ResourceEntry)
+                and v.import_source == namespace.source
+                and v.import_range == range_from_token(name_token)
             ),
             None,
         )
@@ -484,12 +492,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     def _find_variables_import_references_in_file(self, doc: TextDocument, library_doc: LibraryDoc) -> List[Location]:
         namespace = self.parent.documents_cache.get_namespace(doc)
 
-        result: List[Location] = []
-        for lib_entry in namespace.variables_imports.values():
-            if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
-                result.append(Location(str(doc.uri), lib_entry.import_range))
-
-        return result
+        # every import statement, also one of a variable file that is already imported
+        return [
+            Location(str(doc.uri), lib_entry.import_range)
+            for lib_entry in namespace.import_entries.values()
+            if isinstance(lib_entry, VariablesEntry)
+            and lib_entry.import_source == str(doc.uri.to_path())
+            and lib_entry.library_doc.source == library_doc.source
+        ]
 
     def references_VariablesImport(  # noqa: N802
         self,

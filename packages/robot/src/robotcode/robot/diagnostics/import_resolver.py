@@ -499,6 +499,11 @@ class ImportResolver:
             None,
         )
         if already_imported is not None:
+            # the statement keeps its own entry, like a repeated library or variables import
+            entry.import_range = imp.range
+            entry.import_source = imp.source
+            self._import_entries[imp] = entry
+
             self._logger.debug(lambda: f"Resource '{imp.name}' already imported.", context_name="import")
             if top_level:
                 self._append_diagnostics(
