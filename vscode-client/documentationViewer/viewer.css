@@ -53,6 +53,11 @@ vscode-toolbar-button[aria-disabled="true"] {
   border: none;
 }
 
+/* The collapsed start pane keeps its border; without a colour it does not show. */
+.body.outline-hidden {
+  --separator-border: transparent;
+}
+
 .side {
   display: flex;
   flex-direction: column;

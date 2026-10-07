@@ -1311,6 +1311,11 @@
             ],
             "default": "beside",
             "markdownDescription": "Where a new Documentation Viewer opens, from \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\" (in the editor and in the Keywords view) and from \"RobotCode: Open Documentation Viewer\"."
+          },
+          "robotcode.documentationViewer.showOutline": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Whether a new Documentation Viewer starts with its outline shown. The button at the start of a viewer's toolbar hides and shows the outline of that viewer, and open viewers keep their own state when this setting changes."
           }
         }
       },

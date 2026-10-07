@@ -28,6 +28,7 @@ declare module "preact" {
         "min-start"?: string;
         "min-end"?: string;
         "fixed-pane"?: "start" | "end" | "none";
+        "handle-size"?: number;
         "reset-on-dbl-click"?: boolean;
       }>;
       "vscode-progress-bar": CustomElement<{ indeterminate?: boolean }>;

@@ -159,6 +159,10 @@ function openColumn(): vscode.ViewColumn {
     : vscode.ViewColumn.Beside;
 }
 
+function showOutline(): boolean {
+  return vscode.workspace.getConfiguration(CONFIG_SECTION).get<boolean>("documentationViewer.showOutline", true);
+}
+
 async function pickFolder(): Promise<vscode.WorkspaceFolder | undefined> {
   const editor = vscode.window.activeTextEditor;
   const editorFolder = editor !== undefined ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
@@ -418,7 +422,7 @@ export class DocumentationViewerManager implements vscode.Disposable {
   <link rel="stylesheet" href="${uri("viewer.css")}">
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root" data-show-outline="${showOutline()}"></div>
   <script type="module" nonce="${nonce}" src="${uri("documentationViewer.js")}"></script>
 </body>
 </html>`;

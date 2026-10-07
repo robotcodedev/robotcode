@@ -289,6 +289,7 @@ The outline on the left lists the sections of the page as a tree: below `Introdu
 
 - `↑` and `↓` move through the entries, `→` opens an entry or moves to the first entry below it, `←` closes an entry or moves to the entry it belongs to, `Home`, `End`, `Page Up` and `Page Down` move by more, and typing jumps to the next entry whose title starts with what you typed.
 - The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. An entry stays while it or one of the entries below it matches.
+- The button at the start of the toolbar hides the outline with its filter field, so that the page gets the full width of the viewer, and shows them again. Each viewer keeps this, also after a reload of the window. The setting `robotcode.documentationViewer.showOutline` decides whether a new viewer starts with its outline.
 
 ### Links, back and forward
 

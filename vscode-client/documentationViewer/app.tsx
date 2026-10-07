@@ -90,6 +90,11 @@ export class Controller {
   constructor() {
     this.state = loadState() ?? { v: 1, id: "", history: [], index: -1, filter: "", collapsed: [], pinned: false };
     if (!this.state.id) this.state.id = newId();
+    // The setting decides only how a viewer starts; from then on the viewer keeps its own state.
+    if (this.state.outlineHidden === undefined) {
+      this.state.outlineHidden = document.getElementById("root")?.dataset.showOutline === "false";
+      saveState(this.state);
+    }
   }
 
   get entry(): HistoryEntry | undefined {
@@ -214,6 +219,12 @@ export class Controller {
   setSplit(position: string): void {
     this.state.split = position;
     this.save(true);
+  }
+
+  setOutlineHidden(hidden: boolean): void {
+    this.state.outlineHidden = hidden;
+    this.save();
+    this.changed();
   }
 
   setPinned(pinned: boolean): void {
@@ -625,6 +636,7 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
     };
     // The split layout clamps the outline while the viewer is narrow; a wider viewer gets the saved width back.
     const resize = () => {
+      if (controller.state.outlineHidden) return;
       (element as HTMLElement & { handlePosition: string }).handlePosition = controller.state.split ?? "280px";
     };
     element.addEventListener("vsc-split-layout-change", listener);
@@ -656,10 +668,22 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
     ? "Unpin: actions use the viewer used last"
     : "Pin: actions from the editor use this viewer";
   const folderName = controller.folders.length > 1 ? controller.folderName : undefined;
+  const outlineHidden = state.outlineHidden === true;
+  const outlineLabel = outlineHidden ? "Show Outline" : "Hide Outline";
 
   return (
     <>
       <vscode-toolbar-container class="toolbar">
+        <vscode-toolbar-button
+          icon={outlineHidden ? "layout-sidebar-left-off" : "layout-sidebar-left"}
+          label={outlineLabel}
+          title={outlineLabel}
+          toggleable
+          checked={!outlineHidden}
+          onChange={(event) =>
+            controller.setOutlineHidden(!(event.currentTarget as HTMLElement & { checked: boolean }).checked)
+          }
+        />
         <vscode-toolbar-button
           icon="arrow-left"
           label="Back"
@@ -724,33 +748,38 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
       <div class="progress">
         {busy && <vscode-progress-bar indeterminate aria-label="Generating the documentation" />}
       </div>
+      {/* A hidden outline collapses the start pane, so that the page stays in its element and keeps its position.
+          The minimum comes before the position, which the split layout clamps to it. */}
       <vscode-split-layout
-        class="body"
+        class={`body${outlineHidden ? " outline-hidden" : ""}`}
         ref={split}
         split="vertical"
         initial-handle-position="280px"
         fixed-pane="start"
-        handle-position={state.split}
-        min-start="160px"
+        min-start={outlineHidden ? "0px" : "160px"}
+        handle-position={outlineHidden ? "0px" : (state.split ?? "280px")}
+        handle-size={outlineHidden ? 0 : 4}
         min-end="30%"
       >
-        <div slot="start" class="side">
-          <vscode-textfield
-            class="filter"
-            value={state.filter}
-            placeholder="Filter"
-            aria-label="Filter the outline"
-            onInput={(event) => controller.setFilter((event.currentTarget as TextField).value)}
-          />
-          <Outline
-            sections={controller.sections}
-            filter={state.filter}
-            collapsed={state.collapsed}
-            selected={controller.selected}
-            onChoose={(id, section) => controller.choose(id, section)}
-            onToggle={(id) => controller.toggle(id)}
-          />
-        </div>
+        {!outlineHidden && (
+          <div slot="start" class="side">
+            <vscode-textfield
+              class="filter"
+              value={state.filter}
+              placeholder="Filter"
+              aria-label="Filter the outline"
+              onInput={(event) => controller.setFilter((event.currentTarget as TextField).value)}
+            />
+            <Outline
+              sections={controller.sections}
+              filter={state.filter}
+              collapsed={state.collapsed}
+              selected={controller.selected}
+              onChoose={(id, section) => controller.choose(id, section)}
+              onToggle={(id) => controller.toggle(id)}
+            />
+          </div>
+        )}
         <div slot="end" class="content">
           {error !== undefined && page !== undefined && <pre class="error">{error}</pre>}
           {error !== undefined && page === undefined && (

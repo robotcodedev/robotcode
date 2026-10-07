@@ -28,6 +28,8 @@ export interface ViewerState {
   index: number;
   filter: string;
   split?: string;
+  // Missing in a new viewer and in the state of an older version, which start as the setting says.
+  outlineHidden?: boolean;
   collapsed: string[];
   pinned: boolean;
 }
