@@ -25,6 +25,7 @@ class LanguageServerConfig(ConfigBase):
 class CompletionConfig(ConfigBase):
     filter_default_language: bool = False
     header_style: Optional[str] = None
+    hide_private_keywords: bool = True
 
 
 @config_section("robotcode.robocop")

@@ -106,7 +106,7 @@ from ...utils.variables import (
 )
 from ...utils.visitor import Visitor
 from ..analyzer_result import AnalyzerResult
-from ..diagnostic_rules import tags_row_without_empty_row
+from ..diagnostic_rules import private_keyword_call_message, tags_row_without_empty_row
 from ..entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -2219,15 +2219,14 @@ class SemanticAnalyzer(Visitor):
                         code=Error.RESERVED_KEYWORD,
                     )
 
-                if result.is_resource_keyword and result.is_private:
-                    if self._source != result.source:
-                        self._append_diagnostics(
-                            range=kw_range,
-                            message=f"Keyword '{result.longname}' is private and should only be called by"
-                            f" keywords in the same file.",
-                            severity=DiagnosticSeverity.WARNING,
-                            code=Error.PRIVATE_KEYWORD,
-                        )
+                private_message = private_keyword_call_message(result, self._source)
+                if private_message is not None:
+                    self._append_diagnostics(
+                        range=kw_range,
+                        message=private_message,
+                        severity=DiagnosticSeverity.WARNING,
+                        code=Error.PRIVATE_KEYWORD,
+                    )
 
                 if not isinstance(node, (Template, TestTemplate)):
                     try:

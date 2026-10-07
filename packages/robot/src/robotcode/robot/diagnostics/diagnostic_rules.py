@@ -8,6 +8,7 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
 
 from .entities import VariableDefinition
+from .library_doc import KeywordDoc
 
 
 def is_variable_name_intentionally_unused(variable: VariableDefinition) -> bool:
@@ -17,6 +18,21 @@ def is_variable_name_intentionally_unused(variable: VariableDefinition) -> bool:
         and bool(variable.name_token.value)
         and variable.name_token.value.startswith("_")
     )
+
+
+def private_keyword_call_message(keyword: KeywordDoc, source: Optional[str]) -> Optional[str]:
+    """The `PrivateKeyword` message for a call of `keyword` in the file `source`, or `None` if the call is fine.
+
+    The file that contains the call decides, not the keyword that calls: Robot Framework also warns when
+    a test case calls a private keyword of its own suite file, which is robotframework/robotframework#5807.
+    """
+    if not keyword.is_private or keyword.source == source:
+        return None
+    if keyword.is_resource_keyword:
+        return f"Keyword '{keyword.longname}' is private and should only be called by keywords in the same file."
+    if keyword.is_library_keyword:
+        return f"Keyword '{keyword.longname}' is private and should not be called from Robot Framework files."
+    return None
 
 
 # The section headers of keyword documentation, as Robot Framework 7.5 recognizes them.

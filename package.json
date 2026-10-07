@@ -755,6 +755,12 @@
             "markdownDescription": "Defines the header style format. If not defined ```*** {name} ***``` is used.",
             "scope": "resource"
           },
+          "robotcode.completion.hidePrivateKeywords": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Do not offer keywords tagged `robot:private` that are defined in another file, including private library keywords. When disabled, they are offered marked as `private` and sorted after the other keywords.",
+            "scope": "resource"
+          },
           "robotcode.inlayHints.parameterNames": {
             "type": "boolean",
             "default": true,

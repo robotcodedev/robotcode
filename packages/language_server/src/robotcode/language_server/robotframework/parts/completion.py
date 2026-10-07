@@ -52,6 +52,7 @@ from robotcode.core.lsp.types import (
     CompletionContext,
     CompletionItem,
     CompletionItemKind,
+    CompletionItemLabelDetails,
     CompletionList,
     InsertTextFormat,
     MarkupContent,
@@ -62,6 +63,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.diagnostic_rules import private_keyword_call_message
 from robotcode.robot.diagnostics.entities import VariableDefinitionType
 from robotcode.robot.diagnostics.library_doc import (
     ArgumentInfo,
@@ -899,6 +901,19 @@ class CompletionCollector(ModelHelper):
 
         return result
 
+    def _is_foreign_private(self, kw: KeywordDoc) -> bool:
+        return private_keyword_call_message(kw, self.namespace.source) is not None
+
+    @staticmethod
+    def _private_label_details(private: bool) -> Optional[CompletionItemLabelDetails]:
+        return CompletionItemLabelDetails(description="private") if private else None
+
+    @staticmethod
+    def _keyword_sort_text(prefix: str, kw: KeywordDoc, private: bool) -> str:
+        """Other keywords first, then the shown private keywords of other files."""
+        rank = 1 if private else 0
+        return f"{prefix}{rank}_{kw.name}"
+
     def create_keyword_completion_items(
         self,
         token: Optional[Token],
@@ -978,13 +993,17 @@ class CompletionCollector(ModelHelper):
                         for kw in libraries[namespace_name].library_doc.keywords.values():
                             if kw.is_error_handler:
                                 continue
+                            private = self._is_foreign_private(kw)
+                            if private and self.config.hide_private_keywords:
+                                continue
                             result.append(
                                 CompletionItem(
                                     label=kw.name,
+                                    label_details=self._private_label_details(private),
                                     kind=CompletionItemKind.FUNCTION,
                                     detail=f"{CompleteResultKind.KEYWORD.value} "
                                     f"{f'({kw.libname})' if kw.libname is not None else ''}",
-                                    sort_text=f"019_{kw.name}",
+                                    sort_text=self._keyword_sort_text("019_", kw, private),
                                     insert_text_format=(
                                         InsertTextFormat.PLAIN_TEXT if not kw.is_embedded else InsertTextFormat.SNIPPET
                                     ),
@@ -1024,14 +1043,18 @@ class CompletionCollector(ModelHelper):
                             for kw in res.library_doc.keywords.values():
                                 if kw.is_error_handler:
                                     continue
+                                private = self._is_foreign_private(kw)
+                                if private and self.config.hide_private_keywords:
+                                    continue
 
                                 result.append(
                                     CompletionItem(
                                         label=kw.name,
+                                        label_details=self._private_label_details(private),
                                         kind=CompletionItemKind.FUNCTION,
                                         detail=f"{CompleteResultKind.KEYWORD.value} "
                                         f"{f'({kw.libname})' if kw.libname is not None else ''}",
-                                        sort_text=f"019_{kw.name}",
+                                        sort_text=self._keyword_sort_text("019_", kw, private),
                                         insert_text_format=(
                                             InsertTextFormat.PLAIN_TEXT
                                             if not kw.is_embedded
@@ -1074,14 +1097,18 @@ class CompletionCollector(ModelHelper):
                 and not kw.matcher.normalized_name.startswith(namespace_matcher.normalized_name)
             ):
                 continue
+            private = self._is_foreign_private(kw)
+            if private and self.config.hide_private_keywords:
+                continue
 
             result.append(
                 CompletionItem(
                     label=kw.name,
+                    label_details=self._private_label_details(private),
                     kind=CompletionItemKind.FUNCTION,
                     detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
                     deprecated=kw.is_deprecated,
-                    sort_text=f"020_{kw.name}",
+                    sort_text=self._keyword_sort_text("020_", kw, private),
                     insert_text_format=InsertTextFormat.PLAIN_TEXT if not kw.is_embedded else InsertTextFormat.SNIPPET,
                     text_edit=TextEdit(
                         range=r,
