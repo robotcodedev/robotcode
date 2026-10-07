@@ -31,17 +31,25 @@ Tools | RobotCode | Select Configuration Profiles... SHALL open the same profile
 
 ### Requirement: The profile list
 
-The profile list SHALL be read with `robotcode profiles list` in the background, without blocking the IDE, with the current selection passed as `-p`. It SHALL offer every profile that `robotcode` lists without its option for hidden profiles, with the profile's description. It SHALL check the selected profiles, or, without a selection, the profiles that `robot.toml` selects by default. Confirming the list without changing the checks while nothing is selected SHALL keep the empty selection. Unchecking every profile SHALL store an empty selection. When `robotcode` reports messages instead of profiles, such as that no configuration file was found, the list SHALL show them; when `robotcode` fails, the list SHALL show the beginning of its error output.
+The profile list SHALL be read with `robotcode profiles list` in the background, without blocking the IDE, with the current selection passed as `-p`. The profile list SHALL offer every profile that `robotcode` lists without its option for hidden profiles, with the profile's description.
 
 #### Scenario: Hidden profiles
 
 - **WHEN** `robot.toml` defines the profiles `dev`, `ci` and the hidden profile `_base`
 - **THEN** the list offers `dev` and `ci` with their descriptions, and not `_base`
 
+### Requirement: Checked profiles in the profile list
+
+The profile list SHALL check the selected profiles, or, without a selection, the profiles that `robot.toml` selects by default. Confirming the list without changing the checks while nothing is selected SHALL keep the empty selection. Unchecking every profile SHALL store an empty selection.
+
 #### Scenario: Default profiles are checked
 
 - **WHEN** nothing is selected and `robot.toml` sets `default-profiles = ["dev"]`
 - **THEN** the list opens with `dev` checked, and confirming it unchanged keeps the selection empty
+
+### Requirement: Messages and errors in the profile list
+
+When `robotcode` reports messages instead of profiles, such as that no configuration file was found, the profile list SHALL show them; when `robotcode` fails, the list SHALL show the beginning of its error output.
 
 #### Scenario: Project without profiles
 

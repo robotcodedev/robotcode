@@ -31,12 +31,16 @@ The CI SHALL build the RobotCode packages, including the JetBrains plugin, only 
 
 ### Requirement: The plugin verifier runs in CI
 
-The code-quality checks of the CI SHALL run the JetBrains plugin verifier (`gradle verifyPlugin` in `intellij-client/`) against the IDE versions that the plugin's build configures. A problem at one of the failure levels the build configures, such as an invalid plugin, a compatibility problem or a missing dependency, SHALL fail the code-quality checks. The job summary of the run SHALL show, for every verified IDE version, the verifier's verdict and its notes, including the usages of deprecated and of experimental API, also when nothing fails. The reports SHALL also be uploaded with the run, also when the verifier fails.
+The code-quality checks of the CI SHALL run the JetBrains plugin verifier (`gradle verifyPlugin` in `intellij-client/`) against the IDE versions that the plugin's build configures. A problem at one of the failure levels the build configures, such as an invalid plugin, a compatibility problem or a missing dependency, SHALL fail the code-quality checks.
 
 #### Scenario: Compatibility problem
 
 - **WHEN** a change makes the plugin use an API that one of the configured IDE versions does not have
 - **THEN** the code-quality checks fail, and the job summary shows the verifier's report with the problem
+
+### Requirement: The plugin verifier's results are shown
+
+The job summary of the CI run SHALL show, for every verified IDE version, the plugin verifier's verdict and its notes, including the usages of deprecated and of experimental API, also when nothing fails. The verifier's reports SHALL also be uploaded with the run, also when the verifier fails.
 
 #### Scenario: Clean verification
 

@@ -14,11 +14,19 @@ The Robot Framework settings node SHALL have an "Analysis" sub-page with these s
 - global library search order, empty by default;
 - library load timeout in seconds: a whole number from 1 to 3600, or empty, which is the default;
 - cache location: "IDE system directory", the default, or "Project folder";
-- libraries and variable files that are not cached, and libraries whose arguments are ignored, all empty by default;
-- exclude patterns, by default VS Code's seven patterns `.hatch/`, `.venv/`, `node_modules/`, `.pytest_cache/`, `__pycache__/`, `.mypy_cache/` and `.robotcode_cache/`;
 - experimental semantic model, off by default.
 
-An empty library load timeout SHALL NOT be sent to the server. The page SHALL reject a timeout outside 1 to 3600 and SHALL NOT send list entries that are blank. The page texts SHALL say that the list entries are added to those in `robot.toml` (`[tool.robotcode-analyze]`), that a library load timeout replaces the one from `robot.toml`, that exclude patterns use `.gitignore` syntax, and that the cache location "Project folder" is the folder `robotcode analyze` uses in the project.
+#### Scenario: References code lens
+
+- **WHEN** the user switches the references code lens on and applies
+- **THEN** keyword definitions in Robot Framework files show the number of references, such as "2 references", above the definition
+
+### Requirement: Cache and exclude settings of the Analysis page
+
+The "Analysis" sub-page SHALL also have these settings, and the language server SHALL use their values after the user applies them:
+
+- libraries and variable files that are not cached, and libraries whose arguments are ignored, all empty by default;
+- exclude patterns, by default VS Code's seven patterns `.hatch/`, `.venv/`, `node_modules/`, `.pytest_cache/`, `__pycache__/`, `.mypy_cache/` and `.robotcode_cache/`.
 
 #### Scenario: Excluding a folder
 
@@ -30,6 +38,10 @@ An empty library load timeout SHALL NOT be sent to the server. The page SHALL re
 - **WHEN** the user removes every exclude pattern, applies and reopens the project
 - **THEN** the list is still empty, and the server receives an empty `robotcode.workspace.excludePatterns`
 
+### Requirement: Values of the Analysis page
+
+An empty library load timeout SHALL NOT be sent to the server. The "Analysis" sub-page SHALL reject a timeout outside 1 to 3600 and SHALL NOT send list entries that are blank.
+
 #### Scenario: Empty library load timeout
 
 - **WHEN** the library load timeout is empty
@@ -40,10 +52,14 @@ An empty library load timeout SHALL NOT be sent to the server. The page SHALL re
 - **WHEN** the user enters `0` as library load timeout
 - **THEN** the page shows an error and the value is not stored
 
-#### Scenario: References code lens
+### Requirement: Texts of the Analysis page
 
-- **WHEN** the user switches the references code lens on and applies
-- **THEN** keyword definitions in Robot Framework files show the number of references, such as "2 references", above the definition
+The texts of the "Analysis" sub-page SHALL say that the list entries are added to those in `robot.toml` (`[tool.robotcode-analyze]`), that a library load timeout replaces the one from `robot.toml`, that exclude patterns use `.gitignore` syntax, and that the cache location "Project folder" is the folder `robotcode analyze` uses in the project.
+
+#### Scenario: Text on exclude patterns
+
+- **WHEN** the user opens the "Analysis" sub-page
+- **THEN** its text says that exclude patterns use `.gitignore` syntax
 
 ### Requirement: Diagnostics page
 
@@ -53,8 +69,6 @@ The Robot Framework settings node SHALL have a "Diagnostics" sub-page with these
 - progress mode: "Off", the default, "Simple" or "Detailed";
 - find unused references, off by default;
 - five diagnostic modifier lists of diagnostic codes, all empty by default: ignore, error, warning, information and hint.
-
-The page texts SHALL say that the modifier lists are added to those in `robot.toml` (`[tool.robotcode-analyze.modifiers]`). The page SHALL NOT send blank list entries.
 
 #### Scenario: Ignoring a diagnostic code
 
@@ -70,6 +84,15 @@ The page texts SHALL say that the modifier lists are added to those in `robot.to
 
 - **WHEN** the diagnostic mode is "Workspace" and a Robot Framework file that is not open in an editor contains an error
 - **THEN** the server reports the problems of that file, and IntelliJ marks the file as a problem file
+
+### Requirement: Text and entries of the Diagnostics page
+
+The texts of the "Diagnostics" sub-page SHALL say that the modifier lists are added to those in `robot.toml` (`[tool.robotcode-analyze.modifiers]`). The page SHALL NOT send blank list entries.
+
+#### Scenario: Blank entry in a modifier list
+
+- **WHEN** the user adds a blank entry to the ignore list and applies
+- **THEN** the server receives the ignore list without the blank entry
 
 ### Requirement: Information and Hint diagnostics are distinguishable
 
@@ -94,7 +117,7 @@ The Robot Framework settings node SHALL have a "Robocop" sub-page with these set
 - ignore Git directory, off by default;
 - ignore file configuration, off by default.
 
-The configuration file SHALL be sent as an absolute path, and the page SHALL reject a path to a file that does not exist. The page text SHALL say that switching Robocop analysis off removes Robocop's diagnostics but does not switch off formatting with Robocop.
+The configuration file SHALL be sent as an absolute path, and the page SHALL reject a path to a file that does not exist.
 
 #### Scenario: Switching Robocop off
 
@@ -110,6 +133,15 @@ The configuration file SHALL be sent as an absolute path, and the page SHALL rej
 
 - **WHEN** the user enters the path of a file that does not exist as configuration file
 - **THEN** the page shows an error and the value is not stored
+
+### Requirement: Text of the Robocop page
+
+The text of the "Robocop" sub-page SHALL say that switching Robocop analysis off removes Robocop's diagnostics but does not switch off formatting with Robocop.
+
+#### Scenario: Text on formatting
+
+- **WHEN** the user opens the "Robocop" sub-page
+- **THEN** its text says that switching Robocop analysis off does not switch off formatting with Robocop
 
 ### Requirement: Analysis settings are stored with the project
 

@@ -29,10 +29,7 @@ The check SHALL tell these results apart, and both the banner on Robot files and
 - the Python is older than 3.10, with the detected version;
 - Robot Framework is not installed;
 - Robot Framework is older than 5.0, with the detected version;
-- the interpreter is a remote one, such as WSL, Docker or SSH, which RobotCode does not support yet;
 - the check failed or timed out.
-
-The plugin SHALL recognize a remote interpreter without running a local process, also when a file with the interpreter's path exists on the local machine.
 
 #### Scenario: Old Robot Framework
 
@@ -49,6 +46,19 @@ The plugin SHALL recognize a remote interpreter without running a local process,
 - **WHEN** the project's interpreter is Python 3.9 and a Robot file is opened
 - **THEN** the banner says that Python 3.9 is older than 3.10 and names the requirement
 
+### Requirement: Remote interpreters are a result of their own
+
+The check SHALL also tell apart, as a result of its own, that the interpreter is a remote one, such as WSL, Docker or SSH, which RobotCode does not support yet; both the banner on Robot files and the error of a run SHALL name it together with the requirement "Python 3.10 or newer with Robot Framework 5.0 or newer".
+
+#### Scenario: Run with an SSH interpreter
+
+- **WHEN** the project's interpreter is an SSH interpreter and the user starts a run
+- **THEN** the error of the run says that RobotCode does not support remote interpreters yet and names the requirement
+
+### Requirement: Remote interpreters are recognized without running them
+
+The plugin SHALL recognize a remote interpreter without running a local process, also when a file with the interpreter's path exists on the local machine.
+
 #### Scenario: Remote interpreter
 
 - **WHEN** the project's interpreter is a remote interpreter whose path, such as `/usr/bin/python3`, also exists on the local machine
@@ -56,7 +66,7 @@ The plugin SHALL recognize a remote interpreter without running a local process,
 
 ### Requirement: A failed check is not a result
 
-When the check process cannot be started, exits with an error, prints something unexpected or times out, the plugin SHALL NOT treat this as a result about the interpreter. It SHALL show that the check failed, SHALL write the command line, the exit code and the output of the check to idea.log as a warning, and SHALL check again on the next trigger: a restart of the language server, a change of the interpreter or of its SDK, or the start of a run. Only a trigger SHALL start a new check, so that a failing check does not run again and again on its own.
+When the check process cannot be started, exits with an error, prints something unexpected or times out, the plugin SHALL NOT treat this as a result about the interpreter. It SHALL show that the check failed, SHALL write the command line, the exit code and the output of the check to idea.log as a warning, and SHALL check again on the next trigger: a restart of the language server, a change of the interpreter or of its SDK, or the start of a run.
 
 #### Scenario: Timeout and retry
 
@@ -68,9 +78,18 @@ When the check process cannot be started, exits with an error, prints something 
 - **WHEN** a check times out
 - **THEN** idea.log contains a warning with the command line of the check, and no "IDE error occurred" notification appears
 
+### Requirement: Only a trigger starts a new check
+
+Only a trigger SHALL start a new check of the interpreter, so that a failing check does not run again and again on its own.
+
+#### Scenario: No trigger after a failed check
+
+- **WHEN** a check failed and neither the language server restarts, nor the interpreter or its SDK changes, nor a run starts
+- **THEN** no new check runs
+
 ### Requirement: Check again only when the interpreter changes
 
-The plugin SHALL check the interpreter again, and restart the language server and test discovery, only when the interpreter RobotCode uses changes: another SDK is chosen, the path of the SDK changes, or the project SDK changes for modules that inherit it. While the interpreter is usable, a refresh of the SDK's paths, a change of excluded folders or a change of an SDK that RobotCode does not use SHALL NOT start a check or a restart. While the interpreter is not usable, a change of its SDK, such as the refresh of its paths after packages were installed, SHALL start a new check.
+The plugin SHALL check the interpreter again, and restart the language server and test discovery, only when the interpreter RobotCode uses changes: another SDK is chosen, the path of the SDK changes, or the project SDK changes for modules that inherit it. While the interpreter is usable, a refresh of the SDK's paths, a change of excluded folders or a change of an SDK that RobotCode does not use SHALL NOT start a check or a restart.
 
 #### Scenario: Switching the interpreter
 
@@ -86,6 +105,10 @@ The plugin SHALL check the interpreter again, and restart the language server an
 
 - **WHEN** the paths of the usable SDK are refreshed, or a folder is excluded from the project
 - **THEN** no check runs and the language server is not restarted
+
+### Requirement: An unusable interpreter is checked again when its SDK changes
+
+While the interpreter is not usable, a change of its SDK, such as the refresh of its paths after packages were installed, SHALL start a new check.
 
 #### Scenario: Packages installed into an unusable interpreter
 

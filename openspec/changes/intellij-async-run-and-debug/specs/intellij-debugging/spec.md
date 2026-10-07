@@ -4,12 +4,7 @@
 
 ### Requirement: Run and Debug do not block the user interface
 
-Starting a Robot Framework Run or Debug session, and every debugger action, SHALL NOT block the IDE's user interface while the plugin waits for the process or the RobotCode debugger. Debugger actions are stepping, resuming, pausing, Run to Cursor, evaluating, computing frames and variables, and adding, changing or removing breakpoints. Every wait for the debugger SHALL be bounded, with a bound longer than the debugger's own limit for a keyword evaluation, so that an evaluation the debugger is still working on is not abandoned by the plugin.
-
-#### Scenario: Evaluate a slow keyword
-
-- **WHEN** the run is paused and the user evaluates `Sleep    5s` in the Evaluate dialog
-- **THEN** the IDE stays responsive during the five seconds, and the dialog shows the result afterwards
+Starting a Robot Framework Run or Debug session, and every debugger action, SHALL NOT block the IDE's user interface while the plugin waits for the process or the RobotCode debugger. Debugger actions are stepping, resuming, pausing, Run to Cursor, evaluating, computing frames and variables, and adding, changing or removing breakpoints.
 
 #### Scenario: Start a run
 
@@ -20,6 +15,15 @@ Starting a Robot Framework Run or Debug session, and every debugger action, SHAL
 
 - **WHEN** the run is paused and the user disables or enables a breakpoint
 - **THEN** the IDE's user interface is not blocked while the change is sent to the debugger
+
+### Requirement: Waits for the debugger are bounded
+
+Every wait for the debugger SHALL be bounded, with a bound longer than the debugger's own limit for a keyword evaluation, so that an evaluation the debugger is still working on is not abandoned by the plugin.
+
+#### Scenario: Evaluate a slow keyword
+
+- **WHEN** the run is paused and the user evaluates `Sleep    5s` in the Evaluate dialog
+- **THEN** the IDE stays responsive during the five seconds, and the dialog shows the result afterwards
 
 ### Requirement: A debugger that does not connect is reported
 

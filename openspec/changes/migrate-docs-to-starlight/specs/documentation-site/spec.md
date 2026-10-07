@@ -49,12 +49,24 @@ The generated CLI reference and the generated configuration reference SHALL be p
 
 ### Requirement: Home page demos
 
-The demo windows of the home page — the window of the feature tour and the window of the agent conversations — SHALL show their parts one after another while the window is visible: a part stays until it can be read, a screen recording until it has played once from its beginning, and the steps of a conversation appear one by one. A window SHALL hold its current part while the reader hovers over it or focuses it with the keyboard, while it is scrolled out of view and while one of its pictures is enlarged; its pause button SHALL hold it and show the whole current part until the button is pressed again. Selecting a part SHALL show it at once. Clicking a screen recording or a screenshot SHALL show it enlarged until a click or Escape. With reduced motion requested by the reader's system, the windows SHALL change parts only when the reader selects one, show each part complete and play no recording by itself. A conversation longer than its window SHALL scroll along with its newest step. The commands and output in the demos SHALL be taken from real runs of an example project, abridged, and the window of the agent conversations SHALL say so. `/llms-full.txt` SHALL NOT contain the demo windows; the texts of the feature tour and of the AI agents section SHALL be part of it.
+The demo windows of the home page — the window of the feature tour and the window of the agent conversations — SHALL show their parts one after another while the window is visible: a part stays until it can be read, a screen recording until it has played once from its beginning, and the steps of a conversation appear one by one. Selecting a part SHALL show it at once.
 
 #### Scenario: Playing while visible
 - **WHEN** the feature tour scrolls into view
 - **THEN** its window shows the demo of the first feature and, when that demo is over, the demo of the next feature
 - **AND** the list marks the feature shown and shows its description
+
+#### Scenario: Editor screenshots
+- **WHEN** the Multi-IDE feature is shown
+- **THEN** its screenshots follow one another, the window title names the editor of each, and the reader can select each screenshot
+
+#### Scenario: Running and debugging
+- **WHEN** the Run, debug & test explorer feature is shown
+- **THEN** a recording of running the tests from the test explorer plays, then a recording of a debug session, and the reader can select each recording
+
+### Requirement: Holding and pausing a home page demo
+
+A demo window of the home page SHALL hold its current part while the reader hovers over it or focuses it with the keyboard, while it is scrolled out of view and while one of its pictures is enlarged; its pause button SHALL hold it and show the whole current part until the button is pressed again.
 
 #### Scenario: Holding a demo
 - **WHEN** the reader hovers over a demo window
@@ -64,23 +76,23 @@ The demo windows of the home page — the window of the feature tour and the win
 - **WHEN** the reader presses the pause button of a demo window
 - **THEN** the current part stays and shows all its steps, and no recording plays, until the button is pressed again
 
-#### Scenario: Reduced motion
-- **WHEN** the reader's system asks for reduced motion
-- **THEN** no demo changes its part and no recording plays by itself
-- **AND** selecting a part shows it complete
+### Requirement: Enlarged parts and reduced motion in home page demos
+
+Clicking a screen recording or a screenshot in a demo window of the home page SHALL show it enlarged until a click or Escape. With reduced motion requested by the reader's system, the windows SHALL change parts only when the reader selects one, show each part complete and play no recording by itself.
 
 #### Scenario: Enlarging a recording
 - **WHEN** the reader clicks the screen recording of Code intelligence
 - **THEN** the recording is shown enlarged
 - **AND** Escape closes the enlarged view
 
-#### Scenario: Editor screenshots
-- **WHEN** the Multi-IDE feature is shown
-- **THEN** its screenshots follow one another, the window title names the editor of each, and the reader can select each screenshot
+#### Scenario: Reduced motion
+- **WHEN** the reader's system asks for reduced motion
+- **THEN** no demo changes its part and no recording plays by itself
+- **AND** selecting a part shows it complete
 
-#### Scenario: Running and debugging
-- **WHEN** the Run, debug & test explorer feature is shown
-- **THEN** a recording of running the tests from the test explorer plays, then a recording of a debug session, and the reader can select each recording
+### Requirement: Content of the home page demos
+
+A conversation longer than its window SHALL scroll along with its newest step. The commands and output in the demos SHALL be taken from real runs of an example project, abridged, and the window of the agent conversations SHALL say so. `/llms-full.txt` SHALL NOT contain the demo windows; the texts of the feature tour and of the AI agents section SHALL be part of it.
 
 #### Scenario: Demos in the LLM export
 - **WHEN** `/llms-full.txt` is requested
@@ -103,13 +115,51 @@ Images shown on pages SHALL be emitted through the build's image optimization wi
 - **WHEN** an editor requests `/schemas/robot.toml.json`
 - **THEN** it receives the current JSON schema for `robot.toml`
 
+### Requirement: Pictures of the home page
+
+Previous and next buttons and a horizontal swipe on the picture of the home page SHALL switch to the neighbouring picture. Clicking the picture SHALL open an enlarged view that closes on a click or Escape and in which the left and right arrow keys switch pictures.
+
+#### Scenario: Next button
+- **WHEN** a reader presses the next button of the picture
+- **THEN** the next picture of the artwork is shown
+
+### Requirement: Sections below the hero
+
+Below the hero the home page SHALL show, in this order, the feature tour, the AI agents section, the RoboCon 2024 tutorial video, the latest news and the open-source section. On a viewport of 1366×768 or larger, the beginning of the feature tour SHALL be visible without scrolling.
+
+#### Scenario: Larger window
+- **WHEN** the home page is opened in a 1920×1080 browser window
+- **THEN** the beginning of the feature tour is visible without scrolling
+
+### Requirement: Feature tour on the home page
+
+The feature tour SHALL list Code intelligence; Run, debug & test explorer; One config everywhere; Powerful CLI; Interactive REPL; and Multi-IDE, same core as feature cards, each with its description and links to the pages that cover it, next to a demo of the selected feature: screen recordings for code intelligence and for running and debugging tests, terminal sessions for the configuration, the CLI and the REPL, and screenshots of RobotCode in several editors for Multi-IDE.
+
+#### Scenario: Demo of a feature card
+- **WHEN** a reader selects the "Powerful CLI" feature card in the feature tour
+- **THEN** its description and links are shown next to the demo of the CLI
+
+### Requirement: AI agents section on the home page
+
+The AI agents section SHALL describe what an AI agent does with the RobotCode skill, name the agents it works with, link to the setup guide `/guides/ai-agents/` and show conversations of an agent working through `robotcode`.
+
+#### Scenario: Agent conversations
+- **WHEN** a reader views the AI agents section of the home page
+- **THEN** it names the agents the skill works with and shows conversations of an agent working through `robotcode`
+
+### Requirement: Latest news and open source on the home page
+
+The latest news SHALL list the three newest posts, newest first, with date, title and description, and link to all news. The open-source section SHALL state the license, link to the GitHub repository, to Support & Contribute and to the sponsoring options, and show the supporters.
+
+#### Scenario: All news
+- **WHEN** a reader follows the link to all news in the latest news of the home page
+- **THEN** `/news/` is shown
+
 ## MODIFIED Requirements
 
 ### Requirement: Home page
 
-The home page SHALL show the product name, the tagline, a subline chosen at random on each load, one picture of the RobotCode artwork chosen at random on each load, the actions Get Started, VS Code Extension, JetBrains Plugin, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, which leads to the open-source section. Previous and next buttons and a horizontal swipe on the picture SHALL switch to the neighbouring picture. Clicking the picture SHALL open an enlarged view that closes on a click or Escape and in which the left and right arrow keys switch pictures.
-
-Below the hero the home page SHALL show, in this order, the feature tour, the AI agents section, the RoboCon 2024 tutorial video, the latest news and the open-source section. The feature tour SHALL list Code intelligence; Run, debug & test explorer; One config everywhere; Powerful CLI; Interactive REPL; and Multi-IDE, same core as feature cards, each with its description and links to the pages that cover it, next to a demo of the selected feature: screen recordings for code intelligence and for running and debugging tests, terminal sessions for the configuration, the CLI and the REPL, and screenshots of RobotCode in several editors for Multi-IDE. The AI agents section SHALL describe what an AI agent does with the RobotCode skill, name the agents it works with, link to the setup guide `/guides/ai-agents/` and show conversations of an agent working through `robotcode`. The latest news SHALL list the three newest posts, newest first, with date, title and description, and link to all news. The open-source section SHALL state the license, link to the GitHub repository, to Support & Contribute and to the sponsoring options, and show the supporters. The home page SHALL show no edit link and no last-change date. On a viewport of 1366×768 or larger, the beginning of the feature tour SHALL be visible without scrolling.
+The home page SHALL show the product name, the tagline, a subline chosen at random on each load, one picture of the RobotCode artwork chosen at random on each load, the actions Get Started, VS Code Extension, JetBrains Plugin, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, which leads to the open-source section. The home page SHALL show no edit link and no last-change date.
 
 #### Scenario: Random picture
 - **WHEN** the home page is loaded

@@ -4,7 +4,7 @@
 
 ### Requirement: Debugging a run with a WSL interpreter
 
-When a Robot Framework run configuration whose interpreter is a WSL interpreter is started with Debug, the session SHALL behave as with a local interpreter. The run SHALL stop at the enabled breakpoints that the user set in the IDE; the frames of the call stack SHALL open the files the IDE shows, at the right lines; stepping, Run to Cursor, resuming and evaluating SHALL work. Stop SHALL end the run gracefully, also while it is paused, so that Robot Framework writes its output, log and report files.
+When a Robot Framework run configuration whose interpreter is a WSL interpreter is started with Debug, the session SHALL behave as with a local interpreter. The run SHALL stop at the enabled breakpoints that the user set in the IDE; the frames of the call stack SHALL open the files the IDE shows, at the right lines; stepping, Run to Cursor, resuming and evaluating SHALL work.
 
 #### Scenario: Breakpoint in a suite
 
@@ -20,6 +20,10 @@ When a Robot Framework run configuration whose interpreter is a WSL interpreter 
 
 - **WHEN** a project in `C:\work\robot-project` uses a WSL interpreter and a breakpoint is set in one of its suites
 - **THEN** the run stops at the breakpoint, and the frame opens the suite below `C:\work\robot-project`
+
+### Requirement: Stopping a debug run with a WSL interpreter
+
+Stop SHALL end a debug run with a WSL interpreter gracefully, also while it is paused, so that Robot Framework writes its output, log and report files.
 
 #### Scenario: Stop while paused
 

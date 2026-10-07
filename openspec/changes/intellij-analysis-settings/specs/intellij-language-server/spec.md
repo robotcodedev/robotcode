@@ -11,10 +11,7 @@ Defines how the IntelliJ plugin runs the RobotCode language server: how the serv
 When the plugin starts the language server, the `initialize` request SHALL carry these initialization options:
 
 - `storageUri`: the file URI of a storage folder for the project in the IDE's system directory, one folder per project;
-- `pythonPath` and `env`: the Robot Framework Python path and environment variables of the settings tree, which are empty while no setting provides them;
 - `settings`: the same `robotcode` settings tree that the plugin sends with `workspace/configuration` and `workspace/didChangeConfiguration`.
-
-The options SHALL leave the documentation viewer links of the server off, because the plugin has no documentation viewer.
 
 #### Scenario: Initialize request
 
@@ -25,6 +22,15 @@ The options SHALL leave the documentation viewer links of the server off, becaus
 
 - **WHEN** two projects are open, each with a language server
 - **THEN** their `initialize` requests carry different storage folders
+
+### Requirement: Python path, environment and documentation links at initialization
+
+The initialization options of the `initialize` request SHALL also carry `pythonPath` and `env`: the Robot Framework Python path and environment variables of the settings tree, which are empty while no setting provides them. The options SHALL leave the documentation viewer links of the server off, because the plugin has no documentation viewer.
+
+#### Scenario: No Python path and environment set
+
+- **WHEN** the language server starts in a project whose settings provide no Python path and no environment variables
+- **THEN** the `initialize` request carries an empty `pythonPath` and an empty `env`
 
 ### Requirement: Analysis cache location
 

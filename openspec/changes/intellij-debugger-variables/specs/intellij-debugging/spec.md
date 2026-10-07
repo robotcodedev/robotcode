@@ -2,9 +2,18 @@
 
 ## ADDED Requirements
 
+### Requirement: Scopes in the Variables view
+
+While a run is paused, the Variables view SHALL show the Local scope of the selected frame inline and the frame's other scopes (Test, Suite, Global) as groups whose variables are loaded when a group is expanded. A frame without scopes SHALL show no variables and no error.
+
+#### Scenario: Frame without scopes
+
+- **WHEN** the user selects a frame for which the debugger reports no scopes
+- **THEN** the Variables view is empty and the IDE logs no error
+
 ### Requirement: Variables expand into their items
 
-While a run is paused, the Variables view SHALL show the Local scope of the selected frame inline and the frame's other scopes (Test, Suite, Global) as groups whose variables are loaded when a group is expanded. A list variable SHALL expand into its length and its items, shown in pages of 100 items with an entry that loads the next page. A dictionary variable SHALL expand into its length and its entries. A frame without scopes SHALL show no variables and no error. Each variable SHALL show the name of its Python type, such as `str`, `list` or `DotDict`.
+A list variable SHALL expand into its length and its items, shown in pages of 100 items with an entry that loads the next page. A dictionary variable SHALL expand into its length and its entries. Each variable SHALL show the name of its Python type, such as `str`, `list` or `DotDict`.
 
 #### Scenario: Expand a list
 
@@ -21,14 +30,18 @@ While a run is paused, the Variables view SHALL show the Local scope of the sele
 - **WHEN** the run is paused after `&{options}=    Create Dictionary    a=1    b=2` and the user expands `&{options}`
 - **THEN** the entries `'a'` and `'b'` are shown with their values
 
-#### Scenario: Frame without scopes
-
-- **WHEN** the user selects a frame for which the debugger reports no scopes
-- **THEN** the Variables view is empty and the IDE logs no error
-
 ### Requirement: Set Value for variables of the paused keyword or test
 
-While a run is paused, Set Value SHALL be offered for the variables of the Local scope of the innermost frame. The new value SHALL be evaluated as the debugger evaluates it: as a Python expression in which Robot Framework variables are replaced. After a successful change, the Variables view and the rest of the run SHALL use the new value. A value the debugger rejects SHALL show the debugger's error message and leave the variable unchanged. Set Value SHALL NOT be offered for variables of outer frames, for the Test, Suite and Global groups, or for items of lists and dictionaries.
+While a run is paused, Set Value SHALL be offered for the variables of the Local scope of the innermost frame. Set Value SHALL NOT be offered for variables of outer frames, for the Test, Suite and Global groups, or for items of lists and dictionaries.
+
+#### Scenario: Not offered for suite variables
+
+- **WHEN** the user opens the context menu of a variable in the Suite group
+- **THEN** Set Value is not available
+
+### Requirement: Set Value evaluates the new value
+
+A value entered with Set Value SHALL be evaluated as the debugger evaluates it: as a Python expression in which Robot Framework variables are replaced. After a successful change, the Variables view and the rest of the run SHALL use the new value. A value the debugger rejects SHALL show the debugger's error message and leave the variable unchanged.
 
 #### Scenario: Change a variable
 
@@ -39,11 +52,6 @@ While a run is paused, Set Value SHALL be offered for the variables of the Local
 
 - **WHEN** the user sets `${x}` to the bare word `changed`
 - **THEN** the IDE shows the debugger's error message and `${x}` keeps its value
-
-#### Scenario: Not offered for suite variables
-
-- **WHEN** the user opens the context menu of a variable in the Suite group
-- **THEN** Set Value is not available
 
 ### Requirement: Frames show their keyword, test or suite
 

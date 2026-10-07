@@ -14,17 +14,7 @@ A Robot Framework run configuration SHALL store its target, which is one of:
 - "Files and folders", with a list of files and folders;
 - "Tests and suites", with a list of tests, tasks and suites.
 
-Saved configurations, temporary configurations, configuration templates and configurations stored as project files SHALL keep their target and every other value of the editor across IDE restarts, and a copy of a configuration SHALL have the same values. Paths inside the project SHALL be stored relative to the project folder.
-
-#### Scenario: Saved configuration after a restart
-
-- **WHEN** the user runs the test "First Test Passes" from the gutter, saves the temporary configuration, restarts the IDE and runs the saved configuration
-- **THEN** only "First Test Passes" runs
-
-#### Scenario: Temporary configuration after a restart
-
-- **WHEN** the user runs "First Test Passes" from the gutter, restarts the IDE without saving the configuration, and runs the temporary configuration from the run widget
-- **THEN** only "First Test Passes" runs
+Paths inside the project SHALL be stored relative to the project folder.
 
 #### Scenario: Target set in the editor
 
@@ -35,6 +25,20 @@ Saved configurations, temporary configurations, configuration templates and conf
 
 - **WHEN** the user marks a configuration with a "Files and folders" target as "Store as project file"
 - **THEN** the file under `.run/` holds the target with `$PROJECT_DIR$` in place of the absolute project path
+
+### Requirement: Run configurations keep their values
+
+Saved configurations, temporary configurations, configuration templates and configurations stored as project files SHALL keep their target and every other value of the editor across IDE restarts, and a copy of a configuration SHALL have the same values.
+
+#### Scenario: Saved configuration after a restart
+
+- **WHEN** the user runs the test "First Test Passes" from the gutter, saves the temporary configuration, restarts the IDE and runs the saved configuration
+- **THEN** only "First Test Passes" runs
+
+#### Scenario: Temporary configuration after a restart
+
+- **WHEN** the user runs "First Test Passes" from the gutter, restarts the IDE without saving the configuration, and runs the temporary configuration from the run widget
+- **THEN** only "First Test Passes" runs
 
 ### Requirement: The configured paths target
 
@@ -61,7 +65,7 @@ A run with the "Files and folders" target SHALL pass the listed files and folder
 
 ### Requirement: The tests and suites target
 
-A run with the "Tests and suites" target SHALL run the stored items with the arguments of a run of selected items. The plugin SHALL store each item by its full name below the top-level suite, and SHALL complete the name at the start of each run with the name of the top-level suite that the current discovery reports, or with the name stored when the item was selected if discovery has no result yet. The editor SHALL list the stored names, one per line, and names the user adds there SHALL be completed the same way. A "Tests and suites" target without items SHALL run like the "Configured paths" target, and the editor SHALL show a warning for it.
+A run with the "Tests and suites" target SHALL run the stored items with the arguments of a run of selected items. The plugin SHALL store each item by its full name below the top-level suite, and SHALL complete the name at the start of each run with the name of the top-level suite that the current discovery reports, or with the name stored when the item was selected if discovery has no result yet.
 
 #### Scenario: Renamed project folder
 
@@ -78,6 +82,10 @@ A run with the "Tests and suites" target SHALL run the stored items with the arg
 - **WHEN** a saved configuration that selects "First Test Passes" is run before discovery has a result
 - **THEN** only "First Test Passes" runs, completed with the top-level suite name stored with the item
 
+### Requirement: Editing the tests and suites target
+
+The editor SHALL list the stored names of a "Tests and suites" target, one per line, and names the user adds there SHALL be completed the same way. A "Tests and suites" target without items SHALL run like the "Configured paths" target, and the editor SHALL show a warning for it.
+
 #### Scenario: Name added in the editor
 
 - **WHEN** the user adds the line `Tests.Sample.Second Test` to the list of a configuration that selects "First Test Passes", and runs it
@@ -85,7 +93,16 @@ A run with the "Tests and suites" target SHALL run the stored items with the arg
 
 ### Requirement: The run configuration editor
 
-The editor of a Robot Framework run configuration SHALL be PyCharm's run configuration editor with "Modify options". It SHALL show a "Robot Framework" section with the target, and PyCharm's options for the Python interpreter, interpreter options, working directory, environment variables and `.env` files, adding content roots and source roots to `PYTHONPATH`, Before launch, "Allow multiple instances" and logs. It SHALL NOT offer options of PyCharm's Python debugger. The template of Robot Framework run configurations SHALL use the same editor. Every option the editor shows SHALL take effect on the next run, and the editor SHALL remember for each configuration which optional fields it shows.
+The editor of a Robot Framework run configuration SHALL be PyCharm's run configuration editor with "Modify options". It SHALL show a "Robot Framework" section with the target, and PyCharm's options for the Python interpreter, interpreter options, working directory, environment variables and `.env` files, adding content roots and source roots to `PYTHONPATH`, Before launch, "Allow multiple instances" and logs. It SHALL NOT offer options of PyCharm's Python debugger.
+
+#### Scenario: No Python debugger options
+
+- **WHEN** the user opens "Modify options" of a Robot Framework run configuration
+- **THEN** it offers no option of PyCharm's Python debugger, such as "Just my code"
+
+### Requirement: Options of the run configuration editor take effect
+
+The template of Robot Framework run configurations SHALL use the same editor as a configuration. Every option the editor shows SHALL take effect on the next run, and the editor SHALL remember for each configuration which optional fields it shows.
 
 #### Scenario: Environment variable
 
@@ -107,34 +124,37 @@ The editor of a Robot Framework run configuration SHALL be PyCharm's run configu
 - **WHEN** the user shows "Interpreter options" through "Modify options", applies, and opens the dialog again
 - **THEN** the field is still shown
 
-#### Scenario: No Python debugger options
-
-- **WHEN** the user opens "Modify options" of a Robot Framework run configuration
-- **THEN** it offers no option of PyCharm's Python debugger, such as "Just my code"
-
 ### Requirement: Runs use the configuration's interpreter and environment
 
-A run SHALL start the bundled `robotcode` with the configuration's Python interpreter, interpreter options, working directory and environment, prepared the way PyCharm prepares its own Python runs, including the activation of a virtualenv or conda interpreter. Without changes in the editor, a run SHALL use the Python interpreter that RobotCode uses for the language server, the project folder as working directory and no additional `PYTHONPATH` entries, as runs did before. A run whose interpreter is remote, such as WSL, Docker or SSH, SHALL NOT start a process and SHALL report that Robot Framework runs with remote interpreters are not supported yet. A configuration without a valid Python interpreter SHALL show an error before the run.
+A run SHALL start the bundled `robotcode` with the configuration's Python interpreter, interpreter options, working directory and environment, prepared the way PyCharm prepares its own Python runs, including the activation of a virtualenv or conda interpreter. Without changes in the editor, a run SHALL use the Python interpreter that RobotCode uses for the language server, the project folder as working directory and no additional `PYTHONPATH` entries, as runs did before.
 
 #### Scenario: Defaults
 
 - **WHEN** the user runs a test from the gutter in a project with one module and its Python interpreter
 - **THEN** the run uses that interpreter, starts in the project folder, and `PYTHONPATH` gets no entry from the project's roots
 
+#### Scenario: Content roots on the Python path
+
+- **WHEN** the user enables adding content roots to `PYTHONPATH` and runs a suite that imports a Python library from a content root that is not on the Python path otherwise
+- **THEN** the library is imported and the suite runs
+
+### Requirement: Runs with remote interpreters
+
+A run whose interpreter is remote, such as WSL, Docker or SSH, SHALL NOT start a process and SHALL report that Robot Framework runs with remote interpreters are not supported yet.
+
 #### Scenario: Remote interpreter
 
 - **WHEN** a configuration's interpreter is a WSL interpreter and the user runs it
 - **THEN** no process starts, and the user sees that Robot Framework runs with remote interpreters are not supported yet
 
+### Requirement: Runs without a valid interpreter
+
+A Robot Framework run configuration without a valid Python interpreter SHALL show an error before the run.
+
 #### Scenario: No interpreter
 
 - **WHEN** a configuration has no valid Python interpreter
 - **THEN** the run widget and the editor show an error for the configuration before it is run
-
-#### Scenario: Content roots on the Python path
-
-- **WHEN** the user enables adding content roots to `PYTHONPATH` and runs a suite that imports a Python library from a content root that is not on the Python path otherwise
-- **THEN** the library is imported and the suite runs
 
 ### Requirement: Run and Debug stay with RobotCode
 

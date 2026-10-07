@@ -4,7 +4,7 @@
 
 ### Requirement: Stop ends a Robot Framework run gracefully
 
-When the user stops a Robot Framework run that the IDE started, in a Run or a Debug session, or reruns it while it is still running, the plugin SHALL ask the RobotCode debugger to end the run, so that Robot Framework stops gracefully: the running test fails, the remaining tests are not run, teardowns run, and the output files are written. This SHALL work whether the run is paused in the debugger or running. While the debugger handles the request, the plugin SHALL NOT send a signal to the process. If the debugger is not connected, or does not confirm the request within five seconds, the plugin SHALL interrupt the process instead. A second Stop while the run is ending SHALL kill the process. Once a paused run continues towards its end, the debug session SHALL no longer show it as paused.
+When the user stops a Robot Framework run that the IDE started, in a Run or a Debug session, or reruns it while it is still running, the plugin SHALL ask the RobotCode debugger to end the run, so that Robot Framework stops gracefully: the running test fails, the remaining tests are not run, teardowns run, and the output files are written. This SHALL work whether the run is paused in the debugger or running.
 
 #### Scenario: Stop while paused at a breakpoint
 
@@ -21,6 +21,10 @@ When the user stops a Robot Framework run that the IDE started, in a Run or a De
 
 - **WHEN** a debug session is paused at a breakpoint and the user reruns it
 - **THEN** the paused run ends gracefully and the new run starts without the user killing the old process
+
+### Requirement: While a stopped run is ending
+
+While the debugger handles the request to end a stopped run, the plugin SHALL NOT send a signal to the process. If the debugger is not connected, or does not confirm the request within five seconds, the plugin SHALL interrupt the process instead. A second Stop while the run is ending SHALL kill the process. Once a paused run continues towards its end, the debug session SHALL no longer show it as paused.
 
 #### Scenario: Debugger does not confirm
 

@@ -11,11 +11,7 @@ Defines what a Robot Framework run configuration of the IntelliJ plugin runs, ho
 At the start of every run, the plugin SHALL combine the project's Robot Framework environment and run options with the configuration's Robot Framework options:
 
 - Python path entries, variable files and robot arguments: the project's values first, then the configuration's;
-- variables: both, and the configuration's value wins for a name that both set;
-- environment variables: the project's below the configuration's environment variables and `.env` files, which win for a name that both set, and above the environment the run inherits;
-- mode, output directory and languages: the configuration's value when it sets one, otherwise the project's.
-
-The plugin SHALL NOT copy project values into configurations, so a changed setting reaches existing and temporary configurations at their next run, and no value SHALL be passed twice. The console of a run SHALL show the command line the run started with.
+- variables: both, and the configuration's value wins for a name that both set.
 
 #### Scenario: Variable set in both places
 
@@ -27,6 +23,10 @@ The plugin SHALL NOT copy project values into configurations, so a changed setti
 - **WHEN** the project's Python path is `libs` and the configuration's Robot Framework Python path is `more_libs`
 - **THEN** the run passes `-P libs` before `-P more_libs`
 
+### Requirement: Environment, mode, output directory and languages of a run
+
+At the start of every run, the plugin SHALL place the project's environment variables below the configuration's environment variables and `.env` files, which win for a name that both set, and above the environment the run inherits. For mode, output directory and languages, it SHALL use the configuration's value when it sets one, otherwise the project's.
+
 #### Scenario: Mode from the project
 
 - **WHEN** the project's mode is "RPA" and the configuration's mode is "Inherit"
@@ -36,6 +36,10 @@ The plugin SHALL NOT copy project values into configurations, so a changed setti
 
 - **WHEN** the project sets the environment variable `STAGE=dev`, the configuration sets `STAGE=ci`, and a test executes `Log    %{STAGE}`
 - **THEN** the log of the run contains `ci`, and without the configuration's variable it contains `dev`
+
+### Requirement: Project values are not copied into configurations
+
+The plugin SHALL NOT copy project values into configurations, so a changed setting reaches existing and temporary configurations at their next run, and no value SHALL be passed twice. The console of a run SHALL show the command line the run started with.
 
 #### Scenario: Existing temporary configuration
 

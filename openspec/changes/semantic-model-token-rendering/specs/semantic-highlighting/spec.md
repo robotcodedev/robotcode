@@ -6,11 +6,6 @@
 
 The language server SHALL send semantic tokens only for information that the Robot Framework TextMate grammar cannot derive from the text alone. Examples are whether a cell is a keyword call or an argument, namespaces, built-in keywords, embedded arguments, declarations, named arguments, and variable names with their resolution.
 
-It SHALL NOT send semantic tokens for:
-- documentation text and comments;
-- Python expressions, in `IF` and `WHILE` conditions as well as inside `${{ }}`;
-- separators and other whitespace.
-
 #### Scenario: Keyword call with an argument
 - **WHEN** `Log    message` is analyzed
 - **THEN** `Log` gets a keyword-call token and `message` gets no token
@@ -18,6 +13,13 @@ It SHALL NOT send semantic tokens for:
 #### Scenario: Template data row
 - **WHEN** a test case with `[Template]    Log` contains the data row `hello    WARN`
 - **THEN** `hello` and `WARN` get argument tokens, because the grammar cannot tell a template row from a keyword call
+
+### Requirement: Text without semantic tokens
+
+The language server SHALL NOT send semantic tokens for:
+- documentation text and comments;
+- Python expressions, in `IF` and `WHILE` conditions as well as inside `${{ }}`;
+- separators and other whitespace.
 
 #### Scenario: Documentation and comments
 - **WHEN** a keyword contains `[Documentation]    Does *things*`, a comment line `# note`, and `Log    x    # trailing`

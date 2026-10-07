@@ -49,19 +49,31 @@ Line breakpoints set with `setBreakpoints` SHALL be reported as verified and SHA
 
 ### Requirement: Stack, scopes and variables reflect the execution state
 
-At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame per suite level from innermost to outermost with their source locations. `scopes` SHALL offer `Local`, `Suite` and `Global` for a frame directly in a test body, where `Local` holds the test's variables, and `Local`, `Test`, `Suite` and `Global` for a frame inside a user keyword called from a test. `variables` SHALL return the variables of a scope with their values, expandable for lists and dictionaries; with the filter `named` or `indexed` it SHALL return the entries from `start` on, at most `count` of them. `setVariable` SHALL evaluate the given value as a Python expression, after replacing Robot Framework variables in it, and assign the result for the rest of the run in the scope and frame that the variable reference belongs to.
+At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame per suite level from innermost to outermost with their source locations. `scopes` SHALL offer `Local`, `Suite` and `Global` for a frame directly in a test body, where `Local` holds the test's variables, and `Local`, `Test`, `Suite` and `Global` for a frame inside a user keyword called from a test.
 
 #### Scenario: Frames inside a resource keyword
 - **WHEN** a directory is run and execution is stopped inside a user keyword from a resource file called by a test
 - **THEN** the frames are the inner keyword call (resource file and line), the calling line in the test, the test, the file suite and the directory suite
 
+#### Scenario: Test scope inside a user keyword
+- **WHEN** the run is stopped inside a user keyword called from a test
+- **THEN** the scopes are `Local` (the keyword's arguments), `Test`, `Suite` and `Global`
+
+### Requirement: Variables of a scope
+
+At a stop, `variables` SHALL return the variables of a scope with their values, expandable for lists and dictionaries; with the filter `named` or `indexed` it SHALL return the entries from `start` on, at most `count` of them.
+
 #### Scenario: Variables by scope
 - **WHEN** the run is stopped in a test body after `${local}=    Set Variable    value` with suite variables `${SUITE_VAR}`, `@{LIST_VAR}` and `&{DICT_VAR}`
 - **THEN** `${local}` is in the `Local` scope, the three suite variables are in the `Suite` scope, and `@{LIST_VAR}` can be expanded into its items
 
-#### Scenario: Test scope inside a user keyword
-- **WHEN** the run is stopped inside a user keyword called from a test
-- **THEN** the scopes are `Local` (the keyword's arguments), `Test`, `Suite` and `Global`
+#### Scenario: Paging a dictionary
+- **WHEN** the client requests the entries of a dictionary variable with five entries with the filter `named`, `start` 2 and `count` 2
+- **THEN** the response holds the third and the fourth entry
+
+### Requirement: Setting a variable at a stop
+
+`setVariable` SHALL evaluate the given value as a Python expression, after replacing Robot Framework variables in it, and assign the result for the rest of the run in the scope and frame that the variable reference belongs to.
 
 #### Scenario: Set variable
 - **WHEN** the client sets `${local}` to the value `'changed'` and continues
@@ -70,10 +82,6 @@ At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame pe
 #### Scenario: Set a suite variable from inside a keyword
 - **WHEN** the run is stopped inside a user keyword and the client sets `${SUITE_VAR}` through the `Suite` scope to `'changed'` and continues
 - **THEN** a `Log    ${SUITE_VAR}` in the next test of the suite logs `changed`
-
-#### Scenario: Paging a dictionary
-- **WHEN** the client requests the entries of a dictionary variable with five entries with the filter `named`, `start` 2 and `count` 2
-- **THEN** the response holds the third and the fourth entry
 
 ### Requirement: Stepping
 
@@ -85,11 +93,15 @@ At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame pe
 
 ### Requirement: Evaluation and completion in the paused context
 
-`evaluate` in the `watch` and `hover` contexts SHALL return the value of a variable or of a Python expression over the variables of the selected frame, and SHALL return an undefined marker instead of an error for an unknown variable. `evaluate` in the `repl` context SHALL treat the input as Robot Framework test-body syntax: a single variable returns its value, anything else is executed as a keyword call in the paused run. Failures in the `repl` context SHALL be reported as unsuccessful responses without ending the session. `completions` SHALL offer keywords and variables visible in the paused context.
+`evaluate` in the `watch` and `hover` contexts SHALL return the value of a variable or of a Python expression over the variables of the selected frame, and SHALL return an undefined marker instead of an error for an unknown variable. `evaluate` in the `repl` context SHALL treat the input as Robot Framework test-body syntax: a single variable returns its value, anything else is executed as a keyword call in the paused run.
 
 #### Scenario: Evaluate a variable, an expression and a keyword
 - **WHEN** the run is stopped with `${local}` set to `local value` and the client evaluates `${local}` and `$local.upper()` in the `watch` context and `Log    from the debug console` in the `repl` context
 - **THEN** the first returns `'local value'`, the second `'LOCAL VALUE'`, and the third succeeds and its message appears as output
+
+### Requirement: Failures and completion in the debug console
+
+Failures in the `repl` context SHALL be reported as unsuccessful responses without ending the session. `completions` SHALL offer keywords and variables visible in the paused context.
 
 #### Scenario: Unknown variable
 - **WHEN** the client evaluates `${does_not_exist}` in the `watch` context and then in the `repl` context
@@ -97,7 +109,7 @@ At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame pe
 
 ### Requirement: Exception filters stop on failures
 
-Every exception filter the server declares in its capabilities — failed keyword, uncaught failed keyword, failed test, failed suite — SHALL be accepted by `setExceptionBreakpoints` and SHALL stop the run with a `stopped` event of reason `exception` carrying the failure message, whether the client sends the filter in `filters` or in `filterOptions`. Without a `setExceptionBreakpoints` request the uncaught-failed-keyword filter SHALL be active; a request enabling no filter SHALL disable all exception stops. "Uncaught" SHALL exclude failures handled by `TRY/EXCEPT` or by BuiltIn's error-handling keywords (`Run Keyword And Expect Error`, `Run Keyword And Ignore Error`, `Run Keyword And Return Status`, `Run Keyword And Continue On Failure`, `Run Keyword And Warn On Failure`, `Wait Until Keyword Succeeds`).
+Every exception filter the server declares in its capabilities — failed keyword, uncaught failed keyword, failed test, failed suite — SHALL be accepted by `setExceptionBreakpoints` and SHALL stop the run with a `stopped` event of reason `exception` carrying the failure message, whether the client sends the filter in `filters` or in `filterOptions`.
 
 #### Scenario: Uncaught failed keyword
 - **WHEN** the uncaught-failed-keyword filter is enabled through `filterOptions` and a test runs `Fail    boom`
@@ -106,14 +118,6 @@ Every exception filter the server declares in its capabilities — failed keywor
 #### Scenario: Plain filters
 - **WHEN** the client sends `setExceptionBreakpoints` with `filters: ["uncaught_failed_keyword"]` and no `filterOptions`
 - **THEN** the run stops at `Fail    boom` in the same way
-
-#### Scenario: Default and disabled
-- **WHEN** one session sends no `setExceptionBreakpoints` request and another sends one with empty `filters`
-- **THEN** the first stops at `Fail    boom` and the second does not stop
-
-#### Scenario: Caught failure with the uncaught filter
-- **WHEN** only the uncaught filter is enabled and `Fail    expected` runs inside `TRY/EXCEPT` and inside `Run Keyword And Expect Error`
-- **THEN** the run does not stop there
 
 #### Scenario: Failed test
 - **WHEN** only the failed-test filter is enabled and a test fails
@@ -126,6 +130,22 @@ Every exception filter the server declares in its capabilities — failed keywor
 #### Scenario: Timeout while stopped
 - **WHEN** a test with `[Timeout]    1 second` is stopped at a breakpoint for longer than its timeout, the default uncaught filter is active, and the client continues
 - **THEN** the client receives an exception stop for the timed-out keyword, and after `continue` the test ends with status FAIL and the message `Test timeout 1 second exceeded.` and the session ends normally
+
+### Requirement: Default exception filter
+
+Without a `setExceptionBreakpoints` request the uncaught-failed-keyword filter SHALL be active; a request enabling no filter SHALL disable all exception stops.
+
+#### Scenario: Default and disabled
+- **WHEN** one session sends no `setExceptionBreakpoints` request and another sends one with empty `filters`
+- **THEN** the first stops at `Fail    boom` and the second does not stop
+
+### Requirement: Uncaught failures
+
+"Uncaught" SHALL exclude failures handled by `TRY/EXCEPT` or by BuiltIn's error-handling keywords (`Run Keyword And Expect Error`, `Run Keyword And Ignore Error`, `Run Keyword And Return Status`, `Run Keyword And Continue On Failure`, `Run Keyword And Warn On Failure`, `Wait Until Keyword Succeeds`).
+
+#### Scenario: Caught failure with the uncaught filter
+- **WHEN** only the uncaught filter is enabled and `Fail    expected` runs inside `TRY/EXCEPT` and inside `Run Keyword And Expect Error`
+- **THEN** the run does not stop there
 
 ### Requirement: A vanished or detached client never ends or stalls the run
 

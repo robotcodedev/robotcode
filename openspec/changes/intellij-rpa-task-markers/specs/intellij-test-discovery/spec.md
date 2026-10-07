@@ -8,12 +8,21 @@ Defines which discovered Robot Framework tests, tasks and suites the IntelliJ pl
 
 ### Requirement: Run markers for tests and tasks
 
-The plugin SHALL show a run marker in the editor gutter on the line of every discovered test and every discovered task of a suite file. A task's marker SHALL offer the same Run and Debug actions as a test's marker, and SHALL show the state of the task's last run with the same icons as a test. Run and Debug from a test's or task's marker SHALL run only that test or task. A suite file SHALL show a run marker on line 1 while it contains at least one discovered test or task. The lines of keyword definitions SHALL show no run marker.
+The plugin SHALL show a run marker in the editor gutter on the line of every discovered test and every discovered task of a suite file. A suite file SHALL show a run marker on line 1 while it contains at least one discovered test or task. The lines of keyword definitions SHALL show no run marker.
 
 #### Scenario: Task file after the startup discovery
 
 - **WHEN** a project contains a suite file with a `*** Tasks ***` section holding two tasks, and the discovery at project startup has finished
 - **THEN** line 1 and the first line of each task show a run marker
+
+#### Scenario: Keyword definitions
+
+- **WHEN** a suite file with tasks also has a `*** Keywords ***` section
+- **THEN** the lines of the keyword definitions show no run marker
+
+### Requirement: Task markers act like test markers
+
+A task's marker SHALL offer the same Run and Debug actions as a test's marker, and SHALL show the state of the task's last run with the same icons as a test. Run and Debug from a test's or task's marker SHALL run only that test or task.
 
 #### Scenario: Running a task from its marker
 
@@ -24,11 +33,6 @@ The plugin SHALL show a run marker in the editor gutter on the line of every dis
 
 - **WHEN** a task failed in its last run
 - **THEN** its marker shows the same failed state icon as the marker of a failed test
-
-#### Scenario: Keyword definitions
-
-- **WHEN** a suite file with tasks also has a `*** Keywords ***` section
-- **THEN** the lines of the keyword definitions show no run marker
 
 ### Requirement: Rediscovering a single suite file keeps its tests and tasks
 

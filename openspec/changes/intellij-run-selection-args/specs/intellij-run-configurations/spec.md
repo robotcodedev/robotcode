@@ -6,22 +6,25 @@ Defines what a Robot Framework run configuration of the IntelliJ plugin runs, ho
 
 ## ADDED Requirements
 
-### Requirement: A run of selected items parses only their files
+### Requirement: A run of selected items selects them by name
 
 When a Robot Framework run covers selected tests, tasks, file suites or folder suites instead of the whole project, the plugin SHALL pass Robot Framework:
 
 - `-N` with the name of the top-level suite as discovery reports it;
 - `-s` with the full name of each selected suite and of the suite that contains each selected test or task, each name once;
-- `-bl` with the full name of each selected item;
-- `-I` with the file or folder of each suite passed with `-s`, each path once, but only when discovery reports that the project's Robot Framework supports `--parseinclude`.
-
-Values passed with `-I` and `-s` SHALL have the glob characters `*`, `?`, `[` and `]` escaped, as in VS Code.
+- `-bl` with the full name of each selected item.
 
 #### Scenario: Running a single test from the gutter
 
 - **WHEN** the project uses Robot Framework 7.5, another suite file in the project contains a syntax error, and the user runs the test "First Test Passes" of `tests/sample.robot` from the gutter
 - **THEN** the run passes `-I tests/sample.robot`, `-N` with the top-level suite name, `-s` with the full name of the suite `Sample` and `-bl` with the full name of the test
 - **AND** the run shows no error from the other suite file
+
+### Requirement: A run of selected items parses only their files
+
+When a Robot Framework run covers selected tests, tasks, file suites or folder suites instead of the whole project, the plugin SHALL pass Robot Framework `-I` with the file or folder of each suite passed with `-s`, each path once, but only when discovery reports that the project's Robot Framework supports `--parseinclude`.
+
+Values passed with `-I` and `-s` SHALL have the glob characters `*`, `?`, `[` and `]` escaped, as in VS Code.
 
 #### Scenario: Running a folder suite
 

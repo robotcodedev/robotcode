@@ -27,10 +27,7 @@ A Robot Framework run configuration SHALL offer, behind "Modify options", these 
 - variables as name and value pairs, each as `-v name:value`;
 - variable files, each as `-V`;
 - Robot Framework Python path entries, each as `-P`;
-- the output directory as `-d`;
-- the mode: "Inherit" passes nothing, "RPA" passes `--rpa`, "Test automation" passes `--norpa`; new configurations use "Inherit";
-- languages, each as `--language`, on every Robot Framework version;
-- dry run as `--dryrun`.
+- the output directory as `-d`.
 
 The editor SHALL keep showing the options a configuration uses when it is opened again.
 
@@ -44,6 +41,19 @@ The editor SHALL keep showing the options a configuration uses when it is opened
 - **WHEN** the configuration sets the output directory `out2` and the user runs it
 - **THEN** `output.xml`, `log.html` and `report.html` are written to `out2` below the project folder
 
+#### Scenario: Options are shown again
+
+- **WHEN** the user shows the variables and the output directory through "Modify options", fills them in, applies, and opens the dialog again
+- **THEN** both fields are shown with their values
+
+### Requirement: Mode, language and dry run options
+
+A Robot Framework run configuration SHALL also offer, behind "Modify options", these options and SHALL pass each one that is set:
+
+- the mode: "Inherit" passes nothing, "RPA" passes `--rpa`, "Test automation" passes `--norpa`; new configurations use "Inherit";
+- languages, each as `--language`, on every Robot Framework version;
+- dry run as `--dryrun`.
+
 #### Scenario: Mode
 
 - **WHEN** the mode is "Inherit"
@@ -53,11 +63,6 @@ The editor SHALL keep showing the options a configuration uses when it is opened
 
 - **WHEN** dry run is on and the user runs a test that executes `Log    executed`
 - **THEN** the run passes `--dryrun`, and the log of the run contains no message `executed`
-
-#### Scenario: Options are shown again
-
-- **WHEN** the user shows the variables and the output directory through "Modify options", fills them in, applies, and opens the dialog again
-- **THEN** both fields are shown with their values
 
 ### Requirement: Tag selection
 
@@ -73,9 +78,18 @@ A Robot Framework run configuration SHALL offer include tags and exclude tags be
 - **WHEN** the configuration's exclude tags are `slow`
 - **THEN** no test with the tag `slow` runs
 
+### Requirement: Order of the configuration options
+
+A run SHALL pass the configuration's Robot Framework options after `--` in this order: languages, mode, dry run, output directory, Robot Framework Python path, variable files, variables, include tags, exclude tags, robot arguments; then the selection arguments and the paths of the target.
+
+#### Scenario: Order on the command line
+
+- **WHEN** a configuration sets the mode "RPA", the output directory `out2` and the variable `NAME` to `x`, and the user runs it
+- **THEN** the command line passes, after `--`, `--rpa`, then `-d out2`, then `-v NAME:x`, followed by the selection arguments and the paths of the target
+
 ### Requirement: Configuration options follow the options of robot.toml
 
-A run SHALL pass the configuration's Robot Framework options after `--` in this order: languages, mode, dry run, output directory, Robot Framework Python path, variable files, variables, include tags, exclude tags, robot arguments; then the selection arguments and the paths of the target. Because `robotcode` places the options of `robot.toml` before them, an option with a single value set in the configuration SHALL replace the value from `robot.toml`, and options with several values SHALL add to it. The editor SHALL say this for the output directory, the variables and the lists.
+Because `robotcode` places the options of `robot.toml` before the configuration's options, an option with a single value set in the configuration SHALL replace the value from `robot.toml`, and options with several values SHALL add to it. The editor SHALL say this for the output directory, the variables and the lists.
 
 #### Scenario: Output directory set in robot.toml
 

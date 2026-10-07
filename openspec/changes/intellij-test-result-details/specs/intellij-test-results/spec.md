@@ -8,7 +8,7 @@ Defines how the IntelliJ plugin turns the events of a Robot Framework run into t
 
 ### Requirement: Failure details list the failed keywords
 
-When a test fails in a keyword, the plugin SHALL show below the test's failure message the keywords that failed, innermost first. Each entry SHALL name the keyword, with its library or resource where Robot Framework reports one, and the file and line where the keyword was called. Each location SHALL be a link that opens the file at that line. Navigating from such a failed test SHALL open the call of the innermost failed keyword. A failed test without failed keywords, for example one that failed in its suite setup or suite teardown, SHALL show its message only and SHALL navigate to its own line.
+When a test fails in a keyword, the plugin SHALL show below the test's failure message the keywords that failed, innermost first. Each entry SHALL name the keyword, with its library or resource where Robot Framework reports one, and the file and line where the keyword was called. Each location SHALL be a link that opens the file at that line.
 
 #### Scenario: Failure in a keyword of a resource file
 
@@ -20,15 +20,24 @@ When a test fails in a keyword, the plugin SHALL show below the test's failure m
 - **WHEN** the user clicks the location of `Should Be Equal` in these failure details
 - **THEN** `resources/common.resource` opens at the line of the `Should Be Equal` call
 
+#### Scenario: Paths with spaces
+
+- **WHEN** the project folder's path contains spaces and a test fails in a keyword
+- **THEN** every location in the failure details is a complete link to its file and line
+
+### Requirement: Navigating from a failed test
+
+Navigating from a failed test whose failure details list failed keywords SHALL open the call of the innermost failed keyword. A failed test without failed keywords, for example one that failed in its suite setup or suite teardown, SHALL show its message only and SHALL navigate to its own line.
+
 #### Scenario: Navigating from the failed test
 
 - **WHEN** the user navigates to the source of `Third Test Fails` from the results tree
 - **THEN** the editor opens `resources/common.resource` at the line of the `Should Be Equal` call
 
-#### Scenario: Paths with spaces
+#### Scenario: Failure in the suite setup
 
-- **WHEN** the project folder's path contains spaces and a test fails in a keyword
-- **THEN** every location in the failure details is a complete link to its file and line
+- **WHEN** a test fails because the suite setup of its suite failed
+- **THEN** selecting the test shows only its failure message, and navigating from it opens the test's own line
 
 ### Requirement: The run's test count is known from the start
 

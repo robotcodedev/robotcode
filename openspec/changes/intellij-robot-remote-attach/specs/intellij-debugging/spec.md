@@ -4,7 +4,16 @@
 
 ### Requirement: Debugging a run started elsewhere
 
-Starting a "Robot Framework (Attach)" configuration with Debug SHALL connect the debugger to the `robotcode debug` server at the configured host and port and send the configured path mappings. The session SHALL then debug the run as it debugs runs the IDE started: it SHALL stop at the line breakpoints and exception breakpoints of the local files that the path mappings map to the files of the run, show frames with the local files, and show variables and evaluations. The session's console SHALL show the output the debugger sends. If nothing accepts the connection within 15 seconds, the session SHALL end with a message in its console.
+Starting a "Robot Framework (Attach)" configuration with Debug SHALL connect the debugger to the `robotcode debug` server at the configured host and port and send the configured path mappings. If nothing accepts the connection within 15 seconds, the session SHALL end with a message in its console.
+
+#### Scenario: Nothing listens
+
+- **WHEN** the user debugs an attach configuration whose port has no `robotcode debug` server
+- **THEN** after 15 seconds the session ends, and its console says that no connection could be made
+
+### Requirement: An attach session debugs like a session the IDE started
+
+A session of a "Robot Framework (Attach)" configuration SHALL debug the run as it debugs runs the IDE started: it SHALL stop at the line breakpoints and exception breakpoints of the local files that the path mappings map to the files of the run, show frames with the local files, and show variables and evaluations. The console of an attach session SHALL show the output the debugger sends.
 
 #### Scenario: Run on the same machine
 
@@ -15,11 +24,6 @@ Starting a "Robot Framework (Attach)" configuration with Debug SHALL connect the
 
 - **WHEN** the run was started in a copy of the project in another folder, and the attach configuration maps the local project folder to that copy
 - **THEN** a breakpoint set in the local `sample.robot` stops the run, and selecting the top frame opens the local `sample.robot`
-
-#### Scenario: Nothing listens
-
-- **WHEN** the user debugs an attach configuration whose port has no `robotcode debug` server
-- **THEN** after 15 seconds the session ends, and its console says that no connection could be made
 
 ### Requirement: Detaching from and terminating an attached run
 

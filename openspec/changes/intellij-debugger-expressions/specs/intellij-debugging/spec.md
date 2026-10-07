@@ -51,17 +51,12 @@ A Robot Framework debug session SHALL have a "Robot Debug Console" tab. While th
 
 ### Requirement: Breakpoint conditions, log messages and hit counts
 
-Robot Framework line breakpoints SHALL offer a condition, a log message ("Evaluate and log") and a hit count, and the project SHALL keep them with its breakpoints. The condition SHALL be a Python expression in which Robot Framework variables are replaced, and the run SHALL stop only when it is true. A hit count N SHALL stop the run only the N-th time it reaches the line, counting only the times the condition was true. With the suspend policy None, the log message SHALL be a Robot Framework template, such as `value is ${i}`, that the debugger writes to the run's output each time the line is reached, without stopping. With a suspending policy, the log message SHALL be evaluated like a watch when the run stops at the breakpoint, and its result SHALL be logged.
+Robot Framework line breakpoints SHALL offer a condition, a log message ("Evaluate and log") and a hit count, and the project SHALL keep them with its breakpoints. The condition SHALL be a Python expression in which Robot Framework variables are replaced, and the run SHALL stop only when it is true. A hit count N SHALL stop the run only the N-th time it reaches the line, counting only the times the condition was true.
 
 #### Scenario: Condition
 
 - **WHEN** a breakpoint inside a `FOR` loop over the numbers 0 to 7 has the condition `${i} == 3`
 - **THEN** the run stops once, with `${i}` being 3
-
-#### Scenario: Log message without stopping
-
-- **WHEN** a breakpoint inside that loop has the suspend policy None and the log message `value is ${i}`
-- **THEN** the output shows `value is 0` to `value is 7`, one line per iteration, and the run does not stop
 
 #### Scenario: Hit count
 
@@ -72,6 +67,15 @@ Robot Framework line breakpoints SHALL offer a condition, a log message ("Evalua
 
 - **WHEN** the user sets a condition, a log message and a hit count on a breakpoint and restarts the IDE
 - **THEN** the breakpoint still has all three
+
+### Requirement: Log messages of breakpoints
+
+With the suspend policy None, the log message of a breakpoint SHALL be a Robot Framework template, such as `value is ${i}`, that the debugger writes to the run's output each time the line is reached, without stopping. With a suspending policy, the log message SHALL be evaluated like a watch when the run stops at the breakpoint, and its result SHALL be logged.
+
+#### Scenario: Log message without stopping
+
+- **WHEN** a breakpoint inside a `FOR` loop over the numbers 0 to 7 has the suspend policy None and the log message `value is ${i}`
+- **THEN** the output shows `value is 0` to `value is 7`, one line per iteration, and the run does not stop
 
 ### Requirement: Breakpoint actions apply at line breakpoints
 

@@ -4,7 +4,7 @@
 
 ### Requirement: Line breakpoints take effect as shown
 
-In a debug session, the RobotCode debugger SHALL stop only at Robot Framework line breakpoints that the IDE shows as enabled and that are not muted, at the line where the IDE shows them. Adding, removing, disabling, enabling, muting, unmuting and moving a breakpoint, by dragging it or by editing the lines above it, SHALL take effect at once, also for the last breakpoint of a file and also while the run is paused. Force Step Over and Force Run to Cursor SHALL ignore all breakpoints until they have reached their target.
+In a debug session, the RobotCode debugger SHALL stop only at Robot Framework line breakpoints that the IDE shows as enabled and that are not muted, at the line where the IDE shows them. Adding, removing, disabling, enabling, muting, unmuting and moving a breakpoint, by dragging it or by editing the lines above it, SHALL take effect at once, also for the last breakpoint of a file and also while the run is paused.
 
 #### Scenario: Disable the only breakpoint of a file while paused
 
@@ -21,15 +21,19 @@ In a debug session, the RobotCode debugger SHALL stop only at Robot Framework li
 - **WHEN** the user mutes breakpoints while the run is paused in a loop and resumes
 - **THEN** the run does not stop at any line breakpoint until breakpoints are unmuted
 
-#### Scenario: Force Step Over
-
-- **WHEN** the run is paused on a line that calls a keyword whose body has a breakpoint and the user chooses Force Step Over
-- **THEN** the run stops at the next line of the current body, not at the breakpoint inside the keyword
-
 #### Scenario: Move a breakpoint
 
 - **WHEN** the user drags a breakpoint to another line, or inserts a line above it, and the run reaches the old line and then the new one
 - **THEN** the run stops only at the line where the IDE now shows the breakpoint
+
+### Requirement: Force actions ignore breakpoints
+
+Force Step Over and Force Run to Cursor SHALL ignore all breakpoints until they have reached their target.
+
+#### Scenario: Force Step Over
+
+- **WHEN** the run is paused on a line that calls a keyword whose body has a breakpoint and the user chooses Force Step Over
+- **THEN** the run stops at the next line of the current body, not at the breakpoint inside the keyword
 
 ### Requirement: Run to Cursor always continues to the target line
 
@@ -56,17 +60,21 @@ The line breakpoints and exception breakpoints that exist when a debug session s
 
 ### Requirement: Exception breakpoints per kind of failure
 
-The IDE SHALL offer one Robot Framework exception breakpoint for each kind of failure the RobotCode debugger stops on: "Uncaught Failed Keywords", "Failed Keywords" and "Failed Suites". Only "Uncaught Failed Keywords" SHALL be enabled by default, and it SHALL keep the enabled state and settings stored for the exception breakpoint of earlier plugin versions. "Uncaught Failed Keywords" SHALL stop at keyword failures that are not handled by `TRY/EXCEPT` or by BuiltIn's error-handling keywords, "Failed Keywords" at every keyword failure, and "Failed Suites" when a suite fails. The debugger SHALL stop at a failure only while the matching exception breakpoint is enabled and breakpoints are not muted. A stop at an exception breakpoint SHALL apply that breakpoint's suspend policy and show the failure message. A failure stop that matches no enabled exception breakpoint SHALL be shown as paused instead of leaving the run waiting unseen.
+The IDE SHALL offer one Robot Framework exception breakpoint for each kind of failure the RobotCode debugger stops on: "Uncaught Failed Keywords", "Failed Keywords" and "Failed Suites". Only "Uncaught Failed Keywords" SHALL be enabled by default, and it SHALL keep the enabled state and settings stored for the exception breakpoint of earlier plugin versions.
+
+#### Scenario: Setting stored by an earlier version
+
+- **WHEN** a project's workspace stores the former "Any Exception" breakpoint as disabled
+- **THEN** "Uncaught Failed Keywords" is shown disabled, and the debugger does not stop at uncaught keyword failures
+
+### Requirement: What each exception breakpoint stops at
+
+"Uncaught Failed Keywords" SHALL stop at keyword failures that are not handled by `TRY/EXCEPT` or by BuiltIn's error-handling keywords, "Failed Keywords" at every keyword failure, and "Failed Suites" when a suite fails. The debugger SHALL stop at a failure only while the matching exception breakpoint is enabled and breakpoints are not muted.
 
 #### Scenario: All exception breakpoints disabled
 
 - **WHEN** all Robot Framework exception breakpoints are disabled and a failing test is started with Debug
 - **THEN** the test fails without the run stopping, and the run ends normally
-
-#### Scenario: Suspend policy None
-
-- **WHEN** "Uncaught Failed Keywords" is enabled with the suspend policy None and a failing test is started with Debug
-- **THEN** the run finishes without a visible stop and the IDE logs no error
 
 #### Scenario: Failed keywords
 
@@ -83,10 +91,14 @@ The IDE SHALL offer one Robot Framework exception breakpoint for each kind of fa
 - **WHEN** only "Failed Suites" is enabled and a test of a suite file fails
 - **THEN** the run stops when that suite ends and shows the suite's failure message
 
-#### Scenario: Setting stored by an earlier version
+### Requirement: Stops at exception breakpoints
 
-- **WHEN** a project's workspace stores the former "Any Exception" breakpoint as disabled
-- **THEN** "Uncaught Failed Keywords" is shown disabled, and the debugger does not stop at uncaught keyword failures
+A stop at an exception breakpoint SHALL apply that breakpoint's suspend policy and show the failure message. A failure stop that matches no enabled exception breakpoint SHALL be shown as paused instead of leaving the run waiting unseen.
+
+#### Scenario: Suspend policy None
+
+- **WHEN** "Uncaught Failed Keywords" is enabled with the suspend policy None and a failing test is started with Debug
+- **THEN** the run finishes without a visible stop and the IDE logs no error
 
 ### Requirement: Robot Framework line breakpoints only in Robot Framework files
 

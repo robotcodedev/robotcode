@@ -8,7 +8,7 @@ Defines what a Robot Framework run configuration of the IntelliJ plugin runs, ho
 
 ### Requirement: Context runs follow the caret
 
-Run and Debug from the editor's context menu, and the shortcuts for running and debugging the context configuration, SHALL run the discovered test or task whose body holds the caret in a suite file. That is the discovered test or task of the file that starts on the caret's line or on the closest line above it, provided that no section header row, a row whose first cell starts with `*`, lies between its start and the caret. At any other position in a suite file, they SHALL run the suite of the file.
+Run and Debug from the editor's context menu, and the shortcuts for running and debugging the context configuration, SHALL run the discovered test or task whose body holds the caret in a suite file. That is the discovered test or task of the file that starts on the caret's line or on the closest line above it, provided that no section header row, a row whose first cell starts with `*`, lies between its start and the caret.
 
 #### Scenario: Caret in a test body
 
@@ -20,19 +20,23 @@ Run and Debug from the editor's context menu, and the shortcuts for running and 
 - **WHEN** the caret is inside the body of the keyword "Build Greeting" in the `*** Keywords ***` section that follows the tests, and the user presses Ctrl+Shift+F10
 - **THEN** the suite of the file runs
 
-#### Scenario: Caret in the settings
-
-- **WHEN** the caret is on line 1 of a suite file and the user chooses Run from the editor's context menu
-- **THEN** the suite of the file runs
-
 #### Scenario: Translated section headers
 
 - **WHEN** a suite file starts with `Language: de`, its tests are in a `*** Testfälle ***` section, and the caret is in the body of one of them
 - **THEN** Ctrl+Shift+F10 runs that test
 
+### Requirement: Context runs outside a test or task
+
+At any other position in a suite file, Run and Debug from the editor's context menu, and the shortcuts for running and debugging the context configuration, SHALL run the suite of the file.
+
+#### Scenario: Caret in the settings
+
+- **WHEN** the caret is on line 1 of a suite file and the user chooses Run from the editor's context menu
+- **THEN** the suite of the file runs
+
 ### Requirement: Several selected items run together
 
-When several suite files, folders or results-tree nodes are selected and the user chooses Run or Debug, the plugin SHALL create one configuration for all of them. It SHALL leave out duplicates and items whose parent is also selected. When discovery knows every selected item, the configuration SHALL have the "Tests and suites" target; when every selected item is a file or folder and discovery does not know all of them, it SHALL have the "Files and folders" target. The configuration SHALL be named after the number of items, for example "Robot: 2 items".
+When several suite files, folders or results-tree nodes are selected and the user chooses Run or Debug, the plugin SHALL create one configuration for all of them. It SHALL leave out duplicates and items whose parent is also selected. The configuration SHALL be named after the number of items, for example "Robot: 2 items".
 
 #### Scenario: Two suite files
 
@@ -43,6 +47,15 @@ When several suite files, folders or results-tree nodes are selected and the use
 
 - **WHEN** the user selects the folder `tests` and the file `tests/sample.robot` and chooses Run
 - **THEN** the run's configuration selects only the folder suite `tests`
+
+### Requirement: Target of a configuration for several items
+
+When discovery knows every selected item, the configuration for several selected items SHALL have the "Tests and suites" target; when every selected item is a file or folder and discovery does not know all of them, it SHALL have the "Files and folders" target.
+
+#### Scenario: Items that discovery knows
+
+- **WHEN** the user selects `tests/sample.robot` and `tests/other.robot`, which discovery knows, and chooses Run
+- **THEN** the run's configuration has the "Tests and suites" target
 
 ### Requirement: Suite nodes in the results tree
 

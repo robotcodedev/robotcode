@@ -69,7 +69,7 @@ When the plugin stops or restarts the language server, it SHALL give the server 
 
 ### Requirement: Restart and Clear Cache actions
 
-Tools | RobotCode | Restart RobotCode Language Server SHALL check the Python environment again before it starts the server, so that a problem fixed outside the IDE, such as installing Robot Framework, takes effect, and SHALL then run test discovery again. Tools | RobotCode | Clear Cache and Restart RobotCode Language Server SHALL clear the analysis cache of a running server and then restart as Restart does; when no server runs, it SHALL restart without clearing and without an error. Neither action SHALL block the IDE while it checks, clears or restarts. Both actions SHALL be disabled when no project is open.
+Tools | RobotCode | Restart RobotCode Language Server SHALL check the Python environment again before it starts the server, so that a problem fixed outside the IDE, such as installing Robot Framework, takes effect, and SHALL then run test discovery again. Tools | RobotCode | Clear Cache and Restart RobotCode Language Server SHALL clear the analysis cache of a running server and then restart as Restart does; when no server runs, it SHALL restart without clearing and without an error.
 
 #### Scenario: Restart after installing Robot Framework
 
@@ -80,6 +80,10 @@ Tools | RobotCode | Restart RobotCode Language Server SHALL check the Python env
 
 - **WHEN** the language server is stopped because the interpreter is not usable, and the user chooses Clear Cache and Restart RobotCode Language Server
 - **THEN** no error is logged, and the plugin checks the environment again and starts the server if the environment is usable now
+
+### Requirement: The restart actions do not block the IDE
+
+Neither Restart RobotCode Language Server nor Clear Cache and Restart RobotCode Language Server SHALL block the IDE while it checks, clears or restarts. Both actions SHALL be disabled when no project is open.
 
 #### Scenario: Clear Cache with a running server
 

@@ -4,7 +4,7 @@
 
 ### Requirement: Rebot console options
 
-The `[rebot]` section SHALL accept `console` — the built-in console names `verbose`, `quiet` and `none`, or any other string passed to `rebot` unchanged as a custom console class or module — and `quiet`. `robotcode rebot` SHALL pass them to `rebot` on every Robot Framework version; on versions older than 7.5 `rebot` itself rejects them, and RobotCode SHALL NOT add a check of its own. The top-level `console` and `quiet` SHALL NOT be copied into the `rebot` options; only the values of the `[rebot]` section apply to `rebot`. The JSON schema and the configuration reference SHALL list `rebot.console` and `rebot.quiet`.
+The `[rebot]` section SHALL accept `console` — the built-in console names `verbose`, `quiet` and `none`, or any other string passed to `rebot` unchanged as a custom console class or module — and `quiet`. `robotcode rebot` SHALL pass them to `rebot` on every Robot Framework version; on versions older than 7.5 `rebot` itself rejects them, and RobotCode SHALL NOT add a check of its own.
 
 #### Scenario: Rebot console on RF 7.5
 - **WHEN** `robot.toml` contains `[rebot]` with `console = "quiet"` and `robotcode rebot output.xml` is run on RF 7.5
@@ -46,3 +46,19 @@ Every link from the JSON schema for `robot.toml` into the documentation SHALL po
 #### Scenario: All schema links
 - **WHEN** the JSON schema and the configuration reference are regenerated and the site is built
 - **THEN** every anchor used by a documentation link in the schema exists on the built configuration reference
+
+### Requirement: Only the rebot section applies to rebot
+
+The top-level `console` and `quiet` SHALL NOT be copied into the `rebot` options; only the values of the `[rebot]` section apply to `rebot`.
+
+#### Scenario: Top-level quiet with a rebot console
+- **WHEN** `robot.toml` contains a top-level `quiet = true` and `[rebot]` with `console = "verbose"`, and `robotcode rebot output.xml` is run on RF 7.5
+- **THEN** `--console verbose` is passed to `rebot` and `--quiet` is not
+
+### Requirement: Schema and reference list the rebot console options
+
+The JSON schema and the configuration reference SHALL list `rebot.console` and `rebot.quiet`.
+
+#### Scenario: Quiet in the schema
+- **WHEN** the JSON schema for `robot.toml` is regenerated
+- **THEN** it lists `rebot.quiet`

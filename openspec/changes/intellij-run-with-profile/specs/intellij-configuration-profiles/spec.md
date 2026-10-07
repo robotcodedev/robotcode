@@ -8,7 +8,16 @@ Defines how users of the IntelliJ plugin select `robot.toml` configuration profi
 
 ### Requirement: Profiles per run configuration
 
-Every Robot Framework run configuration SHALL have one of three profile choices: "Project selection", "Default profiles of robot.toml", or "Custom" with a list of profile names. New configurations and the configuration template SHALL start with "Project selection". At the start of every run, the plugin SHALL resolve the choice and pass `-p` for each resolved profile:
+Every Robot Framework run configuration SHALL have one of three profile choices: "Project selection", "Default profiles of robot.toml", or "Custom" with a list of profile names. New configurations and the configuration template SHALL start with "Project selection".
+
+#### Scenario: Gutter runs follow the project selection
+
+- **WHEN** the project selection is `dev` and the template is unchanged, and the user runs a test from the gutter
+- **THEN** the run's command line contains `-p dev`
+
+### Requirement: The profile choice is resolved at the start of every run
+
+At the start of every run, the plugin SHALL resolve the profile choice of the run configuration and pass `-p` for each resolved profile:
 
 - "Project selection": the profiles selected for the project at that moment;
 - "Default profiles of robot.toml": none, so that `default-profiles` applies;
@@ -18,11 +27,6 @@ Every Robot Framework run configuration SHALL have one of three profile choices:
 
 - **WHEN** the project selection is `dev`, a configuration's choice is "Custom" with `ci`, and the configuration runs a test that logs a variable that only profile `ci` sets
 - **THEN** the run's command line contains `-p ci` and no `-p dev`, and the log shows the value from profile `ci`
-
-#### Scenario: Gutter runs follow the project selection
-
-- **WHEN** the project selection is `dev` and the template is unchanged, and the user runs a test from the gutter
-- **THEN** the run's command line contains `-p dev`
 
 #### Scenario: Changed project selection reaches an existing configuration
 
@@ -45,27 +49,31 @@ When the custom profiles of a configuration include a name that the last read pr
 
 ### Requirement: Run or debug once with a chosen profile
 
-"Run with Profile..." and "Debug with Profile..." SHALL be offered in the context menus of the editor and the Project view and in the gutter menu wherever the plugin offers to run a Robot Framework test, task, suite or folder. Each SHALL offer the profiles that `robot.toml` defines, without hidden profiles, and then run or debug what a context run of the same place runs, once, with `-p` for the chosen profile only. The tab of the run SHALL name the chosen profile. Saved and temporary configurations SHALL stay unchanged, and the run SHALL NOT add a configuration to the run widget.
-
-#### Scenario: Run a test once with a profile
-
-- **WHEN** the project selection is `dev`, a saved configuration runs "First Test Passes", and the user chooses Run with Profile... > `ci` in the gutter menu of that test
-- **THEN** the test runs with `-p ci` in a tab whose title names `ci`, and the saved configuration still has its own profile choice
+"Run with Profile..." and "Debug with Profile..." SHALL be offered in the context menus of the editor and the Project view and in the gutter menu wherever the plugin offers to run a Robot Framework test, task, suite or folder. Each SHALL offer the profiles that `robot.toml` defines, without hidden profiles, and then run or debug what a context run of the same place runs, once, with `-p` for the chosen profile only.
 
 #### Scenario: Debug a suite once with a profile
 
 - **WHEN** the user chooses Debug with Profile... > `ci` in the Project view context menu of `tests/sample.robot`, which holds a Robot Framework breakpoint
 - **THEN** the RobotCode debugger stops at the breakpoint in a run with `-p ci`
 
-#### Scenario: Later gutter runs follow the project again
-
-- **WHEN** the user ran a test once with `ci` and then runs it from the gutter with Run
-- **THEN** the run's command line contains the project selection, not `-p ci`
-
 #### Scenario: Hidden profiles
 
 - **WHEN** `robot.toml` defines the hidden profile `_base`
 - **THEN** Run with Profile... and Debug with Profile... do not offer `_base`
+
+### Requirement: A run with a chosen profile leaves the configurations unchanged
+
+The tab of a run started with "Run with Profile..." or "Debug with Profile..." SHALL name the chosen profile. Saved and temporary configurations SHALL stay unchanged, and the run SHALL NOT add a configuration to the run widget.
+
+#### Scenario: Run a test once with a profile
+
+- **WHEN** the project selection is `dev`, a saved configuration runs "First Test Passes", and the user chooses Run with Profile... > `ci` in the gutter menu of that test
+- **THEN** the test runs with `-p ci` in a tab whose title names `ci`, and the saved configuration still has its own profile choice
+
+#### Scenario: Later gutter runs follow the project again
+
+- **WHEN** the user ran a test once with `ci` and then runs it from the gutter with Run
+- **THEN** the run's command line contains the project selection, not `-p ci`
 
 ### Requirement: The profile list stays current
 

@@ -8,7 +8,7 @@ Defines how RobotCode recognises, extracts and analyses Robot Framework data emb
 
 ### Requirement: Embedded files are typed like Robot Framework does
 
-RobotCode SHALL treat `*.robot.rst` (all versions) and `*.robot.md` (RF ≥ 7.5) as suite files, `*.rst`/`*.rest` (all versions) and `*.md`/`*.markdown` (RF ≥ 7.5) as resource files when imported, opened through a configured pattern or passed explicitly, and `__init__.rst`/`__init__.md` as init files (RobotCode's own decision, like its unconditional `__init__.robot` rule; Robot Framework treats them as init files only when `rst`/`md` is a configured suite extension). `__init__.robot.md` SHALL be typed as a suite file; Robot Framework skips it in directory runs like every `_`-prefixed file and parses it only when passed explicitly. Plain Markdown/reST files SHALL NOT be scanned as suites in workspaces unless configured.
+RobotCode SHALL treat `*.robot.rst` (all versions) and `*.robot.md` (RF ≥ 7.5) as suite files, `*.rst`/`*.rest` (all versions) and `*.md`/`*.markdown` (RF ≥ 7.5) as resource files when imported, opened through a configured pattern or passed explicitly, and `__init__.rst`/`__init__.md` as init files (RobotCode's own decision, like its unconditional `__init__.robot` rule; Robot Framework treats them as init files only when `rst`/`md` is a configured suite extension).
 
 #### Scenario: Suite typing on RF 7.5
 - **WHEN** `sample.robot.md` is opened on RF 7.5
@@ -18,18 +18,17 @@ RobotCode SHALL treat `*.robot.rst` (all versions) and `*.robot.md` (RF ≥ 7.5)
 - **WHEN** `sample.robot.md` is opened on RF 7.4
 - **THEN** it is not analysed as Robot Framework data
 
+### Requirement: Init-named Markdown suites and plain Markdown files
+
+`__init__.robot.md` SHALL be typed as a suite file; Robot Framework skips it in directory runs like every `_`-prefixed file and parses it only when passed explicitly. Plain Markdown/reST files SHALL NOT be scanned as suites in workspaces unless configured.
+
 #### Scenario: README stays prose
 - **WHEN** a workspace contains `README.md` without configuration for plain Markdown
 - **THEN** it is neither preloaded, analysed nor listed by `discover files`
 
 ### Requirement: Only Robot Framework code blocks are analysed, at their file positions
 
-Only the content of Markdown fenced blocks (```` ``` ```` or `~~~`, three or more characters, closed by a fence of the same character and at least the same length, whose info string's first word is exactly `robotframework` or `robot`, case-insensitive, further words ignored; an unclosed block at end of file included; an empty closed block contributes one empty line) and of reStructuredText `code`/`code-block`/`sourcecode` directives with the `robotframework` argument SHALL be analysed, exactly the blocks Robot Framework executes. Every reported position (diagnostics, hover, definitions, references, semantic tokens, symbols, ranges) SHALL refer to the file's own line and column, including for blocks indented inside lists, whose common margin Robot Framework removes.
-
-#### Scenario: Indented fenced block
-- **WHEN** a `.robot.md` file contains a `robotframework` fence indented by four spaces inside a list item, with a test named `Indented Test` at file line 14, column 5
-- **THEN** the test's document symbol and definition range start at line 14, column 5
-- **AND** the analysis result equals Robot Framework's parsing of the dedented block
+Only the content of Markdown fenced blocks with Robot Framework code (requirement "Markdown fenced blocks with Robot Framework code") and of reStructuredText `code`/`code-block`/`sourcecode` directives with the `robotframework` argument SHALL be analysed, exactly the blocks Robot Framework executes.
 
 #### Scenario: Prose is ignored
 - **WHEN** the prose of a `.robot.md` file contains text that looks like Robot Framework syntax outside a fence
@@ -38,6 +37,24 @@ Only the content of Markdown fenced blocks (```` ``` ```` or `~~~`, three or mor
 #### Scenario: Parity with Robot Framework
 - **WHEN** the extracted, concatenated text of a `.robot.md` or `.robot.rst` file is compared with what Robot Framework's own reader produces for the same file
 - **THEN** they are identical
+
+### Requirement: Markdown fenced blocks with Robot Framework code
+
+A Markdown fenced block SHALL hold Robot Framework code when it is fenced with ```` ``` ```` or `~~~`, three or more characters, closed by a fence of the same character and at least the same length, and its info string's first word is exactly `robotframework` or `robot`, case-insensitive, further words ignored. An unclosed block at end of file SHALL be included, and an empty closed block SHALL contribute one empty line.
+
+#### Scenario: Longer closing fence and further words
+
+- **WHEN** a `.robot.md` file contains a block opened by the fence `~~~~ Robot extra` and closed by the fence `~~~~~`
+- **THEN** the content of the block is analysed
+
+### Requirement: Positions in embedded files
+
+Every reported position (diagnostics, hover, definitions, references, semantic tokens, symbols, ranges) SHALL refer to the file's own line and column, including for blocks indented inside lists, whose common margin Robot Framework removes.
+
+#### Scenario: Indented fenced block
+- **WHEN** a `.robot.md` file contains a `robotframework` fence indented by four spaces inside a list item, with a test named `Indented Test` at file line 14, column 5
+- **THEN** the test's document symbol and definition range start at line 14, column 5
+- **AND** the analysis result equals Robot Framework's parsing of the dedented block
 
 ### Requirement: Embedded resources resolve their keywords
 

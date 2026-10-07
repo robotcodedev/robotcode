@@ -8,17 +8,30 @@ Defines how the IntelliJ plugin runs the RobotCode language server: when it star
 
 ### Requirement: RobotCode can be switched off per project
 
-The "Robot Framework" settings page SHALL offer "Enable RobotCode for this project", on by default and stored for the current user only, not in the project's shared settings. While it is off, the project SHALL get no language server, no test discovery, no run markers, no run configurations from the editor or the Project view context, and no banner on Robot files, and the Language Servers tool window SHALL show the RobotCode server as disabled. Turning the setting on SHALL start RobotCode as at project opening. Enabling the RobotCode server in the Language Servers tool window SHALL turn the setting on. Disabling it there, and LSP4IJ's own disable after repeated failed starts, SHALL keep the server off until RobotCode is restarted or the project is opened again, without changing the setting. The plugin's own stops and restarts SHALL NOT change whether the server is enabled.
+The "Robot Framework" settings page SHALL offer "Enable RobotCode for this project", on by default and stored for the current user only, not in the project's shared settings. Turning the setting on SHALL start RobotCode as at project opening.
+
+#### Scenario: After an IDE restart
+
+- **WHEN** the IDE is restarted after RobotCode was switched off for the project
+- **THEN** no robotcode process starts for the project, the project's `.idea/workspace.xml` holds the setting, and `.idea/robotcodeSettings.xml` does not
+
+#### Scenario: Switching RobotCode on
+
+- **WHEN** RobotCode is switched off for the project and the user checks "Enable RobotCode for this project" and applies
+- **THEN** RobotCode starts as it does when the project is opened
+
+### Requirement: A project with RobotCode switched off
+
+While the setting "Enable RobotCode for this project" is off, the project SHALL get no language server, no test discovery, no run markers, no run configurations from the editor or the Project view context, and no banner on Robot files, and the Language Servers tool window SHALL show the RobotCode server as disabled.
 
 #### Scenario: Switching RobotCode off
 
 - **WHEN** the user unchecks "Enable RobotCode for this project" and applies
 - **THEN** the language server stops, the run markers and the banner disappear, and the Language Servers tool window shows the server as disabled
 
-#### Scenario: After an IDE restart
+### Requirement: RobotCode in the Language Servers tool window
 
-- **WHEN** the IDE is restarted after RobotCode was switched off for the project
-- **THEN** no robotcode process starts for the project, the project's `.idea/workspace.xml` holds the setting, and `.idea/robotcodeSettings.xml` does not
+Enabling the RobotCode server in the Language Servers tool window SHALL turn the setting "Enable RobotCode for this project" on. Disabling it there, and LSP4IJ's own disable after repeated failed starts, SHALL keep the server off until RobotCode is restarted or the project is opened again, without changing the setting. The plugin's own stops and restarts SHALL NOT change whether the server is enabled.
 
 #### Scenario: Enabling in the Language Servers tool window
 
@@ -32,33 +45,44 @@ The "Robot Framework" settings page SHALL offer "Enable RobotCode for this proje
 
 ### Requirement: Status bar widget
 
-In a project that uses Robot Framework, the status bar SHALL show a RobotCode widget:
-
-- while the language server runs, its text SHALL name the Robot Framework version and the selected configuration profiles, for example "RF 7.5 · dev", and its tooltip SHALL list the RobotCode, Robot Framework, Robocop and Python versions, the interpreter, and the profiles, or that the `default-profiles` of robot.toml apply;
-- while the interpreter is not usable, it SHALL show an error state whose tooltip gives the message of the environment check;
-- while RobotCode is switched off for the project, it SHALL say so.
-
-A click SHALL open the RobotCode actions: Select Configuration Profiles..., Configure Python Interpreter..., Restart RobotCode Language Server, Clear Cache and Restart RobotCode Language Server and Show Language Server Log, and, while RobotCode is switched off, an action that enables it for the project. Configure Python Interpreter... and Show Language Server Log SHALL also be available under Tools | RobotCode. The widget SHALL take its versions from the running language server in the background and SHALL NOT make the IDE wait.
+In a project that uses Robot Framework, the status bar SHALL show a RobotCode widget. While the language server runs, its text SHALL name the Robot Framework version and the selected configuration profiles, for example "RF 7.5 · dev", and its tooltip SHALL list the RobotCode, Robot Framework, Robocop and Python versions, the interpreter, and the profiles, or that the `default-profiles` of robot.toml apply.
 
 #### Scenario: Running project with a profile
 
 - **WHEN** the language server runs with Robot Framework 7.5 and the profile `dev` is selected
 - **THEN** the widget shows "RF 7.5 · dev", and its tooltip lists the RobotCode, Robot Framework, Robocop and Python versions and the interpreter
 
+#### Scenario: Project without Robot Framework files
+
+- **WHEN** a project without Robot Framework files is open
+- **THEN** the status bar shows no RobotCode widget
+
+### Requirement: States of the status bar widget
+
+While the interpreter is not usable, the RobotCode widget SHALL show an error state whose tooltip gives the message of the environment check; while RobotCode is switched off for the project, it SHALL say so.
+
 #### Scenario: Unusable interpreter
 
 - **WHEN** the project's interpreter has no Robot Framework
 - **THEN** the widget shows an error state whose tooltip says that Robot Framework is not installed
+
+### Requirement: Actions of the status bar widget
+
+A click on the RobotCode widget SHALL open the RobotCode actions: Select Configuration Profiles..., Configure Python Interpreter..., Restart RobotCode Language Server, Clear Cache and Restart RobotCode Language Server and Show Language Server Log, and, while RobotCode is switched off, an action that enables it for the project. Configure Python Interpreter... and Show Language Server Log SHALL also be available under Tools | RobotCode.
 
 #### Scenario: Actions of the widget
 
 - **WHEN** the user clicks the widget and chooses each action in turn
 - **THEN** each action runs: the profile list opens, the Python Interpreter settings open, the server restarts, the cache is cleared and the server restarts, and the Language Servers tool window opens
 
-#### Scenario: Project without Robot Framework files
+### Requirement: The status bar widget does not make the IDE wait
 
-- **WHEN** a project without Robot Framework files is open
-- **THEN** the status bar shows no RobotCode widget
+The RobotCode widget SHALL take its versions from the running language server in the background and SHALL NOT make the IDE wait.
+
+#### Scenario: Language server busy
+
+- **WHEN** the language server does not answer the request for its versions at once
+- **THEN** the IDE does not wait for it, and the widget shows the versions once they arrive
 
 ### Requirement: Code actions finish without error notifications
 

@@ -8,7 +8,16 @@ Defines the Robot Framework settings pages of the IntelliJ plugin and the settin
 
 ### Requirement: Additional robotcode arguments
 
-The "Robot Framework" settings page SHALL offer "Additional robotcode arguments", entered as a command line in which arguments are separated by spaces and can be quoted. The plugin SHALL pass them to every `robotcode` command it runs for the project, except the language server and test runs, as global options: after the `robotcode` entry point and before the plugin's own global options, so that the plugin's options win when both set the same option. Applying a change SHALL run test discovery again and SHALL NOT restart the language server. The setting's text SHALL say that the arguments are not passed to the language server and to test runs.
+The "Robot Framework" settings page SHALL offer "Additional robotcode arguments", entered as a command line in which arguments are separated by spaces and can be quoted. The setting's text SHALL say that the arguments are not passed to the language server and to test runs.
+
+#### Scenario: Quoted argument
+
+- **WHEN** the user enters `--config "team settings.toml"` as additional robotcode arguments
+- **THEN** the discovery command line contains `--config` followed by `team settings.toml` as one argument
+
+### Requirement: Where the additional robotcode arguments go
+
+The plugin SHALL pass the additional robotcode arguments to every `robotcode` command it runs for the project, except the language server and test runs, as global options: after the `robotcode` entry point and before the plugin's own global options, so that the plugin's options win when both set the same option. Applying a change SHALL run test discovery again and SHALL NOT restart the language server.
 
 #### Scenario: Debug log for test discovery
 
@@ -19,11 +28,6 @@ The "Robot Framework" settings page SHALL offer "Additional robotcode arguments"
 
 - **WHEN** the additional robotcode arguments contain `--format toml`
 - **THEN** test discovery still reads its results, and the run markers of the tests appear
-
-#### Scenario: Quoted argument
-
-- **WHEN** the user enters `--config "team settings.toml"` as additional robotcode arguments
-- **THEN** the discovery command line contains `--config` followed by `team settings.toml` as one argument
 
 ### Requirement: Language Server page
 

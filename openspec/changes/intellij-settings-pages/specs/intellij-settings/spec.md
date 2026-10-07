@@ -22,7 +22,7 @@ The IntelliJ plugin SHALL provide a "Robot Framework" node under Settings | Lang
 
 ### Requirement: The language server receives the complete settings tree
 
-The plugin SHALL answer the language server's `workspace/configuration` requests, and send `workspace/didChangeConfiguration`, with one complete `robotcode` settings tree. The tree SHALL contain every setting that VS Code offers in the sections the server reads: the value from the settings pages where the plugin offers the setting, and VS Code's default otherwise. The only exception SHALL be `robotcode.documentationServer.startOnDemand`, which is always `true` because the plugin has no documentation viewer. Values SHALL have the types the server parses: JSON booleans, integers, the exact enum strings, maps from strings to strings, and lists without `null` or empty entries. Settings that only the clients use, for example for the debugger, runs, profiles or the language server process, SHALL NOT be part of the tree.
+The plugin SHALL answer the language server's `workspace/configuration` requests, and send `workspace/didChangeConfiguration`, with one complete `robotcode` settings tree. The tree SHALL contain every setting that VS Code offers in the sections the server reads: the value from the settings pages where the plugin offers the setting, and VS Code's default otherwise.
 
 #### Scenario: Every section is answered
 
@@ -39,10 +39,28 @@ The plugin SHALL answer the language server's `workspace/configuration` requests
 - **WHEN** a project has no stored RobotCode settings
 - **THEN** `robotcode.workspace.excludePatterns` holds VS Code's default patterns `.hatch/`, `.venv/`, `node_modules/`, `.pytest_cache/`, `__pycache__/`, `.mypy_cache/` and `.robotcode_cache/`, and the server does not load Robot Framework files below these folders
 
+### Requirement: Value types in the settings tree
+
+Values in the `robotcode` settings tree SHALL have the types the server parses: JSON booleans, integers, the exact enum strings, maps from strings to strings, and lists without `null` or empty entries.
+
+#### Scenario: Value types
+
+- **WHEN** the language server receives the `robotcode` settings tree
+- **THEN** every boolean in it is a JSON boolean, every number is an integer, and no list holds `null` or an empty entry
+
+### Requirement: Exceptions in the settings tree
+
+The only exception to VS Code's defaults in the `robotcode` settings tree SHALL be `robotcode.documentationServer.startOnDemand`, which is always `true` because the plugin has no documentation viewer. Settings that only the clients use, for example for the debugger, runs, profiles or the language server process, SHALL NOT be part of the tree.
+
 #### Scenario: Documentation server on demand
 
 - **WHEN** the language server starts in IntelliJ
 - **THEN** it does not start its documentation server until something needs a documentation URL
+
+#### Scenario: Settings only the clients use
+
+- **WHEN** the language server requests the `robotcode` section
+- **THEN** the answer holds no settings for the debugger, runs, profiles or the language server process
 
 ### Requirement: Completion settings take effect
 
