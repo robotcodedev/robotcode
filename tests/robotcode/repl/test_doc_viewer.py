@@ -1061,6 +1061,20 @@ def collections_page() -> str:
     )
 
 
+@pytest.fixture(scope="module")
+def sections_page(tmp_path_factory: pytest.TempPathFactory) -> str:
+    from robotcode.robot.diagnostics.library_doc import get_library_doc
+    from robotcode.robot.utils.markdown_docs import anchor_link_resolver
+
+    library = tmp_path_factory.mktemp("sections") / "SectionsLibrary.py"
+    library.write_text(
+        '"""Library with sections.\n\n= Section A =\n\nText.\n\n== Sub A1 ==\n\nText.\n"""\n\n\n'
+        'def keyword_with_a_heading():\n    """= Keyword Heading =\n\n    Text.\n    """\n',
+        encoding="utf-8",
+    )
+    return get_library_doc(str(library)).to_markdown(only_doc=False, header_level=0, link_resolver=anchor_link_resolver)
+
+
 def _sized_viewer(columns: int) -> DocViewer:
     from prompt_toolkit.data_structures import Size
 
@@ -1126,6 +1140,19 @@ class TestSidebarOutline:
         viewer._load_document("T", "# Title\n\n## Section\n\n### Entry\n\n##### Detail\n\nText.", outline=True)
 
         assert [(entry.level, entry.title) for entry in viewer._outline] == [(2, "Section"), (3, "Entry")]
+
+    def test_lists_the_subsections_of_the_introduction(self, sections_page: str) -> None:
+        viewer = _page_viewer(120, sections_page)
+
+        assert [(entry.level, entry.title) for entry in viewer._outline] == [
+            (2, "Introduction"),
+            (3, "Section A"),
+            (4, "Sub A1"),
+            (2, "Keywords"),
+            (3, "Keyword With A Heading"),
+        ]
+        lines = [line.rstrip() for line in _fragments_text(viewer._compute_outline_fragments()).split("\n")]
+        assert lines[2] == "  " + lines[1].replace("Section A", "Sub A1")
 
     def test_a_document_loaded_without_the_flag_has_none(self, collections_page: str) -> None:
         viewer = _sized_viewer(120)
@@ -1354,6 +1381,14 @@ class TestSidebarFilter:
         viewer._filter_buffer.text = text
 
         assert "Get From List" in _listed_titles(viewer)
+
+    def test_subsection(self, sections_page: str) -> None:
+        viewer = _page_viewer(120, sections_page)
+
+        viewer._filter_buffer.text = "sub a1"
+
+        assert _listed_titles(viewer) == ["Introduction", "Section A", "Sub A1"]
+        assert _selected_title(viewer) == "Sub A1"
 
     def test_empty_filter_lists_everything(self, collections_page: str) -> None:
         viewer = _page_viewer(120, collections_page)

@@ -20,8 +20,9 @@ Interactive features:
 - **Back/forward** (``[`` / ``]``): browser-style stack of anchor
   jumps within the doc.
 - **Sidebar** (``s``, library pages only): the level-2 and level-3
-  headings of the page with a filter field; side by side with the
-  page in a wide terminal, over it in a narrow one.
+  headings of the page and the subsections of the introduction, with
+  a filter field; side by side with the page in a wide terminal, over
+  it in a narrow one.
 - **Resize**: terminal width changes trigger a debounced reflow
   that re-renders the markdown at the new width; per-width
   snapshots are cached so re-resizes are instant.
@@ -277,7 +278,7 @@ def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, 
 
 
 class _OutlineEntry(NamedTuple):
-    """One heading in the sidebar: its level (2 or 3), its title as the page shows it, and its anchor."""
+    """One heading in the sidebar: its level (2 or more), its title as the page shows it, and its anchor."""
 
     level: int
     title: str
@@ -285,16 +286,21 @@ class _OutlineEntry(NamedTuple):
 
 
 def _build_outline(md_source: str, anchor_to_line: Dict[str, int]) -> List[_OutlineEntry]:
-    """The level-2 and level-3 headings of ``md_source``, in document order.
+    """The level-2 and level-3 headings of ``md_source`` and the deeper
+    headings of its introduction, in document order.
 
-    Headings without a rendered line are left out, because the sidebar
-    jumps through the anchor map.
+    Deeper headings elsewhere belong to the documentation of a keyword,
+    a data type or an entry of `Importing`. Headings without a rendered
+    line are left out, because the sidebar jumps through the anchor map.
     """
-    return [
-        _OutlineEntry(level, _strip_md_emphasis(title), anchor)
-        for level, title, anchor in heading_anchors(md_source)
-        if level in (2, 3) and anchor in anchor_to_line
-    ]
+    result: List[_OutlineEntry] = []
+    in_introduction = False
+    for level, title, anchor in heading_anchors(md_source):
+        if level == 2:
+            in_introduction = title == "Introduction"
+        if level >= 2 and (level <= 3 or in_introduction) and anchor in anchor_to_line:
+            result.append(_OutlineEntry(level, _strip_md_emphasis(title), anchor))
+    return result
 
 
 def _fit(text: str, width: int) -> str:
@@ -1038,23 +1044,20 @@ class DocViewer:
         `robotcode doc keywords` match: contains, `*` and `?`, case, spaces
         and underscores ignored.
 
-        A level-2 entry stays listed while it or one of its level-3 entries
-        matches. The selection moves to the first entry that matches itself,
-        so it skips a level-2 entry that is only listed for its entries.
+        An entry stays listed while it or one of the entries below it, the
+        following entries of a greater level, matches. The selection moves
+        to the first entry that matches itself, so it skips an entry that is
+        only listed for the entries below it.
         """
         matcher = MultiMatcher([f"*{self._filter_buffer.text}*"], ignore="_")
         matches = [matcher.match(entry.title) for entry in self._outline]
         self._listed = []
         for index, entry in enumerate(self._outline):
-            if entry.level == 2:
-                end = next(
-                    (i for i in range(index + 1, len(self._outline)) if self._outline[i].level == 2),
-                    len(self._outline),
-                )
-                listed = any(matches[index:end])
-            else:
-                listed = matches[index]
-            if listed:
+            end = next(
+                (i for i in range(index + 1, len(self._outline)) if self._outline[i].level <= entry.level),
+                len(self._outline),
+            )
+            if any(matches[index:end]):
                 self._listed.append(index)
         self._selected = next((row for row, index in enumerate(self._listed) if matches[index]), -1)
         self._outline_window.vertical_scroll = 0
@@ -1072,7 +1075,7 @@ class DocViewer:
             self._hide_sidebar()
 
     def _compute_outline_fragments(self) -> StyleAndTextTuples:
-        """The listed entries, one per line, level-3 entries indented."""
+        """The listed entries, one per line, indented by their level."""
         if not self._listed:
             return [("class:doc.sidebar.empty", " no matches")]
         width = _SIDEBAR_WIDTH - 1
