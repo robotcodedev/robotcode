@@ -34,14 +34,14 @@ The initialization options of the `initialize` request SHALL also carry `pythonP
 
 ### Requirement: Analysis cache location
 
-By default, the language server SHALL keep its analysis cache in the project's storage folder of the IDE's system directory. When the cache location on the Analysis page is "Project folder", the server SHALL keep it in `.robotcode_cache` in the project folder. A changed cache location SHALL take effect when the server restarts after Apply.
+By default, the language server SHALL keep its analysis cache in the project's storage folder of the IDE's system directory. When the save location of the cache on the Analysis page is "Project folder", the server SHALL keep it in `.robotcode_cache` in the project folder. A changed save location SHALL take effect when the server restarts after Apply.
 
 #### Scenario: Default cache location
 
-- **WHEN** the language server analyzes a project that has no `.robotcode_cache` folder and no stored cache location
+- **WHEN** the language server analyzes a project that has no `.robotcode_cache` folder and no stored save location
 - **THEN** the cache files appear below the project's storage folder in the IDE's system directory, no `.robotcode_cache` folder appears in the project, and writing the cache starts no indexing of project files
 
 #### Scenario: Cache in the project folder
 
-- **WHEN** the user sets the cache location to "Project folder" and applies
+- **WHEN** the user sets the save location of the cache to "Project folder" and applies
 - **THEN** the restarted server keeps its cache in `<project>/.robotcode_cache`
