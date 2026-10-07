@@ -23,6 +23,7 @@ from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
 from robotcode.robot.utils import RF_VERSION
+from tests.robotcode.language_server.robotframework.tools import write_project
 from tests.robotcode.language_server.robotframework.viewer_links import heading_target, viewer_link
 
 SUITE = """\
@@ -117,24 +118,23 @@ class faillib:
 """
 
 
-@pytest.fixture
-def project(tmp_path: Path) -> Path:
-    files = {
-        "suite.robot": SUITE,
-        "sub/local.resource": LOCAL_RESOURCE,
-        "sub/deeper/nested.resource": NESTED_RESOURCE,
-        "sub/other.resource": OTHER_RESOURCE,
-        "sub/local_lib.py": LOCAL_LIB,
-        "arglib.py": ARGLIB,
-        "with_keywords.robot": SUITE_WITH_KEYWORDS,
-        "failing.robot": FAILING_SUITE,
-        "faillib.py": FAILLIB,
-    }
-    for name, text in files.items():
-        path = tmp_path / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    return tmp_path
+@pytest.fixture(scope="module")
+def project(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The project of the module's tests, shared by all of them and read-only."""
+    return write_project(
+        tmp_path_factory.mktemp("project"),
+        {
+            "suite.robot": SUITE,
+            "sub/local.resource": LOCAL_RESOURCE,
+            "sub/deeper/nested.resource": NESTED_RESOURCE,
+            "sub/other.resource": OTHER_RESOURCE,
+            "sub/local_lib.py": LOCAL_LIB,
+            "arglib.py": ARGLIB,
+            "with_keywords.robot": SUITE_WITH_KEYWORDS,
+            "failing.robot": FAILING_SUITE,
+            "faillib.py": FAILLIB,
+        },
+    )
 
 
 def _position(document: TextDocument, line_text: str) -> Position:

@@ -9,6 +9,7 @@ from robotcode.core.lsp.types import MarkupContent, Position
 from robotcode.core.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 from robotcode.robot.utils import RF_VERSION
+from tests.robotcode.language_server.robotframework.tools import write_project
 from tests.robotcode.language_server.robotframework.viewer_links import heading_target, viewer_link, viewer_links
 
 SUITE = """\
@@ -129,23 +130,22 @@ def paint(shade: Color):
 '''
 
 
-@pytest.fixture
-def project(tmp_path: Path) -> Path:
-    files = {
-        "suite.robot": SUITE,
-        "sub/local.resource": LOCAL_RESOURCE,
-        "dup1.resource": DUP_RESOURCE,
-        "dup2.resource": DUP_RESOURCE,
-        "arglib.py": ARGLIB,
-        "htmllib.py": HTMLLIB,
-        "mdlib.py": MDLIB,
-        "vars.py": "X = 1\n",
-    }
-    for name, text in files.items():
-        path = tmp_path / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    return tmp_path
+@pytest.fixture(scope="module")
+def project(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The project of the module's tests, shared by all of them and read-only."""
+    return write_project(
+        tmp_path_factory.mktemp("project"),
+        {
+            "suite.robot": SUITE,
+            "sub/local.resource": LOCAL_RESOURCE,
+            "dup1.resource": DUP_RESOURCE,
+            "dup2.resource": DUP_RESOURCE,
+            "arglib.py": ARGLIB,
+            "htmllib.py": HTMLLIB,
+            "mdlib.py": MDLIB,
+            "vars.py": "X = 1\n",
+        },
+    )
 
 
 @pytest.fixture

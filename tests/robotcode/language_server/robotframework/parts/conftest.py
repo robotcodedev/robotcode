@@ -130,6 +130,10 @@ def test_document(request: pytest.FixtureRequest, protocol: RobotLanguageServerP
 def open_temp_document(protocol: RobotLanguageServerProtocol) -> Iterator[Callable[[Path], TextDocument]]:
     """Callable: `(path) -> TextDocument` for files outside the test workspace.
 
+    A document is opened with a version, like a document open in the editor:
+    its namespace is analyzed fresh and never comes from the namespace disk
+    cache.
+
     The protocol is shared by the whole test session, so every document opened
     from the file's directory (the file itself and what it imports) is closed
     again. Otherwise it would show up in the results of later tests, e.g. in
@@ -139,7 +143,7 @@ def open_temp_document(protocol: RobotLanguageServerProtocol) -> Iterator[Callab
 
     def open_document(path: Path) -> TextDocument:
         directories.append(path.parent)
-        return protocol.documents.get_or_open_document(path, "robotframework")
+        return protocol.documents.get_or_open_document(path, "robotframework", version=1)
 
     try:
         yield open_document

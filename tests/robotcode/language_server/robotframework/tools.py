@@ -1,8 +1,10 @@
 import dataclasses
+import os
 import re
+import time
 from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Any, Iterator, Tuple, Union
+from typing import Any, Iterator, Mapping, Tuple, Union
 
 import pytest
 import yaml
@@ -81,6 +83,22 @@ def generate_test_id_with_path(base_path: Path, params: Any) -> Any:
         return params.name
 
     return params
+
+
+def write_project(root: Path, files: Mapping[str, str]) -> Path:
+    """Write `files` (relative path -> text) below `root` and return `root`.
+
+    The files get a modification time ten seconds in the past: RobotCode caches
+    the import result of a library or variable file only when the file is at
+    least two seconds old, so the first import of the project is cached too.
+    """
+    settled = time.time() - 10
+    for name, text in files.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        os.utime(path, (settled, settled))
+    return root
 
 
 def dump_enum(dumper: yaml.Dumper, data: Enum) -> yaml.Node:

@@ -9,6 +9,7 @@ from robotcode.core.lsp.types import MarkupContent, Position, SignatureHelp
 from robotcode.core.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 from robotcode.robot.utils import RF_VERSION
+from tests.robotcode.language_server.robotframework.tools import write_project
 from tests.robotcode.language_server.robotframework.viewer_links import viewer_link, viewer_links
 
 SUITE = """\
@@ -71,21 +72,31 @@ def get_variables(some_arg=None):
 '''
 
 
+@pytest.fixture(scope="module")
+def project(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The project of the module's tests, shared by all of them and read-only."""
+    return write_project(
+        tmp_path_factory.mktemp("project"),
+        {
+            "arglib.py": ARGLIB,
+            "faillib.py": FAILLIB,
+            "sigvars.py": VARIABLES,
+            "suite.robot": SUITE,
+        },
+    )
+
+
 @pytest.fixture
 def document(
     protocol: RobotLanguageServerProtocol,
     open_temp_document: Callable[[Path], TextDocument],
-    tmp_path: Path,
+    project: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> TextDocument:
     monkeypatch.setattr(protocol.robot_initialization_options, "documentation_viewer_links", True)
     # both analysis paths: the namespace of the suite gets a semantic model
     monkeypatch.setattr(protocol.documents_cache.analysis_config, "semantic_model", True)
-    (tmp_path / "arglib.py").write_text(ARGLIB, encoding="utf-8")
-    (tmp_path / "faillib.py").write_text(FAILLIB, encoding="utf-8")
-    (tmp_path / "sigvars.py").write_text(VARIABLES, encoding="utf-8")
-    (tmp_path / "suite.robot").write_text(SUITE, encoding="utf-8")
-    return open_temp_document(tmp_path / "suite.robot")
+    return open_temp_document(project / "suite.robot")
 
 
 def _position(document: TextDocument, line_start: str, word: str) -> Position:
@@ -139,7 +150,7 @@ def _signature_help(
 def test_links_of_a_library_keyword(
     protocol: RobotLanguageServerProtocol,
     document: TextDocument,
-    tmp_path: Path,
+    project: Path,
     line_start: str,
     word: str,
     link: str,
@@ -150,18 +161,18 @@ def test_links_of_a_library_keyword(
 
     target = viewer_link(documentation, link)
     assert (target["name"], target["args"], target.get("keyword")) == ("./arglib.py", args, keyword)
-    assert Path(target["baseDir"]).resolve() == tmp_path.resolve()
+    assert Path(target["baseDir"]).resolve() == project.resolve()
 
 
 def test_links_of_a_library_whose_arguments_fail(
-    protocol: RobotLanguageServerProtocol, document: TextDocument, tmp_path: Path
+    protocol: RobotLanguageServerProtocol, document: TextDocument, project: Path
 ) -> None:
     documentation = "\n".join(_signature_help(protocol, document, "Library     ./faillib.py", "port"))
 
     # the signature help shows the library loaded without the arguments, so does the page
     target = viewer_link(documentation, "Connect")
     assert (target["name"], target["args"], target.get("keyword")) == ("./faillib.py", [], "Connect")
-    assert Path(target["baseDir"]).resolve() == tmp_path.resolve()
+    assert Path(target["baseDir"]).resolve() == project.resolve()
 
 
 def test_links_of_a_builtin_keyword(protocol: RobotLanguageServerProtocol, document: TextDocument) -> None:
@@ -173,13 +184,13 @@ def test_links_of_a_builtin_keyword(protocol: RobotLanguageServerProtocol, docum
 
 
 def test_links_of_a_keyword_of_the_current_file(
-    protocol: RobotLanguageServerProtocol, document: TextDocument, tmp_path: Path
+    protocol: RobotLanguageServerProtocol, document: TextDocument, project: Path
 ) -> None:
     documentation = "\n".join(_signature_help(protocol, document, "My Keyword    x", "x"))
 
     target = viewer_link(documentation, "Other Keyword")
     assert (target["name"], target.get("keyword")) == ("suite.robot", "Other Keyword")
-    assert Path(target["baseDir"]).resolve() == tmp_path.resolve()
+    assert Path(target["baseDir"]).resolve() == project.resolve()
 
 
 def test_run_keyword_if_links_to_the_page_of_the_outer_keyword(
