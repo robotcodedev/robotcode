@@ -36,7 +36,7 @@ The Robot Framework settings node SHALL have a "Robocop" sub-page with these set
 - ignore Git dir, off by default;
 - ignore file config, off by default.
 
-The config file SHALL be stored and sent as the user entered it, without a check by the plugin, as VS Code does; the language server and Robocop resolve it and report a file they cannot read.
+The config file SHALL be stored and sent as entered, without a check by the plugin, as in VS Code; the language server and Robocop resolve it and report a file they cannot read.
 
 #### Scenario: Switching Robocop off
 
