@@ -25,6 +25,9 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
+import dev.robotcode.robotcode4ij.EnvironmentState
+import dev.robotcode.robotcode4ij.PythonInterpreter
+import dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
@@ -39,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.jetbrains.annotations.TestOnly
 import java.nio.file.Paths
 import java.util.*
 
@@ -276,7 +280,20 @@ import java.util.*
         DaemonCodeAnalyzer.getInstance(project).restart("RobotCode test items refreshed")
     }
     
-    fun findTestItem(
+    /**
+     * Forgets the result of the last discovery, so that its run markers disappear.
+     */
+    fun clearTestItems() {
+        testItems = arrayOf()
+        DaemonCodeAnalyzer.getInstance(project).restart("RobotCode test items cleared")
+    }
+    
+    @TestOnly
+    internal fun setTestItemsForTests(items: Array<RobotCodeTestItem>) {
+        testItems = items
+    }
+    
+        fun findTestItem(
         uri: String,
         line: UInt? = null,
     ): RobotCodeTestItem? {
@@ -345,6 +362,19 @@ import java.util.*
         
         val result = findTestItem(containingFile.virtualFile.uri, lineNumber.toUInt())
         return result
+    }
+}
+
+/**
+ * Removes the run markers while the project's interpreter is not usable, because no test can run then. A usable result
+ * starts a discovery, which brings them back.
+ */
+class RobotCodeTestManagerEnvironmentListener(private val project: Project) : RobotCodeEnvironmentListener {
+    override fun stateChanged(interpreter: PythonInterpreter, state: EnvironmentState) {
+        val notUsable = state is EnvironmentState.Failed || (state is EnvironmentState.Checked && !state.isUsable)
+        if (notUsable && interpreter == project.robotCodeEnvironment.projectInterpreter) {
+            project.testManger.clearTestItems()
+        }
     }
 }
 

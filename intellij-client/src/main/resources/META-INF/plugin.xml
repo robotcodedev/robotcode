@@ -135,6 +135,8 @@
 				  topic="dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener"/>
 		<listener class="dev.robotcode.robotcode4ij.editor.RobotCodeEnvironmentEditorListener"
 				  topic="dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener"/>
+		<listener class="dev.robotcode.robotcode4ij.testing.RobotCodeTestManagerEnvironmentListener"
+				  topic="dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener"/>
 		<listener class="dev.robotcode.robotcode4ij.RobotCodeFileOpenedListener"
 				  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
 	</projectListeners>
