@@ -39,6 +39,20 @@ When the language server process exits before it connects, the start SHALL fail 
 - **WHEN** the start failed because the server exited before it connected, and the user then restarts the server three times
 - **THEN** no NullPointerException or other error is logged, and no listening port or waiting thread is left behind
 
+### Requirement: No new start after a failed start
+
+After a start of the language server failed, the plugin SHALL NOT start the server again on its own, for example when an editor needs it, until the server is restarted, for example with Restart RobotCode Language Server or Clear Cache and Restart RobotCode Language Server.
+
+#### Scenario: Editing after a failed start
+
+- **WHEN** the start failed because the server exited before it connected, and the user then opens and edits a Robot file
+- **THEN** no new language server process starts
+
+#### Scenario: Restart after a failed start
+
+- **WHEN** the start failed, the cause has been fixed, and the user chooses Restart RobotCode Language Server
+- **THEN** the language server starts
+
 ### Requirement: Language server output goes to the Language Servers console
 
 Everything the language server writes to stderr or stdout SHALL appear in the logs of the RobotCode entry in the Language Servers tool window. It SHALL NOT be reported as an IDE error. Output on stdout SHALL NOT stall the language server, however much of it there is.

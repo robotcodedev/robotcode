@@ -10,6 +10,7 @@ The Python check accepts Python 3.8 and 3.9, although every RobotCode package re
 
 - The plugin accepts the server's connection only on 127.0.0.1, and it stops listening once the server has connected.
 - A server that exits before it connects fails the start with an error that names its exit code. A server that neither connects nor exits within 60 seconds is ended, and the start fails with an error that says so. No thread keeps waiting, and stopping or restarting afterwards no longer throws (#630).
+- After a failed start, the plugin does not start the server again on its own, for example for every editor that needs it, until the server is restarted, for example with Restart RobotCode Language Server.
 - The server's stderr appears only in the RobotCode entry of the Language Servers tool window, as before, and no longer raises IDE errors. Output on stdout appears there too, instead of piling up unread where it can stall the server.
 - Stopping and restarting give the server time to receive the exit notification and end on its own before the plugin ends the process, which removes the "Socket closed" error that every restart reported.
 - RobotCode requires Python 3.10 or newer with Robot Framework 5.0 or newer, and every message about an unusable interpreter, including the error of a run, says so. The VS Code extension applies the same Python 3.10 minimum and names it, so both clients reject the same interpreters.

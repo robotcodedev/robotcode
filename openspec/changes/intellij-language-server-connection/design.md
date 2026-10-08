@@ -52,11 +52,21 @@ Alternatives:
 
 ### Stop waits for the server, then closes and ends
 
-`stop()` first waits up to two seconds for the process to end on its own, which it does after the `exit` notification. Then it closes the client socket and the listener, if they exist, and calls the base `stop()`, which ends a process that is still running. Every step is null-safe, and a second call does nothing. Because LSP4IJ calls `stop()` on a common-pool thread, the wait does not block the EDT; during project disposal LSP4IJ calls it directly, and the wait then adds at most two seconds for a server that ignores `exit`.
+`stop()` first waits up to two seconds for the process to end on its own, which it does after the `exit` notification. Then it closes the client socket and the listener, if they exist, and calls the base `stop()`, which ends a process that is still running. Every step is null-safe, and a second call does nothing. LSP4IJ calls `stop()` on a common-pool thread on a stop or restart, so the wait does not block the EDT. When the project closes, LSP4IJ calls `stop()` on the EDT without sending `exit` (seen in the harness check: the wait froze the EDT for the full two seconds), so on the EDT `stop()` does not wait and ends the process at once, as before.
 
 The null-safe stop (#630) may land earlier as a plain fix. This change then builds the wait and the closing order on top of it.
 
+Because the process now ends before the base `stop()` marks the provider as stopped, LSP4IJ would take that end for an unexpected stop and record "The server was stopped unexpectedly." for a normal restart. The same message would replace the exit code of a server that ends before it connects. The provider therefore wraps the handlers that LSP4IJ registers through `addUnexpectedServerStopHandler` and runs them only after the server has connected and before its own `stop()` has begun (found in the harness check).
+
 Alternative: closing the sockets before the process has ended, as today, makes LSP4IJ's queued `exit` write fail with "Socket closed".
+
+### No new start after a failed start
+
+LSP4IJ starts the server on demand, for every feature request of an open editor, and it consults the factory's `isEnabled` before it does. After a failed start, pending requests triggered bursts of new starts in the harness check, up to six processes at once, and each failed start makes LSP4IJ's feature collectors, such as document links, log SEVERE errors that the IDE blames on LSP4IJ. Before this change, such a start never ended, so neither happened. (Decided by the maintainer on 2026-10-08.)
+
+So the provider reports every failed start to the language server manager, and the factory's `isEnabled` returns `false` while the failure is reported. Every start through the manager clears it first; all restart paths go through it: Restart, Clear Cache and Restart, changes to `robot.toml`, Apply on a settings page, the startup activity and SDK changes. The errors of the first failed start remain, because LSP4IJ logs them before the plugin can react.
+
+Alternative: leaving the on-demand starts as they are, as a limitation of LSP4IJ; a broken environment then spawns new processes and errors whenever an editor needs the server.
 
 ### Server output goes only to LSP4IJ's log
 
@@ -97,6 +107,7 @@ Alternatives:
 - [A very slow machine needs more than 60 seconds before the server connects] → The start error says that the server did not connect in time, so the cause is visible. The limit is about 35 times the measured start time.
 - [stdout lines appear as error-level entries in LSP4IJ's log, like stderr lines today] → They appear where users look for server output, and they raise no IDE error.
 - [Users whose interpreter is Python 3.8 or 3.9 lose RobotCode at once] → It could not run there before, because every package requires Python 3.10. The message names the fix, and the release notes mention it.
+- [LSP4IJ's feature collectors, such as document links, log a SEVERE error for every failed start, which the IDE blames on LSP4IJ] → After a failed start, the plugin does not start the server on its own any more, so the errors come only from starts the user asked for.
 - [The VS Code change has no automated test] → The probe string is checked against Python 3.9 and 3.10 interpreters in the tasks, and lint and compile cover the rest.
 - [#630 lands earlier as a plain fix] → `stop()` is then rebased onto it; the fix and this change touch the same method.
 
