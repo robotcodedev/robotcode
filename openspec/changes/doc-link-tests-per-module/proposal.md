@@ -10,7 +10,7 @@ Three test modules of the Documentation Viewer links cause 192 of these imports.
 
 - `test_hover_documentation_links.py`, `test_documentation_target.py` and `test_signature_help_documentation_links.py` write their project once per module instead of once per test.
 - The project files get a modification time older than the two seconds in which RobotCode does not trust a file state. The first import of each library then already goes into the library cache, and the module's later tests read it from there.
-- `open_temp_document` in `tests/robotcode/language_server/robotframework/parts/conftest.py` opens a document with a version, as the editor does. Its namespace is then analyzed fresh, as it is today. Without the version, a shared project that is old enough would bring the namespace back from the namespace disk cache from the second test of a module on.
+- `open_temp_document` in `tests/robotcode/language_server/robotframework/parts/conftest.py` switches the namespace disk cache off during each test. The namespace of a document is then analyzed fresh, as it is today. Otherwise a shared project that is old enough would bring the namespace back from the namespace disk cache from the second test of a module on. (A first implementation opened the documents with a version instead; design.md explains why that was replaced.)
 - The assertions of the tests stay the same.
 
 Not part of this change:
@@ -34,7 +34,7 @@ None, so the change sets `skip_specs: true` in `.openspec.yaml`. The change only
 
 ## Impact
 
-- `tests/robotcode/language_server/robotframework/parts/conftest.py`: `open_temp_document` opens documents with a version. This applies to the eight modules that use the fixture.
+- `tests/robotcode/language_server/robotframework/parts/conftest.py`: `open_temp_document` switches the namespace disk cache off during each test. This applies to all modules that use the fixture.
 - The three test modules: a project fixture with `scope="module"`. In `test_signature_help_documentation_links.py` this also affects the `document` fixture and the assertions that compare against `tmp_path`.
 - Test time, measured on Robot Framework 7.5 with each module run alone. Each figure includes about 9 s for starting the shared language server.
 

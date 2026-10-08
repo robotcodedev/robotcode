@@ -34,14 +34,14 @@ Intermediate steps, measured on the hover module:
 - **Plus backdated files:** 28 imports, the same two failures, now from the second test on.
 - **Plus documents with a version:** all green.
 
-In these runs, a plugin set the version on every `get_or_open_document` call of the process, not only in `open_temp_document`. The tasks check that the narrower change gives the same results. The 10 imports that remain in the signature help module (after subtracting the 22 of the server start) were not broken down further.
+In these runs, a plugin set the version on every `get_or_open_document` call of the process, not only in `open_temp_document`. The tasks check that the narrower change gives the same results. The fixture no longer uses the version; it switches the namespace disk cache off instead (see "Decisions"), and the three modules give the same results and import counts with that. The 10 imports that remain in the signature help module (after subtracting the 22 of the server start) were not broken down further.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
 - In each of the three modules, the first test loads a library or variable file in a subprocess. The module's later tests get it from the library cache.
-- The tests keep checking the namespace that a fresh analysis builds, as an editor document gets it.
+- The tests keep checking the namespace that a fresh analysis builds.
 - Every assertion stays as it is. Single tests and any subset still run on their own.
 - The tests behave the same on Linux, Windows and macOS.
 
@@ -73,26 +73,35 @@ One helper in `tests/robotcode/language_server/robotframework/tools.py` writes a
 
 Alternative: the same loop in each module, rejected because it would be three copies of the same code and the same explanation.
 
-### `open_temp_document` opens documents with a version
+### `open_temp_document` switches the namespace disk cache off
 
-The fixture passes `version=1` to `get_or_open_document`. With a version, a document is analyzed fresh and is never stored in or restored from the namespace disk cache, as with a document open in the editor. Its model is also cached between requests. Files that the analysis loads itself, such as imported resources, stay without a version, as in the editor.
+During each test, the fixture sets `cache_namespaces` of the analysis cache settings to `False` (`monkeypatch`, so the value comes back after the test). The namespace disk cache is neither read nor written then, and the namespace of every document is analyzed fresh. The library cache, which gives the speed-up, stays on. The documents are opened without a version, as before this change.
 
-This applies to all eight modules that use the fixture. A test that opens a document simulates a document the user opened, so all of them should see the editor's path. No test opens a document that the same test has already loaded as an import; for such a document, `get_or_open_document` would return the existing document without a version.
+This applies to all modules that use the fixture. The restore test of `namespace-cache-import-references` opens its documents itself and keeps the cache on.
+
+**First implementation and why it was replaced (2026-10-08):** the fixture first opened the documents with `version=1`. That also keeps the namespace out of the disk cache, but the workspace diagnostics then analyze such a document in the background.
+- The diagnostics loop works through a list of documents that it takes at the start of a round. When a test closes its documents during that round, the loop still analyzes them.
+- Closing clears a document's caches but keeps its text, so that analysis builds the namespace again and puts the closed document back into the reference index.
+- A later test that searches the index then finds references in another test's files. One run of the full matrix failed this way on Robot Framework 7.4: `test_references` found `Log` calls of two suites of `test_import_navigation`.
+- With the background analysis of temporary test documents delayed by 0.8 s, the loop analyzed them twice with a version, both times after they were closed, and both put a file back into the index. Without a version, it analyzed none of them, and nothing leaked. The result was the same on Robot Framework 7.4 and 7.5.
 
 Alternatives:
-- **A second fixture with a version, only for the three modules:** rejected. It would add a second way to open a temporary document for the same purpose.
-- **Opening through `textDocument/didOpen`:** rejected. It also marks the document as opened in the editor, and for the tests' client without diagnostic pull it starts the document's diagnostics in the background. That is extra work outside the tests' purpose. The version alone decides which analysis path a document takes.
+- **Keep the version and mark the document's diagnostics as current right after opening:** rejected. It sets internal bookkeeping of the diagnostics, and a short window between opening and marking remains.
+- **A second fixture, only for the three modules:** rejected. It would add a second way to open a temporary document for the same purpose.
+- **Opening through `textDocument/didOpen`:** rejected. It also starts the document's diagnostics in the background, which has the same problem as the version.
+
+What the replacement costs: the model of a document without a version is not cached on the document, so it is parsed again for each request. The run times of the three modules did not change measurably (11.0 s, 10.6 s and 12.0 s, each alone).
 
 ## Findings outside this change
 
 - **Namespace disk cache:** `Namespace.to_data` and `from_data` (`namespace.py`) identify a `namespace_references` entry only by its type, import name, arguments and alias. `from_data` looks the entry up in `libraries`, `resources` and `variables_imports`, not in `import_entries`. A direct import of a library or variable file that something else already imported therefore comes back as that other entry, or not at all if its arguments differ. This was checked for an explicit `Library    BuiltIn`, for a library or variable file imported after a resource that imports it, and for a library with other arguments. Find References from an open file over closed files gave the same results before and after a simulated restart. Planned as the change `namespace-cache-import-references`.
 - **Find References on an import:** for a library or variable-file import, Find References did not list the direct import lines in files that also import a resource which already imports the same library or file. This also happened with a fresh analysis. It is fixed, together with further cases of repeated imports, by the change `duplicate-import-navigation` (f66b01c2).
 
-Neither change is needed for this one: with documents opened with a version, the tests do not read restored namespaces, and they do not test Find References on imports.
+Neither change is needed for this one: with the namespace disk cache off, the tests do not read restored namespaces, and they do not test Find References on imports.
 
 ## Risks / Trade-offs
 
 - **[Tests of a module share files]** → A future test that writes into the project would change it for the tests after it. Mitigation: the fixture's docstring says the project is read-only; a test that needs other files writes them into its own `tmp_path`.
-- **[The five other modules now open documents with a version]** → One of them could depend on the path of a document without a version. Mitigation: none of them says it tests the namespace disk cache, and the tasks run them on every Robot Framework version. A failure gets analyzed, not hidden by going back to opening without a version.
+- **[The other modules that use the fixture now run without the namespace disk cache]** → One of them could depend on a namespace restored from the cache. Mitigation: none of them says it tests the namespace disk cache, and the tasks run them on every Robot Framework version.
 - **[Fewer subprocess loads in these tests]** → After the first test, these modules no longer exercise the import subprocess. Mitigation: the first test of each module still does, and `test_library_loading.py` covers loading itself.
 - **[More disk-cache entries per run]** → Entries for the temporary projects collect in `data/.robotcode_cache` during a run. There are a few dozen of them, and the conftest deletes the cache at the start of the next run.
