@@ -69,7 +69,7 @@ During development under an unchanged version, namespaces stored with the old ke
 - **The cache check of a namespace finds a dependency by its import name only:** `ImportsManager.validate_namespace_meta` looks up a library or variable file of a cached namespace with `get_cached_library_meta(name, args=None)` or `get_cached_variables_meta(name, args=None)`. Both match the import name in all loaded entries, whatever their directory.
   - When another directory's file with the same import name is loaded, for example `vars.py` or `./arglib.py`, the check compares against that file. It declares the cached namespace stale, and the file is analyzed again.
   - The result is still correct, but the cache is not used. In the tests, the same case run first with one analysis mode and then with the other showed it: the second run was never restored from the cache.
-  - Found on 2026-10-07; not planned.
+  - Found on 2026-10-07. A check on 2026-10-08 showed that it can also bring back a stale namespace, when one namespace uses two files with the same import name. Planned as the change `namespace-cache-dependencies`.
 - **Unit test:** `test_namespace_data.py` gets a test that two entries of the same library with different import positions get different keys. The comment on the key format in `test_to_data_converts_namespace_references` follows the new format.
 
 ## Risks / Trade-offs
