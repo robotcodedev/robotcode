@@ -168,15 +168,25 @@
 			   icon="dev.robotcode.robotcode4ij.RobotIcons.RobotCode" description="Tools for RobotCode" popup="true">
 			<add-to-group group-id="ToolsMenu" anchor="last"/>
 
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeEnableAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeEnableAction"/>
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeSelectConfigurationProfilesAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeSelectConfigurationProfilesAction"/>
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeConfigurePythonInterpreterAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeConfigurePythonInterpreterAction"/>
+			<separator/>
 			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeRestartLanguageServerAction"
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeRestartLanguageServerAction"
 					text="Restart RobotCode Language Server"/>
 			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeClearCacheAndRestartLanguageServerAction"
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeClearCacheAndRestartLanguageServerAction"
 					text="Clear Cache and Restart RobotCode Language Server"/>
-			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeSelectConfigurationProfilesAction"
-					id="dev.robotcode.robotcode4ij.actions.RobotCodeSelectConfigurationProfilesAction"/>
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"/>
 		</group>
 
+		<!-- the client command of RobotCode's code actions, which LSP4IJ runs as the action with the command's id -->
+		<action id="_robotcode.codeActionShowDocumentSelectAndRename"
+				class="dev.robotcode.robotcode4ij.lsp.RobotCodeShowDocumentSelectAndRenameAction"/>
 	</actions>
 </idea-plugin>

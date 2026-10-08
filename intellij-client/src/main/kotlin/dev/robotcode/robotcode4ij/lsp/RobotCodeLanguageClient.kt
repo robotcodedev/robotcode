@@ -8,8 +8,14 @@ import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettingsMapper
 class RobotCodeLanguageClient(project: Project) : IndexAwareLanguageClient(project) {
     
     override fun handleServerStatusChanged(serverStatus: ServerStatus) {
-        if (serverStatus == ServerStatus.started) {
-            triggerChangeConfiguration()
+        when (serverStatus) {
+            ServerStatus.started -> {
+                triggerChangeConfiguration()
+                project.robotCodeProjectInfo.serverStarted()
+            }
+
+            ServerStatus.stopping, ServerStatus.stopped -> project.robotCodeProjectInfo.serverStopped()
+            else -> {}
         }
     }
     

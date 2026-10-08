@@ -17,6 +17,7 @@ import com.intellij.platform.workspace.jps.entities.SdkEntity
 import com.intellij.platform.workspace.storage.EntityChange
 import com.intellij.util.messages.Topic
 import com.jetbrains.python.sdk.PythonSdkUtil
+import dev.robotcode.robotcode4ij.editor.updateRobotCodeStatusBar
 import dev.robotcode.robotcode4ij.lsp.langServerManager
 import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.CancellationException
@@ -342,10 +343,30 @@ class RobotCodeEnvironment(private val project: Project, private val scope: Coro
             return
         }
         isRobotProject = true
+        project.updateRobotCodeStatusBar()
         val interpreter = projectInterpreter
         when {
             checks.state(interpreter) == EnvironmentState.Unknown -> checks.request(interpreter)
             checks.state(interpreter).isUsable -> project.testManger.refreshDebounced()
+        }
+    }
+
+    /**
+     * Starts RobotCode as when the project is opened, for example when "Disable extension" is unchecked: without a
+     * result the interpreter is checked, and a usable result starts the server and a full discovery.
+     */
+    fun startAgain() {
+        if (!isRobotProject) {
+            return
+        }
+        val interpreter = projectInterpreter
+        val state = checks.state(interpreter)
+        when {
+            state == EnvironmentState.Unknown -> checks.request(interpreter)
+            state.isUsable -> {
+                project.langServerManager.start()
+                project.testManger.refreshDebounced()
+            }
         }
     }
 

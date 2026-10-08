@@ -169,9 +169,13 @@ private class RobotCodeRestartManager(private val project: Project, private val 
 }
 
 fun Project.restartAll(reset: Boolean = false) {
-    // settings for new projects start nothing
-    if (isDefault) {
+    // settings for new projects start nothing, and neither does a project with "Disable extension"
+    if (isDefault || isRobotCodeDisabled) {
         return
+    }
+    // the restart actions also undo a disable in the Language Servers tool window
+    if (reset) {
+        langServerManager.enableForSession()
     }
     this.service<RobotCodeRestartManager>().restartDebounced(reset)
 }

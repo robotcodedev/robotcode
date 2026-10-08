@@ -31,11 +31,15 @@ class RobotCodePersonalConfiguration :
 
         // the selected robot.toml profiles; without any, the default-profiles of robot.toml apply
         var profiles by list<String>()
+
+        // switches RobotCode off for the project, as VS Code's robotcode.disableExtension does
+        var disableExtension by property(false)
     }
 
     var extraArgs by stringDelegate(PersonalState::extraArgs)
     var languageServerExtraArgs by stringDelegate(PersonalState::languageServerExtraArgs)
     var profiles by delegate(PersonalState::profiles)
+    var disableExtension by delegate(PersonalState::disableExtension)
 
     val extraArgsList: List<String>
         get() = ParametersListUtil.parse(extraArgs)

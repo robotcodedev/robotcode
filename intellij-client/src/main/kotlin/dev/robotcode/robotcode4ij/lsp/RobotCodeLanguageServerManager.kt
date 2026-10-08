@@ -5,7 +5,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.ServerStatus
@@ -13,6 +12,7 @@ import dev.robotcode.robotcode4ij.EnvironmentState
 import dev.robotcode.robotcode4ij.PythonInterpreter
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener
+import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.restartAll
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.testing.testManger
@@ -28,7 +28,6 @@ import kotlin.time.Duration.Companion.seconds
 class RobotCodeLanguageServerManager(private val project: Project, private val scope: CoroutineScope) {
     companion object {
         const val LANGUAGE_SERVER_ID = "RobotCode"
-        val LANGUAGE_SERVER_ENABLED_KEY = Key.create<Boolean?>("ROBOTCODE_LANGUAGE_SERVER_ENABLED")
         private val CLEAR_CACHE_TIMEOUT = 30.seconds
     }
     
@@ -50,6 +49,22 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
         isStartBlocked = false
     }
     
+    /**
+     * Set when LSP4IJ disables the server, from the Language Servers tool window or after repeated failed starts. It
+     * lasts until the server is restarted with the restart actions, and does not change "Disable extension".
+     */
+    @Volatile
+    var isDisabledForSession = false
+        private set
+    
+    fun disableForSession() {
+        isDisabledForSession = true
+    }
+    
+    fun enableForSession() {
+        isDisabledForSession = false
+    }
+    
     fun start() {
         if (lease != null) {
             lease!!.dispose()
@@ -57,7 +72,7 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
         }
         
         allowStart()
-        if (project.robotCodeEnvironment.projectState.isUsable) {
+        if (project.robotCodeEnvironment.projectState.isUsable && !project.isRobotCodeDisabled && !isDisabledForSession) {
             
             val options = LanguageServerManager.StartOptions()
             options.isForceStart = true
@@ -74,7 +89,9 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
             lease!!.dispose()
             lease = null
         }
-        LanguageServerManager.getInstance(project).stop(LANGUAGE_SERVER_ID)
+        // a stop of the plugin does not disable the server in LSP4IJ
+        LanguageServerManager.getInstance(project)
+            .stop(LANGUAGE_SERVER_ID, LanguageServerManager.StopOptions().setWillDisable(false))
     }
     
     fun restart() {
@@ -133,7 +150,7 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
      */
     internal fun environmentChanged(interpreter: PythonInterpreter, state: EnvironmentState) {
         val environment = project.robotCodeEnvironment
-        if (restartPending || interpreter != environment.projectInterpreter) {
+        if (restartPending || interpreter != environment.projectInterpreter || project.isRobotCodeDisabled) {
             return
         }
         when {

@@ -8,6 +8,7 @@ import com.intellij.execution.configurations.runConfigurationType
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiElement
 import com.redhat.devtools.lsp4ij.features.documentSymbol.DocumentSymbolData
+import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.testing.testManger
 import java.util.*
 
@@ -26,6 +27,9 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         context: ConfigurationContext,
         sourceElement: Ref<PsiElement>
     ): Boolean {
+        if (configuration.project.isRobotCodeDisabled) {
+            return false
+        }
         var psiElement = sourceElement.get()
         if (psiElement is DocumentSymbolData) {
             psiElement = psiElement.toPsiElement() ?: return false
@@ -50,6 +54,9 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         configuration: RobotCodeRunConfiguration,
         context: ConfigurationContext
     ): Boolean {
+        if (configuration.project.isRobotCodeDisabled) {
+            return false
+        }
         var psiElement = context.psiLocation ?: return false
         if (psiElement is DocumentSymbolData) {
             psiElement = psiElement.toPsiElement() ?: return false

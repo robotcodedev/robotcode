@@ -30,6 +30,7 @@ import dev.robotcode.robotcode4ij.PythonInterpreter
 import dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
 import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
@@ -165,7 +166,9 @@ import java.util.*
     }
     
     fun refresh(uri: String) {
-        if (!project.isOpen || project.isDisposed || !project.robotCodeEnvironment.projectState.isUsable) {
+        if (!project.isOpen || project.isDisposed || !project.robotCodeEnvironment.projectState.isUsable ||
+            project.isRobotCodeDisabled
+        ) {
             return
         }
         
@@ -229,7 +232,7 @@ import java.util.*
     
     fun refresh() {
         // a usable result of the environment check runs discovery again
-        if (!project.robotCodeEnvironment.projectState.isUsable) {
+        if (!project.robotCodeEnvironment.projectState.isUsable || project.isRobotCodeDisabled) {
             return
         }
         

@@ -22,7 +22,7 @@ class RobotCodeLanguageServerTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
-            project.putUserData(RobotCodeLanguageServerManager.LANGUAGE_SERVER_ENABLED_KEY, null)
+            project.langServerManager.enableForSession()
             project.langServerManager.allowStart()
             environment.resetForTests()
         } finally {

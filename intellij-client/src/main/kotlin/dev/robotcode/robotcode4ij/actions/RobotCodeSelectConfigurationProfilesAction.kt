@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.chooseProfiles
+import dev.robotcode.robotcode4ij.editor.updateRobotCodeStatusBar
 import dev.robotcode.robotcode4ij.restartAll
 
 /**
@@ -29,6 +30,7 @@ class RobotCodeSelectConfigurationProfilesAction : AnAction() {
         if (profiles != settings.profiles) {
             settings.profiles = profiles.toMutableList()
             project.restartAll()
+            project.updateRobotCodeStatusBar()
         }
     }
 }

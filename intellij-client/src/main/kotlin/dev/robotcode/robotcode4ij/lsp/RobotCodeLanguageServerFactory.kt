@@ -7,7 +7,8 @@ import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import dev.robotcode.robotcode4ij.EnvironmentState
-import dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerManager.Companion.LANGUAGE_SERVER_ENABLED_KEY
+import dev.robotcode.robotcode4ij.isRobotCodeDisabled
+import dev.robotcode.robotcode4ij.languageServerEnabled
 import dev.robotcode.robotcode4ij.lsp.features.RobotDiagnosticsFeature
 import dev.robotcode.robotcode4ij.lsp.features.RobotSemanticTokensFeature
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
@@ -34,12 +35,9 @@ import org.eclipse.lsp4j.services.LanguageServer
     }
     
     override fun isEnabled(project: Project): Boolean {
-        if (project.langServerManager.isStartBlocked) {
+        val manager = project.langServerManager
+        if (manager.isStartBlocked || manager.isDisabledForSession || project.isRobotCodeDisabled) {
             return false
-        }
-        
-        if (project.getUserData(LANGUAGE_SERVER_ENABLED_KEY) == true) {
-            return true
         }
         
         // never waits for the check: without a result, LSP4IJ starts nothing yet, and a usable result starts the server
@@ -52,8 +50,13 @@ import org.eclipse.lsp4j.services.LanguageServer
         return state.isUsable
     }
     
+    // LSP4IJ disables the server from the Language Servers tool window and after repeated failed starts
     override fun setEnabled(enabled: Boolean, project: Project) {
-        project.putUserData(LANGUAGE_SERVER_ENABLED_KEY, enabled)
+        if (enabled) {
+            project.languageServerEnabled()
+        } else {
+            project.langServerManager.disableForSession()
+        }
     }
 }
 

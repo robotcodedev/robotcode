@@ -23,6 +23,7 @@ class RobotCodePersonalConfigurationTest {
             extraArgs = "--config \"team settings.toml\""
             languageServerExtraArgs = "--log --log-level INFO"
             profiles = mutableListOf("dev", "ci")
+            disableExtension = true
         }
 
         val restored = XmlSerializer.deserialize(
@@ -32,6 +33,11 @@ class RobotCodePersonalConfigurationTest {
 
         assertEquals(state, restored)
         assertTrue(XmlSerializer.serialize(RobotCodePersonalConfiguration.PersonalState()).children.isEmpty())
+    }
+
+    @Test
+    fun disableExtensionIsNotASharedSetting() {
+        assertTrue(RobotCodeProjectConfiguration.ProjectState::class.java.methods.none { it.name == "getDisableExtension" })
     }
 
     @Test
