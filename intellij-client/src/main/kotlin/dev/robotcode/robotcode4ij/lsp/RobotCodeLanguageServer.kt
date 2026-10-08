@@ -10,6 +10,7 @@ import com.redhat.devtools.lsp4ij.server.LanguageServerLogErrorHandler
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import dev.robotcode.robotcode4ij.InvalidPythonOrRobotVersionException
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettingsMapper
 import java.io.InputStream
 import java.io.OutputStream
@@ -26,7 +27,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 class RobotCodeLanguageServer(
     private val project: Project,
     private val commandLineFor: (port: Int) -> GeneralCommandLine = { port ->
-        project.buildRobotCodeCommandLine(arrayOf("language-server", "--socket", "$port"))
+        project.buildRobotCodeCommandLine(
+            arrayOf("language-server", "--socket", "$port"),
+            extraArgs = RobotCodePersonalConfiguration.getInstance(project).languageServerExtraArgsList.toTypedArray()
+        )
     }
 ) : OSProcessStreamConnectionProvider() {
 

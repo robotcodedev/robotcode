@@ -101,8 +101,10 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
                 *connection.toTypedArray(),
                 *(if (!debug) arrayOf("--no-debug") else arrayOf()),
                 *(included.toTypedArray())
-            ), noColor = false // ,extraArgs = arrayOf("-v", "--log", "--log-level", "TRACE")
-        
+            ),
+            // as in VS Code, the robotcode extra args do not reach test runs
+            extraArgs = arrayOf(),
+            noColor = false
         )
         
         val handler = KillableColoredProcessHandler(commandLine) // handler.setHasPty(true)

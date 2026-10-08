@@ -12,6 +12,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
 import com.intellij.openapi.util.Key
 import com.jetbrains.python.sdk.PythonSdkUtil
+import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.lsp.langServerManager
 import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.CoroutineScope
@@ -126,10 +127,32 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): CheckPythonAndRo
 
 class InvalidPythonOrRobotVersionException(message: String) : Exception(message)
 
+/**
+ * The arguments after the `robotcode` entry point. The extra arguments come first, so that the plugin's own options win
+ * when the extra arguments set the same option; `-p` collects, so profiles among them add to [profiles].
+ */
+internal fun robotCodeArguments(
+    extraArgs: List<String>,
+    format: String,
+    noColor: Boolean,
+    noPager: Boolean,
+    profiles: List<String>,
+    args: List<String>
+): List<String> {
+    return buildList {
+        addAll(extraArgs)
+        if (format.isNotEmpty()) addAll(listOf("--format", format))
+        if (noColor) add("--no-color")
+        if (noPager) add("--no-pager")
+        profiles.forEach { addAll(listOf("-p", it)) }
+        addAll(args)
+    }
+}
+
 fun Project.buildRobotCodeCommandLine(
     args: Array<String> = arrayOf(),
     profiles: Array<String> = arrayOf(),
-    extraArgs: Array<String> = arrayOf(),
+    extraArgs: Array<String> = RobotCodePersonalConfiguration.getInstance(this).extraArgsList.toTypedArray(),
     format: String = "",
     noColor: Boolean = true,
     noPager: Boolean = true
@@ -138,7 +161,7 @@ fun Project.buildRobotCodeCommandLine(
     if (result != CheckPythonAndRobotVersionResult.OK) {
         throw InvalidPythonOrRobotVersionException(result.errorMessage!!)
     }
-    
+
     val pythonInterpreter = this.robotPythonSdk?.homePath
     val commandLine = GeneralCommandLine(
         pythonInterpreter,
@@ -146,14 +169,11 @@ fun Project.buildRobotCodeCommandLine(
         "-X",
         "utf8",
         RobotCodeHelpers.robotCodePath.pathString,
-        *(if (format.isNotEmpty()) arrayOf("--format", format) else arrayOf()),
-        *(if (noColor) arrayOf("--no-color") else arrayOf()),
-        *(if (noPager) arrayOf("--no-pager") else arrayOf()),
-        *profiles.flatMap { listOf("-p", it) }.toTypedArray(),
-        *extraArgs,
-        *args
+        *robotCodeArguments(
+            extraArgs.toList(), format, noColor, noPager, profiles.toList(), args.toList()
+        ).toTypedArray()
     ).withWorkDirectory(this.basePath).withCharset(Charsets.UTF_8)
-    
+
     return commandLine
 }
 

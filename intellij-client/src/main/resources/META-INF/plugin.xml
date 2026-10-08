@@ -75,6 +75,11 @@
 							 key="settings.robotframework.displayName"
 							 nonDefaultProject="true"/>
 		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
+							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeGeneralConfigurable"
+							 id="dev.robotcode.robotcode4ij.projectsettings.general"
+							 key="settings.general.displayName"
+							 nonDefaultProject="true"/>
+		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
 							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeEditingConfigurable"
 							 id="dev.robotcode.robotcode4ij.projectsettings.editing"
 							 key="settings.editing.displayName"
@@ -88,6 +93,11 @@
 							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeRobocopConfigurable"
 							 id="dev.robotcode.robotcode4ij.projectsettings.robocop"
 							 key="settings.robocop.displayName"
+							 nonDefaultProject="true"/>
+		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
+							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeLanguageServerConfigurable"
+							 id="dev.robotcode.robotcode4ij.projectsettings.languageserver"
+							 key="settings.languageServer.displayName"
 							 nonDefaultProject="true"/>
 
 		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.configuration.RobotCodeColorSettingsPage"/>
