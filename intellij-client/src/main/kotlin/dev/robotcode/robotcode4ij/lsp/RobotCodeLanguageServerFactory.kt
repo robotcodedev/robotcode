@@ -32,6 +32,10 @@ import org.eclipse.lsp4j.services.LanguageServer
     }
     
     override fun isEnabled(project: Project): Boolean {
+        if (project.langServerManager.isStartBlocked) {
+            return false
+        }
+        
         if (project.getUserData(LANGUAGE_SERVER_ENABLED_KEY) == true) {
             return true
         }

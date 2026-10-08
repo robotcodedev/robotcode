@@ -1,6 +1,7 @@
 package dev.robotcode.robotcode4ij
 
 import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.process.ProcessOutput
 import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
@@ -42,12 +43,26 @@ val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
         return this.modules.firstNotNullOfOrNull { PythonSdkUtil.findPythonSdk(it) }
     }
 
-enum class CheckPythonAndRobotVersionResult(val errorMessage: String? = null) {
-    OK(null),
-    NO_PYTHON("No Python interpreter is configured for the project."),
-    INVALID_PYTHON("The configured Python interpreter is invalid."),
-    INVALID_PYTHON_VERSION("The Python version configured for the project is too old. Minimum required version is 3.9."),
-    INVALID_ROBOT("The Robot Framework version is invalid or not installed. Version 5.0 or higher is required.")
+enum class CheckPythonAndRobotVersionResult(private val messageKey: String? = null) {
+    OK,
+    NO_PYTHON("python.noInterpreter"),
+    INVALID_PYTHON("python.interpreterNotFound"),
+    INVALID_PYTHON_VERSION("python.tooOld"),
+    INVALID_ROBOT("python.noRobotFramework");
+
+    val errorMessage: String?
+        get() = messageKey?.let { RobotCodeBundle.message(it) }
+}
+
+// Every RobotCode package requires Python 3.10.
+internal const val PYTHON_VERSION_PROBE = "import sys; print(sys.version_info[:2] >= (3, 10))"
+
+internal fun pythonVersionResult(output: ProcessOutput): CheckPythonAndRobotVersionResult {
+    return if (output.exitCode == 0 && output.stdout.trim() == "True") {
+        CheckPythonAndRobotVersionResult.OK
+    } else {
+        CheckPythonAndRobotVersionResult.INVALID_PYTHON_VERSION
+    }
 }
 
 fun Project.resetPythonAndRobotVersionCache() {
@@ -84,11 +99,9 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): CheckPythonAndRo
         thisLogger().info("Use Python Interpreter $pythonInterpreter for project '${this.name}'")
         
         val res = ExecUtil.execAndGetOutput(
-            GeneralCommandLine(
-                pythonInterpreter, "-u", "-c", "import sys; print(sys.version_info[:2]>=(3,8))"
-            ), timeoutInMilliseconds = 5000
+            GeneralCommandLine(pythonInterpreter, "-u", "-c", PYTHON_VERSION_PROBE), timeoutInMilliseconds = 5000
         )
-        if (res.exitCode != 0 || res.stdout.trim() != "True") {
+        if (pythonVersionResult(res) != CheckPythonAndRobotVersionResult.OK) {
             thisLogger().warn("Invalid python version")
             return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON_VERSION
         }
@@ -121,8 +134,9 @@ fun Project.buildRobotCodeCommandLine(
     noColor: Boolean = true,
     noPager: Boolean = true
 ): GeneralCommandLine {
-    if (this.checkPythonAndRobotVersion() != CheckPythonAndRobotVersionResult.OK) {
-        throw InvalidPythonOrRobotVersionException("PythonSDK is not defined or robot version is not valid for project ${this.name}")
+    val result = this.checkPythonAndRobotVersion()
+    if (result != CheckPythonAndRobotVersionResult.OK) {
+        throw InvalidPythonOrRobotVersionException(result.errorMessage!!)
     }
     
     val pythonInterpreter = this.robotPythonSdk?.homePath
@@ -143,11 +157,16 @@ fun Project.buildRobotCodeCommandLine(
     return commandLine
 }
 
+// The platform cancels the scope when the project closes or the plugin is unloaded.
 @Service(Service.Level.PROJECT)
-private class RobotCodeRestartManager(private val project: Project) {
+private class RobotCodeRestartManager(private val project: Project, private val scope: CoroutineScope) {
     companion object {
         private const val DEBOUNCE_DELAY = 500L
     }
+    
+    // one restart at a time, in the order they were requested
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val restartDispatcher = Dispatchers.IO.limitedParallelism(1)
     
     private var refreshJob: Job? = null
     
@@ -157,9 +176,6 @@ private class RobotCodeRestartManager(private val project: Project) {
         project.testManger.refreshDebounced()
     }
     
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val restartScope = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
-    
     fun restartDebounced(reset: Boolean = false) {
         if (!project.isOpen || project.isDisposed) {
             return
@@ -167,8 +183,11 @@ private class RobotCodeRestartManager(private val project: Project) {
         
         refreshJob?.cancel()
         
-        refreshJob = restartScope.launch {
+        refreshJob = scope.launch(restartDispatcher) {
             delay(DEBOUNCE_DELAY)
+            if (!project.isOpen || project.isDisposed) {
+                return@launch
+            }
             restart(reset)
             refreshJob = null
         }
