@@ -106,6 +106,11 @@ The plugin SHALL check the interpreter again, and restart the language server an
 - **WHEN** the paths of the usable SDK are refreshed, or a folder is excluded from the project
 - **THEN** no check runs and the language server is not restarted
 
+#### Scenario: Interpreter change after a failed start
+
+- **WHEN** a start of the language server failed and the user switches the project to another usable interpreter
+- **THEN** the plugin checks the new interpreter and starts the language server
+
 ### Requirement: An unusable interpreter is checked again when its SDK changes
 
 While the interpreter is not usable, a change of its SDK, such as the refresh of its paths after packages were installed, SHALL start a new check.

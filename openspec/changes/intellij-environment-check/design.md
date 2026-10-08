@@ -11,7 +11,11 @@ See proposal.md for the motivation. The current state that shapes the approach, 
 - **LSP4IJ:** it consults the factory's `isEnabled` before it starts the server, and `LanguageServerManager.start` refuses a server that is not enabled unless `willEnable` is set.
 - **Remote interpreters:** `PythonSdkUtil.isRemote(sdk)` is true when the SDK's additional data implements `PyRemoteSdkAdditionalDataMarker`. Target-based SDKs (`PyTargetAwareAdditionalData`), which PyCharm uses for WSL, Docker and SSH, implement it. Today the check probes such an SDK's home path on the local machine.
 - **Bundled paths:** derived from `PathManager.getPluginsDir()/robotcode4ij/data`.
-- **Planned change this builds on:** `intellij-language-server-connection` is planned, not implemented. This design assumes its planned design: Restart calls `restartAll(reset = true)` on the restart manager's coroutine scope, the interpreter texts live in the message bundle, and the probe requires Python 3.10.
+- **Builds on the implemented `intellij-language-server-connection`:**
+  - Restart and Clear Cache call `restartAll(reset = true)`, which runs on the restart manager's coroutine scope; the settings pages apply through the debounced `restartAll()` and do not wait for the check.
+  - The four interpreter texts (`python.*`) live in the message bundle, each naming the requirement, and the version probe (`PYTHON_VERSION_PROBE`) requires Python 3.10.
+  - The connection provider turns `InvalidPythonOrRobotVersionException` into LSP4IJ's `CannotStartProcessException`.
+  - After a failed start, `isStartBlocked` keeps LSP4IJ from starting the server on its own, until `RobotCodeLanguageServerManager.start()` clears it.
 
 ## Goals / Non-Goals
 
@@ -41,7 +45,7 @@ A new project service holds one state per interpreter:
 
 An interpreter is identified by its kind, the SDK name and its home path. The service runs at most one check per interpreter at a time, on the coroutine scope the platform injects into the service, with `Dispatchers.IO`. It publishes every state change on a project topic.
 
-Consumers read the state and never wait for it. When they find **Unknown**, they request a check. LSP4IJ's `isEnabled` returns whether the project interpreter is usable, `buildRobotCodeCommandLine` throws `CantRunException` with the message of the result, and the widget's `isAvailable` reads the state.
+Consumers read the state and never wait for it. When they find **Unknown**, they request a check. LSP4IJ's `isEnabled` returns false while the start is blocked after a failed start, true when LSP4IJ's own toggle stored true through `setEnabled`, as today, and otherwise whether the project interpreter is usable; `tryConfigureProject()` goes away. `buildRobotCodeCommandLine` throws `CantRunException` with the message of the result, which the connection provider turns into `CannotStartProcessException` as it does with today's exception. The widget's `isAvailable` reads the state.
 
 Alternatives:
 - Keeping the user data cache and the blocking call: this is the status quo.
@@ -81,7 +85,7 @@ A check starts:
 A consumer that finds **Failed** does not request a check, so a failing check is not repeated on its own.
 
 A change of the project interpreter between usable and not usable acts as follows:
-- To usable, it starts the language server, if needed, and a full discovery, but only in a project that uses Robot Framework: the startup lookup found Robot Framework files, or a Robot Framework file has been opened.
+- To usable, it starts the language server through `RobotCodeLanguageServerManager.start()`, which also clears the start block of an earlier failed start, and a full discovery, but only in a project that uses Robot Framework: the startup lookup found Robot Framework files, or a Robot Framework file has been opened.
 - From usable, it stops the server.
 - Every change refreshes the banners through `EditorNotifications.updateAllNotifications()`.
 
