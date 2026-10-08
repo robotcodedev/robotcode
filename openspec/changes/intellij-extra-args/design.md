@@ -4,8 +4,8 @@
 
 See proposal.md for the motivation. The state that shapes the approach:
 
-- **Builds on two planned changes.** Neither is implemented yet; this design builds on their planned designs:
-  - the settings pages change: the "Robot Framework" node (`dev.robotcode.robotcode4ij.projectsettings`) with a parent page that holds only a description, child pages registered with that `parentId`, texts in `messages/RobotCode.properties`;
+- **Builds on two implemented changes:**
+  - the settings pages change: the "Robot Framework" node (`dev.robotcode.robotcode4ij.projectsettings`) with a parent page that has no content yet, so the settings dialog lists its sub-pages there; child pages registered with that `parentId`; texts in `messages/RobotCode.properties`. Its labels follow VS Code's setting titles, its groups the key parts VS Code shows before a title, and its pages VS Code's settings categories;
   - the language server connection change: the server's stderr and stdout go only to the RobotCode entry of the Language Servers tool window, and no longer through the plugin's `logError` handler into `Logger.error`. `robotcode --log` without `--log-filename` and `--verbose` write to stderr. Without that change, every log line from the language server arguments would raise an "IDE error occurred" report, so this change needs it, in addition to the settings pages.
 - **The builder:** `Project.buildRobotCodeCommandLine` in `RobotCodeHelpers.kt` builds `<python> -u -X utf8 <bundled robotcode> [--format f] [--no-color] [--no-pager] [-p profile]... [extraArgs] <args>` with the project directory as working directory. It already has `profiles` and `extraArgs` parameters, but no caller passes either. Its callers: the language server (`language-server --socket <port>`, with the default `--no-color --no-pager`), the full and the per-file discovery in `RobotCodeTestManager` (`--format json`), and runs in `RobotCodeRunProfileState` (`noColor = false`, with a commented-out `extraArgs` example).
 - **Option semantics:** `--format`, `--color/--no-color` and `--pager/--no-pager` are single-value options of the `robotcode` group, and click keeps the last occurrence. `-p/--profile` and `-c/--config` collect every occurrence.
@@ -46,8 +46,8 @@ Alternatives:
 
 ### Who gets which arguments
 
-- `buildRobotCodeCommandLine` takes the additional robotcode arguments as the default of its `extraArgs` parameter. Every helper command, today the full and the per-file discovery and later commands such as the profile list, gets them without its own wiring.
-- The language server passes the additional language server arguments instead.
+- `buildRobotCodeCommandLine` takes the robotcode extra args as the default of its `extraArgs` parameter. Every helper command, today the full and the per-file discovery and later commands such as the profile list, gets them without its own wiring.
+- The language server passes the language server extra args instead.
 - Runs pass an empty list. Passing the robotcode arguments to `robotcode debug` would change their effect compared with VS Code, for example `--log` would log the test process into the run console. The planned run configuration change moves the building of a run's arguments into its Python command-line state; there, too, runs get no extra arguments.
 
 Alternative: each caller reads the setting itself. A new helper command would then miss the arguments unless its author remembered them.
@@ -64,15 +64,18 @@ Alternatives:
 
 ### Where the fields live
 
-- "Additional robotcode arguments" goes into an "Advanced" group of the "Robot Framework" parent page, the page for settings of the whole project. It is edited with a `RawCommandLineEditor`.
-- "Additional language server arguments" gets its own "Language Server" child page (`dev.robotcode.robotcode4ij.projectsettings.languageserver`, `nonDefaultProject="true"`), which the settings node reserved for language server settings.
-- Both values are personal, so neither is offered for the default project: the Language Server page stays out of Settings for New Projects, and the parent page leaves out the robotcode arguments row for the default project. The planned profiles change offers the parent page there; the rule keeps both landing orders consistent.
+- The robotcode extra args get their own "General" child page (`dev.robotcode.robotcode4ij.projectsettings.general`, `nonDefaultProject="true"`), for VS Code's "General" category, as "Extra args" without a group: VS Code shows `robotcode.extraArgs` without a key part before its title. The parent page keeps listing its sub-pages.
+- The language server extra args get their own "Language Server" child page (`dev.robotcode.robotcode4ij.projectsettings.languageserver`, `nonDefaultProject="true"`), for VS Code's "Language Server" category, as "Extra args".
+- Both fields are `RawCommandLineEditor`s, the editor of IntelliJ's own argument fields.
+- Both values are personal, so neither page is offered for the default project: both stay out of Settings for New Projects.
 
-Alternative: both on one page. Next to each other, the two fields invite the wrong expectation that the robotcode arguments reach the language server too; the separate page and the texts keep them apart.
+Alternatives:
+- The "Robot Framework" parent page for the robotcode extra args: the parent page would show the field instead of the list of its sub-pages, and VS Code shows "General" as a category like the others.
+- Both on one page. Next to each other, the two fields invite the wrong expectation that the robotcode arguments reach the language server too; the separate page and the texts keep them apart.
 
 ### What Apply does
 
-- The parent page runs discovery again (`refreshDebounced()`) when the robotcode arguments changed, and restarts nothing, because the language server does not use them.
+- The General page runs discovery again (`refreshDebounced()`) when the robotcode arguments changed, and restarts nothing, because the language server does not use them.
 - The Language Server page restarts through the debounced `restartAll()` when its arguments changed.
 
 Alternative: VS Code's behaviour, which restarts the language server for both. That costs a restart for a value the server never sees.
@@ -81,7 +84,6 @@ Alternative: VS Code's behaviour, which restarts the language server for both. T
 
 - [A user puts options into the robotcode arguments that break discovery, such as `--dry`] → The text names logging and configuration files as the intended use; a failing discovery logs its stderr as today.
 - [`--log` on discovery writes to stderr, which the plugin ignores on success] → Expected: the arguments target debugging, and the log of a failing discovery is in `idea.log`.
-- [Applying the Editing page and the Language Server page together restarts the server twice while the Editing page still restarts synchronously] → The Language Server page uses the debounced restart; making every page use it is planned with the analysis settings.
 - [The robotcode arguments do not reach test runs, unlike what users might expect from the name] → The setting's text says so, as stated in the spec.
 
 ## Migration Plan
