@@ -2062,6 +2062,7 @@ class SemanticAnalyzer(Visitor):
         ignore_errors_if_contains_variables: bool = False,
         unescape_keyword: bool = True,
         is_template: bool = False,
+        check_arguments: bool = True,
     ) -> Optional[KeywordDoc]:
         # Reset token-decomposition outputs for this call. Visitors read them
         # after we return to build BDD_PREFIX / NAMESPACE / SEPARATOR / KEYWORD
@@ -2228,7 +2229,7 @@ class SemanticAnalyzer(Visitor):
                         code=Error.PRIVATE_KEYWORD,
                     )
 
-                if not isinstance(node, (Template, TestTemplate)):
+                if check_arguments and not isinstance(node, (Template, TestTemplate)):
                     try:
                         if result.arguments_spec is not None:
                             result.arguments_spec.resolve(
@@ -2391,7 +2392,7 @@ class SemanticAnalyzer(Visitor):
         tokens = list(argument_tokens)
         token_idx = 0
 
-        for arg_info in kw_args:
+        for arg_idx, arg_info in enumerate(kw_args):
             if token_idx >= len(tokens):
                 break
 
@@ -2401,15 +2402,21 @@ class SemanticAnalyzer(Visitor):
                 kw_name_token = tokens[token_idx]
                 token_idx += 1
 
+                # Without a following is_keyword_argument parameter the keyword is only
+                # named, not called (e.g. `Keyword Should Exist`): the remaining tokens
+                # belong to the outer keyword and the inner arguments are not checked.
+                is_called = any(a.is_keyword_argument for a in kw_args[arg_idx + 1 :])
+
                 # Collect inner keyword args: all remaining tokens that map to
                 # is_keyword_argument parameters (VAR_POSITIONAL covers all remaining)
-                inner_arg_tokens = tokens[token_idx:]
+                inner_arg_tokens = tokens[token_idx:] if is_called else []
                 kw_doc = self._analyze_keyword_call(
                     node,
                     kw_name_token,
                     inner_arg_tokens,
                     allow_variables=True,
                     ignore_errors_if_contains_variables=True,
+                    check_arguments=is_called,
                 )
                 nested = self._last_inner_calls
                 self._last_inner_calls = [

@@ -13,12 +13,14 @@ from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
 from robotcode.robot.diagnostics.library_doc import (
     BUILTIN_LIBRARY_NAME,
     KeywordDoc,
+    get_library_doc,
 )
 from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     KeywordCallStatement,
     RunKeywordCallStatement,
 )
+from robotcode.robot.utils import RF_VERSION
 
 # Type alias keeps test signatures readable.
 AnalyzerFactory = Callable[..., AnalyzerResult]
@@ -642,6 +644,37 @@ Example
             inner = stmts[0].inner_calls[i]
             assert any(t.kind == TokenKind.KEYWORD_INNER and t.value == "Log" for t in inner.tokens)
             assert any(t.kind == TokenKind.ARGUMENT and t.value == expected_arg for t in inner.tokens)
+
+
+# --- KeywordName without KeywordArgument: the keyword is only named ---
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 4), reason="KeywordName/KeywordArgument type hints require RF >= 7.4")
+class TestKeywordNameWithoutKeywordArguments:
+    def test_keyword_should_exist_does_not_check_inner_arguments(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
+
+        builtin = get_library_doc(BUILTIN_LIBRARY_NAME)
+        result = run_kw_analyzer(
+            """\
+*** Test Cases ***
+Example
+    Keyword Should Exist    Log
+    Keyword Should Exist    Log    custom message
+    Keyword Should Exist    Should Be Equal    msg=boom
+""",
+            {name: builtin.keywords[name] for name in ["Keyword Should Exist", "Log", "Should Be Equal"]},
+        )
+        assert result.diagnostics == []
+        stmts = _keyword_call_stmts(result)
+        assert len(stmts) == 3
+        for stmt, inner_name in zip(stmts, ["Log", "Log", "Should Be Equal"]):
+            assert isinstance(stmt, RunKeywordCallStatement)
+            assert len(stmt.inner_calls) == 1
+            inner = stmt.inner_calls[0]
+            assert inner.keyword_doc is not None
+            assert inner.keyword_doc.name == inner_name
+            assert not any(t.kind == TokenKind.ARGUMENT for t in inner.tokens)
 
 
 # --- Template keywords: never produce RunKeywordCallStatement ---
