@@ -48,7 +48,7 @@ The check SHALL tell these results apart, and both the banner on Robot files and
 
 ### Requirement: Remote interpreters are a result of their own
 
-The check SHALL also tell apart, as a result of its own, that the interpreter is a remote one, such as WSL, Docker or SSH, which RobotCode does not support yet; both the banner on Robot files and the error of a run SHALL name it together with the requirement "Python 3.10 or newer with Robot Framework 5.0 or newer".
+The check SHALL also tell apart, as a result of its own, that the interpreter is a remote one, such as WSL, Docker or SSH, which RobotCode does not support yet; both the banner on Robot files and the error of a run SHALL name it together with the requirement "Python 3.10 or newer with Robot Framework 5.0 or newer". PyCharm without a Pro subscription does not count remote interpreters as Python interpreters, so there the result SHALL be that no interpreter is configured.
 
 #### Scenario: Run with an SSH interpreter
 

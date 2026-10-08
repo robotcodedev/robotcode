@@ -41,7 +41,7 @@ _None._
 
 ## Impact
 
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/RobotCodeHelpers.kt`: the check and its cache move into a new project service in the plugin's root package, with a topic for state changes; `buildRobotCodeCommandLine` only reads the state; bundled paths come from the plugin descriptor.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/RobotCodeHelpers.kt`: the check and its cache move into a new project service in the plugin's root package, with a topic for state changes; `buildRobotCodeCommandLine` only reads the state; bundled paths come from the directory of the plugin's jar.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/RobotCodePostStartupActivity.kt`: activation by index lookup and the filtered reaction to SDK and module changes.
 - `lsp/RobotCodeLanguageServer.kt`: turns the run error of the builder into LSP4IJ's start error, as it does with today's exception.
 - `lsp/RobotCodeLanguageServerFactory.kt`, `lsp/RobotCodeLanguageServerManager.kt`, `editor/EditorNotificationProvider.kt`, `editor/RobotCodeStatusBarWidgetFactory.kt`, `execution/RobotCodeRunProfileState.kt` and `testing/RobotCodeTestManager.kt`: read the state instead of running the check.

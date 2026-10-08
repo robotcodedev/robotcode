@@ -89,7 +89,7 @@ A change of the project interpreter between usable and not usable acts as follow
 - From usable, it stops the server.
 - Every change refreshes the banners through `EditorNotifications.updateAllNotifications()`.
 
-A result that stays usable changes nothing; the restart path restarts by itself after its own check.
+A result that stays usable changes nothing; the restart path restarts by itself after its own check. From the moment a restart is requested until it has finished, a change of the result neither starts nor stops the server, because the restart starts it itself; otherwise a result that arrives during the restart's delay starts the server a second time. A restart that a newer one replaces leaves this state to the newer one.
 
 ### Runs wait for a missing result
 
@@ -102,7 +102,7 @@ Alternatives:
 
 ### Reacting to SDK and module changes by identity
 
-The existing `workspaceModel.eventLog` subscription moves into the service and also watches `ProjectSettingsEntity`. On each change, the service resolves the project interpreter again and compares its identity with the last one. A different identity starts a check and, if the server runs, a restart through the restart path. The same identity starts nothing, unless an `SdkEntity` change concerns the SDK in use and its result is not usable; then it starts a check.
+The existing `workspaceModel.eventLog` subscription moves into the service. On every change, the service resolves the project interpreter again and compares its identity with the last one; this also covers a new project SDK for modules that inherit it, a `ProjectSettingsEntity` change, without naming that entity. In a Robot Framework project, a different identity requests a restart through the restart path and then checks the new interpreter; the restart waits for the check and also starts a server whose start failed with the last interpreter. Outside a Robot Framework project, it only restarts a running server. The same identity starts nothing, unless an `SdkEntity` change concerns the SDK in use and its result is not usable; then it starts a check.
 
 Alternatives:
 - `ModuleRootListener.TOPIC`: it also fires for root changes and needs the same comparison.
@@ -118,14 +118,17 @@ A hit marks the project as a Robot Framework project and requests the check. Wit
 
 Alternative: relying on LSP4IJ's lazy start alone would leave Robot Framework projects without discovery, and so without Run in the Project view, until a file is opened.
 
-### Bundled paths from the plugin descriptor
+### Bundled paths from the plugin's own jar
 
-The base path becomes `PluginManagerCore.getPlugin(PluginId.getId("dev.robotcode.robotcode4ij"))?.pluginPath` plus `data`. Both calls carry no status annotation in 2026.1.
+The base path becomes the plugin directory plus `data`. The plugin directory is the parent of the `lib` folder that holds the jar with the plugin's classes, found through the class resource of `RobotCodeHelpers`. When the classes do not come from a jar, as in the plugin's tests, the base path stays below the IDE's plugins directory.
+
+Alternative: `PluginManagerCore.getPlugin(PluginId.getId("dev.robotcode.robotcode4ij"))?.pluginPath`. It carries no status annotation in 2026.1, but from 2026.2 on it is internal API, as are `PluginManager.getPlugin`, `PluginManager.getPluginByClass` and `PluginAwareClassLoader`; the plugin verifier reports it.
 
 ## Risks / Trade-offs
 
 - [The first server start in a Robot Framework project now waits for the index lookup in smart mode] → The lookup is a cheap index query. During a long indexing, opening a Robot Framework file still requests the check and starts the server.
 - [The probe repeats the Robot Framework minimum that VS Code reads from `check_robot_version.py`] → Both minimums sit next to the message texts that name them. VS Code is unchanged.
+- [PyCharm without a Pro subscription does not count remote SDKs as Python SDKs: `PythonSdkUtil.isPythonSdk` returns false for them, so `findPythonSdk` finds no interpreter] → RobotCode reports that no interpreter is configured there, and starts nothing. PyCharm without Pro does not support remote interpreters, so nothing more is needed (decided during the implementation). IntelliJ IDEA with the Python plugin and PyCharm with Pro get the remote result.
 - [A remote SDK whose path also exists locally stops working] → It only worked by running the local interpreter by accident. The message says that remote interpreters are not supported yet.
 - [A cancellable modal progress during a run start] → It appears only when no result exists yet, and for at most 30 seconds.
 - [Installing packages from a terminal may not change the SDK in the workspace model] → This is not verified. Restart checks again in any case.
