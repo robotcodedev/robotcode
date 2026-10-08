@@ -681,6 +681,13 @@ class RobotFileMeta:
         return cls(str(normalized_path(document.uri.to_path())), info)
 
 
+def _has_cache_key(meta: LibraryMetaData, cache_key: str) -> bool:
+    try:
+        return meta.cache_key == cache_key
+    except ValueError:
+        return False
+
+
 @dataclass(slots=True)
 class NamespaceMetaData:
     """Lightweight metadata for fast cache freshness checks.
@@ -958,14 +965,14 @@ class ImportsManager:
             return False
 
         # Level 2: dependency checks — direct comparison, no hashing
-        base_dir = os.path.dirname(source)
         for key, saved_value in meta.dependency_fingerprints.items():
             if key.startswith("lib:"):
+                # the cache key of the library's meta: its file, or its module name
                 lib_name = key[4:]
                 try:
-                    lib_meta = self.get_cached_library_meta(lib_name, args=None)
+                    lib_meta = self.get_cached_library_meta(lib_name)
                     if lib_meta is None:
-                        lib_meta, _, _ = self.get_library_meta(lib_name, base_dir=base_dir)
+                        lib_meta, _, _ = self.get_library_meta(lib_name)
                     if lib_meta is None or lib_meta != saved_value:
                         self._logger.debug(
                             lambda: (
@@ -1016,11 +1023,12 @@ class ImportsManager:
                     )
                     return False
             elif key.startswith("var:"):
+                # the cache key of the variable file's meta: its file, or its module name
                 var_name = key[4:]
                 try:
-                    var_meta = self.get_cached_variables_meta(var_name, args=None)
+                    var_meta = self.get_cached_variables_meta(var_name)
                     if var_meta is None:
-                        var_meta, _ = self.get_variables_meta(var_name, base_dir=base_dir)
+                        var_meta, _ = self.get_variables_meta(var_name)
                     if var_meta is None or var_meta != saved_value:
                         self._logger.debug(
                             lambda: (
@@ -1510,46 +1518,28 @@ class ImportsManager:
 
         return None, name
 
-    def get_cached_library_meta(
-        self, import_name: str, args: Optional[Tuple[Any, ...]] = ()
-    ) -> Optional[LibraryMetaData]:
-        """Return already-computed LibraryMetaData from the internal cache, or None.
+    def get_cached_library_meta(self, cache_key: str) -> Optional[LibraryMetaData]:
+        """Return the meta of a loaded library whose meta has the cache key `cache_key`, or None.
 
-        Matches by import name and args to find the correct entry, since the
-        same library with different args may produce different keywords.
-        ``args=None`` matches by name only — the metadata describes the
-        library's module files and is the same regardless of the arguments.
+        The cache key names the library's file (or module), so a library with
+        the same import name from another folder is not found.
         """
         with self._libaries_lock:
-            for entry in self._libaries.values():
-                if entry.name != import_name:
-                    continue
-                if args is not None:
-                    if entry.args == args:
-                        return entry.meta
-                elif entry.meta is not None:
-                    return entry.meta
-        return None
+            return next(
+                (e.meta for e in self._libaries.values() if e.meta is not None and _has_cache_key(e.meta, cache_key)),
+                None,
+            )
 
-    def get_cached_variables_meta(
-        self, import_name: str, args: Optional[Tuple[Any, ...]] = ()
-    ) -> Optional[LibraryMetaData]:
-        """Return already-computed LibraryMetaData for a variables import, or None.
+    def get_cached_variables_meta(self, cache_key: str) -> Optional[LibraryMetaData]:
+        """Return the meta of a loaded variable file whose meta has the cache key `cache_key`, or None.
 
-        Matches by import name and args, since variable files can return
-        different content depending on the arguments. ``args=None`` matches by
-        name only (see ``get_cached_library_meta``).
+        See ``get_cached_library_meta``.
         """
         with self._variables_lock:
-            for entry in self._variables.values():
-                if entry.name != import_name:
-                    continue
-                if args is not None:
-                    if entry.args == args:
-                        return entry.meta
-                elif entry.meta is not None:
-                    return entry.meta
-        return None
+            return next(
+                (e.meta for e in self._variables.values() if e.meta is not None and _has_cache_key(e.meta, cache_key)),
+                None,
+            )
 
     def find_library(
         self,

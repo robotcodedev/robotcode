@@ -36,9 +36,24 @@ from .entities import (
     VariablesImport,
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
-from .imports_manager import ImportsManager
+from .imports_manager import ImportsManager, LibraryMetaData
 from .library_doc import BUILTIN_LIBRARY_NAME, DEFAULT_LIBRARIES
 from .variable_scope import VariableScope
+
+
+def _dependency_key(kind: str, meta: Optional[Any], import_name: str) -> str:
+    """The key of a library or variable-file dependency of the namespace cache.
+
+    It names the file of the meta, so that two files imported with the same
+    name from different folders are dependencies of their own. Without a meta
+    the namespace is not cached anyway, and the import name is enough.
+    """
+    if isinstance(meta, LibraryMetaData):
+        try:
+            return f"{kind}:{meta.cache_key}"
+        except ValueError:
+            pass
+    return f"{kind}:{import_name}"
 
 
 class _NameSpaceError(Exception):
@@ -60,7 +75,8 @@ class ResolvedImports:
     variables_imports: Dict[str, VariablesEntry] = field(default_factory=dict)
 
     # Metadata of each resolved dependency, captured together with its doc at
-    # resolve time (keys: "lib:{import_name}", "res:{source}", "var:{import_name}").
+    # resolve time (keys: "lib:{cache_key}", "res:{source}", "var:{cache_key}", see
+    # _dependency_key; the import name when there is no meta).
     # A None value means the dependency was resolved but no trustworthy meta
     # exists — namespaces built from it must not be persisted.
     dependency_metas: Dict[str, Optional[Any]] = field(default_factory=dict)
@@ -202,7 +218,7 @@ class ImportResolver:
                         sentinel=None,
                         variables=self._variables,
                     )
-                    self._dependency_metas[f"lib:{library}"] = meta
+                    self._dependency_metas[_dependency_key("lib", meta, library)] = meta
                     entry = LibraryEntry(
                         name=library_doc.name,
                         import_name=library,
@@ -345,7 +361,7 @@ class ImportResolver:
             sentinel=self._sentinel,
             variables=self._variables,
         )
-        self._record_dependency_meta(f"lib:{imp.name}", meta)
+        self._record_dependency_meta(_dependency_key("lib", meta, imp.name), meta)
         entry = LibraryEntry(
             name=library_doc.name,
             import_name=imp.name,
@@ -578,7 +594,7 @@ class ImportResolver:
             sentinel=self._sentinel,
             variables=self._variables,
         )
-        self._record_dependency_meta(f"var:{imp.name}", meta)
+        self._record_dependency_meta(_dependency_key("var", meta, imp.name), meta)
         entry = VariablesEntry(
             name=library_doc.name,
             import_name=imp.name,

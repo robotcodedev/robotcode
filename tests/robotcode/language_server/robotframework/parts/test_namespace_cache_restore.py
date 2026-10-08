@@ -147,17 +147,8 @@ def test_restored_references_to_imports_match_the_fresh_analysis(
     semantic_model: bool,
 ) -> None:
     monkeypatch.setattr(protocol.documents_cache.analysis_config, "semantic_model", semantic_model)
-
-    # Names no other test imports: the cache checks a library or variable file by its import name,
-    # so a file of the same name that an earlier test imported from another directory would make
-    # the cached namespace look stale.
-    mode = "model" if semantic_model else "legacy"
-
-    def unique(text: str) -> str:
-        return text.replace("vars.py", f"vars_{mode}.py").replace("arglib", f"arglib_{mode}")
-
     # files old enough to be trusted, otherwise their analysis is not cached
-    suite = write_project(tmp_path, {unique(name): unique(text) for name, text in CASES[case].items()}) / "suite.robot"
+    suite = write_project(tmp_path, CASES[case]) / "suite.robot"
 
     try:
         # without a version, as a file that is not open in the editor: only such a namespace is cached

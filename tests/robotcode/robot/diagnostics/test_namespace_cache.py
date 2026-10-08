@@ -446,6 +446,33 @@ class TestValidateNamespaceMeta:
 
         assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is True
 
+    def test_variables_files_with_the_same_name_are_checked_each_against_its_own_file(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        def vars_meta(path: str, mtime_ns: int) -> LibraryMetaData:
+            return LibraryMetaData("vars", None, path, None, True, file_infos={path: DiskInfo(mtime_ns, 1)})
+
+        # two files imported as `vars.py`, from the suite's folder and from a resource file's folder
+        recorded: Dict[str, Optional[Any]] = {"var:/project/vars.py": vars_meta("/project/vars.py", 100)}
+        recorded["var:/project/sub/vars.py"] = vars_meta("/project/sub/vars.py", 100)
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas=recorded)
+        im = _mock_imports_manager(mocker)
+        meta = self._build(im, source, ns)
+
+        # only the file in the resource file's folder changed
+        current = {"/project/vars.py": vars_meta("/project/vars.py", 100)}
+        current["/project/sub/vars.py"] = vars_meta("/project/sub/vars.py", 200)
+        im.get_variables_meta.side_effect = lambda key, **kwargs: (current[key], key)
+
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
+        # looked up and computed by the key, the file's own path, not relative to the suite's folder
+        expected = [mocker.call("/project/vars.py"), mocker.call("/project/sub/vars.py")]
+        assert im.get_cached_variables_meta.call_args_list == expected
+        assert im.get_variables_meta.call_args_list == expected
+
     def test_resource_dependency_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")

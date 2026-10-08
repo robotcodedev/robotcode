@@ -352,9 +352,38 @@ class TestTimedOutImportInTheAnalysis:
 
         namespace.dependency_metas = {
             **resolved.dependency_metas,
-            "lib:HangingLib.py": resolved.dependency_metas["lib:BuiltIn"],
+            "lib:HangingLib.py": resolved.dependency_metas["lib:robot.libraries.BuiltIn"],
         }
         assert imports_manager.build_namespace_meta(str(suite), namespace, DiskInfo(100, 17)) is not None
+
+
+class TestLoadedMetaByCacheKey:
+    """The namespace cache finds a loaded file by the cache key of its meta, not by its import name."""
+
+    @pytest.mark.parametrize("kind", ["library", "variables"])
+    def test_files_with_the_same_import_name_are_found_by_their_cache_key(
+        self, imports_manager: ImportsManager, tmp_path: Path, kind: str
+    ) -> None:
+        sentinel = _Sentinel()
+        metas = []
+        for folder in (tmp_path / "a", tmp_path / "b"):
+            folder.mkdir()
+            (folder / "same.py").write_text("def kw():\n    pass\n", encoding="utf-8")
+            if kind == "library":
+                _, meta = imports_manager.get_libdoc_for_library_import_with_meta(
+                    "same.py", (), str(folder), sentinel=sentinel
+                )
+            else:
+                _, meta = imports_manager.get_libdoc_for_variables_import_with_meta(
+                    "same.py", (), str(folder), sentinel=sentinel
+                )
+            assert meta is not None
+            metas.append(meta)
+
+        find = (
+            imports_manager.get_cached_library_meta if kind == "library" else imports_manager.get_cached_variables_meta
+        )
+        assert [find(meta.cache_key) for meta in metas] == metas
 
 
 STRICT_LIB = """\
