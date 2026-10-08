@@ -36,7 +36,9 @@
   - The whole matrix took 1753 s of test time instead of 2181 s, about 7 minutes less.
   - After the replacement of the version (task 1.1), the matrix was green again in all nine environments on 2026-10-08, with 1887 s of test time; the run includes the tests of the other changes since then.
 - [x] 3.2 Run `hatch run lint:all` and verify that ruff and mypy report nothing.
-- [ ] 3.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 3.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-08): CI run 37790400858 for 39c541c3 is green, all 139 jobs, with 45 test jobs each on Linux, Windows and macOS.
 
 ## Workflow follow-up
 

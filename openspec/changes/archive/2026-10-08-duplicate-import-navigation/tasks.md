@@ -39,7 +39,9 @@
   - The second run is green in all nine environments; Robot Framework 7.5 had 5003 passed and 95 skipped.
   - The only changed regression outputs are the three of 2.3.
 - [x] 3.2 Run `hatch run lint:all` and verify that ruff and mypy report nothing.
-- [ ] 3.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 3.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-08): CI run 37790400858 for 39c541c3 is green, all 139 jobs, with 45 test jobs each on Linux, Windows and macOS.
 
 ## Workflow follow-up
 

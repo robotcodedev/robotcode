@@ -14,7 +14,9 @@
   - The first run failed once on Robot Framework 7.4 in `test_references`, because of a leak between tests from the change `doc-link-tests-per-module`, not from this change.
   - After that leak was fixed, all nine environments were green; Robot Framework 7.5 had 5014 passed and 95 skipped.
 - [x] 2.2 Run `hatch run lint:all` and verify that ruff and mypy report nothing.
-- [ ] 2.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 2.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-08): CI run 37790400858 for 39c541c3 is green, all 139 jobs, with 45 test jobs each on Linux, Windows and macOS.
 
   Note (2026-10-08): the first CI run (37783553021) failed on Windows in the 10 restore cases and in `test_an_unchanged_namespace_is_restored`, in every Windows job. The tests compared the source of the restored namespace with `str(suite)`. On Windows, `Uri.to_path()` gives that source a lower-case drive letter, so the string comparison never matched; both tests now compare paths. The run was cancelled; the next run decides this task.
 
