@@ -38,7 +38,6 @@ Readers want to know three things: what will I notice, what can I do now, and do
 - The commits from that tag to `HEAD`, with subjects, bodies and changed files.
 - For changes planned with OpenSpec, the archived `proposal.md` under `openspec/changes/archive/`. It says in prose what changes for users.
 - The documentation changed in the range. It shows how a feature is documented and which pages and anchors to link.
-- The "What is RobotCode?" section of `README.md`, for the one-sentence product description.
 
 ## Procedure
 
@@ -60,7 +59,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
     - Check that users actually see a difference. A commit body says how the code changed, which is not always what users notice; see "Changes Users See" in the writing guide.
     - Leave out internal refactors, CI and tooling, work on the documentation site itself (build, theme, preview, single pages), OpenSpec planning, dependency bumps and synced vendored files. Also leave out fixes for features added after the last tag; those bugs never reached users. A correction of the documentation that closes an issue is a fix and goes into Bug Fixes.
     - Leave out cosmetic changes that don't change how anything works, such as new translations of section headers. A fix of visibly wrong output, such as empty lines when output is paged, is not cosmetic; it gets a line in Editor and CLI Polish. If you think a cosmetic change matters to users, ask.
-    - A rebuilt or reorganized website is news for every reader, unlike work on single pages. Give it a chapter of its own with a few paragraphs: why the site changed, as the planning documents give the reason, what is new for readers, and what they must do, such as updating bookmarks when addresses change.
+    - A website that moved to a new platform or was reorganized is news for every reader, unlike work on single pages. Give it a chapter of its own with a few paragraphs: why the site changed, as the planning documents give the reason, what is new for readers, and what they must do, such as updating bookmarks when addresses change.
     - Give a deprecation of a rarely used feature one sentence, last in its list, never a section of its own.
     - Mention each change once. A new minimum IDE version goes into Breaking Changes and not again in the chapter for that IDE.
     - If you are unsure whether something matters or whether it is breaking, ask (see Decision Points).
@@ -70,7 +69,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
     2. the headline chapters, such as support for a new Robot Framework version or a big editor feature
     3. other improvements that most editor users notice
     4. the chapter for PyCharm and IntelliJ IDEA
-    5. a rebuilt website, if there is one
+    5. a website that moved or was reorganized, if there is one
     6. Editor and CLI Polish, with one-line fixes
     7. command-line and REPL changes for power users
     8. Bug Fixes
@@ -78,7 +77,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 6. **Write the chapters.** Read `references/writing-guide.md` before you draft or restructure a post. It explains how each part of the post works: the chapter patterns (breaking changes, support for a new Robot Framework version, editor chapters, polish lists, bug fixes), the wording, and how much space an item gets. It also contains openings that worked and openings the maintainer rejected.
 
-7. **Write the opening last.** When the chapters stand, write the lede, the product sentence and the highlights list from them, as the writing guide describes. Writing them last keeps them consistent with the final order.
+7. **Write the opening last.** When the chapters stand, write the lede and the highlights list from them, as the writing guide describes. Writing them last keeps them consistent with the final order.
 
 8. **End with the standard footer.**
 
@@ -124,7 +123,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
     ```markdown
     ---
     title: What's New in vX.Y.Z
-    description: RobotCode X.Y.Z adds …, in one sentence.
+    description: RobotCode vX.Y.Z supports …, adds … and brings … to …
     date: YYYY-MM-DD
     tags:
       - release
@@ -132,7 +131,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
     ---
     ```
 
-- `description:` is one sentence about what the release brings. The site uses it as the page's meta description.
+- `description:` names the main changes in one sentence, the headline chapters in a few words each, not their details. The site does not show it: it is the page's meta description for search results and link previews, and the summary of the post in the RSS feed. The news list shows the lede instead.
 - `tags:` has exactly one kind tag, `release` for a release post (the other kinds are `tips` and `april-fools`), followed by one topic tag for each topic the post has its own section about. Use only these topic tags: `analysis`, `editor`, `vscode`, `intellij`, `cli`, `configuration`, `ci`, `debugging`, `ai-agents`, `performance`.
 - No heading of level 1: the page shows `title:` as its heading, and the post starts with the lede.
 - Put `<!-- excerpt -->` on a line of its own after the first paragraph. The news list shows the post up to that marker.
@@ -164,7 +163,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 ## Quality Criteria
 
-- The first sentence states RobotCode's news: the version and the two or three changes that matter most to users.
+- The lede states RobotCode's news in about 50 words: the version, each headline chapter in a few words, and "along with much more" or similar at the end.
 - Chapters, subsections and list items are ordered by user impact.
 - The post describes what RobotCode does. Robot Framework's own features are explained only as far as the reader needs them to understand RobotCode's part.
 - The text is factual, concise and neutral, with no hype and no "would otherwise have failed" framing.

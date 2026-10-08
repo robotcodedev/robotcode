@@ -11,18 +11,18 @@ News is written as an inverted pyramid: the most important facts come first, and
 ```markdown
 ---
 title: What's New in vX.Y.Z
-description: <what the release brings, in one sentence>
+description: <the main changes, precisely, in one or two sentences>
 date: YYYY-MM-DD
 tags:
   - release
   - <topic tags>
 ---
 
-<lede: one sentence> <product sentence>
+<lede: a short paragraph>
 
 <!-- excerpt -->
 
-Highlights of this release:
+## Highlights
 
 - [<Feature>](#<anchor>): <what the reader can do, in one sentence>
 - …
@@ -49,7 +49,7 @@ Not every post has every chapter. A patch release is mostly Bug Fixes, with a sh
 
 ### The lede
 
-The first sentence states RobotCode's own news: the version and the two or three changes that matter most to users. It is at most about 40 words. If there is more, end with "along with many smaller enhancements and bug fixes".
+The lede is the opening paragraph, and the news list shows it as the post's excerpt. In two or three sentences, about 50 words, it states RobotCode's own news: the version, then each headline chapter in a few words, in the order of the chapters, and it ends with "along with much more" or similar. For v2.8.0, one sentence that only named three features was too short and too vague, and four sentences of about 90 words with the details of each chapter were too fine-grained.
 
 - Start with **RobotCode** and the version. Don't start with background, a date, a slogan or another project's release.
 - Name what RobotCode does ("adds support for Robot Framework 7.5"), not what Robot Framework added.
@@ -57,7 +57,7 @@ The first sentence states RobotCode's own news: the version and the two or three
 
 The lede of v2.8.0:
 
-> **RobotCode** v2.8.0 adds support for Robot Framework 7.5, a Documentation Viewer for VS Code and test selection by metadata, along with many smaller enhancements and bug fixes.
+> **RobotCode** v2.8.0 supports Robot Framework 7.5, with argument documentation right in the editor and test selection by metadata. VS Code gets a Documentation Viewer, PyCharm and IntelliJ IDEA follow your color scheme and get many new settings, and the website has moved to a new platform with a new structure and a polished design, along with much more.
 
 Openings the maintainer rejected for v2.8.0, and why:
 
@@ -74,15 +74,11 @@ Other projects use the same structure: their own news first, then a short list o
 
 The Robot Framework ecosystem (Robot Framework, SeleniumLibrary, the Browser library, Robocop) opens matter-of-factly; none of its recent release posts says "excited" or "proud". RobotCode uses the same tone.
 
-### The product sentence
-
-Right after the lede comes one sentence for readers who don't know RobotCode. Base it on the README, without superlatives:
-
-> **RobotCode** brings Robot Framework support to VS Code, PyCharm, IntelliJ IDEA and the command line.
+The lede stands alone. No sentence that introduces RobotCode follows it: "**RobotCode** brings Robot Framework support to VS Code, PyCharm, IntelliJ IDEA and the command line" was cut from the v2.8.0 post.
 
 ### The highlights list
 
-After "Highlights of this release:" come three to five bullets. Each has the form `[Feature](#anchor): what the reader can do`, in one sentence, and links to its chapter. Choose the bullets by user impact: features in the editor before tools for power users. Breaking changes are not highlights; they have their own chapter right below.
+Under the heading `## Highlights`, which also lists them in the page's "On this page" navigation, come three to five bullets. Each has the form `[Feature](#anchor): what the reader can do`, in one sentence, and links to its chapter. Choose the bullets by user impact: features in the editor before tools for power users. A website that moved to a new platform or was reorganized is a highlight too, as the last bullet. Breaking changes are not highlights; they have their own chapter right below.
 
 ## Changes Users See
 
@@ -157,5 +153,6 @@ Experimental or internal work that users can opt into. One paragraph, last befor
 - No hype: no "excited", "proud", "ultimate" or "powerful", and no exclamation marks. Address the reader as "you".
 - A heading names what the user gets: "Richer Keyword Documentation", "More Robust Library Loading".
 - Give a reason only if a commit, the code or the docs back it.
+- When a change brings many things of one kind, such as settings, name the areas they cover instead of picking a few. "The General, Editing, Analysis, Robocop and Language Server pages …, among them the switches for private and deprecated keywords and extra arguments" read as if only those settings had been added; "Many settings of the VS Code extension can now be changed here too. Settings pages … cover editing and completion, analysis and diagnostics, Robocop, the language server and the command line" replaced it.
 - Use an example only if it is real and shows the point. "Its heading, such as `Keyword Log`" was cut: readers take `Keyword Log` for a keyword, but the keyword is `Log`, and its documentation has no links. An example taken from the docs needs the same check. If no example fits, write the sentence without one.
 - Write plain English, one idea per sentence where possible.
