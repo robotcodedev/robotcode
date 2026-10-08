@@ -22,7 +22,7 @@ The "General" page below the "Robot Framework" settings node SHALL offer "Disabl
 
 ### Requirement: A project with RobotCode switched off
 
-While the setting "Disable extension" is checked, the project SHALL get no language server, no test discovery, no run markers, no run configurations from the editor or the Project view context, and no banner on Robot files, and the Language Servers tool window SHALL show the RobotCode server as disabled.
+While the setting "Disable extension" is checked, the project SHALL get no language server, no test discovery, no run markers, no run configurations from the editor or the Project view context, and no banner on Robot files. When the server has run in this session, the Language Servers tool window SHALL show it as disabled.
 
 #### Scenario: Switching RobotCode off
 
@@ -31,12 +31,17 @@ While the setting "Disable extension" is checked, the project SHALL get no langu
 
 ### Requirement: RobotCode in the Language Servers tool window
 
-Enabling the RobotCode server in the Language Servers tool window SHALL uncheck the setting "Disable extension". Disabling it there, and LSP4IJ's own disable after repeated failed starts, SHALL keep the server off until RobotCode is restarted or the project is opened again, without changing the setting. The plugin's own stops and restarts SHALL NOT change whether the server is enabled.
+Enabling the RobotCode server in the Language Servers tool window, which LSP4IJ offers for a server that has run in this session, SHALL uncheck the setting "Disable extension". Disabling it there, and LSP4IJ's own disable after repeated failed starts, SHALL keep the server off until RobotCode is restarted or the project is opened again, without changing the setting. The plugin's own stops and restarts SHALL NOT change whether the server is enabled.
 
 #### Scenario: Enabling in the Language Servers tool window
 
-- **WHEN** RobotCode is switched off and the user enables the RobotCode server in the Language Servers tool window
+- **WHEN** RobotCode is switched off after the server ran in this session, and the user restarts the RobotCode server in the Language Servers tool window
 - **THEN** "Disable extension" is unchecked again and the language server starts
+
+#### Scenario: After an IDE restart
+
+- **WHEN** the IDE starts with "Disable extension" checked, so that the server has not run in this session
+- **THEN** the status bar widget says that RobotCode is off, and its popup offers the action that enables RobotCode for the project
 
 #### Scenario: Repeated failed starts
 

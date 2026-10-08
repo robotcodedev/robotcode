@@ -67,7 +67,7 @@ The banner gets four things:
 - "Disable RobotCode for This Project", which turns the switch off;
 - a close action, which adds the project to an in-memory set of dismissed projects and refreshes the banners.
 
-For a missing or old Robot Framework, the text adds `"<interpreter>" -m pip install robotframework`, or `-U robotframework` for an upgrade, with the interpreter path from the environment state.
+For a missing or old Robot Framework, the text adds `"<interpreter>" -m pip install robotframework`, or `-U robotframework` for an upgrade, with the interpreter path from the environment state, on a line of its own, so that a narrow editor does not cut it off.
 
 Alternatives:
 - Installing through PyCharm's `PythonPackageManager`: its install API is `@ApiStatus.Experimental` or `@Internal`.
@@ -126,6 +126,7 @@ A harness check confirms that the intention list offers no documentation action.
 
 - [A later LSP4IJ version asks for `source` actions, and the three documentation actions appear without a handler] → The harness check catches this when the LSP4IJ version is raised. The server then needs a client option to leave them out, as it already decides about documentation links by an initialization option. A handler for the deprecated command alone would leave the other two failing.
 - [`StatusBarWidgetsManager` lives in an `impl` package] → It is public and carries no status annotation in 2026.1. It is used only to re-evaluate availability; `verifyPlugin` reports changes.
+- [LSP4IJ shows a server as disabled, and lets it be enabled, only on the process node of a server it created in this session. For a disabled definition it creates none when files open, and creating one without a start needs `LanguageServiceAccessor.forceCreateServer`, which is `@ApiStatus.Internal`] → After an IDE restart with "Disable extension" checked, the status bar widget and the General page show the state and switch it on.
 - [Disabling the server in the Language Servers tool window lasts only for the session] → "Disable extension" on the General page is the lasting switch, and the page says so.
 - [The rename after "Extract keyword" depends on LSP4IJ's rename handler] → The harness checks it. Without the rename, the new name is still selected.
 
