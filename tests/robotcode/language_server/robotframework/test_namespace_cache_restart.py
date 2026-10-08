@@ -85,7 +85,9 @@ def _session(project: Path, mocker: MockerFixture) -> _Session:
     finally:
         protocol._shutdown()
         mocker.stop(from_data)
-    return _Session(any(call.args[0].source == str(suite) for call in from_data.call_args_list), not_found, files)
+    # compared as paths, because on Windows the source of a namespace has a lower-case drive letter
+    restored = any(Path(call.args[0].source) == suite for call in from_data.call_args_list)
+    return _Session(restored, not_found, files)
 
 
 def _variables_project(settings: str) -> Dict[str, str]:

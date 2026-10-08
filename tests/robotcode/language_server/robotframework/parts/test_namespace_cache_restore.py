@@ -160,6 +160,7 @@ def test_restored_references_to_imports_match_the_fresh_analysis(
     finally:
         _close_project(protocol, tmp_path)
 
-    # the second namespace really comes from the cache
-    assert any(call.args[0].source == str(suite) for call in from_data.call_args_list)
+    # the second namespace really comes from the cache; compared as paths, because on Windows
+    # the source of a namespace has a lower-case drive letter
+    assert any(Path(call.args[0].source) == suite for call in from_data.call_args_list)
     assert restored == fresh
