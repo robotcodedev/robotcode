@@ -86,7 +86,7 @@ internal fun robotCodeArguments(
  */
 fun Project.buildRobotCodeCommandLine(
     args: Array<String> = arrayOf(),
-    profiles: Array<String> = arrayOf(),
+    profiles: Array<String> = RobotCodePersonalConfiguration.getInstance(this).profiles.toTypedArray(),
     extraArgs: Array<String> = RobotCodePersonalConfiguration.getInstance(this).extraArgsList.toTypedArray(),
     format: String = "",
     noColor: Boolean = true,
@@ -169,5 +169,9 @@ private class RobotCodeRestartManager(private val project: Project, private val 
 }
 
 fun Project.restartAll(reset: Boolean = false) {
+    // settings for new projects start nothing
+    if (isDefault) {
+        return
+    }
     this.service<RobotCodeRestartManager>().restartDebounced(reset)
 }

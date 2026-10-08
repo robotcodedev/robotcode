@@ -9,6 +9,7 @@ import com.intellij.openapi.components.StoragePathMacros
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.util.execution.ParametersListUtil
+import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.delegate
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.stringDelegate
 
 /**
@@ -27,10 +28,14 @@ class RobotCodePersonalConfiguration :
     class PersonalState : BaseState() {
         var extraArgs by string()
         var languageServerExtraArgs by string()
+
+        // the selected robot.toml profiles; without any, the default-profiles of robot.toml apply
+        var profiles by list<String>()
     }
 
     var extraArgs by stringDelegate(PersonalState::extraArgs)
     var languageServerExtraArgs by stringDelegate(PersonalState::languageServerExtraArgs)
+    var profiles by delegate(PersonalState::profiles)
 
     val extraArgsList: List<String>
         get() = ParametersListUtil.parse(extraArgs)

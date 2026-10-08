@@ -22,6 +22,7 @@ class RobotCodePersonalConfigurationTest {
         val state = RobotCodePersonalConfiguration.PersonalState().apply {
             extraArgs = "--config \"team settings.toml\""
             languageServerExtraArgs = "--log --log-level INFO"
+            profiles = mutableListOf("dev", "ci")
         }
 
         val restored = XmlSerializer.deserialize(
