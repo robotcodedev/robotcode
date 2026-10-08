@@ -68,7 +68,10 @@ Alternative: the key from the folder and the import name (`lib:<folder>|<name>`)
   - without a loaded meta, the meta is computed from the key.
 
   The existing tests use `lib:MyLib` as a key and keep working. They only need the cache key where they check the lookup.
-- **Resolver:** a test resolves a suite that imports two variable files with the same import name from different folders, with a real `ImportsManager`, as `test_library_loading.py` does. It checks that both are recorded under their absolute paths. The assertion in `test_library_loading.py` that uses the key `lib:BuiltIn` changes to the new key.
+- **Recording:** the first session of the restart tests for a changed variable file and a changed library file also checks that both files with the same import name are recorded under their absolute paths.
+  - A resolver test with the `ImportsManager` of `test_library_loading.py` cannot do this, because that manager cannot read the resource file.
+  - The lookup of a loaded file by its cache key is tested there instead (`TestLoadedMetaByCacheKey`).
+  - The assertion in `test_library_loading.py` that uses the key `lib:BuiltIn` changes to the new key.
 - **Restart test:** a new module `tests/robotcode/language_server/robotframework/test_namespace_cache_restart.py` checks the three scenarios of the spec, as the scratch test did.
   - Each test starts two language-server sessions with their own workspace in `tmp_path`, one after the other, and changes a file between them; the files are written with the backdating helper `write_project`.
   - A spy on `Namespace.from_data` tells whether the suite was restored.
