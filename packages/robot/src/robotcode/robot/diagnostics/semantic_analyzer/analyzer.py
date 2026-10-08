@@ -4374,7 +4374,9 @@ class SemanticAnalyzer(Visitor):
         - ``${scalar}`` → resolved value converted to string, multi-values joined with space
         - ``@{list}`` → ``str(list_value)`` e.g. ``"['a', 'b']"
         - ``&{dict}`` → ``str(dict_value)`` e.g. ``"{'a': '1'}"
-        - ``%{ENV}`` → environment variable value or default
+        - ``%{ENV}`` → environment variable value or default, ``False`` if a variable in its
+          name or in the default of an unset variable would have to be resolved (a default
+          without variables behind a name with a variable is still returned)
         - ``${{expr}}`` → cannot evaluate statically → ``False``
 
         Returns:
@@ -4394,11 +4396,20 @@ class SemanticAnalyzer(Visitor):
         # Environment variable %{VAR} or %{VAR=default}
         if sub_id == "%":
             env_inner = var_ref[2:-1]
+            # A variable in the name means the environment variable RF looks up is not known here.
+            name, name_default = split_from_equals(env_inner)
+            if contains_variable(name, "$@&%"):
+                if name_default is not None and not contains_variable(name_default, "$@&%"):
+                    return name_default
+                return False
             env_name, sep, default = env_inner.partition("=")
             env_val = os.environ.get(env_name)
             if env_val is not None:
                 return env_val
             if sep:
+                # A variable in the default is not resolved here.
+                if contains_variable(default, "$@&%"):
+                    return False
                 return default
             return None
 

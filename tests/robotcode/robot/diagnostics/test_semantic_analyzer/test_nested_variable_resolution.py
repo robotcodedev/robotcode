@@ -1518,3 +1518,272 @@ Example
 
         assert "${i}" in names
         assert len(errors) == 1
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  Environment variables inside nested variable names
+# ──────────────────────────────────────────────────────────────────────
+
+_ANALYZERS = ("SemanticAnalyzer", "NamespaceAnalyzer")
+
+_NESTED_NAME_CODES = (
+    Error.VARIABLE_NAME_NOT_RESOLVABLE,
+    Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE,
+    Error.VARIABLE_REFERENCE_NOT_STATICALLY_RESOLVABLE,
+    Error.VARIABLE_NOT_FOUND,
+)
+
+
+def _nested_name_diagnostics(result: AnalyzerResult) -> list[tuple[int, str]]:
+    """Return `(line, code)` of the diagnostics for nested names, sorted.
+
+    `EnvironmentVariableNotFound` is left out: the analyzers check the names
+    of environment variables differently.
+    """
+    return sorted((d.range.start.line, str(d.code)) for d in result.diagnostics if str(d.code) in _NESTED_NAME_CODES)
+
+
+def _reference_lines(result: AnalyzerResult, name: str) -> list[int]:
+    """Return the lines of the recorded locations of the variable `name`."""
+    return sorted(
+        location.range.start.line
+        for var_def, locations in result.variable_references.items()
+        if var_def.name == name
+        for location in locations
+    )
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 0), reason="Nested variable names require RF >= 7.0")
+class TestEnvironmentVariableInNestedName:
+    """An environment variable inside a nested variable name is resolved only where its result is certain."""
+
+    def test_variable_in_environment_variable_name(self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_A_SUFFIX", "1")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${X_%{ROBOTCODE_TEST_NESTED_ENV_A_${S}}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(2, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)], analyzer
+            assert not [name for name in _var_names(result) if name.startswith("${X_")], analyzer
+
+    def test_unset_environment_variable_with_variable_in_default(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ROBOTCODE_TEST_NESTED_ENV_X", raising=False)
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${Y_%{ROBOTCODE_TEST_NESTED_ENV_X=${S}}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(2, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)], analyzer
+            assert not [name for name in _var_names(result) if name.startswith("${Y_")], analyzer
+
+    def test_environment_variable_in_value_of_another_variable(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_A_SUFFIX", "1")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${A}    %{ROBOTCODE_TEST_NESTED_ENV_A_${S}}
+${V_${A}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(3, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)], analyzer
+            assert not [name for name in _var_names(result) if name.startswith("${V_")], analyzer
+
+    def test_undefined_variable_nested_in_environment_variable(self, run_both: RunBoth) -> None:
+        results = run_both(
+            """\
+*** Variables ***
+${Z_%{ROBOTCODE_TEST_NESTED_ENV_A_${UNDEF}}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [
+                (1, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE),
+                (1, Error.VARIABLE_NOT_FOUND),
+            ], analyzer
+
+    def test_var_statement_and_assignment(self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_A_SUFFIX", "1")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+
+*** Test Cases ***
+Example
+    VAR    ${P_%{ROBOTCODE_TEST_NESTED_ENV_A_${S}}}    p
+    ${Q_%{ROBOTCODE_TEST_NESTED_ENV_A_${S}}}=    Set Variable    q
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [
+                (5, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE),
+                (6, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE),
+            ], analyzer
+            assert not [name for name in _var_names(result) if name.startswith(("${P_", "${Q_"))], analyzer
+
+    def test_default_without_variables_behind_name_with_variable(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ROBOTCODE_TEST_NESTED_ENV_B_SUFFIX", raising=False)
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${N_%{ROBOTCODE_TEST_NESTED_ENV_B_${S}=fb}}    v
+${USED_fb}    u
+
+*** Test Cases ***
+Example
+    Log    ${N_fb}
+    Log    ${USED_%{ROBOTCODE_TEST_NESTED_ENV_B_${S}=fb}}
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [], analyzer
+            assert 7 in _reference_lines(result, "${N_fb}"), analyzer
+            assert 8 in _reference_lines(result, "${USED_fb}"), analyzer
+
+    def test_set_environment_variable_with_variable_in_default(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_SET", "SETVAL")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${Y_%{ROBOTCODE_TEST_NESTED_ENV_SET=${S}}}    y
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [], analyzer
+            assert "${Y_SETVAL}" in _var_names(result), analyzer
+
+    def test_unset_environment_variable_without_default(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ROBOTCODE_TEST_NESTED_ENV_UNSET", raising=False)
+        results = run_both(
+            """\
+*** Variables ***
+${U_%{ROBOTCODE_TEST_NESTED_ENV_UNSET}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(1, Error.VARIABLE_NAME_NOT_RESOLVABLE)], analyzer
+
+    def test_escaped_variable_in_environment_variable_name(self, run_both: RunBoth) -> None:
+        results = run_both(
+            """\
+*** Variables ***
+${E_%{ROBOTCODE_TEST_NESTED_ENV_A_\\${S}}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(1, Error.VARIABLE_NAME_NOT_RESOLVABLE)], analyzer
+
+    def test_reference_with_variable_in_default_of_unset_environment_variable(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ROBOTCODE_TEST_NESTED_ENV_X", raising=False)
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${NAME_SUFFIX}    n
+
+*** Test Cases ***
+Example
+    Log    ${NAME_%{ROBOTCODE_TEST_NESTED_ENV_X=${S}}}
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(6, Error.VARIABLE_REFERENCE_NOT_STATICALLY_RESOLVABLE)], (
+                analyzer
+            )
+            assert 6 not in _reference_lines(result, "${NAME_SUFFIX}"), analyzer
+
+    def test_reference_with_variable_in_environment_variable_name(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_A_SUFFIX", "1")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${NAME_SUFFIX}    n
+
+*** Test Cases ***
+Example
+    Log    ${NAME_%{ROBOTCODE_TEST_NESTED_ENV_A_${S}}}
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [(6, Error.VARIABLE_REFERENCE_NOT_STATICALLY_RESOLVABLE)], (
+                analyzer
+            )
+            assert 6 not in _reference_lines(result, "${NAME_SUFFIX}"), analyzer
+
+    def test_resolvable_reference_is_recorded(self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_SET", "SETVAL")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${NAME_SETVAL}    n
+
+*** Test Cases ***
+Example
+    Log    ${NAME_%{ROBOTCODE_TEST_NESTED_ENV_SET=${S}}}
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert _nested_name_diagnostics(result) == [], analyzer
+            assert 6 in _reference_lines(result, "${NAME_SETVAL}"), analyzer
+
+    def test_environment_variable_reference_with_such_name(
+        self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ROBOTCODE_TEST_NESTED_ENV_N_SUFFIX", raising=False)
+        semantic, namespace = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+
+*** Test Cases ***
+Example
+    Log    %{%{ROBOTCODE_TEST_NESTED_ENV_N_${S}}=x}
+"""
+        )
+        assert _nested_name_diagnostics(semantic) == [(5, Error.VARIABLE_REFERENCE_NOT_STATICALLY_RESOLVABLE)]
+        assert _nested_name_diagnostics(namespace) == []
+
+
+@pytest.mark.skipif(RF_VERSION >= (7, 0), reason="Tests the behavior before RF 7.0")
+class TestEnvironmentVariableInNestedNameBeforeRF70:
+    """Before RF 7.0 the analyzers do not resolve nested variable names."""
+
+    def test_variable_in_environment_variable_name(self, run_both: RunBoth, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ROBOTCODE_TEST_NESTED_ENV_A_SUFFIX", "1")
+        results = run_both(
+            """\
+*** Variables ***
+${S}    SUFFIX
+${X_%{ROBOTCODE_TEST_NESTED_ENV_A_${S}}}    v
+"""
+        )
+        for analyzer, result in zip(_ANALYZERS, results):
+            assert not _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE), analyzer
+            assert not _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE), analyzer
