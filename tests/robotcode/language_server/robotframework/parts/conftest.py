@@ -127,23 +127,28 @@ def test_document(request: pytest.FixtureRequest, protocol: RobotLanguageServerP
 
 
 @pytest.fixture
-def open_temp_document(protocol: RobotLanguageServerProtocol) -> Iterator[Callable[[Path], TextDocument]]:
+def open_temp_document(
+    protocol: RobotLanguageServerProtocol, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[[Path], TextDocument]]:
     """Callable: `(path) -> TextDocument` for files outside the test workspace.
 
-    A document is opened with a version, like a document open in the editor:
-    its namespace is analyzed fresh and never comes from the namespace disk
-    cache.
+    A document is opened without a version. The workspace diagnostics analyze a
+    document with a version in the background; when that analysis comes after
+    the document is closed again, it puts the closed document back into the
+    reference index. The namespace disk cache is off during the test, so the
+    namespace of a document is still analyzed fresh.
 
     The protocol is shared by the whole test session, so every document opened
     from the file's directory (the file itself and what it imports) is closed
     again. Otherwise it would show up in the results of later tests, e.g. in
     the workspace symbols.
     """
+    monkeypatch.setattr(protocol.documents_cache.analysis_config.cache, "cache_namespaces", False)
     directories: List[Path] = []
 
     def open_document(path: Path) -> TextDocument:
         directories.append(path.parent)
-        return protocol.documents.get_or_open_document(path, "robotframework", version=1)
+        return protocol.documents.get_or_open_document(path, "robotframework")
 
     try:
         yield open_document
