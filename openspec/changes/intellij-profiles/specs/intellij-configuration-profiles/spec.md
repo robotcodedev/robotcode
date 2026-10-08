@@ -6,19 +6,19 @@ Defines how users of the IntelliJ plugin select `robot.toml` configuration profi
 
 ## ADDED Requirements
 
-### Requirement: Profile selection on the settings page
+### Requirement: Profile selection on the General page
 
-The "Robot Framework" settings page SHALL show "Configuration profiles": the names of the selected profiles, or, when none are selected, that the `default-profiles` of `robot.toml` apply. A "Select..." button SHALL open the profile list. A choice made there SHALL take effect when the user applies the page: the selection is stored, the language server restarts, and test discovery runs again.
+The "General" page below the "Robot Framework" settings node SHALL show "Profiles", VS Code's `robotcode.profiles`: the names of the selected profiles, or, when none are selected, that the `default-profiles` of `robot.toml` apply. A "Select..." button SHALL open the profile list. A choice made there SHALL take effect when the user applies the page: the selection is stored, the language server restarts, and test discovery runs again.
 
-#### Scenario: Selecting a profile on the settings page
+#### Scenario: Selecting a profile on the General page
 
-- **WHEN** the user opens the profile list from the settings page, checks `dev`, confirms and applies
-- **THEN** the page shows `dev`, the language server restarts with `-p dev`, and test discovery runs again with `-p dev`
+- **WHEN** the user opens the profile list from the General page, checks `dev`, confirms and applies
+- **THEN** the page shows `dev`, the language server restarts once with `-p dev`, and test discovery runs again with `-p dev`
 
 #### Scenario: No selection
 
 - **WHEN** no profile is selected
-- **THEN** the page says that the `default-profiles` of `robot.toml` apply
+- **THEN** the General page says that the `default-profiles` of `robot.toml` apply
 
 ### Requirement: Select Configuration Profiles action
 
@@ -40,16 +40,21 @@ The profile list SHALL be read with `robotcode profiles list` in the background,
 
 ### Requirement: Checked profiles in the profile list
 
-The profile list SHALL check the selected profiles, or, without a selection, the profiles that `robot.toml` selects by default. Confirming the list without changing the checks while nothing is selected SHALL keep the empty selection. Unchecking every profile SHALL store an empty selection.
+The profile list SHALL check the profiles that `robotcode profiles list` reports as selected for the current selection, or, without a selection, for the `default-profiles` of `robot.toml`. Confirming the list SHALL store the checked profiles as the selection, also when nothing was selected and the checks are unchanged. Unchecking every profile SHALL store an empty selection, so that the `default-profiles` apply again.
 
 #### Scenario: Default profiles are checked
 
 - **WHEN** nothing is selected and `robot.toml` sets `default-profiles = ["dev"]`
-- **THEN** the list opens with `dev` checked, and confirming it unchanged keeps the selection empty
+- **THEN** the list opens with `dev` checked, and confirming it unchanged stores `dev` as the selection
+
+#### Scenario: Unchecking every profile
+
+- **WHEN** `dev` is selected and the user unchecks it in the list and confirms
+- **THEN** the selection is empty, and the language server, test discovery and runs get no `-p`
 
 ### Requirement: Messages and errors in the profile list
 
-When `robotcode` reports messages instead of profiles, such as that no configuration file was found, the profile list SHALL show them; when `robotcode` fails, the list SHALL show the beginning of its error output.
+When `robotcode` reports messages instead of profiles, such as that no configuration file was found, the profile list SHALL show them. When the project's interpreter is not usable, the list SHALL show the text of the environment check, and when `robotcode` fails, the beginning of its error output.
 
 #### Scenario: Project without profiles
 
@@ -61,14 +66,19 @@ When `robotcode` reports messages instead of profiles, such as that no configura
 - **WHEN** `robot.toml` contains a TOML syntax error and the user opens the list
 - **THEN** the list shows the beginning of the error output of `robotcode`, and the selection stays unchanged
 
+#### Scenario: Interpreter without Robot Framework
+
+- **WHEN** the project's interpreter has no Robot Framework installed and the user opens the list
+- **THEN** the list shows the text of the environment check that Robot Framework is not installed, nothing can be checked, and the selection stays unchanged
+
 ### Requirement: Profiles that no longer exist
 
-When the profile list opens, it SHALL remove from the choice every selected profile that `robotcode profiles list` does not report, and SHALL name the removed profiles. It SHALL NOT remove anything when `robotcode` reported neither profiles nor messages, so that a selection is not lost when the list cannot be read.
+When the profile list opens, every selected profile that `robotcode profiles list` does not report SHALL leave the selection at once, also when the user then cancels the list, and the list SHALL name them. Opened from the General page, they SHALL leave the page's choice, which Apply stores. Nothing SHALL be removed when `robotcode` reported neither profiles nor messages, so that a selection is not lost when the list cannot be read.
 
 #### Scenario: Renamed profile
 
-- **WHEN** `dev` is selected, `robot.toml` renames it to `development`, and the user opens the list
-- **THEN** the list says that `dev` was removed because `robot.toml` no longer defines it, `dev` is not checked, and confirming the list stores the selection without `dev`
+- **WHEN** `dev` is selected, `robot.toml` renames it to `development`, and the user opens the list from the Tools menu and cancels it
+- **THEN** the list said that `dev` was removed because `robot.toml` no longer defines it, the selection no longer contains `dev`, and the language server restarts without `-p dev`
 
 ### Requirement: Selected profiles reach every robotcode process
 
@@ -91,4 +101,4 @@ The profile selection SHALL be stored for the current user, in the project's wor
 #### Scenario: Selection survives a restart
 
 - **WHEN** the user selects `dev` and restarts the IDE
-- **THEN** the settings page shows `dev`, `.idea/workspace.xml` holds it, and `.idea/robotcodeSettings.xml` does not
+- **THEN** the General page shows `dev`, `.idea/workspace.xml` holds it, and `.idea/robotcodeSettings.xml` does not
