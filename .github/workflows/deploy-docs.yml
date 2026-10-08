@@ -72,3 +72,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # Recrawl the Algolia DocSearch index so the search finds the deployed pages
+  reindex:
+    needs: deploy
+    runs-on: ubuntu-latest
+    name: Recrawl search index
+    steps:
+      - name: Start the Algolia crawler
+        env:
+          CRAWLER_ID: ${{ secrets.ALGOLIA_CRAWLER_ID }}
+          CRAWLER_USER_ID: ${{ secrets.ALGOLIA_CRAWLER_USER_ID }}
+          CRAWLER_API_KEY: ${{ secrets.ALGOLIA_CRAWLER_API_KEY }}
+        run: >
+          curl --fail-with-body --silent --show-error -X POST
+          -u "$CRAWLER_USER_ID:$CRAWLER_API_KEY"
+          "https://crawler.algolia.com/api/1/crawlers/$CRAWLER_ID/reindex"
