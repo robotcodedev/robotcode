@@ -10,7 +10,7 @@ Quick fixes and refactorings such as "Create Keyword" or "Extract keyword" apply
 
 ## What Changes
 
-- A personal setting "Enable RobotCode for this project" on the "Robot Framework" settings page, on by default. When it is off, the project gets no language server, no discovery, no run markers, no context runs and no banner. The Language Servers tool window shows the server as disabled then. Enabling the server there turns the setting on again; disabling it there, or LSP4IJ's own disable after repeated failed starts, lasts until the next restart of RobotCode or the IDE and does not change the setting.
+- "Disable extension", VS Code's `robotcode.disableExtension`, on the "General" page below "Robot Framework": off by default and stored for the current user only. When it is checked, the project gets no language server, no discovery, no run markers, no context runs and no banner. The Language Servers tool window shows the server as disabled then. Enabling the server there unchecks the setting again; disabling it there, or LSP4IJ's own disable after repeated failed starts, lasts until the next restart of RobotCode or the IDE and does not change the setting.
 - The banner offers the next step: "Configure Python Interpreter...", which opens the Python Interpreter settings by their id, "Retry", which checks the interpreter again, "Disable RobotCode for This Project", and a close button that hides it for the session. For a missing or old Robot Framework it shows the pip command for the project's interpreter; RobotCode installs nothing itself.
 - A RobotCode status bar widget in Robot Framework projects:
   - its text shows the Robot Framework version and the selected profiles, for example "RF 7.5 · dev";
@@ -40,7 +40,7 @@ _None._
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/lsp/`: `RobotCodeLanguageServerFactory.kt` (enablement), `RobotCodeLanguageServerManager.kt` (stops that keep the enablement), `RobotCodeServerApi.kt` (`robot/projectInfo`), `RobotCodeLanguageClient.kt` (fetching it when the server starts), and a command action for `_robotcode.codeActionShowDocumentSelectAndRename`.
 - `editor/RobotCodeStatusBarWidgetFactory.kt` and `editor/EditorNotificationProvider.kt`: the widget and the banner.
-- The personal state component and the "Robot Framework" page in `configuration/`, discovery and producers in `testing/` and `execution/`: the switch.
+- The personal state component `RobotCodePersonalConfiguration` and the General page in `configuration/`, discovery and producers in `testing/` and `execution/`, and `restartAll()` in `RobotCodeHelpers.kt`: the switch.
 - `intellij-client/src/main/resources/META-INF/plugin.xml`: the new actions, the command action, the widget id; `messages/RobotCode.properties`: the texts.
 - New unit tests under `intellij-client/src/test/kotlin/`.
 - No change to the language server or the VS Code extension.

@@ -27,7 +27,7 @@ The banner that a Robot file shows for an interpreter RobotCode cannot use SHALL
 #### Scenario: Disable from the banner
 
 - **WHEN** the user clicks "Disable RobotCode for This Project"
-- **THEN** the setting "Enable RobotCode for this project" is off, and the banner, the run markers and the language server are gone
+- **THEN** the setting "Disable extension" is checked, and the banner, the run markers and the language server are gone
 
 ### Requirement: Hiding the banner
 
