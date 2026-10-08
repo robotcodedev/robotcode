@@ -58,7 +58,7 @@ export class PythonManager {
   _pythonLanguageServerMain: string;
   _checkRobotVersionMain: string;
   _robotCodeMain: string;
-  _pythonVersionScript = "import sys; print(sys.version_info[:2]>=(3,8))";
+  _pythonVersionScript = "import sys; print(sys.version_info[:2] >= (3, 10))";
 
   _pythonExtension: PythonExtension | undefined;
   private _disposables: vscode.Disposable | undefined;

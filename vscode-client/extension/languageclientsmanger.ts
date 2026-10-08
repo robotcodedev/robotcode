@@ -474,7 +474,10 @@ export class LanguageClientsManager {
     if (!this.pythonManager.checkPythonVersion(pythonCommand)) {
       this._pythonValidPythonAndRobotEnv.set(folder, false);
       if (showDialogs) {
-        await this.selectPythonEnvironment(`Invalid python version for workspace folder '${folder.name}'`, folder);
+        await this.selectPythonEnvironment(
+          `Python 3.10 or newer is required for workspace folder '${folder.name}'`,
+          folder,
+        );
       }
 
       return false;
