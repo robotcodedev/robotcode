@@ -6,14 +6,16 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.removeUserData
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.ServerStatus
-import dev.robotcode.robotcode4ij.CheckPythonAndRobotVersionResult
+import dev.robotcode.robotcode4ij.EnvironmentState
+import dev.robotcode.robotcode4ij.PythonInterpreter
 import dev.robotcode.robotcode4ij.RobotCodeBundle
-import dev.robotcode.robotcode4ij.checkPythonAndRobotVersion
+import dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener
 import dev.robotcode.robotcode4ij.restartAll
+import dev.robotcode.robotcode4ij.robotCodeEnvironment
+import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -28,16 +30,6 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
         const val LANGUAGE_SERVER_ID = "RobotCode"
         val LANGUAGE_SERVER_ENABLED_KEY = Key.create<Boolean?>("ROBOTCODE_LANGUAGE_SERVER_ENABLED")
         private val CLEAR_CACHE_TIMEOUT = 30.seconds
-    }
-    
-    fun tryConfigureProject(): Boolean {
-        project.removeUserData(LANGUAGE_SERVER_ENABLED_KEY)
-        
-        val result = project.checkPythonAndRobotVersion() == CheckPythonAndRobotVersionResult.OK
-        
-        project.putUserData(LANGUAGE_SERVER_ENABLED_KEY, result)
-        
-        return result
     }
     
     private var lease: Disposable? = null
@@ -65,7 +57,7 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
         }
         
         allowStart()
-        if (tryConfigureProject()) {
+        if (project.robotCodeEnvironment.projectState.isUsable) {
             
             val options = LanguageServerManager.StartOptions()
             options.isForceStart = true
@@ -127,6 +119,45 @@ class RobotCodeLanguageServerManager(private val project: Project, private val s
         get() {
             return LanguageServerManager.getInstance(project).getServerStatus(LANGUAGE_SERVER_ID)
         }
+    
+    val isRunning: Boolean
+        get() = status == ServerStatus.starting || status == ServerStatus.started
+    
+    /** Set from the moment a restart is requested until it is done; the restart starts the server itself. */
+    @Volatile
+    internal var restartPending = false
+    
+    /**
+     * Follows the result of the project interpreter's check: a usable result starts the server and a full discovery in
+     * a Robot Framework project, any other result stops the server.
+     */
+    internal fun environmentChanged(interpreter: PythonInterpreter, state: EnvironmentState) {
+        val environment = project.robotCodeEnvironment
+        if (restartPending || interpreter != environment.projectInterpreter) {
+            return
+        }
+        when {
+            state.isUsable -> if (environment.isRobotProject) {
+                if (!isRunning) {
+                    start()
+                }
+                project.testManger.refreshDebounced()
+            }
+            
+            state is EnvironmentState.Checked || state is EnvironmentState.Failed -> if (isRunning) {
+                stop()
+            }
+        }
+    }
+}
+
+/**
+ * Passes the changes of the environment check to the language server manager.
+ */
+class RobotCodeLanguageServerEnvironmentListener(private val project: Project) : RobotCodeEnvironmentListener {
+    override fun stateChanged(interpreter: PythonInterpreter, state: EnvironmentState) {
+        project.langServerManager.environmentChanged(interpreter, state)
+    }
 }
 
 val Project.langServerManager: RobotCodeLanguageServerManager

@@ -130,6 +130,15 @@
 		<editorNotificationProvider implementation="dev.robotcode.robotcode4ij.editor.EditorNotificationProvider"/>
 	</extensions>
 
+	<projectListeners>
+		<listener class="dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerEnvironmentListener"
+				  topic="dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener"/>
+		<listener class="dev.robotcode.robotcode4ij.editor.RobotCodeEnvironmentEditorListener"
+				  topic="dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener"/>
+		<listener class="dev.robotcode.robotcode4ij.RobotCodeFileOpenedListener"
+				  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+	</projectListeners>
+
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
 		<server id="RobotCode"
 				name="RobotCode Language Server"

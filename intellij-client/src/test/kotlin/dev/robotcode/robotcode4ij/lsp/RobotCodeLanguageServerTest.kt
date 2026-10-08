@@ -3,33 +3,76 @@ package dev.robotcode.robotcode4ij.lsp
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
-import dev.robotcode.robotcode4ij.CheckPythonAndRobotVersionResult
-import dev.robotcode.robotcode4ij.RobotCodeHelpers
+import dev.robotcode.robotcode4ij.EnvironmentResult
+import dev.robotcode.robotcode4ij.EnvironmentState
+import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import org.junit.Assert
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
 class RobotCodeLanguageServerTest : BasePlatformTestCase() {
 
+    private val environment get() = project.robotCodeEnvironment
+    private val usable = EnvironmentState.Checked(EnvironmentResult.Usable)
+
+    override fun setUp() {
+        super.setUp()
+        environment.resetForTests()
+    }
+
     override fun tearDown() {
         try {
-            project.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, null)
             project.putUserData(RobotCodeLanguageServerManager.LANGUAGE_SERVER_ENABLED_KEY, null)
             project.langServerManager.allowStart()
+            environment.resetForTests()
         } finally {
             super.tearDown()
         }
     }
 
-    // The environment check stores its result in the project, so a check would leave it there.
-    fun testCreatingTheProviderChecksNothingAndStartsNothing() {
-        project.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, null)
+    private fun setProjectState(state: EnvironmentState) {
+        environment.checks.setState(environment.projectInterpreter, state)
+    }
 
+    fun testCreatingTheProviderChecksNothingAndStartsNothing() {
         val server = RobotCodeLanguageServer(project)
 
-        assertNull(project.getUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY))
+        assertEquals(EnvironmentState.Unknown, environment.projectState)
         assertNull(server.commandLine)
         assertFalse(server.isAlive)
+    }
+
+    // LSP4IJ asks on the EDT, for example when a Robot file is opened.
+    fun testIsEnabledFollowsTheStateWithoutWaiting() {
+        val factory = RobotCodeLanguageServerFactory()
+        val states = listOf(
+            EnvironmentState.Checking to false,
+            usable to true,
+            EnvironmentState.Checked(EnvironmentResult.RobotNotInstalled) to false,
+            EnvironmentState.Failed("it did not answer within 30 seconds.") to false,
+        )
+        for ((state, enabled) in states) {
+            setProjectState(state)
+            val start = System.nanoTime()
+
+            assertEquals(state.toString(), enabled, factory.isEnabled(project))
+            // far below the 30 seconds that a check may take
+            assertTrue(System.nanoTime() - start < 1_000_000_000)
+            assertEquals(state, environment.projectState)
+        }
+    }
+
+    fun testIsEnabledRequestsACheckWithoutAResult() {
+        assertFalse(RobotCodeLanguageServerFactory().isEnabled(project))
+
+        assertTrue(environment.projectState != EnvironmentState.Unknown)
+    }
+
+    fun testIsEnabledIsFalseWhileTheStartIsBlocked() {
+        setProjectState(usable)
+        project.langServerManager.reportStartFailure()
+
+        assertFalse(RobotCodeLanguageServerFactory().isEnabled(project))
     }
 
     // LSP4IJ stops a server that has not connected yet when the project closes or the server restarts during its start
@@ -66,7 +109,7 @@ class RobotCodeLanguageServerTest : BasePlatformTestCase() {
 
         assertFalse(factory.isEnabled(project))
 
-        project.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, CheckPythonAndRobotVersionResult.OK)
+        setProjectState(usable)
         project.langServerManager.allowStart()
         assertTrue(factory.isEnabled(project))
     }

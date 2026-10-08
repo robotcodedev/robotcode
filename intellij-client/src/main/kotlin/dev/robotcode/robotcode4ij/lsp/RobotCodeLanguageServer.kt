@@ -1,5 +1,6 @@
 package dev.robotcode.robotcode4ij.lsp
 
+import com.intellij.execution.CantRunException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
@@ -8,7 +9,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import com.redhat.devtools.lsp4ij.server.LanguageServerLogErrorHandler
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
-import dev.robotcode.robotcode4ij.InvalidPythonOrRobotVersionException
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettingsMapper
@@ -73,7 +73,7 @@ class RobotCodeLanguageServer(
             if (!stopped.get()) {
                 project.langServerManager.reportStartFailure()
             }
-            throw if (e is InvalidPythonOrRobotVersionException) CannotStartProcessException(e.message) else e
+            throw if (e is CantRunException) CannotStartProcessException(e.message) else e
         }
     }
 

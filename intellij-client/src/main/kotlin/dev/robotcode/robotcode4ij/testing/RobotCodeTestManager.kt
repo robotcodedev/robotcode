@@ -25,11 +25,11 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
-import dev.robotcode.robotcode4ij.InvalidPythonOrRobotVersionException
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
 import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
+import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,7 +161,7 @@ import java.util.*
     }
     
     fun refresh(uri: String) {
-        if (!project.isOpen || project.isDisposed) {
+        if (!project.isOpen || project.isDisposed || !project.robotCodeEnvironment.projectState.isUsable) {
             return
         }
         
@@ -224,6 +224,11 @@ import java.util.*
     }
     
     fun refresh() {
+        // a usable result of the environment check runs discovery again
+        if (!project.robotCodeEnvironment.projectState.isUsable) {
+            return
+        }
+        
         thisLogger().info("Refreshing test items")
         try {
             val discoverResult = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult?> {
@@ -231,14 +236,9 @@ import java.util.*
                 // TODO: Add support for configurable paths
                 val defaultPaths = arrayOf("-dp", ".")
 
-                val cmdLine = try {
-                    project.buildRobotCodeCommandLine(
-                        arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
-                    ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
-                } catch (e: InvalidPythonOrRobotVersionException) {
-                    thisLogger().warn("Failed to build command line", e)
-                    return@executeOnPooledThread null
-                }
+                val cmdLine = project.buildRobotCodeCommandLine(
+                    arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
+                ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
 
                 val openFiles = mutableMapOf<String, String>()
 

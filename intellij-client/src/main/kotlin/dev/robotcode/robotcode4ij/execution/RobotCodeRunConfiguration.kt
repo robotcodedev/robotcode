@@ -10,6 +10,7 @@ import com.intellij.execution.testframework.sm.runner.SMRunnerConsolePropertiesP
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
+import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import org.jdom.Element
 
@@ -17,7 +18,9 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     LocatableConfigurationBase<ConfigurationFactory>
         (project, factory, "Robot Framework"), SMRunnerConsolePropertiesProvider {
     
+    // fails with the IDE's run error before a process or a debug session starts
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
+        project.robotCodeEnvironment.ensureUsableForRun()
         return RobotCodeRunProfileState(this, environment)
     }
     

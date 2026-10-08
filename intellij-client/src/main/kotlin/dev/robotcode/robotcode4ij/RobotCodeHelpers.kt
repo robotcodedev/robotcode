@@ -1,131 +1,62 @@
 package dev.robotcode.robotcode4ij
 
+import com.intellij.execution.CantRunException
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.process.ProcessOutput
-import com.intellij.execution.util.ExecUtil
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
-import com.intellij.openapi.util.Key
 import com.jetbrains.python.sdk.PythonSdkUtil
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.lsp.langServerManager
 import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URI
+import java.net.URL
 import java.nio.file.Path
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import kotlin.io.path.isRegularFile
 import kotlin.io.path.pathString
 
 class RobotCodeHelpers {
     companion object {
-        val basePath: Path = PathManager.getPluginsDir().resolve("robotcode4ij").resolve("data")
+        val basePath: Path = robotCodeBasePath(
+            pluginPathOf(RobotCodeHelpers::class.java.getResource("RobotCodeHelpers.class"))
+        )
         val bundledPath: Path = basePath.resolve("bundled")
         val toolPath: Path = bundledPath.resolve("tool")
         val robotCodePath: Path = toolPath.resolve("robotcode")
-        val checkRobotVersion: Path = toolPath.resolve("utils").resolve("check_robot_version.py")
-        
-        val PYTHON_AND_ROBOT_OK_KEY = Key.create<CheckPythonAndRobotVersionResult?>("ROBOTCODE_PYTHON_AND_ROBOT_OK")
     }
+}
+
+/**
+ * The folder with the plugin's bundled files, below the directory from which the IDE loaded the plugin.
+ */
+internal fun robotCodeBasePath(pluginPath: Path?): Path {
+    return (pluginPath ?: PathManager.getPluginsDir().resolve("robotcode4ij")).resolve("data")
+}
+
+/**
+ * The directory of the plugin whose jar in `lib` holds [classResource], or null when the class does not come from a jar.
+ * The platform's lookups of a plugin's descriptor are internal API.
+ */
+internal fun pluginPathOf(classResource: URL?): Path? {
+    if (classResource?.protocol != "jar") {
+        return null
+    }
+    val jar = Path.of(URI(classResource.path.substringBefore("!/")))
+    return jar.parent?.parent
 }
 
 val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
     get() {
         return this.modules.firstNotNullOfOrNull { PythonSdkUtil.findPythonSdk(it) }
     }
-
-enum class CheckPythonAndRobotVersionResult(private val messageKey: String? = null) {
-    OK,
-    NO_PYTHON("python.noInterpreter"),
-    INVALID_PYTHON("python.interpreterNotFound"),
-    INVALID_PYTHON_VERSION("python.tooOld"),
-    INVALID_ROBOT("python.noRobotFramework");
-
-    val errorMessage: String?
-        get() = messageKey?.let { RobotCodeBundle.message(it) }
-}
-
-// Every RobotCode package requires Python 3.10.
-internal const val PYTHON_VERSION_PROBE = "import sys; print(sys.version_info[:2] >= (3, 10))"
-
-internal fun pythonVersionResult(output: ProcessOutput): CheckPythonAndRobotVersionResult {
-    return if (output.exitCode == 0 && output.stdout.trim() == "True") {
-        CheckPythonAndRobotVersionResult.OK
-    } else {
-        CheckPythonAndRobotVersionResult.INVALID_PYTHON_VERSION
-    }
-}
-
-fun Project.resetPythonAndRobotVersionCache() {
-    this.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, null)
-}
-
-fun Project.checkPythonAndRobotVersion(reset: Boolean = false): CheckPythonAndRobotVersionResult {
-    if (!reset) {
-        val cachedResult = this.getUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY)
-        if (cachedResult != null) {
-            return cachedResult
-        }
-    }
-    
-    val result = ApplicationManager.getApplication().executeOnPooledThread<CheckPythonAndRobotVersionResult> {
-        
-        val pythonInterpreter = this.robotPythonSdk?.homePath
-        
-        if (pythonInterpreter == null) {
-            thisLogger().info("No Python Interpreter defined for project '${this.name}'")
-            return@executeOnPooledThread CheckPythonAndRobotVersionResult.NO_PYTHON
-        }
-        
-        if (!Path(pythonInterpreter).exists()) {
-            thisLogger().warn("Python Interpreter $pythonInterpreter not exists")
-            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON
-        }
-        
-        if (!Path(pythonInterpreter).isRegularFile()) {
-            thisLogger().warn("Python Interpreter $pythonInterpreter is not a regular file")
-            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON
-        }
-        
-        thisLogger().info("Use Python Interpreter $pythonInterpreter for project '${this.name}'")
-        
-        val res = ExecUtil.execAndGetOutput(
-            GeneralCommandLine(pythonInterpreter, "-u", "-c", PYTHON_VERSION_PROBE), timeoutInMilliseconds = 5000
-        )
-        if (pythonVersionResult(res) != CheckPythonAndRobotVersionResult.OK) {
-            thisLogger().warn("Invalid python version")
-            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON_VERSION
-        }
-        
-        val res1 = ExecUtil.execAndGetOutput(
-            GeneralCommandLine(pythonInterpreter, "-u", RobotCodeHelpers.checkRobotVersion.pathString),
-            timeoutInMilliseconds = 5000
-        )
-        if (res1.exitCode != 0 || res1.stdout.trim() != "True") {
-            thisLogger().warn("Invalid Robot Framework version")
-            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_ROBOT
-        }
-        
-        return@executeOnPooledThread CheckPythonAndRobotVersionResult.OK
-        
-    }.get()
-    
-    this.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, result)
-    
-    return result
-}
-
-class InvalidPythonOrRobotVersionException(message: String) : Exception(message)
 
 /**
  * The arguments after the `robotcode` entry point. The extra arguments come first, so that the plugin's own options win
@@ -149,6 +80,10 @@ internal fun robotCodeArguments(
     }
 }
 
+/**
+ * The command line of a `robotcode` command. It throws [CantRunException] with the text of the result when the project's
+ * interpreter is not usable.
+ */
 fun Project.buildRobotCodeCommandLine(
     args: Array<String> = arrayOf(),
     profiles: Array<String> = arrayOf(),
@@ -157,14 +92,14 @@ fun Project.buildRobotCodeCommandLine(
     noColor: Boolean = true,
     noPager: Boolean = true
 ): GeneralCommandLine {
-    val result = this.checkPythonAndRobotVersion()
-    if (result != CheckPythonAndRobotVersionResult.OK) {
-        throw InvalidPythonOrRobotVersionException(result.errorMessage!!)
+    val interpreter = robotCodeEnvironment.projectInterpreter
+    val state = robotCodeEnvironment.state(interpreter)
+    if (!state.isUsable) {
+        throw CantRunException(state.message)
     }
-
-    val pythonInterpreter = this.robotPythonSdk?.homePath
+    
     val commandLine = GeneralCommandLine(
-        pythonInterpreter,
+        interpreter.homePath,
         "-u",
         "-X",
         "utf8",
@@ -188,10 +123,17 @@ private class RobotCodeRestartManager(private val project: Project, private val 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val restartDispatcher = Dispatchers.IO.limitedParallelism(1)
     
+    @Volatile
     private var refreshJob: Job? = null
     
-    fun restart(reset: Boolean = false) {
-        project.checkPythonAndRobotVersion(reset)
+    // The restart waits for the check and starts the server itself.
+    private suspend fun restart(reset: Boolean = false) {
+        val environment = project.robotCodeEnvironment
+        if (reset) {
+            environment.checkAgain().await()
+        } else {
+            environment.awaitRunningCheck()
+        }
         project.langServerManager.restart()
         project.testManger.refreshDebounced()
     }
@@ -202,29 +144,30 @@ private class RobotCodeRestartManager(private val project: Project, private val 
         }
         
         refreshJob?.cancel()
+        project.langServerManager.restartPending = true
         
-        refreshJob = scope.launch(restartDispatcher) {
-            delay(DEBOUNCE_DELAY)
-            if (!project.isOpen || project.isDisposed) {
-                return@launch
+        // a restart that a newer one replaced leaves the pending state to the newer one
+        val job = scope.launch(restartDispatcher, start = CoroutineStart.LAZY) {
+            try {
+                delay(DEBOUNCE_DELAY)
+                if (project.isOpen && !project.isDisposed) {
+                    restart(reset)
+                }
+            } finally {
+                if (refreshJob === coroutineContext[Job]) {
+                    refreshJob = null
+                    // the scope also ends when the project closes
+                    if (!project.isDisposed) {
+                        project.langServerManager.restartPending = false
+                    }
+                }
             }
-            restart(reset)
-            refreshJob = null
         }
-    }
-    
-    fun cancelRestart() {
-        refreshJob?.cancel()
-        refreshJob = null
+        refreshJob = job
+        job.start()
     }
 }
 
-fun Project.restartAll(reset: Boolean = false, debounced: Boolean = true) {
-    val service = this.service<RobotCodeRestartManager>()
-    if (debounced) {
-        service.restartDebounced(reset)
-    } else {
-        service.cancelRestart()
-        service.restart(reset)
-    }
+fun Project.restartAll(reset: Boolean = false) {
+    this.service<RobotCodeRestartManager>().restartDebounced(reset)
 }
