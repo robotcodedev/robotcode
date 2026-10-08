@@ -24,3 +24,31 @@ The Robot Framework settings pages that hold shared settings SHALL be available 
 
 - **WHEN** the user changes a value under Settings for New Projects and applies
 - **THEN** no `robotcode` process starts
+
+## MODIFIED Requirements
+
+### Requirement: Robocop page
+
+The Robot Framework settings node SHALL have a "Robocop" sub-page with these settings, and the language server SHALL use their values after the user applies them:
+
+- Robocop analysis enabled, on by default;
+- config file, none by default;
+- ignore Git dir, off by default;
+- ignore file config, off by default.
+
+The config file SHALL be stored and sent as the user entered it, without a check by the plugin, as VS Code does; the language server and Robocop resolve it and report a file they cannot read.
+
+#### Scenario: Switching Robocop off
+
+- **WHEN** Robocop is installed in the project's interpreter and the user switches Robocop analysis off and applies
+- **THEN** Robocop's diagnostics disappear, and the other RobotCode diagnostics stay
+
+#### Scenario: Config file
+
+- **WHEN** the user enters `robocop.toml`, a Robocop configuration file in the project folder that ignores a Robocop rule, and applies
+- **THEN** the page keeps `robocop.toml`, and diagnostics of that rule disappear
+
+#### Scenario: Missing config file
+
+- **WHEN** the user enters the path of a file that does not exist as config file and applies
+- **THEN** the value is stored as entered, and the language server reports that the Robocop configuration could not be loaded

@@ -15,8 +15,9 @@
 - Changing the selection restarts the language server and runs test discovery again, because the server reads profiles only when it starts.
 - The selection is stored for the current user only, in the project's workspace file. Unlike VS Code, where it is a workspace setting that teams often commit, the shared default for a team is `default-profiles` in `robot.toml`.
 - The Robot Framework pages with shared settings, Editing, Analysis and Robocop, appear under File | New Projects Setup | Settings for New Projects, and the values set there are used for projects created afterwards. The General and Language Server pages, which hold only personal values such as the profile selection, are not offered there, and applying there starts no language server and runs no discovery.
+- As in VS Code, the Robocop page stores its config file as entered, without checking that the file exists; the language server and Robocop resolve it. Before, the page resolved a relative path against the project folder and rejected missing files, which Settings for New Projects cannot do, because it has no project folder.
 
-Behaviour that users notice, for the release notes (not breaking): profiles can be selected in the IDE; the selection is personal; RobotCode settings can be preset for new projects.
+Behaviour that users notice, for the release notes (not breaking): profiles can be selected in the IDE; the selection is personal; RobotCode settings can be preset for new projects; the Robocop config file is no longer checked by the plugin.
 
 Not part of this change: profiles per run configuration and running something once with a chosen profile; a status bar entry for the active profiles; removing selected profiles that `robot.toml` no longer defines without opening the list; reporting failures of background `robotcode` commands as notifications.
 
@@ -28,7 +29,7 @@ Not part of this change: profiles per run configuration and running something on
 
 ### Modified Capabilities
 
-- `intellij-settings`: the RobotCode settings pages in Settings for New Projects.
+- `intellij-settings`: the RobotCode settings pages in Settings for New Projects, and the Robocop config file stored as entered.
 
 ## Impact
 
@@ -36,5 +37,6 @@ Not part of this change: profiles per run configuration and running something on
 - `configuration/`: a `profiles` field in the personal component `RobotCodePersonalConfiguration` (`.idea/workspace.xml`), the profile picker dialog, and the "Profiles" row on the General page.
 - A new action in `actions/`, registered in the RobotCode group of `plugin.xml`; `nonDefaultProject` of the "Robot Framework" node and the Editing, Analysis and Robocop pages in `plugin.xml`.
 - `lsp/RobotCodeLanguageServer.kt`, `testing/RobotCodeTestManager.kt` and `execution/RobotCodeRunProfileState.kt` get the profiles through the builder's default, without changes of their own.
+- `configuration/RobotCodeRobocopConfigurable.kt` loses the check and the resolution of the config file.
 - Texts in `messages/RobotCode.properties`; new unit tests under `intellij-client/src/test/kotlin/`.
 - No change to the language server, the VS Code extension or `robot.toml`.

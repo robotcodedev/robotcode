@@ -18,6 +18,7 @@ See proposal.md for the motivation. The state that shapes the approach:
   - It then shows a multi-select with the profiles marked `selected` checked, and writes the checked names to the folder-level workspace setting.
   - A language status item shows the selection.
 - **Settings for new projects:** every RobotCode page is registered with `nonDefaultProject="true"`. The Editing, Analysis and Robocop pages hold only shared values and call `restartAll()` in `apply()` without checking for the default project; the General and Language Server pages hold only personal values.
+- **Robocop config file:** the Robocop page resolves a relative path against `project.basePath`, stores the absolute path and rejects a file that does not exist. The default project has no `basePath`, so there a relative path is checked against the IDE's working directory, the IDE installation folder (harness check). VS Code sends `robotcode.robocop.configFile` as entered; the language server opens it relative to its working directory, the project folder, and reports a file it cannot load.
 - **UI API:** `DialogWrapper`, `CheckBoxList`, `runWithModalProgressBlocking` and `CapturingProcessHandler` carry no API status annotations in 2026.1.
 
 ## Goals / Non-Goals
@@ -81,6 +82,14 @@ The "Robot Framework" node and the pages that hold only shared settings, Editing
 
 Alternative: leaving new projects out. The parity notes list it with the storage scopes that this change completes, and it is a small step once the personal values are kept apart.
 
+### The Robocop config file as entered
+
+The Robocop page stores the config file as the user entered it and checks nothing, as VS Code does; the language server and Robocop resolve it and report a file they cannot load. The same value then works in Settings for New Projects, where a relative path such as `robocop.toml` means the file of each new project. Values stored before stay absolute paths.
+
+Alternatives:
+- Accepting only absolute paths for the default project. Users could not preset a file that each project has.
+- Checking relative paths against the project folder in projects only. The page would treat the same value differently in two places, while the server's report covers a missing file in both.
+
 ## Risks / Trade-offs
 
 - [A selected profile that `robot.toml` no longer defines makes every `robotcode` process print an error line until the list is opened] → `robotcode` continues without that profile; the line goes to the Language Servers console and to discovery's ignored stderr, as in VS Code, which also removes such names only in its picker.
@@ -92,7 +101,3 @@ Alternative: leaving new projects out. The parity notes list it with the storage
 ## Migration Plan
 
 None. Projects without a selection keep today's behaviour, because no `-p` is passed.
-
-## Open Questions
-
-- What the Robocop page's check of the configuration file resolves a relative path against for the default project, which stands for no project folder. If it is not a folder of the new project, only an absolute path should pass there; the harness check of task 5.2 answers it.
