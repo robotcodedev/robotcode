@@ -61,6 +61,15 @@ During development under an unchanged version, namespaces stored with the old ke
   - It opens each suite with `protocol.documents.get_or_open_document` without a version, notes `namespace_references` (entry, importing file, import range, alias, locations), closes the documents and removes them from the project index, and opens the suite again.
   - A spy on `Namespace.from_data` checks that the second analysis really came from the cache. Without that check, the test could compare two fresh analyses.
   - It does not use `open_temp_document`, which with the change `doc-link-tests-per-module` opens documents with a version, and those never use the cache.
+  - It writes the files with `write_project` from that change, which backdates them.
+  - The library and variable files get names that no other test imports, with the analysis mode appended (`vars_legacy.py`, `arglib_model.py`). The reason is a finding of the implementation, see below.
+
+## Findings outside this change
+
+- **The cache check of a namespace finds a dependency by its import name only:** `ImportsManager.validate_namespace_meta` looks up a library or variable file of a cached namespace with `get_cached_library_meta(name, args=None)` or `get_cached_variables_meta(name, args=None)`. Both match the import name in all loaded entries, whatever their directory.
+  - When another directory's file with the same import name is loaded, for example `vars.py` or `./arglib.py`, the check compares against that file. It declares the cached namespace stale, and the file is analyzed again.
+  - The result is still correct, but the cache is not used. In the tests, the same case run first with one analysis mode and then with the other showed it: the second run was never restored from the cache.
+  - Found on 2026-10-07; not planned.
 - **Unit test:** `test_namespace_data.py` gets a test that two entries of the same library with different import positions get different keys. The comment on the key format in `test_to_data_converts_namespace_references` follows the new format.
 
 ## Risks / Trade-offs
