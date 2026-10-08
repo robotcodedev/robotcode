@@ -1,5 +1,6 @@
 """Tests for NamespaceData serialization (to_data + Pickle roundtrip)."""
 
+import dataclasses
 import pickle
 from typing import Dict, Optional, Set, Tuple
 
@@ -311,7 +312,24 @@ class TestToData:
         assert len(data.namespace_references) == 2
         for key in data.namespace_references:
             assert isinstance(key, str)
-            assert ":" in key  # format: ClassName:import_name:args:alias
+            assert ":" in key  # format: ClassName:name:import_name:args:alias:import_source:import_range:alias_range
+
+    def test_to_data_keeps_entries_of_one_library_with_other_import_positions_apart(
+        self, mocker: MockerFixture
+    ) -> None:
+        ns = _make_namespace(mocker)
+        builtin = ns.libraries["BuiltIn"]
+        # an explicit import of the implicitly imported BuiltIn: the same library at another import position
+        explicit = dataclasses.replace(
+            builtin,
+            import_source="/project/test.robot",
+            import_range=Range(start=Position(line=7, character=12), end=Position(line=7, character=19)),
+        )
+        ns.namespace_references[explicit] = {_loc("file:///project/test.robot", 9)}
+
+        data = ns.to_data()
+
+        assert len(data.namespace_references) == len(ns.namespace_references) == 3
 
     def test_to_data_preserves_tag_references(self, mocker: MockerFixture) -> None:
         ns = _make_namespace(mocker)

@@ -147,6 +147,24 @@ class NamespaceData:
     variable_definitions: Dict[str, VariableDefinition] = field(default_factory=dict)
 
 
+def _namespace_reference_key(entry: LibraryEntry) -> str:
+    """The key of a `namespace_references` entry in `NamespaceData`.
+
+    Like `LibraryEntry.__hash__`, it includes the import position, so it tells
+    apart the entries of one library: the implicitly imported BuiltIn and an
+    explicit import of it, or a library imported by a resource file and the
+    same library imported directly.
+    """
+
+    def position(r: Range) -> str:
+        return f"{r.start.line}.{r.start.character}-{r.end.line}.{r.end.character}"
+
+    return (
+        f"{type(entry).__name__}:{entry.name}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
+        f":{entry.import_source or ''}:{position(entry.import_range)}:{position(entry.alias_range)}"
+    )
+
+
 class Namespace:
     """Data container holding all results of a namespace build.
 
@@ -488,10 +506,9 @@ class Namespace:
         (diagnostics, tag references, etc.) is copied directly.
         """
         # Build namespace_references key from LibraryEntry identity
-        ns_refs: Dict[str, Set[Location]] = {}
-        for entry, locs in self._namespace_references.items():
-            key = f"{type(entry).__name__}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
-            ns_refs[key] = locs
+        ns_refs: Dict[str, Set[Location]] = {
+            _namespace_reference_key(entry): locs for entry, locs in self._namespace_references.items()
+        }
 
         # Collect all referenced variable definitions for stable_id → object lookup
         all_var_defs: Dict[str, VariableDefinition] = {}
@@ -654,15 +671,19 @@ class Namespace:
             if sid in var_by_id:
                 local_variable_assignments[var_by_id[sid]] = set(ranges)
 
-        # Reconstruct namespace_references: key format "ClassName:import_name:args:alias"
-        all_entries: Dict[str, LibraryEntry] = {}
-        for entry in itertools.chain(
-            resolved.libraries.values(),
-            resolved.resources.values(),
-            resolved.variables_imports.values(),
-        ):
-            key = f"{type(entry).__name__}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
-            all_entries[key] = entry
+        # Reconstruct namespace_references. import_entries has the entry of every
+        # import statement, also of one that imports something already imported;
+        # the other maps add the implicit default libraries and the imports of
+        # resource files.
+        all_entries: Dict[str, LibraryEntry] = {
+            _namespace_reference_key(entry): entry
+            for entry in itertools.chain(
+                resolved.libraries.values(),
+                resolved.resources.values(),
+                resolved.variables_imports.values(),
+                resolved.import_entries.values(),
+            )
+        }
 
         namespace_references: Dict[LibraryEntry, Set[Location]] = {}
         for key, locs in data.namespace_references.items():
