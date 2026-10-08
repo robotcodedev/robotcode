@@ -49,6 +49,8 @@
 - [x] 5.2 Run `hatch run lint:all` and verify that ruff and mypy report nothing.
 - [ ] 5.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
 
+  Note (2026-10-08): the first CI run (37783553021) failed on Windows in the 10 restore cases and in `test_an_unchanged_namespace_is_restored`, in every Windows job. The tests compared the source of the restored namespace with `str(suite)`. On Windows, `Uri.to_path()` gives that source a lower-case drive letter, so the string comparison never matched; both tests now compare paths. The run was cancelled; the next run decides this task.
+
 ## Workflow follow-up
 
 - Archive this change after `namespace-cache-import-references`, which introduces the capability `namespace-cache`, and after the maintainer's review.
