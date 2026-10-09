@@ -34,10 +34,11 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart):
     def collect(self, sender: Any, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:
         namespace = self.parent.documents_cache.get_namespace(document)
         semantic_model = namespace.semantic_model
+        model = self.parent.documents_cache.get_model(document)
 
         results: List[SelectionRange] = []
         for position in positions:
-            nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document), position)
+            nodes = get_nodes_at_position(model, position)
 
             if not nodes:
                 break
