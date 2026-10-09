@@ -17,29 +17,30 @@ When discovery fails, for example because robot.toml has a syntax error, every r
   - one discovery runs at a time, a newer one cancels it and ends its process, and the run markers always show one complete result;
   - output fields the plugin does not know are ignored.
 - Tools | RobotCode | Refresh Robot Framework Tests runs a full discovery.
+- While "Disable extension" is checked or the project's interpreter is not usable, these triggers do nothing; the switch and the environment check start the language server and discovery themselves.
 - When discovery fails, the run markers of the last successful discovery stay. One RobotCode notification shows the first lines of robotcode's error output, with "Retry" and, when the project has one, "Open robot.toml". The same failure does not add another notification, a successful discovery removes it, and no IDE error is raised. idea.log gets the command line and the full output.
 - Problems that discovery reports for a suite file show in the tooltip of its run marker. A file that Robot Framework cannot turn into a suite, for example because it is not valid UTF-8 or mixes tests and tasks, gets a marker whose tooltip says why.
 
 Behaviour that users notice, for the release notes (not breaking): a discovery failure no longer removes the run markers; settings that only the language server uses no longer cause a discovery, and settings that only discovery uses no longer restart the server.
 
-Not part of this change: restarts on interpreter changes; the handling of task suites in the discovery of a single file; a switch that turns discovery off, a view of all discovered tests, and editor diagnostics from discovery.
+Not part of this change: restarts on interpreter changes; the arguments of the discovery of a single file; a switch that turns discovery off, a view of all discovered tests, and editor diagnostics from discovery.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `intellij-test-discovery`: when discovery runs again, how it stays consistent, and how failures and unreadable suite files are shown.
-- `intellij-language-server`: when the language server restarts.
+_None._
 
 ### Modified Capabilities
 
-_None._
+- `intellij-test-discovery`: when discovery runs again, how it stays consistent, and how failures and unreadable suite files are shown.
+- `intellij-language-server`: when the language server restarts.
 
 ## Impact
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/testing/RobotCodeTestManager.kt` and `DataItems.kt`: triggers, cancellation, the immutable model, tolerant decoding, typed discovery diagnostics, failure handling.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/RobotCodeHelpers.kt` (restart manager), `listeners/RobotCodeVirtualFileListener.kt` and `RobotCodePostStartupActivity.kt`: the restart decision, the settings topic, the project filter.
-- The RobotCode settings pages and state components in `configuration/`: publishing instead of restarting.
+- The RobotCode settings pages and state components in `configuration/`, and `actions/RobotCodeSelectConfigurationProfilesAction.kt`: publishing instead of restarting.
 - `execution/RobotCodeRunLineMarkerContributor.kt` and a line marker for files without a suite.
 - `intellij-client/src/main/resources/META-INF/plugin.xml`: the RobotCode notification group and the refresh action; `messages/RobotCode.properties`: their texts.
 - New unit tests under `intellij-client/src/test/kotlin/`.

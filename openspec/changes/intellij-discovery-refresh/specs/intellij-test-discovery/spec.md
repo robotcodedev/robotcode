@@ -28,7 +28,7 @@ The plugin SHALL run a full discovery of a project when:
 #### Scenario: Deleted suite folder
 
 - **WHEN** the user deletes a folder with suite files
-- **THEN** a full discovery runs, and run markers, context runs and the checks of run configurations no longer know the suites of that folder
+- **THEN** a full discovery runs, and run markers and context runs no longer know the suites of that folder
 
 #### Scenario: Refresh action
 

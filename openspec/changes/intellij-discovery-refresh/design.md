@@ -5,20 +5,22 @@
 See proposal.md for the motivation. The state that shapes the approach, checked against the code on main:
 
 - **Discovery** lives in `testing/RobotCodeTestManager`:
-  - It listens to document changes of suite files in its project, to VFS events through an application-wide `AsyncFileListener` without a project filter that reacts only to content events of suite files, and to opening and closing editors.
-  - Opening or closing a suite file starts a per-file discovery. Folder events are ignored. After a file is deleted, its per-file discovery gets `{"items": []}` with exit code 0, so the empty suite stays in the model.
+  - It listens to document changes of suite files in its project, to VFS events through an application-wide `AsyncFileListener` without a project filter, and to opening and closing editors. Every VFS event of a suite file requests a per-file discovery when the model knows the file and a full discovery otherwise, so a suite file of another open project starts a full discovery here.
+  - Opening or closing a suite file starts a per-file discovery. Folder events are ignored, so the suites of a deleted folder stay in the model. Since the task-marker change, the per-file discovery runs `discover all` with `-I` and `--suite` and falls back to a full discovery when the result has no suite with children for the file, so a deleted file's suite disappears.
   - Discoveries run on an own `CoroutineScope(Dispatchers.IO.limitedParallelism(1))` that is never cancelled, and wait in `executeOnPooledThread { … }.get()`. Cancelling a job does not stop the running `robotcode` process.
-  - A failure inside the pooled callable is logged by the platform as SEVERE and returns `null` (analysis notes, `test-discovery-errors`). The full discovery then sets the model to empty; the per-file discovery sets the suite's children to empty.
+  - A failure inside the pooled callable is logged by the platform as SEVERE and returns `null` (analysis notes, `test-discovery-errors`). The full discovery then sets the model to empty; the per-file discovery leaves it unchanged.
+  - Both discoveries return at once while the project's interpreter is not usable or "Disable extension" is checked; a result that is not usable empties the model (`clearTestItems()`).
   - `testItems` is a plain property written from the IO thread and read by run markers and producers; the per-file discovery assigns `children` of a suite in place.
   - The JSON is decoded with the default, strict `Json`.
 - **What discovery reports about broken files,** checked with Robot Framework 6.0, 7.0 and 7.5: robotcode's `discover all` leaves a file that Robot Framework cannot build into a suite out of the item tree, for example a file that is not valid UTF-8 or that has both tests and tasks. It reports the problem in `diagnostics`, keyed by the file's URI, with a line and a message. Files with tolerable problems, such as `Test Template` set twice, keep their items and get a diagnostic as well. The plugin decodes `diagnostics` as untyped JSON and ignores it; `RobotCodeTestItem.error` is decoded but unused, and it was not set in these cases.
 - **Configuration files:** `listeners/RobotCodeVirtualFileListener` reacts to `robot.toml`, `.robot.toml`, `pyproject.toml` and `robocop.toml` by name, from any project, and calls `restartAll()`. The startup activity registers it application-wide for each project.
-- **Restarts:** `restartAll()` in `RobotCodeHelpers.kt` debounces for 500 ms, then restarts the language server and refreshes discovery.
-- **Planned changes this builds on, none of them implemented yet:**
-  - `intellij-profiles`, which this change needs: the personal profile selection, `-p` on every process through a pure argument function, and `restartAll()` after a change.
-  - The settings pages and their mapper (`intellij-settings-pages`), the Analysis, Diagnostics and Robocop pages with one debounced restart per Apply and initialization options (`intellij-analysis-settings`), and the extra arguments with their personal state and page-specific Apply rules (`intellij-extra-args`).
-  - `intellij-environment-check`, which restarts on interpreter changes by itself.
-  - `intellij-rpa-task-markers`, which changes the arguments of the per-file discovery and falls back to a full discovery when a file yields no suite.
+- **Restarts:** `restartAll(reset)` in `RobotCodeHelpers.kt` returns for the default project and while "Disable extension" is checked. It debounces for 500 ms, waits for a running environment check (with `reset`, it checks again and also undoes a disable from the Language Servers tool window), sets `restartPending` so that the environment listener does not start the server a second time, then restarts the language server and requests a full discovery. The Editing, Analysis and Robocop pages call it on every Apply, the Language Server page when its extra arguments changed, the General page and Select Configuration Profiles when the profile selection changed; the General page requests a discovery directly when only the robotcode extra arguments changed.
+- **Archived changes this builds on:**
+  - `intellij-profiles`: the personal profile selection and `-p` on every process through `robotCodeArguments`.
+  - `intellij-settings-pages`, `intellij-analysis-settings` and `intellij-extra-args`: the pages, the settings mapper and initialization options, and the personal extra arguments.
+  - `intellij-environment-check`, which restarts on interpreter changes by itself and starts the server and discovery when the interpreter becomes usable.
+  - `intellij-project-status`: "Disable extension", which stops and starts the server and discovery directly and makes discovery and `restartAll()` do nothing while it is checked.
+  - `intellij-rpa-task-markers`: the arguments of the per-file discovery (`fileDiscoveryArguments`) and its fallback to a full discovery (`findSuiteChildren`).
 
 ## Goals / Non-Goals
 
@@ -45,13 +47,15 @@ The restart manager keeps two snapshots:
 
 On a settings event it waits for the 500-millisecond debounce, builds both snapshots from the current state, and compares them. It restarts the server if the server's snapshot differs, and runs a full discovery if the discovery snapshot differs. The comparison is a pure function of the two old and the two new snapshots, which unit tests cover. A new snapshot is taken whenever the server starts and whenever a full discovery runs.
 
+Snapshots exist only while the interpreter is usable and RobotCode is switched on, because the command line cannot be built otherwise; without them the decision does nothing, and the environment check or the switch start the server and discovery later. The restart and the discovery go through the existing restart path, with its waiting for a running check and its `restartPending`, split into the server alone, discovery alone, or both.
+
 Alternatives:
 - VS Code's list of setting sections that restart (`index.ts:174-205`): it needs care for every new setting, and it misses inputs such as the interpreter or the profiles on the command line.
-- The page-specific rules of the planned pages: each page decides on its own, and the rules drift apart.
+- The page-specific rules of today's pages: each page decides on its own, and the rules drift apart.
 
 ### One settings topic, fed by pages and stored state
 
-A project topic announces that RobotCode settings changed. Every RobotCode settings page publishes it after `apply()`, and every RobotCode state component publishes it in `loadState()`. The platform calls `loadState()` again when the storage file changes outside the IDE, for example through a VCS update; this is documented platform behaviour and is checked in the harness. The direct restart and discovery calls that the planned pages and the Select Configuration Profiles action make are replaced by publishing. Events for the default project are ignored, as the planned pages already do for it.
+A project topic announces that RobotCode settings changed. Every RobotCode settings page publishes it after `apply()`, and every RobotCode state component publishes it in `loadState()`. The platform calls `loadState()` again when the storage file changes outside the IDE, for example through a VCS update; this is documented platform behaviour and is checked in the harness. The direct restart and discovery calls that the pages and the Select Configuration Profiles action make today are replaced by publishing. Events for the default project are ignored, as `restartAll()` already does for it. "Disable extension" keeps its own handling, because it stops and starts the server instead of restarting it.
 
 Alternative: publishing only from the pages misses external edits of `.idea/robotcodeSettings.xml`.
 
@@ -66,7 +70,7 @@ Alternative: publishing only from the pages misses external edits of `.idea/robo
 - A per-file discovery runs without progress.
 - A cancelled discovery destroys its `robotcode` process.
 
-The model is an immutable tree in a `@Volatile` property. A full discovery replaces it. A per-file discovery builds a copy of the path from the root to the changed suite and swaps the root. A failed or cancelled discovery leaves the property as it is. Decoding uses `Json { ignoreUnknownKeys = true }`, and the existing test that documents the strict decoding changes accordingly.
+The model is an immutable tree in a `@Volatile` property. A full discovery replaces it. A per-file discovery keeps the arguments and the fallback of the task-marker change, builds a copy of the path from the root to the changed suite and swaps the root. A failed or cancelled discovery leaves the property as it is. Decoding uses `Json { ignoreUnknownKeys = true }`, and the existing test that documents the strict decoding changes accordingly.
 
 Alternative: keeping `executeOnPooledThread { }.get()`, which can neither be cancelled nor fail without a SEVERE entry.
 
@@ -78,7 +82,7 @@ Alternative: keeping `executeOnPooledThread { }.get()`, which can neither be can
 - Settings events go through the comparison above.
 - Tools | RobotCode | Refresh Robot Framework Tests requests a full discovery. It is enabled only with a project.
 
-The planned task-marker change states the per-file rediscovery as happening when a suite file is "opened, closed or edited". This change drops opening and closing as triggers, so when both are archived, that requirement's list of triggers needs the same edit.
+The archived requirement of the task-marker change names an edit as its example trigger and does not list opening or closing, so it stays as it is.
 
 ### Failures: keep the model, one notification
 
@@ -104,8 +108,7 @@ Alternative: a run marker without actions for such files; whether the run gutter
 - [The comparison restarts the server for settings it could also take without a restart] → VS Code restarts for them too, and the analysis found that many values are read only once per server process.
 - [The platform's `loadState()` call on external changes is an assumption] → The harness changes the stored settings file outside the IDE and checks the restart.
 - [A visible progress for every full discovery] → Full discoveries run only on real changes, and per-file discoveries stay silent.
-- [Conflict with the planned single-file requirement, which names opening and closing as triggers] → Noted above; the requirement's trigger list changes when both are archived.
-- [The per-file arguments change in the task-marker change] → This change wraps the per-file discovery without depending on its arguments.
+- [The per-file discovery of the task-marker change assigns a suite's children in place] → This change keeps its arguments and its fallback and only replaces how the result reaches the model.
 
 ## Migration Plan
 
