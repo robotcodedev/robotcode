@@ -18,6 +18,7 @@ import com.intellij.ui.EditorNotificationPanel
 import com.jetbrains.python.sdk.PyRemoteSdkAdditionalDataMarker
 import com.jetbrains.python.sdk.PythonSdkType
 import dev.robotcode.robotcode4ij.editor.EditorNotificationProvider
+import dev.robotcode.robotcode4ij.editor.bannerText
 import dev.robotcode.robotcode4ij.lsp.langServerManager
 import org.junit.Assert
 import java.lang.reflect.Proxy
@@ -152,7 +153,7 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
             val editor = FileEditorManager.getInstance(project).openFile(file, false).first()
             val panel = provider.collectNotificationData(project, file)!!.apply(editor) as EditorNotificationPanel
 
-            assertEquals(state.message, panel.text)
+            assertEquals(bannerText(state, noInterpreter.homePath), panel.text)
         }
         assertEmpty(checksStarted)
     }
