@@ -116,7 +116,7 @@ At the `(rdb)` prompt you have the full debug command set, every shell dot-comma
 | `.print <expr>` / `.p` | Evaluate a variable or expression in the selected frame. |
 | `.pprint <expr>` / `.pp` | Same, pretty-printed — readable for nested dicts / lists. |
 | `.whatis <expr>` | Print the Python type of a variable or expression. |
-| `.set ${x} <value>` | Set a **scalar** local variable in the selected frame (value is variable-substituted, like `Set Variable`). Lists/dicts (`@{…}`/`&{…}`) and item access aren't supported. |
+| `.set ${x} <value>` | Change an existing **scalar** local variable in the selected frame; the value is variable-substituted and stored as a string. To create a variable or set another type, assign it at the prompt (`${x}=    Evaluate    [1, 2]`). Lists/dicts (`@{…}`/`&{…}`) and item access aren't supported. |
 | `.display <expr>` / `.undisplay <expr>` | Show `<expr>`'s value automatically at every following stop / stop showing it. |
 
 **Source:**
