@@ -33,7 +33,9 @@
 
   Note (2026-10-09): green in all nine environments, without changed regression outputs; Robot Framework 7.5 had 5064 passed and 96 skipped.
 - [x] 4.2 Run `hatch run lint:all` and verify that ruff and mypy report nothing.
-- [ ] 4.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 4.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-09): CI run 37911643226 for 20c1767a is green in its second attempt, all 139 jobs. The first attempt failed only in `test (windows-latest, 3.14, rf61)`: `test_selection_range_flag_parity` ran longer than the 30 seconds after which faulthandler dumps the stacks, and the process ended with an access violation during that dump.
 
 ## Workflow follow-up
 
