@@ -109,6 +109,8 @@
 
 		<runLineMarkerContributor language="robotframework" id="robotCodeRunLineMarkerContributor"
 								  implementationClass="dev.robotcode.robotcode4ij.execution.RobotCodeRunLineMarkerContributor"/>
+		<codeInsight.lineMarkerProvider language="robotframework"
+										implementationClass="dev.robotcode.robotcode4ij.execution.RobotCodeDiscoveryProblemLineMarkerProvider"/>
 
 		<configurationType implementation="dev.robotcode.robotcode4ij.execution.RobotCodeConfigurationType"/>
 		<runConfigurationProducer
@@ -128,6 +130,7 @@
 		<editorActionHandler action="EditorTab"
 							 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeEditorTabActionHandler"/>
 		<editorNotificationProvider implementation="dev.robotcode.robotcode4ij.editor.EditorNotificationProvider"/>
+		<notificationGroup id="RobotCode" displayType="BALLOON" key="notification.group.robotcode"/>
 	</extensions>
 
 	<projectListeners>
@@ -139,6 +142,8 @@
 				  topic="dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener"/>
 		<listener class="dev.robotcode.robotcode4ij.RobotCodeFileOpenedListener"
 				  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+		<listener class="dev.robotcode.robotcode4ij.RobotCodeSettingsRestartListener"
+				  topic="dev.robotcode.robotcode4ij.RobotCodeSettingsListener"/>
 	</projectListeners>
 
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
@@ -181,6 +186,8 @@
 			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeClearCacheAndRestartLanguageServerAction"
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeClearCacheAndRestartLanguageServerAction"
 					text="Clear Cache and Restart RobotCode Language Server"/>
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeRefreshTestsAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeRefreshTestsAction"/>
 			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"/>
 		</group>

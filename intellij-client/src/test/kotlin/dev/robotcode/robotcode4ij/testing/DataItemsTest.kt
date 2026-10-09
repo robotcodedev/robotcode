@@ -1,11 +1,9 @@
 package dev.robotcode.robotcode4ij.testing
 
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DataItemsTest {
@@ -69,13 +67,16 @@ class DataItemsTest {
         assertNull(tests[1].metadata)
     }
 
-    // `RobotCodeTestManager` decodes the discover output with the default `Json`, which rejects keys the
-    // model doesn't declare, so every key `robotcode discover` emits has to be a property of `RobotCodeTestItem`.
+    // `RobotCodeTestManager` ignores keys that the model does not declare, so a newer robotcode does not make the result
+    // unreadable
     @Test
-    fun defaultJsonRejectsUnknownKeys() {
-        assertThrows(SerializationException::class.java) {
-            Json.decodeFromString<RobotCodeDiscoverResult>(discoverResult(""""notInTheModel": {"Issue": "4409"}"""))
-        }
+    fun unknownKeysAreIgnored() {
+        val metadata = """"metadata": {"Issue": "4409"}"""
+
+        assertEquals(
+            decodeDiscoverResult(discoverResult(metadata)),
+            decodeDiscoverResult(discoverResult("""$metadata, "notInTheModel": {"Issue": "4409"}"""))
+        )
     }
 
     @Test

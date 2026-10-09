@@ -1,8 +1,8 @@
 package dev.robotcode.robotcode4ij.testing
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class RobotCodeFileDiscoveryTest {
@@ -11,7 +11,7 @@ class RobotCodeFileDiscoveryTest {
     private fun recorded(name: String): RobotCodeDiscoverResult {
         val text = javaClass.getResourceAsStream("/discover/$name.json")!!.bufferedReader().use { it.readText() }
         // decoded as the plugin decodes it
-        return Json.decodeFromString<RobotCodeDiscoverResult>(text)
+        return decodeDiscoverResult(text)
     }
 
     @Test
@@ -61,5 +61,40 @@ class RobotCodeFileDiscoveryTest {
         assertNull(findSuiteChildren(recorded("keyword-only").items, "/project/tasks/keywords.robot;Project.Tasks.Keywords"))
         // a suite without children counts as missing as well
         assertNull(findSuiteChildren(recorded("keyword-only").items, "/project;Project"))
+    }
+
+    private fun item(type: String, id: String, vararg children: RobotCodeTestItem) =
+        RobotCodeTestItem(type = type, id = id, name = id, longname = id, children = arrayOf(*children))
+
+    @Test
+    fun replacingChildrenCopiesOnlyThePathToTheSuite() {
+        val first = item("suite", "first", item("test", "first.one"))
+        val second = item("suite", "second", item("test", "second.one"))
+        val root = arrayOf(item("workspace", "workspace", item("suite", "project", first, second)))
+
+        val updated = replaceSuiteChildren(root, "second", arrayOf(item("test", "second.two")))!!
+
+        // the old tree is unchanged, and the sibling suite is shared
+        assertEquals("second.one", root[0].children!![0].children!![1].children!![0].id)
+        assertEquals("second.two", updated[0].children!![0].children!![1].children!![0].id)
+        assertSame(first, updated[0].children!![0].children!![0])
+        assertNull(replaceSuiteChildren(root, "missing", arrayOf()))
+    }
+
+    @Test
+    fun brokenFilesAreReportedInTheDiagnostics() {
+        val result = recorded("broken-files")
+        val suites = result.items!![0].children!![0].children!!.map { it.longname }
+
+        // the file with tests and tasks is left out of the tree; the file with a tolerable problem keeps its test
+        assertEquals(listOf("Project.Good", "Project.Template"), suites)
+        assertEquals(
+            listOf("One file cannot have both tests and tasks."),
+            result.diagnostics!!["file:///project/mixed.robot"]!!.map { it.message }
+        )
+        assertEquals(
+            listOf("Setting 'Test Template' is allowed only once. Only the first value is used."),
+            result.diagnostics!!["file:///project/template.robot"]!!.map { it.message }
+        )
     }
 }

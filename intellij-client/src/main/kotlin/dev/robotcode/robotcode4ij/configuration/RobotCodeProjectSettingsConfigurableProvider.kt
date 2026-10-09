@@ -12,6 +12,7 @@ import com.intellij.openapi.project.Project
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.delegate
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.stringDelegate
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 import javax.swing.JComponent
 
 
@@ -38,10 +39,16 @@ class RobotCodeProjectSettingsConfigurable : Configurable {
 }
 
 @Service(Service.Level.PROJECT) @State(name = "ProjectSettings", storages = [Storage("robotcodeSettings.xml")])
-class RobotCodeProjectConfiguration :
+class RobotCodeProjectConfiguration(private val project: Project) :
     SimplePersistentStateComponent<RobotCodeProjectConfiguration.ProjectState>(ProjectState()) {
     companion object {
         fun getInstance(project: Project): RobotCodeProjectConfiguration = project.service()
+    }
+
+    // also called when the settings file changes outside the IDE, for example through a VCS update
+    override fun loadState(state: ProjectState) {
+        super.loadState(state)
+        project.publishRobotCodeSettingsChanged()
     }
 
     class ProjectState : BaseState() {

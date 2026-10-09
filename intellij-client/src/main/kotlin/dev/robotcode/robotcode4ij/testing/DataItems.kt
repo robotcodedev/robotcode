@@ -2,7 +2,7 @@ package dev.robotcode.robotcode4ij.testing
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.Json
 import java.net.URI
 
 private object UriCache {
@@ -34,7 +34,7 @@ data class Position(val line: UInt, val character: UInt)
     val uri: String? = null,
     val relSource: String? = null,
     val source: String? = null,
-    var children: Array<RobotCodeTestItem>? = null,
+    val children: Array<RobotCodeTestItem>? = null,
     val range: Range? = null,
     val error: String? = null,
     val tags: Array<String>? = null,
@@ -98,9 +98,13 @@ data class Position(val line: UInt, val character: UInt)
     }
 }
 
+/** A problem that discovery reports for a file, for example that Robot Framework cannot build a suite from it. */
+@Serializable data class DiscoverDiagnostic(val range: Range? = null, val message: String, val severity: Int? = null)
+
 @Serializable data class RobotCodeDiscoverResult(
     val items: Array<RobotCodeTestItem>? = null,
-    val diagnostics: Map<String, JsonElement>? = null, // TODO val diagnostics: { [Key: string]: Diagnostic[] };
+    // the problems of each file, by the file's URI
+    val diagnostics: Map<String, List<DiscoverDiagnostic>>? = null,
     // True when the project's Robot Framework version supports `--parseinclude` (RF >= 6.1).
     val supportsParseInclude: Boolean? = null
 ) {
@@ -127,3 +131,8 @@ data class Position(val line: UInt, val character: UInt)
         return result
     }
 }
+
+// output fields that the plugin does not know are ignored
+private val discoverJson = Json { ignoreUnknownKeys = true }
+
+internal fun decodeDiscoverResult(text: String): RobotCodeDiscoverResult = discoverJson.decodeFromString(text)

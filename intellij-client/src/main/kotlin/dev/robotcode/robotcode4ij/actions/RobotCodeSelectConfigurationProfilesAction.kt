@@ -7,7 +7,7 @@ import com.intellij.openapi.project.Project
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.chooseProfiles
 import dev.robotcode.robotcode4ij.editor.updateRobotCodeStatusBar
-import dev.robotcode.robotcode4ij.restartAll
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 
 /**
  * Tools | RobotCode | Select Configuration Profiles...: stores the selection at once, as VS Code's command does.
@@ -29,7 +29,7 @@ class RobotCodeSelectConfigurationProfilesAction : AnAction() {
         val settings = RobotCodePersonalConfiguration.getInstance(project)
         if (profiles != settings.profiles) {
             settings.profiles = profiles.toMutableList()
-            project.restartAll()
+            project.publishRobotCodeSettingsChanged()
             project.updateRobotCodeStatusBar()
         }
     }

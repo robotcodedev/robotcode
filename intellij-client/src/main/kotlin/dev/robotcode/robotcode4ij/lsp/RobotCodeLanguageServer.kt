@@ -12,6 +12,7 @@ import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettingsMapper
+import dev.robotcode.robotcode4ij.recordServerSnapshot
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
@@ -21,17 +22,22 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
+ * The command line of the language server that connects to [port].
+ */
+internal fun Project.languageServerCommandLine(port: String): GeneralCommandLine {
+    return buildRobotCodeCommandLine(
+        arrayOf("language-server", "--socket", port),
+        extraArgs = RobotCodePersonalConfiguration.getInstance(this).languageServerExtraArgsList.toTypedArray()
+    )
+}
+
+/**
  * Starts the language server and connects to it through a local socket. [commandLineFor] builds the command line for
  * the port that the server connects to.
  */
 class RobotCodeLanguageServer(
     private val project: Project,
-    private val commandLineFor: (port: Int) -> GeneralCommandLine = { port ->
-        project.buildRobotCodeCommandLine(
-            arrayOf("language-server", "--socket", "$port"),
-            extraArgs = RobotCodePersonalConfiguration.getInstance(project).languageServerExtraArgsList.toTypedArray()
-        )
-    }
+    private val commandLineFor: (port: Int) -> GeneralCommandLine = { port -> project.languageServerCommandLine("$port") }
 ) : OSProcessStreamConnectionProvider() {
 
     private val logHandlers = CopyOnWriteArrayList<LanguageServerLogErrorHandler>()
@@ -83,6 +89,8 @@ class RobotCodeLanguageServer(
         try {
             commandLine = commandLineFor(listener.localPort)
             thisLogger().info("Start robotcode language server with command $commandLine")
+            // what this server gets, for deciding later whether a settings change needs a restart
+            project.recordServerSnapshot()
             super.start()
         } catch (e: Exception) {
             // no server will connect

@@ -10,7 +10,7 @@ import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
 import dev.robotcode.robotcode4ij.RobotCodeBundle
-import dev.robotcode.robotcode4ij.restartAll
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 
 /**
  * The "Robocop" page below the "Robot Framework" node.
@@ -54,6 +54,7 @@ class RobotCodeRobocopConfigurable(private val project: Project) : BoundSearchab
 
     override fun apply() {
         super.apply()
-        project.restartAll()
+        // the restart manager decides whether the change needs a restart or a discovery
+        project.publishRobotCodeSettingsChanged()
     }
 }

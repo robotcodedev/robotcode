@@ -1,11 +1,13 @@
 package dev.robotcode.robotcode4ij.configuration
 
 import com.intellij.openapi.components.State
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.StoragePathMacros
 import com.intellij.util.xmlb.XmlSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.lang.reflect.Proxy
 
 class RobotCodePersonalConfigurationTest {
 
@@ -42,7 +44,8 @@ class RobotCodePersonalConfigurationTest {
 
     @Test
     fun quotedArgumentStaysOneArgument() {
-        val settings = RobotCodePersonalConfiguration().apply { extraArgs = "--config \"team settings.toml\"" }
+        val project = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(Project::class.java)) { _, _, _ -> null } as Project
+        val settings = RobotCodePersonalConfiguration(project).apply { extraArgs = "--config \"team settings.toml\"" }
 
         assertEquals(listOf("--config", "team settings.toml"), settings.extraArgsList)
         assertEquals(emptyList<String>(), settings.languageServerExtraArgsList)

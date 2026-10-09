@@ -7,9 +7,8 @@ import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.panel
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.editor.updateRobotCodeStatusBar
-import dev.robotcode.robotcode4ij.restartAll
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 import dev.robotcode.robotcode4ij.robotCodeSwitchChanged
-import dev.robotcode.robotcode4ij.testing.testManger
 import javax.swing.JLabel
 
 /**
@@ -64,19 +63,17 @@ class RobotCodeGeneralConfigurable(private val project: Project) : BoundSearchab
 
     override fun apply() {
         val disabled = personalSettings.disableExtension
-        val extraArgs = personalSettings.extraArgs
         val profilesBefore = personalSettings.profiles.toList()
         super.apply()
-        // switched on again, RobotCode starts with the other values of the page
+        if (personalSettings.profiles != profilesBefore) {
+            project.updateRobotCodeStatusBar()
+        }
+        // switched on again, RobotCode starts with the other values of the page, and switched off, nothing restarts
         if (personalSettings.disableExtension != disabled) {
             project.robotCodeSwitchChanged()
-        } else if (personalSettings.profiles != profilesBefore) {
-            // the language server reads the profiles only when it starts; the restart runs discovery as well
-            project.restartAll()
-            project.updateRobotCodeStatusBar()
-        } else if (personalSettings.extraArgs != extraArgs) {
-            // the language server does not use them
-            project.testManger.refreshDebounced()
+        } else {
+            // the restart manager decides whether the change needs a restart or a discovery
+            project.publishRobotCodeSettingsChanged()
         }
     }
 }

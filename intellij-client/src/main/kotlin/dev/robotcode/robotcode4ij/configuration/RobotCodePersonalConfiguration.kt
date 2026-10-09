@@ -11,6 +11,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.execution.ParametersListUtil
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.delegate
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.stringDelegate
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 
 /**
  * The settings of the current user for a project, kept in the project's workspace file and not shared through version
@@ -18,10 +19,16 @@ import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHe
  */
 @Service(Service.Level.PROJECT)
 @State(name = "RobotCodePersonalSettings", storages = [Storage(StoragePathMacros.WORKSPACE_FILE)])
-class RobotCodePersonalConfiguration :
+class RobotCodePersonalConfiguration(private val project: Project) :
     SimplePersistentStateComponent<RobotCodePersonalConfiguration.PersonalState>(PersonalState()) {
     companion object {
         fun getInstance(project: Project): RobotCodePersonalConfiguration = project.service()
+    }
+
+    // also called when the workspace file changes outside the IDE
+    override fun loadState(state: PersonalState) {
+        super.loadState(state)
+        project.publishRobotCodeSettingsChanged()
     }
 
     // The arguments are stored as the command lines the user typed.

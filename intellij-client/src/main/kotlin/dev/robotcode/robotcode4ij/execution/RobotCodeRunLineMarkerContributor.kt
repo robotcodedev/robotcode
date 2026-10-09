@@ -4,6 +4,7 @@ import com.intellij.execution.lineMarker.RunLineMarkerContributor
 import com.intellij.psi.PsiElement
 import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl
+import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import dev.robotcode.robotcode4ij.testing.testManger
 
@@ -31,7 +32,16 @@ class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
         ).addParameters(mapOf("line" to ((testElement.lineno ?: 1) - 1).toString()))
 
         val icon = getTestStateIcon(uri.toString(), element.project, kind == RunMarkerKind.SUITE)
-        return withExecutorActions(icon)
+        val info = withExecutorActions(icon)
+        
+        // the marker on line 1 also shows the problems that discovery reported for the file
+        val problems = if (element is RobotSuiteFile) element.project.testManger.problems(testElement.uri ?: "") else listOf()
+        if (problems.isEmpty()) {
+            return info
+        }
+        return Info(info.icon, info.actions) { e ->
+            (listOfNotNull(info.tooltipProvider?.apply(e)) + problems).joinToString("\n")
+        }
     }
 
 }

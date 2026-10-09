@@ -5,20 +5,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import dev.robotcode.robotcode4ij.lsp.langServerManager
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
+import dev.robotcode.robotcode4ij.restartDecisions
 
 class RobotCodeDefaultProjectSettingsTest : BasePlatformTestCase() {
-
-    override fun tearDown() {
-        try {
-            // a restart that a test requested would otherwise run during the next test
-            PlatformTestUtil.waitWithEventsDispatching(
-                "the requested restart did not finish", { !project.langServerManager.restartPending }, 10
-            )
-        } finally {
-            super.tearDown()
-        }
-    }
 
     private fun applyEditingPage(project: Project) {
         val configurable: Configurable = RobotCodeEditingConfigurable(project)
@@ -31,16 +21,34 @@ class RobotCodeDefaultProjectSettingsTest : BasePlatformTestCase() {
         }
     }
 
-    fun testApplyingASharedPageForTheDefaultProjectSchedulesNoRestart() {
+    private fun waitForDecisions(count: Int) {
+        PlatformTestUtil.waitWithEventsDispatching(
+            "the settings change led to no decision", { project.restartDecisions >= count }, 10
+        )
+    }
+
+    fun testApplyingASharedPageForTheDefaultProjectLeadsToNoDecision() {
         val defaultProject = ProjectManager.getInstance().defaultProject
+        val before = project.restartDecisions
 
         applyEditingPage(defaultProject)
+        Thread.sleep(1000)
 
-        assertFalse(defaultProject.langServerManager.restartPending)
+        assertEquals(0, defaultProject.restartDecisions)
 
-        // the same page of an open project restarts the language server
+        // the same page of an open project lets the restart manager decide
         applyEditingPage(project)
+        waitForDecisions(before + 1)
+    }
 
-        assertTrue(project.langServerManager.restartPending)
+    fun testTwoEventsWithinTheDebounceLeadToOneDecision() {
+        val before = project.restartDecisions
+
+        project.publishRobotCodeSettingsChanged()
+        project.publishRobotCodeSettingsChanged()
+        waitForDecisions(before + 1)
+        Thread.sleep(1000)
+
+        assertEquals(before + 1, project.restartDecisions)
     }
 }

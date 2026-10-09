@@ -7,6 +7,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
+import com.intellij.util.messages.Topic
 import com.jetbrains.python.sdk.PythonSdkUtil
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.lsp.langServerManager
@@ -18,9 +19,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.annotations.VisibleForTesting
 import java.net.URI
 import java.net.URL
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.pathString
 
 class RobotCodeHelpers {
@@ -112,6 +115,23 @@ fun Project.buildRobotCodeCommandLine(
     return commandLine
 }
 
+/**
+ * Announces that RobotCode settings changed, applied on a settings page or loaded from the stored state; the restart
+ * manager decides what the change needs.
+ */
+fun interface RobotCodeSettingsListener {
+    fun settingsChanged()
+
+    companion object {
+        @Topic.ProjectLevel
+        val TOPIC = Topic(RobotCodeSettingsListener::class.java, Topic.BroadcastDirection.NONE)
+    }
+}
+
+fun Project.publishRobotCodeSettingsChanged() {
+    messageBus.syncPublisher(RobotCodeSettingsListener.TOPIC).settingsChanged()
+}
+
 // The platform cancels the scope when the project closes or the plugin is unloaded.
 @Service(Service.Level.PROJECT)
 private class RobotCodeRestartManager(private val project: Project, private val scope: CoroutineScope) {
@@ -126,8 +146,24 @@ private class RobotCodeRestartManager(private val project: Project, private val 
     @Volatile
     private var refreshJob: Job? = null
     
+    // whether the pending restart also runs a full discovery
+    @Volatile
+    private var discoveryRequested = false
+    
+    // what the running server and the last full discovery got
+    @Volatile
+    private var serverSnapshot: ServerSnapshot? = null
+    
+    @Volatile
+    private var discoverySnapshot: DiscoverySnapshot? = null
+    
+    @Volatile
+    private var settingsJob: Job? = null
+    
+    val decisions = AtomicInteger()
+    
     // The restart waits for the check and starts the server itself.
-    private suspend fun restart(reset: Boolean = false) {
+    private suspend fun restart(reset: Boolean, discovery: Boolean) {
         val environment = project.robotCodeEnvironment
         if (reset) {
             environment.checkAgain().await()
@@ -135,15 +171,21 @@ private class RobotCodeRestartManager(private val project: Project, private val 
             environment.awaitRunningCheck()
         }
         project.langServerManager.restart()
-        project.testManger.refreshDebounced()
+        if (discovery) {
+            project.testManger.refreshDebounced()
+        }
     }
     
-    fun restartDebounced(reset: Boolean = false) {
+    @Synchronized
+    fun restartDebounced(reset: Boolean = false, discovery: Boolean = true) {
         if (!project.isOpen || project.isDisposed) {
             return
         }
         
+        // a restart that a newer one replaces passes on its request for a discovery
+        val runDiscovery = discovery || (refreshJob?.isActive == true && discoveryRequested)
         refreshJob?.cancel()
+        discoveryRequested = runDiscovery
         project.langServerManager.restartPending = true
         
         // a restart that a newer one replaced leaves the pending state to the newer one
@@ -151,7 +193,7 @@ private class RobotCodeRestartManager(private val project: Project, private val 
             try {
                 delay(DEBOUNCE_DELAY)
                 if (project.isOpen && !project.isDisposed) {
-                    restart(reset)
+                    restart(reset, runDiscovery)
                 }
             } finally {
                 if (refreshJob === coroutineContext[Job]) {
@@ -166,6 +208,44 @@ private class RobotCodeRestartManager(private val project: Project, private val 
         refreshJob = job
         job.start()
     }
+    
+    fun serverStarted(snapshot: ServerSnapshot?) {
+        serverSnapshot = snapshot
+    }
+    
+    fun discoveryRan(snapshot: DiscoverySnapshot) {
+        discoverySnapshot = snapshot
+    }
+    
+    @Synchronized
+    fun settingsChanged() {
+        if (!project.isOpen || project.isDisposed) {
+            return
+        }
+        settingsJob?.cancel()
+        settingsJob = scope.launch(restartDispatcher) {
+            delay(DEBOUNCE_DELAY)
+            decide()
+        }
+    }
+    
+    // Without a usable interpreter the environment check starts the server and discovery once it is usable, and with
+    // "Disable extension" the switch does.
+    private suspend fun decide() {
+        decisions.incrementAndGet()
+        val environment = project.robotCodeEnvironment
+        environment.awaitRunningCheck()
+        if (project.isRobotCodeDisabled || !environment.projectState.isUsable) {
+            return
+        }
+        val work = decideRestart(serverSnapshot, project.serverSnapshot(), discoverySnapshot, project.discoverySnapshot())
+        // the restart path joins this restart with one that a configuration file requested
+        if (work.server) {
+            restartDebounced(discovery = work.discovery)
+        } else if (work.discovery) {
+            project.testManger.refreshDebounced()
+        }
+    }
 }
 
 fun Project.restartAll(reset: Boolean = false) {
@@ -178,4 +258,37 @@ fun Project.restartAll(reset: Boolean = false) {
         langServerManager.enableForSession()
     }
     this.service<RobotCodeRestartManager>().restartDebounced(reset)
+}
+
+/**
+ * Restarts the language server alone, debounced like [restartAll].
+ */
+fun Project.restartLanguageServer() {
+    if (isDefault || isRobotCodeDisabled) {
+        return
+    }
+    this.service<RobotCodeRestartManager>().restartDebounced(discovery = false)
+}
+
+internal fun Project.recordServerSnapshot() {
+    this.service<RobotCodeRestartManager>().serverStarted(serverSnapshot())
+}
+
+internal fun Project.recordDiscoverySnapshot(commandLine: GeneralCommandLine) {
+    this.service<RobotCodeRestartManager>().discoveryRan(DiscoverySnapshot(commandLine))
+}
+
+/** The number of decisions that settings changes led to. */
+internal val Project.restartDecisions: Int
+    @VisibleForTesting get() = this.service<RobotCodeRestartManager>().decisions.get()
+
+/**
+ * Passes changes of the RobotCode settings to the restart manager.
+ */
+class RobotCodeSettingsRestartListener(private val project: Project) : RobotCodeSettingsListener {
+    override fun settingsChanged() {
+        if (!project.isDefault) {
+            project.service<RobotCodeRestartManager>().settingsChanged()
+        }
+    }
 }

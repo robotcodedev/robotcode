@@ -15,7 +15,7 @@ import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettings.CacheSaveLocation
 import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettings.DiagnosticMode
 import dev.robotcode.robotcode4ij.configuration.RobotCodeServerSettings.ProgressMode
-import dev.robotcode.robotcode4ij.restartAll
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 
 /**
  * The "Analysis" page below the "Robot Framework" node: the settings of VS Code's settings category "Analysis", and
@@ -137,7 +137,8 @@ class RobotCodeAnalysisConfigurable(private val project: Project) : BoundSearcha
         super.apply()
         // shows the stored values as the fields write them, for example the list entries
         reset()
-        project.restartAll()
+        // the restart manager decides whether the change needs a restart or a discovery
+        project.publishRobotCodeSettingsChanged()
     }
 
     private fun ValidationInfoBuilder.checkLoadLibraryTimeout(text: String): ValidationInfo? {

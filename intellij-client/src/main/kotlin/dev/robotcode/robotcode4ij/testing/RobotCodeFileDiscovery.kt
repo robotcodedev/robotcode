@@ -1,6 +1,18 @@
 package dev.robotcode.robotcode4ij.testing
 
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.openapi.project.Project
+import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
+
+/**
+ * The command line of the full discovery of the project.
+ */
+internal fun Project.fullDiscoveryCommandLine(): GeneralCommandLine {
+    // TODO: Add support for configurable paths
+    return buildRobotCodeCommandLine(arrayOf("-dp", ".", "discover", "--read-from-stdin", "all"), format = "json")
+        .withCharset(Charsets.UTF_8).withWorkDirectory(basePath)
+}
 
 /**
  * The arguments of the discovery of a single suite file. `discover all` returns tests and tasks alike, so the same call
@@ -27,6 +39,28 @@ internal fun findSuiteChildren(items: Array<RobotCodeTestItem>?, suiteId: String
             return item.children?.takeIf { it.isNotEmpty() }
         }
         findSuiteChildren(item.children, suiteId)?.let { return it }
+    }
+    return null
+}
+
+/**
+ * A copy of [items] in which the item with [suiteId] has [children]. Only the items on the path to it are copied, so the
+ * old tree stays as it was and the other items are shared. Null when the tree has no item with [suiteId].
+ */
+internal fun replaceSuiteChildren(
+    items: Array<RobotCodeTestItem>,
+    suiteId: String,
+    children: Array<RobotCodeTestItem>
+): Array<RobotCodeTestItem>? {
+    items.forEachIndexed { index, item ->
+        val replaced = if (item.id == suiteId) {
+            item.copy(children = children)
+        } else {
+            item.children?.let { replaceSuiteChildren(it, suiteId, children) }?.let { item.copy(children = it) }
+        }
+        if (replaced != null) {
+            return items.copyOf().also { it[index] = replaced }
+        }
     }
     return null
 }

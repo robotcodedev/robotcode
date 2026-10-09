@@ -1,0 +1,152 @@
+{
+  "items": [
+    {
+      "type": "workspace",
+      "id": "/project",
+      "name": "project",
+      "longname": "project",
+      "uri": "file:///project",
+      "relSource": ".",
+      "source": "/project",
+      "children": [
+        {
+          "type": "suite",
+          "id": "/project;Project",
+          "name": "Project",
+          "longname": "Project",
+          "uri": "file:///project",
+          "relSource": ".",
+          "source": "/project",
+          "children": [
+            {
+              "type": "suite",
+              "id": "/project/good.robot;Project.Good",
+              "name": "Good",
+              "longname": "Project.Good",
+              "uri": "file:///project/good.robot",
+              "relSource": "good.robot",
+              "source": "/project/good.robot",
+              "children": [
+                {
+                  "type": "test",
+                  "id": "/project/good.robot;Project.Good.Good;2",
+                  "name": "Good",
+                  "longname": "Project.Good.Good",
+                  "lineno": 2,
+                  "uri": "file:///project/good.robot",
+                  "relSource": "good.robot",
+                  "source": "/project/good.robot",
+                  "range": {
+                    "start": {
+                      "line": 1,
+                      "character": 0
+                    },
+                    "end": {
+                      "line": 1,
+                      "character": 0
+                    }
+                  },
+                  "rpa": false
+                }
+              ],
+              "range": {
+                "start": {
+                  "line": 0,
+                  "character": 0
+                },
+                "end": {
+                  "line": 0,
+                  "character": 0
+                }
+              },
+              "rpa": false
+            },
+            {
+              "type": "suite",
+              "id": "/project/template.robot;Project.Template",
+              "name": "Template",
+              "longname": "Project.Template",
+              "uri": "file:///project/template.robot",
+              "relSource": "template.robot",
+              "source": "/project/template.robot",
+              "children": [
+                {
+                  "type": "test",
+                  "id": "/project/template.robot;Project.Template.Templated;6",
+                  "name": "Templated",
+                  "longname": "Project.Template.Templated",
+                  "lineno": 6,
+                  "uri": "file:///project/template.robot",
+                  "relSource": "template.robot",
+                  "source": "/project/template.robot",
+                  "range": {
+                    "start": {
+                      "line": 5,
+                      "character": 0
+                    },
+                    "end": {
+                      "line": 5,
+                      "character": 0
+                    }
+                  },
+                  "rpa": false
+                }
+              ],
+              "range": {
+                "start": {
+                  "line": 0,
+                  "character": 0
+                },
+                "end": {
+                  "line": 0,
+                  "character": 0
+                }
+              },
+              "rpa": false
+            }
+          ],
+          "rpa": false
+        }
+      ]
+    }
+  ],
+  "diagnostics": {
+    "file:///project/mixed.robot": [
+      {
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 0
+          },
+          "end": {
+            "line": 0,
+            "character": 0
+          }
+        },
+        "message": "One file cannot have both tests and tasks.",
+        "severity": 1,
+        "code": "discover",
+        "source": "robotcode.discover"
+      }
+    ],
+    "file:///project/template.robot": [
+      {
+        "range": {
+          "start": {
+            "line": 2,
+            "character": 0
+          },
+          "end": {
+            "line": 2,
+            "character": 0
+          }
+        },
+        "message": "Setting 'Test Template' is allowed only once. Only the first value is used.",
+        "severity": 1,
+        "code": "discover",
+        "source": "robotcode.discover"
+      }
+    ]
+  },
+  "supportsParseInclude": true
+}
