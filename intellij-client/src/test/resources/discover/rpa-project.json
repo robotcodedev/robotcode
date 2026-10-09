@@ -1,0 +1,105 @@
+{
+  "items": [
+    {
+      "type": "workspace",
+      "id": "/rpaproject",
+      "name": "rpaproject",
+      "longname": "rpaproject",
+      "uri": "file:///rpaproject",
+      "relSource": ".",
+      "source": "/rpaproject",
+      "children": [
+        {
+          "type": "suite",
+          "id": "/rpaproject;Rpaproject",
+          "name": "Rpaproject",
+          "longname": "Rpaproject",
+          "uri": "file:///rpaproject",
+          "relSource": ".",
+          "source": "/rpaproject",
+          "children": [
+            {
+              "type": "suite",
+              "id": "/rpaproject/tests;Rpaproject.Tests",
+              "name": "Tests",
+              "longname": "Rpaproject.Tests",
+              "uri": "file:///rpaproject/tests",
+              "relSource": "tests",
+              "source": "/rpaproject/tests",
+              "children": [
+                {
+                  "type": "suite",
+                  "id": "/rpaproject/tests/sample.robot;Rpaproject.Tests.Sample",
+                  "name": "Sample",
+                  "longname": "Rpaproject.Tests.Sample",
+                  "uri": "file:///rpaproject/tests/sample.robot",
+                  "relSource": "tests/sample.robot",
+                  "source": "/rpaproject/tests/sample.robot",
+                  "children": [
+                    {
+                      "type": "task",
+                      "id": "/rpaproject/tests/sample.robot;Rpaproject.Tests.Sample.First Item;2",
+                      "name": "First Item",
+                      "longname": "Rpaproject.Tests.Sample.First Item",
+                      "lineno": 2,
+                      "uri": "file:///rpaproject/tests/sample.robot",
+                      "relSource": "tests/sample.robot",
+                      "source": "/rpaproject/tests/sample.robot",
+                      "range": {
+                        "start": {
+                          "line": 1,
+                          "character": 0
+                        },
+                        "end": {
+                          "line": 1,
+                          "character": 0
+                        }
+                      },
+                      "rpa": true
+                    },
+                    {
+                      "type": "task",
+                      "id": "/rpaproject/tests/sample.robot;Rpaproject.Tests.Sample.Second Item;5",
+                      "name": "Second Item",
+                      "longname": "Rpaproject.Tests.Sample.Second Item",
+                      "lineno": 5,
+                      "uri": "file:///rpaproject/tests/sample.robot",
+                      "relSource": "tests/sample.robot",
+                      "source": "/rpaproject/tests/sample.robot",
+                      "range": {
+                        "start": {
+                          "line": 4,
+                          "character": 0
+                        },
+                        "end": {
+                          "line": 4,
+                          "character": 0
+                        }
+                      },
+                      "rpa": true
+                    }
+                  ],
+                  "range": {
+                    "start": {
+                      "line": 0,
+                      "character": 0
+                    },
+                    "end": {
+                      "line": 0,
+                      "character": 0
+                    }
+                  },
+                  "rpa": true
+                }
+              ],
+              "rpa": true
+            }
+          ],
+          "rpa": true
+        }
+      ]
+    }
+  ],
+  "diagnostics": {},
+  "supportsParseInclude": true
+}

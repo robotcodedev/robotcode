@@ -34,7 +34,6 @@ import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
 import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
-import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -176,24 +175,11 @@ import java.util.*
         try {
             val testItem = findTestItem(uri) ?: return
             
-            testItem.children = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
-                
-                // TODO: Add support for configurable paths
-                val defaultPaths = arrayOf("-dp", ".")
+            val discovered = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
                 
                 val cmdLine = project.buildRobotCodeCommandLine(
-                    arrayOf(
-                        *defaultPaths,
-                        "discover",
-                        "--read-from-stdin",
-                        "tests",
-                        *(if (supportsParseInclude && testItem.relSource != null) arrayOf(
-                            "-I", escapeRobotGlob(testItem.relSource)
-                        )
-                        else arrayOf<String>()),
-                        "--suite",
-                        escapeRobotGlob(testItem.longname)
-                    ), format = "json"
+                    fileDiscoveryArguments(testItem.longname, testItem.relSource, supportsParseInclude),
+                    format = "json"
                 ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
                 
                 var openFiles = mutableMapOf<String, String>()
@@ -222,7 +208,15 @@ import java.util.*
                     throw RuntimeException("Failed to discover test items for $uri: ${result.stderr}")
                 }
                 Json.decodeFromString<RobotCodeDiscoverResult>(result.stdout)
-            }.get()?.items ?: arrayOf()
+            }.get()
+            
+            // a file that no longer yields its suite with tests or tasks is left to a full discovery, as in VS Code
+            val children = findSuiteChildren(discovered?.items, testItem.id)
+            if (children != null) {
+                testItem.children = children
+            } else {
+                refreshDebounced()
+            }
         } catch (e: Exception) {
             thisLogger().warn("Failed to discover test items", e)
         }

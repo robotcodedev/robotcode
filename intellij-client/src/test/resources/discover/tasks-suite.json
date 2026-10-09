@@ -1,0 +1,104 @@
+{
+  "items": [
+    {
+      "type": "workspace",
+      "id": "/project",
+      "name": "project",
+      "longname": "project",
+      "uri": "file:///project",
+      "relSource": ".",
+      "source": "/project",
+      "children": [
+        {
+          "type": "suite",
+          "id": "/project;Project",
+          "name": "Project",
+          "longname": "Project",
+          "uri": "file:///project",
+          "relSource": ".",
+          "source": "/project",
+          "children": [
+            {
+              "type": "suite",
+              "id": "/project/tasks;Project.Tasks",
+              "name": "Tasks",
+              "longname": "Project.Tasks",
+              "uri": "file:///project/tasks",
+              "relSource": "tasks",
+              "source": "/project/tasks",
+              "children": [
+                {
+                  "type": "suite",
+                  "id": "/project/tasks/rpa.robot;Project.Tasks.Rpa",
+                  "name": "Rpa",
+                  "longname": "Project.Tasks.Rpa",
+                  "uri": "file:///project/tasks/rpa.robot",
+                  "relSource": "tasks/rpa.robot",
+                  "source": "/project/tasks/rpa.robot",
+                  "children": [
+                    {
+                      "type": "task",
+                      "id": "/project/tasks/rpa.robot;Project.Tasks.Rpa.First Task;2",
+                      "name": "First Task",
+                      "longname": "Project.Tasks.Rpa.First Task",
+                      "lineno": 2,
+                      "uri": "file:///project/tasks/rpa.robot",
+                      "relSource": "tasks/rpa.robot",
+                      "source": "/project/tasks/rpa.robot",
+                      "range": {
+                        "start": {
+                          "line": 1,
+                          "character": 0
+                        },
+                        "end": {
+                          "line": 1,
+                          "character": 0
+                        }
+                      },
+                      "rpa": true
+                    },
+                    {
+                      "type": "task",
+                      "id": "/project/tasks/rpa.robot;Project.Tasks.Rpa.Second Task;5",
+                      "name": "Second Task",
+                      "longname": "Project.Tasks.Rpa.Second Task",
+                      "lineno": 5,
+                      "uri": "file:///project/tasks/rpa.robot",
+                      "relSource": "tasks/rpa.robot",
+                      "source": "/project/tasks/rpa.robot",
+                      "range": {
+                        "start": {
+                          "line": 4,
+                          "character": 0
+                        },
+                        "end": {
+                          "line": 4,
+                          "character": 0
+                        }
+                      },
+                      "rpa": true
+                    }
+                  ],
+                  "range": {
+                    "start": {
+                      "line": 0,
+                      "character": 0
+                    },
+                    "end": {
+                      "line": 0,
+                      "character": 0
+                    }
+                  },
+                  "rpa": true
+                }
+              ],
+              "rpa": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": {},
+  "supportsParseInclude": true
+}
