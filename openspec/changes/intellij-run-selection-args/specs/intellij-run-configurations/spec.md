@@ -41,23 +41,9 @@ Values passed with `-I` and `-s` SHALL have the glob characters `*`, `?`, `[` an
 - **WHEN** the user runs a test of the suite file `tests/[draft] cases.robot`
 - **THEN** the run passes `-I` with the value `tests/[[]draft[]] cases.robot`, `-s` with the suite's full name with its glob characters escaped the same way, and `-bl` with the unescaped full name of the test
 
-### Requirement: A run that limits parsing tolerates empty top-level suites
-
-A run that passes `-I` SHALL also pass `--runemptysuite`, so that Robot Framework does not reject the run when a top-level path of the project contains no file to parse. A run without `-I` SHALL NOT pass `--runemptysuite` for this reason.
-
-#### Scenario: Several paths in robot.toml
-
-- **WHEN** `robot.toml` sets `paths = ["folder1", "folder2"]`, the project uses Robot Framework 7.5, and the user runs a test of a suite in `folder2` from the gutter
-- **THEN** the run passes `--runemptysuite` together with `-I`, the test runs and passes, and the run does not end with "Suite 'Folder1' contains no tests or tasks"
-
-#### Scenario: Selected test no longer exists
-
-- **WHEN** the user renames a test and reruns the run configuration that was created for its old name
-- **THEN** the run ends with Robot Framework's summary "0 tests" instead of the error that the suite contains no tests
-
 ### Requirement: A run of the whole project gets no selection arguments
 
-When a run covers the whole project, the plugin SHALL pass none of `-I`, `-N`, `-s`, `-bl` and `--runemptysuite`, so that Robot Framework runs every suite of the configured paths.
+When a run covers the whole project, the plugin SHALL pass none of `-I`, `-N`, `-s` and `-bl`, so that Robot Framework runs every suite of the configured paths.
 
 #### Scenario: Running the project folder
 

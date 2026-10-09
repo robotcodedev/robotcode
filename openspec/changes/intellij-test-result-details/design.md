@@ -7,7 +7,7 @@ See proposal.md for the motivation.
 **Builds on planned changes.** None of them is implemented yet; this design relies on their planned designs in `openspec/changes/`:
 - `intellij-test-result-events`: the converter reports to the platform's events processor directly (`TestStartedEvent`, `TestFailedEvent` and so on, with the robot event ids as node ids), applies robot events and process output in one order, and re-marks tests on a failed suite teardown. Warnings and errors that Robot Framework writes to its console appear in the output of their test.
 - `intellij-run-configuration-target`: the run configuration extends PyCharm's `AbstractPythonRunConfiguration` and stores its target in an options class. A `SELECTION` target holds entries with kind, full name below the top-level suite, `relSource` and suite, plus the top-level suite name. An entry that has only a name is looked up in the current discovery model by full name at the start of the run; if it is not found, only `-bl` is passed for it. `ModuleBasedConfiguration.clone()` copies a configuration with its options. The run state extends `PythonCommandLineState`; its `createAndAttachConsole` creates the SM test console and its `execute(Executor)` adds the rerun-failed action to the result. Both program runners are registered with `order="first"` and start the run state off the UI thread.
-- `intellij-run-selection-args`: the pure builder that turns resolved selection entries into `-I`, `-N`, `-s` and `-bl` after `--`, with `--runemptysuite` whenever `-I` is passed.
+- `intellij-run-selection-args`: the pure builder that turns resolved selection entries into `-I`, `-N`, `-s` and `-bl` after `--`.
 
 **Current code** (checked on 2026-10-03):
 
@@ -86,7 +86,7 @@ A rerun's console properties belong to the copy, so a second rerun works from th
 
 Alternatives:
 - Building full entries from the discovery items of the failed tests in the action: the run's name lookup already does this, in one place.
-- `-bl` arguments without a target: they bypass the selection rules (`-I` and `--runemptysuite`), and a Debug rerun would need its own path.
+- `-bl` arguments without a target: they bypass the selection rules (`-I`, `-N` and `-s`), and a Debug rerun would need its own path.
 
 ### No per-test entries from `robotLog` and `robotMessage`
 
