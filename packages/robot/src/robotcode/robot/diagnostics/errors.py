@@ -20,6 +20,7 @@ class Error:
     VARIABLES_ALREADY_IMPORTED = "VariablesAlreadyImported"
     LIBRARY_ALREADY_IMPORTED = "LibraryAlreadyImported"
     LIBRARY_OVERRIDES_BUILTIN = "LibraryOverridesBuiltIn"
+    LIBRARY_IMPORT_IGNORED = "LibraryImportIgnored"
     LIBRARY_LOADED_WITHOUT_ARGUMENTS = "LibraryLoadedWithoutArguments"
     LIBRARY_TIMEOUT_ERROR = "LibraryTimeoutError"
     VARIABLES_TIMEOUT_ERROR = "VariablesTimeoutError"

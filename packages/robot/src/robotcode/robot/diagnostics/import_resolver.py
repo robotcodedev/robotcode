@@ -12,7 +12,7 @@ containing all resolved entries and collected diagnostics.
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from robotcode.core.lsp.types import (
     Diagnostic,
@@ -26,6 +26,7 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import file_id, same_file_id
 
+from ..utils import RF_VERSION
 from .entities import (
     Import,
     LibraryEntry,
@@ -37,7 +38,7 @@ from .entities import (
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .imports_manager import ImportsManager, LibraryMetaData
-from .library_doc import BUILTIN_LIBRARY_NAME, DEFAULT_LIBRARIES
+from .library_doc import BUILTIN_LIBRARY_NAME, DEFAULT_LIBRARIES, resolve_args
 from .variable_scope import VariableScope
 
 
@@ -105,6 +106,7 @@ class ImportResolver:
         "_import_entries",
         "_imports_manager",
         "_libraries",
+        "_library_args",
         "_resources",
         "_scope",
         "_sentinel",
@@ -131,6 +133,8 @@ class ImportResolver:
         self._base_dir = str(Path(source).parent)
 
         self._libraries: Dict[str, LibraryEntry] = {}
+        # the arguments of each entry in _libraries, resolved when it was imported
+        self._library_args: Dict[str, Tuple[Any, ...]] = {}
         self._resources: Dict[str, ResourceEntry] = {}
         self._variables_imports: Dict[str, VariablesEntry] = {}
         self._import_entries: Dict[Import, LibraryEntry] = {}
@@ -227,6 +231,7 @@ class ImportResolver:
                         alias=None,
                     )
                     self._libraries[entry.alias or entry.name or entry.import_name] = entry
+                    self._library_args[entry.alias or entry.name or entry.import_name] = ()
 
                     for err in library_doc.errors or []:
                         self._append_diagnostics(
@@ -291,7 +296,7 @@ class ImportResolver:
             if isinstance(imp, LibraryImport):
                 if imp.name is None:
                     raise _NameSpaceError("Library setting requires value.")
-                self._import_library(imp, base_dir, top_level=top_level)
+                self._import_library(imp, base_dir, top_level=top_level, parent_import=parent_import)
             elif isinstance(imp, ResourceImport):
                 if imp.name is None:
                     raise _NameSpaceError("Resource setting requires value.")
@@ -351,7 +356,9 @@ class ImportResolver:
             return
         self._dependency_metas[key] = meta
 
-    def _import_library(self, imp: LibraryImport, base_dir: str, *, top_level: bool) -> None:
+    def _import_library(
+        self, imp: LibraryImport, base_dir: str, *, top_level: bool, parent_import: Optional[Import] = None
+    ) -> None:
         assert imp.name is not None
 
         library_doc, meta = self._imports_manager.get_libdoc_for_library_import_with_meta(
@@ -401,9 +408,20 @@ class ImportResolver:
             ),
             None,
         )
-        if already_imported is None and (entry.alias or entry.name or entry.import_name) not in self._libraries:
-            self._libraries[entry.alias or entry.name or entry.import_name] = entry
-        elif top_level and already_imported and already_imported.library_doc.source:
+        key = entry.alias or entry.name or entry.import_name
+        args = resolve_args(
+            imp.args,
+            str(self._imports_manager.root_folder),
+            base_dir,
+            self._imports_manager.get_resolvable_command_line_variables(),
+            self._variables,
+        )
+        if already_imported is None and key not in self._libraries:
+            self._libraries[key] = entry
+            self._library_args[key] = args
+        elif already_imported is None:
+            self._report_ignored_library(imp, entry, key, args, top_level=top_level, parent_import=parent_import)
+        elif top_level and already_imported.library_doc.source:
             self._append_diagnostics(
                 range=entry.import_range,
                 message=f'Library "{entry}" already imported.',
@@ -430,6 +448,58 @@ class ImportResolver:
 
         if top_level:
             self._report_entry_errors(imp, entry)
+
+    def _report_ignored_library(
+        self,
+        imp: LibraryImport,
+        entry: LibraryEntry,
+        key: str,
+        args: Tuple[Any, ...],
+        *,
+        top_level: bool,
+        parent_import: Optional[Import] = None,
+    ) -> None:
+        """Report a library import that is ignored because another import uses its name.
+
+        Robot Framework warns about it since 7.4 when the earlier import is
+        another library or the same library with other arguments. An import of
+        a resource file is reported at the analyzed file's import of it.
+        """
+        if RF_VERSION < (7, 4) or not (top_level or (parent_import is not None and imp.source)):
+            return
+
+        earlier = self._libraries[key]
+        # Robot Framework reports an import that fails to load as an error and never registers it
+        if earlier.library_doc.errors or entry.library_doc.errors:
+            return
+
+        if earlier.name != entry.name:
+            reason = f'another library with name "{key}" is already imported'
+        elif self._library_args[key] != args:
+            reason = f'library "{key}" is already imported with different arguments'
+        else:
+            return
+
+        related = self._related_info_from_entry(earlier) or []
+        if top_level:
+            at = imp.range
+            message = f'Library "{imp.name}" is not imported, because {reason}.'
+        else:
+            assert parent_import is not None
+            assert imp.source
+            at = parent_import.range
+            message = f'Library "{imp.name}" in "{Path(imp.source).name}" is not imported, because {reason}.'
+            ignored = Location(uri=str(Uri.from_path(imp.source)), range=imp.range)
+            related.insert(0, DiagnosticRelatedInformation(location=ignored, message=""))
+
+        self._append_diagnostics(
+            range=at,
+            message=message,
+            severity=DiagnosticSeverity.WARNING,
+            source=DIAGNOSTICS_SOURCE_NAME,
+            related_information=related or None,
+            code=Error.LIBRARY_IMPORT_IGNORED,
+        )
 
     def _import_resource(
         self,
