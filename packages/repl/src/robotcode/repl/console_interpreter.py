@@ -1636,13 +1636,16 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("set", group="Debugger")
     def _set(self, arg: str) -> None:
-        """Set a scalar variable in the selected frame — `.set ${x} <value>`.
+        """Change an existing scalar variable in the selected frame — `.set ${x} <value>`.
 
-        The value is variable-substituted and stored as-is (like `Set Variable`):
-        `.set ${name} hello` sets the string; use `${{ ... }}` for Python. Only
-        whole scalar variables (`${...}`) are supported — not list/dict variables
-        (`@{...}`/`&{...}`) or item access (`${x}[0]`). The assignment lands in
-        the selected frame's local scope.
+        Only variables that already exist can be changed; create a new one with
+        `${x}=    Set Variable    …` at the prompt. The value is
+        variable-substituted and stored as a string: `.set ${name} hello` sets
+        `hello`, and `.set ${count} 7` sets the string `7`. For other types,
+        assign at the prompt, e.g. `${items}=    Evaluate    [1, 2]`. Only whole
+        scalar variables (`${...}`) are supported — not list/dict variables
+        (`@{...}`/`&{...}`) or item access (`${x}[0]`). The value lands in the
+        selected frame's local scope.
         """
         if not self._require_stop():
             return

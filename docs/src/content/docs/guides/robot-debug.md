@@ -145,7 +145,7 @@ Each command has a canonical long name and, where it helps, a single-letter shor
 | `.pprint <expr>` / `.pp` | Same, but pretty-printed — readable for nested dicts / lists. |
 | `.whatis <expr>` | Print the Python type of a variable or expression. |
 | `.vars` / `.v` | Show the variables in scope (Local / Test / Suite / Global), name + value. `--user` hides the variables Robot Framework sets itself (`${OUTPUT_DIR}`, `${SUITE_NAME}`, `${True}`, …) and the result variable `${_}` in every scope; a scope left empty shows `(none)`. |
-| `.set ${x} <value>` | Set a **scalar** variable in the selected frame's local scope (the value is variable-substituted, like `Set Variable`). List/dict variables (`@{…}`/`&{…}`) and item access (`${x}[0]`) aren't supported. |
+| `.set ${x} <value>` | Change an existing **scalar** variable in the selected frame's local scope. The value is variable-substituted and stored as a string. To create a variable or set another type, assign it at the prompt, e.g. `${x}=    Evaluate    [1, 2]`. List/dict variables (`@{…}`/`&{…}`) and item access (`${x}[0]`) aren't supported. |
 | `.display <expr>` | Show `<expr>`'s value automatically at every following stop. Bare `.display` lists/shows the registered expressions. |
 | `.undisplay <expr>` | Stop displaying `<expr>`; bare `.undisplay` clears the list. |
 
