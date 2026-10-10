@@ -556,9 +556,10 @@ class ConsoleInterpreter(BaseInterpreter):
         self._frame_no = 0  # innermost frame selected
         self._pending_action = None
         # A breakpoint with attached `.commands` replays them at the hit; a
-        # leading `silent` suppresses the stop banner (pdb semantics).
+        # leading `silent` suppresses the stop banner (pdb semantics), except
+        # when it carries a condition error (a breakpoint stop's only description).
         bp = stop.breakpoint
-        silent = bool(bp is not None and bp.commands and bp.commands[0] == "silent")
+        silent = bool(bp is not None and bp.commands and bp.commands[0] == "silent" and not stop.description)
         if not silent:
             self._render_stop(stop)
         # try/finally so the stop state is always cleared, even if `.abort`

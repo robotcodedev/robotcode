@@ -66,8 +66,8 @@ class Breakpoint:
 
     `kind` is ``"line"`` (`source`+`line`) or ``"keyword"`` (`name`). The optional
     attributes drive the hit-time decision: `condition` (stop only if the
-    expression is truthy — a *failing* condition stops too, so the breakage is
-    noticed), `ignore_count` (skip the next N triggering hits), `log_message`
+    expression is truthy — a *failing* condition stops too, past `ignore_count`
+    and `temporary`, so the breakage is noticed), `ignore_count` (skip the next N triggering hits), `log_message`
     (logpoint: log + continue, never stop), `temporary` (remove after it stops),
     `commands` (debugger commands replayed at the hit). `id` is a stable number
     for referencing the breakpoint (`.condition 2`, `.delete 2`, …).

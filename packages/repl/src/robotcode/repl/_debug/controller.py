@@ -628,8 +628,16 @@ class DebugController:
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                triggered = True  # a failing condition stops, so it gets noticed
+                # A failing condition stops right away, so it gets noticed: past the
+                # ignore count and keeping a temporary breakpoint (pdb semantics).
+                # A logpoint never stops; it reports the error instead.
                 self._condition_error = f"condition error: {str(e) or type(e).__name__}"
+                if bp.log_message is not None:
+                    if self._frontend is not None:
+                        self._frontend.on_output(self._condition_error)
+                    return False
+                self._stopped_breakpoint = bp
+                return True
             if not triggered:
                 return False
         bp.hits += 1

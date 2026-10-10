@@ -842,6 +842,45 @@ def test_condition_error_still_stops() -> None:
     assert stops[0].endswith("— condition error: Variable '${nonexistent}' not found.")
 
 
+def test_condition_error_stops_past_ignore_and_keeps_tbreak() -> None:
+    # A failing condition stops at every hit: it neither uses up the ignore
+    # count nor removes a temporary breakpoint (it can still be fixed).
+    def add_bad(interp: ConsoleInterpreter) -> None:
+        bp = interp._controller.add_keyword_breakpoint(  # type: ignore[union-attr]
+            "Log", condition="${nonexistent} == 1", temporary=True
+        )
+        bp.ignore_count = 2
+
+    messages = _run_debug(COND_SUITE, [], prepare=add_bad)
+    stops = [s for s in _stop_lines(messages) if s.startswith("* breakpoint")]
+    assert len(stops) == 3
+    assert all(s.endswith("— condition error: Variable '${nonexistent}' not found.") for s in stops)
+
+
+def test_condition_error_shows_the_banner_despite_silent() -> None:
+    # `silent` + `.continue` replays and moves on; a failing condition still
+    # shows its banner at each hit instead of the commands running unnoticed.
+    messages = _run_debug(
+        COND_SUITE,
+        [".break Log, ${nonexistent} == 1", ".commands 1", "silent", ".continue", "end", ".continue"],
+        stop_on_entry=True,
+    )
+    stops = [s for s in _stop_lines(messages) if s.startswith("* breakpoint")]
+    assert len(stops) == 3
+    assert all(s.endswith("— condition error: Variable '${nonexistent}' not found.") for s in stops)
+
+
+def test_logpoint_reports_a_condition_error_and_continues() -> None:
+    def add_logpoint(interp: ConsoleInterpreter) -> None:
+        interp._controller.add_keyword_breakpoint(  # type: ignore[union-attr]
+            "Log", condition="${nonexistent} == 1", log_message="i is ${i}"
+        )
+
+    messages = _run_debug(COND_SUITE, [], prepare=add_logpoint)
+    assert sum(s.startswith("* breakpoint") for s in _stop_lines(messages)) == 0
+    assert messages.count("condition error: Variable '${nonexistent}' not found.") == 3
+
+
 def test_tbreak_is_removed_after_first_hit() -> None:
     # `Log` is hit three times in STEP_SUITE; a temporary breakpoint stops once.
     messages = _run_debug(STEP_SUITE, [".tbreak Log", ".continue", ".continue"], stop_on_entry=True)
