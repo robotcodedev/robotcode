@@ -1,9 +1,8 @@
 import dataclasses
 import logging
 import shutil
-import threading
 from pathlib import Path
-from typing import Any, AsyncIterable, Callable, Iterator, List
+from typing import AsyncIterable, Callable, Iterator, List
 
 import pytest
 
@@ -94,18 +93,7 @@ async def protocol(
 
     protocol._initialized(InitializedParams())
 
-    diagnostics_end = threading.Event()
-
-    def on_diagnostics_end(sender: Any) -> None:
-        diagnostics_end.set()
-
-    protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
-
-    diagnostics_end.wait(120)
-    # protocol.diagnostics.cancel_workspace_diagnostics_task(None)
-
-    protocol.diagnostics.workspace_diagnostics_started_event.wait(300)
-    protocol.diagnostics.in_get_workspace_diagnostics_event.wait(300)
+    assert protocol.diagnostics.workspace_analyzed_event.wait(300), "the workspace analysis did not end"
 
     try:
         yield protocol

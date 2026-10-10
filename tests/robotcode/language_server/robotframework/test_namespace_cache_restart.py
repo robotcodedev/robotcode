@@ -8,9 +8,8 @@ when two of them are imported with the same name from different folders.
 """
 
 import os
-import threading
 from pathlib import Path
-from typing import Any, Dict, List, NamedTuple, Set
+from typing import Dict, List, NamedTuple, Set
 
 from pytest_mock import MockerFixture
 
@@ -47,16 +46,8 @@ def _start(root: Path) -> RobotLanguageServerProtocol:
         )
     }
 
-    analyzed = threading.Event()
-
-    def on_workspace_analyzed(sender: Any) -> None:
-        analyzed.set()
-
-    # before the start, the analysis of a small workspace can end before the handler is added;
-    # the event keeps only a weak reference, so the handler stays referenced until the wait is over
-    protocol.diagnostics.on_workspace_diagnostics_end.add(on_workspace_analyzed)
     protocol._initialized(InitializedParams())
-    assert analyzed.wait(120), "the workspace analysis did not end"
+    assert protocol.diagnostics.workspace_analyzed_event.wait(300), "the workspace analysis did not end"
     return protocol
 
 

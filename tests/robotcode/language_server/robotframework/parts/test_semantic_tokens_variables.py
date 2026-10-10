@@ -5,7 +5,6 @@ the legacy path (flag off) and the SemanticModel renderer (flag on).
 """
 
 import itertools
-import threading
 from pathlib import Path
 from typing import Any, Iterator, List, Tuple
 
@@ -54,16 +53,8 @@ def protocol(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFa
         settings[RobotCodeConfig.__config_section__]["experimental"] = {"semantic_model": True}
     protocol.workspace.settings = settings
 
-    diagnostics_end = threading.Event()
-
-    def on_diagnostics_end(sender: Any) -> None:
-        diagnostics_end.set()
-
-    protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
     protocol._initialized(InitializedParams())
-    diagnostics_end.wait(120)
-    protocol.diagnostics.workspace_diagnostics_started_event.wait(300)
-    protocol.diagnostics.in_get_workspace_diagnostics_event.wait(300)
+    assert protocol.diagnostics.workspace_analyzed_event.wait(300), "the workspace analysis did not end"
     try:
         yield protocol, files, request.param
     finally:

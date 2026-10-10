@@ -103,8 +103,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.on_document_cache_invalidated.add(self._on_document_cache_invalidated)
         self.parent.documents.did_close.add(self.on_did_close)
 
-        self.in_get_workspace_diagnostics_event = Event()
-        self.workspace_diagnostics_started_event = Event()
+        # set while no document needs an update; the loop clears it again when a pass finds work
+        self.workspace_analyzed_event = Event()
 
         self.client_supports_pull = False
 
@@ -341,8 +341,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             check_current_task_canceled()
 
             self.on_workspace_diagnostics_start(self)
-            self.in_get_workspace_diagnostics_event.clear()
-            self.workspace_diagnostics_started_event.set()
             done_something = False
 
             try:
@@ -354,8 +352,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 )
 
                 if len(documents) == 0:
+                    self.workspace_analyzed_event.set()
                     check_current_task_canceled(1)
                     continue
+
+                self.workspace_analyzed_event.clear()
 
                 with self._logger.measure_time(
                     lambda: f"analyzing workspace for {len(documents)} documents",
@@ -527,8 +528,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             except BaseException as e:
                 self._logger.exception(e)
             finally:
-                self.workspace_diagnostics_started_event.clear()
-                self.in_get_workspace_diagnostics_event.set()
                 self.on_workspace_diagnostics_end(self)
 
                 if not done_something:

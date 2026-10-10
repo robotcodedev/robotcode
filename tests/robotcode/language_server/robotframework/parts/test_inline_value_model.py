@@ -12,7 +12,6 @@ Can be removed once the old code path is retired (Phase 4).
 import functools
 import logging
 import re
-import threading
 from pathlib import Path
 from typing import Any, AsyncIterable
 
@@ -95,15 +94,7 @@ async def _make_protocol(
     protocol.workspace.settings = settings
     protocol._initialized(InitializedParams())
 
-    diagnostics_end = threading.Event()
-
-    def on_diagnostics_end(sender: Any) -> None:
-        diagnostics_end.set()
-
-    protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
-    diagnostics_end.wait(120)
-    protocol.diagnostics.workspace_diagnostics_started_event.wait(300)
-    protocol.diagnostics.in_get_workspace_diagnostics_event.wait(300)
+    assert protocol.diagnostics.workspace_analyzed_event.wait(300), "the workspace analysis did not end"
     return protocol
 
 
