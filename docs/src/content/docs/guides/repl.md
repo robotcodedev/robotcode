@@ -263,7 +263,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 | `.history del <N>` | Drop the single entry at index N from both. |
 | `.cwd` | Print the working directory of the REPL process — the project root. Relative file paths passed to keywords such as `File Should Exist` resolve against it; for `${CURDIR}` and relative imports see [`--source`](#--source-run-the-session-as-if-it-lived-in-a-file). |
 | `.clear` | Erase the screen. |
-| `.save [-a] [-t NAME] <file>` | Export the session as a runnable `.robot` file (see below). |
+| `.save [-a] [-t NAME] [--keep-failed] <file>` | Export the session as a runnable `.robot` file (see below). |
 | `.exit [CODE]` / `.quit [CODE]` | Leave the REPL. Without `CODE` it's the same as `Ctrl-D` on an empty prompt; with `CODE`, `robotcode repl` exits with that exit code (see [Exit code and session status](#exit-code-and-session-status)). |
 
 `.kw` and `.doc` show the same documentation the editor displays on hover — full per-keyword pages with signature, argument table (types + defaults), tags, and docstring body. It's rendered as styled Markdown, so headings, lists, code blocks, tables, and inline emphasis show up formatted in any modern terminal.
@@ -311,7 +311,7 @@ On the plain backend the doc-display commands still work — they print the rend
 
 ### Saving a session as a runnable `.robot` file
 
-`.save scratch.robot` writes the inputs you typed (the ones that round-tripped through Robot's parser without errors) to a `.robot` file you can re-run with `robot scratch.robot`:
+`.save scratch.robot` writes the inputs you typed (the ones that parsed and ran without errors) to a `.robot` file you can re-run with `robot scratch.robot`:
 
 ```
 robotcode repl
@@ -332,7 +332,7 @@ The exporter does two things automatically:
 
 `-a` appends to an existing file instead of overwriting, so you can build a test suite incrementally across multiple REPL sessions.
 
-Failed entries — anything Robot's parser rejected — are silently skipped, so the exported file always parses cleanly. One caveat: REPL-only variables such as `${_}` parse fine but don't exist in a standalone `robot` run, so a session that relied on them may need a small edit before the exported file runs on its own.
+Inputs with syntax errors are never exported. Inputs whose run failed or was skipped are left out as well, so the exported file runs the way the session did; the `Wrote …` line says how many were left out. `--keep-failed` keeps them, for example to reproduce a failing check. An input that ended with `Pass Execution` counts as passed, unless failures were continued before it. One caveat: REPL-only variables such as `${_}` parse fine but don't exist in a standalone `robot` run, so a session that relied on them may need a small edit before the exported file runs on its own.
 
 ## What syntax the REPL accepts
 

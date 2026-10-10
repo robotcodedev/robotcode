@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional,
 
 import click
 from robot import result, running
-from robot.errors import ExecutionFailed
+from robot.errors import ExecutionFailed, ExecutionPassed
 from robot.running import Keyword
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -314,6 +314,7 @@ def _build_save_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog=".save", add_help=False, exit_on_error=False)
     p.add_argument("-a", "--append", action="store_true", help="Append to FILENAME instead of overwriting.")
     p.add_argument("-t", "--test-name", default="", help="Override the generated test-case name.")
+    p.add_argument("--keep-failed", action="store_true", help="Also export inputs whose run failed.")
     p.add_argument("filename")
     return p
 
@@ -360,6 +361,9 @@ class ConsoleInterpreter(BaseInterpreter):
         # REPL inputs that parsed cleanly — `.save` exports them as a
         # runnable `.robot` file. Each entry may be multi-line.
         self._session_lines: List[str] = []
+        # Indexes into `_session_lines` of inputs whose run failed; `.save`
+        # leaves them out unless `--keep-failed` is given.
+        self._failed_session_lines: Set[int] = set()
         # Set when the input ended inside an unfinished block: that block still
         # runs, then the session ends without reading again — on a terminal, a
         # read after Ctrl-D waits for more input instead of ending.
@@ -525,6 +529,21 @@ class ConsoleInterpreter(BaseInterpreter):
         # keyword runs, rather than raising "Variable not found".
         self.set_last_result(None)
         return super().run()
+
+    def run_input(self) -> None:
+        recorded = len(self._session_lines)
+        try:
+            super().run_input()
+        except ExecutionPassed as e:
+            # `Pass Execution` ends the input successfully, unless failures were
+            # continued before it — Robot Framework fails the test then.
+            if e.earlier_failures:
+                self._failed_session_lines.update(range(recorded, len(self._session_lines)))
+            raise
+        except BaseException:
+            # A failure, `Skip` or an interrupt: the input didn't run through.
+            self._failed_session_lines.update(range(recorded, len(self._session_lines)))
+            raise
 
     # ------------------------------------------------------------------
     # Debug frontend — the interpreter *is* the debug core's `Frontend`.
@@ -889,8 +908,9 @@ class ConsoleInterpreter(BaseInterpreter):
                 if parsed.incomplete and not last_one:
                     continue
 
-                # Record cleanly-parsed inputs for `.save`. Inputs with errors
-                # are skipped so the exported file stays runnable.
+                # Record cleanly-parsed inputs for `.save` (`run_input` marks the
+                # ones whose run fails). Inputs with errors are skipped so the
+                # exported file stays runnable.
                 if parsed.test.body and not parsed.errors:
                     self._session_lines.append("\n".join(lines))
 
@@ -1343,18 +1363,20 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("save")
     def _save(self, arg: str) -> None:
-        """Save session as a .robot file: .save [-a] [-t NAME] FILENAME
+        """Save session as a .robot file: .save [-a] [-t NAME] [--keep-failed] FILENAME
 
-        Save the current REPL session as a runnable `.robot` file. Only
-        lines Robot could parse are exported; lines that failed are
-        skipped so the result stays runnable with `robot <filename>`.
+        Save the current REPL session as a runnable `.robot` file. Inputs
+        with syntax errors are never exported. Inputs whose run failed or
+        was skipped are left out too, so the result runs with
+        `robot <filename>` the way the session did; `--keep-failed` keeps
+        them.
 
         Imports become a `*** Settings ***` section (so
         `Import Library    Collections` becomes `Library    Collections`),
         and everything else goes into a single `*** Test Cases ***` block.
 
         Usage:
-          .save [-a] [-t NAME] FILENAME
+          .save [-a] [-t NAME] [--keep-failed] FILENAME
 
         Options:
           -a, --append             Append to FILENAME instead of overwriting.
@@ -1365,6 +1387,8 @@ class ConsoleInterpreter(BaseInterpreter):
                                    Override the default test-case name. By
                                    default the test is called
                                    `REPL Session <ISO-timestamp>`.
+          --keep-failed            Also export inputs whose run failed,
+                                   e.g. to reproduce a failing check.
 
         Examples:
           .save scratch.robot
@@ -1377,12 +1401,16 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             opts = parser.parse_args(_split_command_args(arg))
         except (argparse.ArgumentError, SystemExit, ValueError):
-            self.app.echo("Usage: .save [-a] [-t NAME] FILENAME")
+            self.app.echo("Usage: .save [-a] [-t NAME] [--keep-failed] FILENAME")
             return
 
-        lines: List[str] = list(self._session_lines or [])
-        if not lines:
+        recorded: List[str] = list(self._session_lines or [])
+        if not recorded:
             self.app.echo("Nothing to save — the session has no recorded inputs yet.")
+            return
+        lines = [line for i, line in enumerate(recorded) if opts.keep_failed or i not in self._failed_session_lines]
+        if not lines:
+            self.app.echo("Nothing to save — every recorded input failed; `--keep-failed` exports them anyway.")
             return
 
         content = render_robot_file(lines, test_name=opts.test_name)
@@ -1402,7 +1430,11 @@ class ConsoleInterpreter(BaseInterpreter):
             self.app.echo(f"Could not write {opts.filename}: {e}")
             return
 
-        self.app.echo(f"Wrote {path} ({len(lines)} entries)")
+        summary = f"{len(lines)} entries"
+        left_out = len(recorded) - len(lines)
+        if left_out:
+            summary += f"; {left_out} failed {'input' if left_out == 1 else 'inputs'} left out, see --keep-failed"
+        self.app.echo(f"Wrote {path} ({summary})")
 
     # ------------------------------------------------------------------
     # Debugger dot-commands — active while paused at a stop (`group=

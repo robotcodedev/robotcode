@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how `robotcode repl` handles input that does not parse — script files, line-by-line input, unfinished blocks at the end of input and orphaned continuation lines — so that invalid statements fail visibly when execution reaches them, consistent with how `robot` treats the same statements in a test body.
+Defines how `robotcode repl` handles input that does not parse — script files, line-by-line input, unfinished blocks at the end of input and orphaned continuation lines — so that invalid statements fail visibly when execution reaches them, consistent with how `robot` treats the same statements in a test body — and which input `.save` exports.
 
 ## Requirements
 
@@ -129,6 +129,28 @@ Input that contains parse errors SHALL NOT be recorded for `.save`, so that an e
 - **WHEN** a session contains a valid keyword call, then an `IF` block with an empty `ELSE` branch, then another valid keyword call, and the user runs `.save session.robot`
 - **THEN** `session.robot` contains both valid keyword calls
 - **AND** it does not contain the invalid `IF` block
+
+### Requirement: Failed input is not exported by default
+
+`.save` SHALL leave out input whose run failed or was skipped, so that the exported file runs the way the session did. Input that ended with `Pass Execution` SHALL count as passed unless failures were continued before it. With `--keep-failed`, `.save` SHALL export failed input as well. The confirmation SHALL say how many inputs were left out.
+
+#### Scenario: Save after a failing keyword
+- **WHEN** a session contains `Log    one`, then `No Such Keyword Here`, then `Log    two`, and the user runs `.save session.robot`
+- **THEN** `session.robot` contains both `Log` calls
+- **AND** it does not contain `No Such Keyword Here`
+- **AND** the confirmation says that one failed input was left out
+
+#### Scenario: Keep failed input
+- **WHEN** the same session is saved with `.save --keep-failed session.robot`
+- **THEN** `session.robot` also contains `No Such Keyword Here`
+
+#### Scenario: Skipped input
+- **WHEN** a session contains `Skip    not now`, then `Log    after`, and the user runs `.save session.robot`
+- **THEN** `session.robot` contains `Log    after` but not the `Skip` call
+
+#### Scenario: Pass Execution counts as passed
+- **WHEN** a session contains `Pass Execution    done`, then `Log    after`, and the user runs `.save session.robot`
+- **THEN** `session.robot` contains both inputs
 
 ### Requirement: Failure message of an invalid statement
 

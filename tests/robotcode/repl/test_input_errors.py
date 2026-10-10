@@ -401,6 +401,72 @@ def test_save_exports_only_inputs_without_errors(tmp_path: Path, monkeypatch: py
     assert "ELSE" not in content
 
 
+def _run_and_save(project: Path, lines: Sequence[str]) -> List[str]:
+    """Runs `lines` at the prompt (the last one a `.save`) and returns what was echoed."""
+    session = _Session(lines=lines)
+    app = _EchoApp()
+    session.app = app
+    _run(project, session)
+    return app.echoed
+
+
+def test_save_leaves_out_inputs_whose_run_failed(project: Path) -> None:
+    echoed = _run_and_save(
+        project,
+        ["Log    one", "No Such Keyword Here", "Should Be Equal    1    2", "Log    two", ".save session.robot"],
+    )
+
+    content = (project / "session.robot").read_text(encoding="utf-8")
+    assert "Log    one" in content
+    assert "Log    two" in content
+    assert "No Such Keyword Here" not in content
+    assert "Should Be Equal" not in content
+    assert "Wrote session.robot (2 entries; 2 failed inputs left out, see --keep-failed)" in echoed
+
+
+def test_save_keep_failed_exports_failed_inputs(project: Path) -> None:
+    echoed = _run_and_save(project, ["Log    one", "No Such Keyword Here", ".save --keep-failed session.robot"])
+
+    content = (project / "session.robot").read_text(encoding="utf-8")
+    assert "Log    one" in content
+    assert "No Such Keyword Here" in content
+    assert "Wrote session.robot (2 entries)" in echoed
+
+
+def test_save_says_when_every_input_failed(project: Path) -> None:
+    echoed = _run_and_save(project, ["Fail    boom", ".save session.robot"])
+
+    assert not (project / "session.robot").exists()
+    assert any("every recorded input failed" in message for message in echoed)
+
+
+@pytest.mark.parametrize(
+    ("statement", "exported"),
+    [
+        pytest.param(["Skip    not now"], False, id="skip"),
+        pytest.param(["Pass Execution    done"], True, id="pass-execution"),
+        pytest.param(
+            [
+                "IF    True",
+                "    Run Keyword And Continue On Failure    Fail    early",
+                "    Pass Execution    done",
+                "END",
+            ],
+            False,
+            id="continued-failure-before-pass-execution",
+        ),
+    ],
+)
+def test_save_counts_skip_as_failed_and_pass_execution_as_passed(
+    project: Path, statement: List[str], exported: bool
+) -> None:
+    _run_and_save(project, [*statement, "Log    after", ".save session.robot"])
+
+    content = (project / "session.robot").read_text(encoding="utf-8")
+    assert "Log    after" in content
+    assert (statement[0] in content) is exported
+
+
 # ---------------------------------------------------------------------------
 # prompt_toolkit backend
 # ---------------------------------------------------------------------------
