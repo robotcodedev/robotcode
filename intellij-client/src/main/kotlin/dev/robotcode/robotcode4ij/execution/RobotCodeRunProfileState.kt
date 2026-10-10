@@ -26,6 +26,7 @@ import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.testing.testManger
 import dev.robotcode.robotcode4ij.utils.NetUtils.findFreePort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -42,6 +43,24 @@ import java.net.SocketTimeoutException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * The arguments after `debug`: the options of `robotcode debug`, then a `--` separator and the arguments for Robot
+ * Framework, only when there are any.
+ */
+internal fun debugArguments(debug: Boolean, port: Int, robotArguments: List<String>): List<String> {
+    return buildList {
+        if (!debug) {
+            add("--no-debug")
+        }
+        if (port != RobotCodeRunProfileState.DEBUGGER_DEFAULT_PORT) {
+            addAll(listOf("--tcp", port.toString()))
+        }
+        if (robotArguments.isNotEmpty()) {
+            add("--")
+            addAll(robotArguments)
+        }
+    }
+}
 
 class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, environment: ExecutionEnvironment) :
     CommandLineState(environment), ProcessListener {
@@ -79,29 +98,16 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val defaultPaths = arrayOf("-dp", ".")
         
         val debug = environment.runner is RobotCodeDebugProgramRunner
-        
-        val included = mutableListOf<String>()
-        for (test in profile.includedTestItems) {
-            included.add("-bl")
-            included.add(test.longname)
-        }
-        
-        val connection = mutableListOf<String>()
-        
+
+        val testManager = project.testManger
+        val selection = selectionArguments(
+            resolveSelection(profile.includedTestItems, testManager.testItems), testManager.supportsParseInclude
+        )
+
         val port = findFreePort(DEBUGGER_DEFAULT_PORT)
-        if (port != DEBUGGER_DEFAULT_PORT) {
-            included.add("--tcp")
-            included.add(port.toString())
-        }
-        
+
         val commandLine = project.buildRobotCodeCommandLine(
-            arrayOf(
-                *defaultPaths,
-                "debug",
-                *connection.toTypedArray(),
-                *(if (!debug) arrayOf("--no-debug") else arrayOf()),
-                *(included.toTypedArray())
-            ),
+            arrayOf(*defaultPaths, "debug", *debugArguments(debug, port, selection).toTypedArray()),
             // as in VS Code, the robotcode extra args do not reach test runs
             extraArgs = arrayOf(),
             noColor = false
