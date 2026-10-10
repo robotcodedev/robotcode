@@ -830,14 +830,16 @@ def test_conditional_breakpoint_stops_only_when_true() -> None:
 
 
 def test_condition_error_still_stops() -> None:
-    # A failing condition (undefined variable) stops anyway, so the breakage is
-    # noticed rather than silently swallowed (pdb semantics).
+    # A failing condition (undefined variable) stops anyway and shows the error,
+    # so the breakage is noticed rather than silently swallowed (pdb semantics).
     def add_bad(interp: ConsoleInterpreter) -> None:
         interp._controller.add_keyword_breakpoint("Outer", condition="${nonexistent} > 0")  # type: ignore[union-attr]
 
     messages = _run_debug(STEP_SUITE, [".continue"], prepare=add_bad)
-    stops = _stop_lines(messages)
-    assert any(s.startswith("* breakpoint") and "Outer" in s for s in stops)
+    stops = [s for s in _stop_lines(messages) if s.startswith("* breakpoint")]
+    assert len(stops) == 1
+    assert "Outer" in stops[0]
+    assert stops[0].endswith("— condition error: Variable '${nonexistent}' not found.")
 
 
 def test_tbreak_is_removed_after_first_hit() -> None:

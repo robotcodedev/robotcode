@@ -119,6 +119,8 @@ class DebugController:
         self._next_bp_id = 1
         # the breakpoint matched at the current stop (for `.commands` replay)
         self._stopped_breakpoint: Optional[Breakpoint] = None
+        # why that breakpoint's condition couldn't be evaluated, shown in the stop line
+        self._condition_error = ""
 
         # stepping / pause state
         self._stepping: Optional[ResumeAction] = None
@@ -439,7 +441,7 @@ class DebugController:
 
         reason = self._stop_reason(frame)
         if reason is not None:
-            self._pause(reason, frame)
+            self._pause(reason, frame, self._condition_error if reason == StopReason.BREAKPOINT else "")
 
     def end_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
         if not self._stack:
@@ -614,6 +616,7 @@ class DebugController:
         logpoint emit (log + continue), one-shot removal; records the matched
         breakpoint in `_stopped_breakpoint` for the front-end (`.commands`)."""
         self._stopped_breakpoint = None
+        self._condition_error = ""
         if frame.name == _BREAKPOINT_MARKER:  # embedded `Breakpoint` keyword
             return True
         bp = self._match_breakpoint(frame)
@@ -624,8 +627,9 @@ class DebugController:
                 triggered = bool(self.evaluate_expression(frame, bp.condition))
             except (SystemExit, KeyboardInterrupt):
                 raise
-            except BaseException:
+            except BaseException as e:
                 triggered = True  # a failing condition stops, so it gets noticed
+                self._condition_error = f"condition error: {str(e) or type(e).__name__}"
             if not triggered:
                 return False
         bp.hits += 1

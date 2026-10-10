@@ -738,8 +738,20 @@ class Debugger:
                                 )
                             except (SystemExit, KeyboardInterrupt):
                                 raise
-                            except BaseException:
+                            except BaseException as e:
                                 hit = False
+                                error = str(e) or e.__class__.__name__
+                                self.send_event(
+                                    self,
+                                    OutputEvent(
+                                        body=OutputEventBody(
+                                            output=f"Breakpoint condition error: {error}{os.linesep}",
+                                            category=OutputCategory.STDERR,
+                                            source=Source(path=str(source_path)),
+                                            line=line_no,
+                                        )
+                                    ),
+                                )
 
                             if not hit:
                                 return
