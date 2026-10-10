@@ -59,10 +59,10 @@ Alternative: dropping it below Robot Framework 6 with the version that the langu
 
 - **Robot arguments**, shown by default below the target fragment: an own `SettingsEditorFragment` with a `RawCommandLineEditor`, the placeholder "Robot Framework options, e.g. --loglevel DEBUG" and `MacrosDialog.addMacroSupport` on its `editorField`. `CommonParameterFragments.programArguments()` would need the configuration to implement `CommonProgramRunConfigurationParameters`, which the Python base class does not do, and its label says "Program arguments".
 - **Behind "Modify options", in a "Robot Framework" group:**
-  - variables in a two-column name/value table (`ListTableWithButtons`); rows without a name are dropped;
-  - variable files and Robot Framework Python path as `RawCommandLineEditor` fields like the target's lists, each with an "Add Files or Folders..." button and macro support;
+  - variables in a two-column name/value table, a `TableView` on a `ListTableModel` with `ToolbarDecorator`'s add, remove and move buttons, which keeps the order of the rows; rows without a name are dropped. PyCharm's `EnvVariablesTable` sorts its rows by name, and a subclass of `ListTableWithButtons` would bring the deprecated `java.util.Observable` into the plugin;
+  - variable files with an "Add Files..." button and the Robot Framework Python path with an "Add Files or Folders..." button, both `RawCommandLineEditor` fields like the target's lists with macro support;
   - languages, include tags and exclude tags as the same fields, without a button;
-  - the output directory as a `TextFieldWithBrowseButton` around an `ExtendableTextField`, with a folder chooser and macro support;
+  - the output directory as a `TextFieldWithBrowseButton` around an `ExtendableTextField`, with macro support and a folder chooser that starts in the folder of the field, or the working directory while the field is empty or holds a macro;
   - the mode as a combo box;
   - dry run as a tag (`SettingsEditorFragment.createTag`).
 
@@ -70,6 +70,7 @@ Alternative: dropping it below Robot Framework 6 with the version that the langu
 - **Comments** say that the output directory replaces the one from `robot.toml`, that variables override the same variables from it, and that lists add to it.
 - An optional fragment is shown again when its value is set, as PyCharm's own optional fields are; an emptied field is hidden again, as PyCharm does with "Interpreter options".
 - The paths field of the target fragment gets macro support on its `editorField`.
+- The "Add Files or Folders..." buttons, the target's included, and the folder chooser of the output directory add a chosen path relative to the working directory that the editor shows, with forward slashes; with an empty field that is the project folder. A path outside it stays absolute (request of 2026-10-10). The editor offers no snapshot (`getSnapshot()` has no settings factory here), so the working directory is `workingDirectorySafe` of a copy of the configuration with the editor's values applied.
 
 Deprecated members are not used.
 

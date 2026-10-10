@@ -4,9 +4,14 @@ import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import dev.robotcode.robotcode4ij.testing.decodeDiscoverResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class RobotCodeRunTargetTest {
+
+    @get:Rule
+    val temporaryFolder = TemporaryFolder()
 
     // the output of `robotcode -dp . discover all` with Robot Framework 7.5
     private val model: Array<RobotCodeTestItem> by lazy {
@@ -107,6 +112,33 @@ class RobotCodeRunTargetTest {
     }
 
     @Test
+    fun optionsComeBeforeTheArgumentsOfTheTarget() {
+        val stored = contextTarget(model.find("Project.Tests.Sample.First Test Passes"))
+        val selectionArguments = listOf(
+            "-I", "tests/sample.robot", "-N", "Project", "-s", "Project.Tests.Sample",
+            "-bl", "Project.Tests.Sample.First Test Passes"
+        )
+        val head = listOf("--no-pager", "-dp", ".", "debug", "--no-debug")
+        val cases = listOf(
+            Triple("paths without options", paths("tests"), listOf("--", "tests")),
+            Triple("paths with options", paths("tests").apply { includeTags = mutableListOf("smoke") },
+                listOf("--", "-i", "smoke", "tests")),
+            Triple("no paths without options", paths(), listOf()),
+            // the separator comes also when only the options pass arguments
+            Triple("no paths with options", paths().apply { includeTags = mutableListOf("smoke") },
+                listOf("--", "-i", "smoke")),
+            Triple("tests and suites without options", stored, listOf("--") + selectionArguments),
+            Triple("tests and suites with options", contextTarget(model.find("Project.Tests.Sample.First Test Passes"))
+                .apply { mode = RobotRunMode.RPA; robotArguments = "--loglevel DEBUG" },
+                listOf("--", "--rpa", "--loglevel", "DEBUG") + selectionArguments),
+        )
+        for ((name, options, expected) in cases) {
+            val arguments = robotFrameworkArguments(options, model, supportsParseInclude = true)
+            assertEquals(name, head + expected, runArguments(listOf(), debug = false, port = 6612, arguments))
+        }
+    }
+
+    @Test
     fun contextRunsMatchTheirConfigurationAfterALineShift() {
         val test = model.find("Project.Tests.Sample.First Test Passes")
         val shifted = test.copy(id = test.id + ";shifted", lineno = (test.lineno ?: 0) + 3, range = null)
@@ -149,5 +181,29 @@ class RobotCodeRunTargetTest {
 
         assertEquals(entries, parseTargetEntries(text))
         assertEquals(listOf("a b", "c"), parseTargetEntries("  \"a b\"   c  \"\" "))
+    }
+
+    @Test
+    fun chosenPathsAreRelativeToTheWorkingDirectory() {
+        val workingDirectory = temporaryFolder.newFolder("project").toPath()
+        val inside = workingDirectory.resolve("vars dir").resolve("vars.py")
+        val outside = workingDirectory.parent.resolve("shared.py")
+
+        assertEquals("vars dir/vars.py", pathRelativeTo(inside, workingDirectory))
+        assertEquals(".", pathRelativeTo(workingDirectory, workingDirectory))
+        assertEquals(outside.toString(), pathRelativeTo(outside, workingDirectory))
+        assertEquals(inside.toString(), pathRelativeTo(inside, null))
+    }
+
+    @Test
+    fun folderChooserStartsInTheFolderOfTheField() {
+        val workingDirectory = temporaryFolder.newFolder("project").toPath()
+        val elsewhere = temporaryFolder.newFolder("elsewhere").toPath()
+
+        assertEquals(workingDirectory.resolve("out3"), chooserStart("out3", workingDirectory))
+        assertEquals(elsewhere, chooserStart(elsewhere.toString(), workingDirectory))
+        assertEquals(workingDirectory, chooserStart("  ", workingDirectory))
+        assertEquals(workingDirectory, chooserStart("\$ProjectFileDir\$/out3", workingDirectory))
+        assertEquals(null, chooserStart("out3", null))
     }
 }

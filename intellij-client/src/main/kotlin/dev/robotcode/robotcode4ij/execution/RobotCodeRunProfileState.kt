@@ -15,6 +15,7 @@ import com.intellij.execution.target.TargetedCommandLine
 import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.ui.BaseTestsOutputConsoleView
+import com.intellij.execution.util.ProgramParametersConfigurator
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
@@ -131,7 +132,13 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val project = environment.project
         val debug = environment.runner is RobotCodeDebugProgramRunner
         val testManager = project.testManger
-        val robotArguments = targetArguments(config.options, testManager.testItems, testManager.supportsParseInclude)
+        // the macros of the stored values, expanded with the data context of the run
+        val configurator = ProgramParametersConfigurator()
+        val robotArguments = robotFrameworkArguments(
+            config.options, testManager.testItems, testManager.supportsParseInclude,
+            expandPath = { configurator.expandPathAndMacros(it, config.module, project) ?: it },
+            parseArguments = { ProgramParametersConfigurator.expandMacrosAndParseParameters(it) }
+        )
         debugPort = findFreePort(DEBUGGER_DEFAULT_PORT)
         
         return PythonScriptExecution().apply {

@@ -57,6 +57,46 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
         }
     }
 
+    private fun RobotCodeRunConfigurationOptions.robotOptions() = listOf(
+        robotArguments, variables, variableFiles, pythonPath, languages, includeTags, excludeTags, outputDir, mode,
+        dryRun
+    )
+
+    fun testRobotFrameworkOptionsSurviveWritingAndCloning() {
+        val configuration = newConfiguration().apply {
+            options.robotArguments = "--loglevel DEBUG --metadata \"Build:1 2\""
+            options.variables = linkedMapOf("NAME" to "x", "URL" to "http://host:8080")
+            options.variableFiles = mutableListOf("vars.py", "C:\\My Vars\\more.yaml")
+            options.pythonPath = mutableListOf("lib", "\$ProjectFileDir\$/resources")
+            options.languages = mutableListOf("de", "fi")
+            options.includeTags = mutableListOf("smoke", "my tag")
+            options.excludeTags = mutableListOf("slow")
+            options.outputDir = "\$ProjectFileDir\$/out3"
+            options.mode = RobotRunMode.RPA
+            options.dryRun = true
+        }
+
+        for (copy in listOf(roundTrip(configuration), configuration.clone() as RobotCodeRunConfiguration)) {
+            assertEquals(configuration.options.robotOptions(), copy.options.robotOptions())
+            assertEquals(listOf("NAME", "URL"), copy.options.variables.keys.toList())
+        }
+    }
+
+    fun testConfigurationWithoutRobotFrameworkOptionsWritesNone() {
+        val element = Element("configuration")
+        newConfiguration().writeExternal(element)
+
+        val text = JDOMUtil.write(element)
+        val names = listOf(
+            "robotArguments", "variables", "variableFiles", "pythonPath", "languages", "includeTags", "excludeTags",
+            "outputDir", "mode", "dryRun"
+        )
+        for (name in names) {
+            assertFalse("$name in $text", text.contains("\"$name\"") || text.contains("<$name"))
+        }
+        assertEquals(RobotRunMode.INHERIT, newConfiguration().options.mode)
+    }
+
     fun testPyCharmFieldsSurviveNextToTheTarget() {
         val configuration = newConfiguration().apply {
             options.targetKind = RobotRunTargetKind.PATHS

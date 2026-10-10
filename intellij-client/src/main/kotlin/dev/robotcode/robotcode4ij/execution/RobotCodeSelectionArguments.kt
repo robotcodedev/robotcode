@@ -106,14 +106,18 @@ internal fun resolveStoredSelection(
 }
 
 /**
- * The arguments for Robot Framework that a stored target passes: the paths for files and folders, and the selection
- * arguments for tests and suites. Without arguments, robotcode runs the paths of `robot.toml` or the project folder.
+ * The arguments for Robot Framework that a stored target passes: the paths for files and folders, each through
+ * [expandPath], and the selection arguments for tests and suites. Without arguments, robotcode runs the paths of
+ * `robot.toml` or the project folder.
  */
 internal fun targetArguments(
-    options: RobotCodeRunConfigurationOptions, model: Array<RobotCodeTestItem>, supportsParseInclude: Boolean
+    options: RobotCodeRunConfigurationOptions,
+    model: Array<RobotCodeTestItem>,
+    supportsParseInclude: Boolean,
+    expandPath: (String) -> String = { it }
 ): List<String> {
     return when (options.targetKind) {
-        RobotRunTargetKind.PATHS -> options.targetPaths.filter { it.isNotBlank() }
+        RobotRunTargetKind.PATHS -> options.targetPaths.filter { it.isNotBlank() }.map(expandPath)
         RobotRunTargetKind.SELECTION -> selectionArguments(
             resolveStoredSelection(options.selection, options.topLevelSuite, model), supportsParseInclude
         )
