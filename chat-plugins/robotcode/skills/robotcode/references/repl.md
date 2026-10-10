@@ -96,7 +96,7 @@ Available at the `>>>` prompt (work in the plain agent backend too; `.help` list
 - `.doc <name>` — full documentation for an imported library or resource. Only what the session has imported is shown, addressed by its namespace name (a library imported with `AS` is found under the alias); a name that isn't loaded reports that instead of showing an empty page.
 - `.cwd` — print the working directory that relative imports/variable files resolve against.
 - `.clear` — clear the screen.
-- `.save [-a] [-t NAME] FILENAME` — export the session as a runnable `.robot` file (see *Move experiments into tests*).
+- `.save [-a] [-t NAME] [--keep-failed] FILENAME` — export the session as a runnable `.robot` file (see *Move experiments into tests*).
 - `.exit [CODE]` / `.quit [CODE]` — clean exit (aliases); with `CODE` the process exits with that code (see *Exit code*).
 
 A **human** on the rich backend also gets Tab completion, syntax highlighting, persistent history, and shortcuts (F1 help · Ctrl-R search · Ctrl-L clear · Ctrl-D exit). In the doc viewer that `.kw`/`.doc` open, the keyword names in a `.kw` listing are follow-able links — Tab to one and press Enter to open its documentation, `[` to go back to the list. An agent on the plain backend uses the dot commands instead (the list comes back as plain text).
@@ -171,7 +171,7 @@ When a keyword sequence works and should become a repeatable test, save it direc
 .save -t "My Scenario" scratch.robot
 ```
 
-`.save` hoists `Import Library` / `Import Resource` calls into a `*** Settings ***` section and puts everything else into a `*** Test Cases ***` block. Inputs with parse errors are skipped automatically, so the result always parses (a keyword that failed when it ran is still in it). Use `-a` / `--append` to add to an existing file instead of overwriting; `-t` / `--test-name` overrides the generated test-case name.
+`.save` hoists `Import Library` / `Import Resource` calls into a `*** Settings ***` section and puts everything else into a `*** Test Cases ***` block. Inputs with parse errors are never exported, and inputs whose run failed or was skipped are left out too, so the file runs the way the session did; `--keep-failed` keeps the failed ones (an input ending in `Pass Execution` counts as passed). Use `-a` / `--append` to add to an existing file instead of overwriting; `-t` / `--test-name` overrides the generated test-case name.
 
 Then extract the generated keyword calls into a reusable keyword when it will be used more than once:
 
