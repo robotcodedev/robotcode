@@ -25,7 +25,6 @@ from robotcode.core.lsp.types import (
     TextDocumentSaveReason,
     TextDocumentSyncKind,
     TextDocumentSyncOptions,
-    TextEdit,
     VersionedTextDocumentIdentifier,
     WatchKind,
     WillSaveTextDocumentParams,
@@ -183,19 +182,21 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
 
             self.did_save(self, document, callback_filter=language_id_filter(document))
 
-    @rpc_method(
-        name="textDocument/willSaveWaitUntil",
-        param_type=WillSaveTextDocumentParams,
-    )
-    @__logger.call
-    def _text_document_will_save_wait_until(
-        self,
-        text_document: TextDocumentIdentifier,
-        reason: TextDocumentSaveReason,
-        *args: Any,
-        **kwargs: Any,
-    ) -> List[TextEdit]:
-        return []
+    # willSaveWaitUntil stays commented out until the server returns edits for it, see the text document sync
+    # options of the protocol.
+    # @rpc_method(
+    #     name="textDocument/willSaveWaitUntil",
+    #     param_type=WillSaveTextDocumentParams,
+    # )
+    # @__logger.call
+    # def _text_document_will_save_wait_until(
+    #     self,
+    #     text_document: TextDocumentIdentifier,
+    #     reason: TextDocumentSaveReason,
+    #     *args: Any,
+    #     **kwargs: Any,
+    # ) -> List[TextEdit]:
+    #     return []
 
     @rpc_method(name="textDocument/didChange", param_type=DidChangeTextDocumentParams)
     @__logger.call

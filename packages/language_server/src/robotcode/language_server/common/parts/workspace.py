@@ -8,7 +8,6 @@ from typing import (
     Dict,
     Final,
     List,
-    Mapping,
     Optional,
     Tuple,
     Type,
@@ -43,7 +42,6 @@ from robotcode.core.lsp.types import (
     ServerCapabilities,
     ServerCapabilitiesWorkspaceType,
     TextDocumentEdit,
-    TextEdit,
     WatchKind,
     WorkspaceEdit,
     WorkspaceFoldersChangeEvent,
@@ -117,6 +115,8 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
             workspace_folders=WorkspaceFoldersServerCapabilities(
                 supported=True, change_notifications=str(uuid.uuid4())
             ),
+            # The will* operations stay unregistered until the server returns edits for them: clients wait for their
+            # answer before they create, rename or delete the files.
             file_operations=FileOperationOptions(
                 did_create=FileOperationRegistrationOptions(
                     filters=[
@@ -125,13 +125,13 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
                         )
                     ]
                 ),
-                will_create=FileOperationRegistrationOptions(
-                    filters=[
-                        FileOperationFilter(
-                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
-                        )
-                    ]
-                ),
+                # will_create=FileOperationRegistrationOptions(
+                #     filters=[
+                #         FileOperationFilter(
+                #             pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                #         )
+                #     ]
+                # ),
                 did_rename=FileOperationRegistrationOptions(
                     filters=[
                         FileOperationFilter(
@@ -139,13 +139,13 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
                         )
                     ]
                 ),
-                will_rename=FileOperationRegistrationOptions(
-                    filters=[
-                        FileOperationFilter(
-                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
-                        )
-                    ]
-                ),
+                # will_rename=FileOperationRegistrationOptions(
+                #     filters=[
+                #         FileOperationFilter(
+                #             pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                #         )
+                #     ]
+                # ),
                 did_delete=FileOperationRegistrationOptions(
                     filters=[
                         FileOperationFilter(
@@ -153,13 +153,13 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
                         )
                     ]
                 ),
-                will_delete=FileOperationRegistrationOptions(
-                    filters=[
-                        FileOperationFilter(
-                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
-                        )
-                    ]
-                ),
+                # will_delete=FileOperationRegistrationOptions(
+                #     filters=[
+                #         FileOperationFilter(
+                #             pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                #         )
+                #     ]
+                # ),
             ),
         )
 
@@ -180,60 +180,62 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
         self._settings_cache.clear()
         self.did_change_configuration(self, settings)
 
-    @event
-    def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]: ...
+    # The will* events and their handlers stay commented out until the server returns edits for them, see
+    # extend_capabilities.
+    # @event
+    # def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]: ...
 
     @event
     def did_create_files(sender, files: List[str]) -> None: ...
 
-    @event
-    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None: ...
+    # @event
+    # def will_rename_files(sender, files: List[Tuple[str, str]]) -> None: ...
 
     @event
     def did_rename_files(sender, files: List[Tuple[str, str]]) -> None: ...
 
-    @event
-    def will_delete_files(sender, files: List[str]) -> None: ...
+    # @event
+    # def will_delete_files(sender, files: List[str]) -> None: ...
 
     @event
     def did_delete_files(sender, files: List[str]) -> None: ...
 
-    @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams, threaded=True)
-    def _workspace_will_create_files(
-        self, files: List[FileCreate], *args: Any, **kwargs: Any
-    ) -> Optional[WorkspaceEdit]:
-        results = self.will_create_files(self, [f.uri for f in files])
-        if len(results) == 0:
-            return None
-
-        result: Dict[str, List[TextEdit]] = {}
-        for e in results:
-            if e is not None and isinstance(e, Mapping):
-                result.update(e)
-
-        # TODO: support full WorkspaceEdit
-
-        return WorkspaceEdit(changes=result)
+    # @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams, threaded=True)
+    # def _workspace_will_create_files(
+    #     self, files: List[FileCreate], *args: Any, **kwargs: Any
+    # ) -> Optional[WorkspaceEdit]:
+    #     results = self.will_create_files(self, [f.uri for f in files])
+    #     if len(results) == 0:
+    #         return None
+    #
+    #     result: Dict[str, List[TextEdit]] = {}
+    #     for e in results:
+    #         if e is not None and isinstance(e, Mapping):
+    #             result.update(e)
+    #
+    #     # TODO: support full WorkspaceEdit
+    #
+    #     return WorkspaceEdit(changes=result)
 
     @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams, threaded=True)
     def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
         self.did_create_files(self, [f.uri for f in files])
 
-    @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams, threaded=True)
-    def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
-        self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
-
-        # TODO: return WorkspaceEdit
+    # @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams, threaded=True)
+    # def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
+    #     self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
+    #
+    #     # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams, threaded=True)
     def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
         self.did_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
-    @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams, threaded=True)
-    def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
-        self.will_delete_files(self, [f.uri for f in files])
-
-        # TODO: return WorkspaceEdit
+    # @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams, threaded=True)
+    # def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
+    #     self.will_delete_files(self, [f.uri for f in files])
+    #
+    #     # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams, threaded=True)
     def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:

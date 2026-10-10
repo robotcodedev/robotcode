@@ -151,7 +151,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 open_close=True,
                 change=TextDocumentSyncKind.INCREMENTAL,
                 will_save=True,
-                will_save_wait_until=True,
+                # willSaveWaitUntil stays unregistered until the server returns edits for it: clients wait for its
+                # answer before they save.
+                # will_save_wait_until=True,
                 save=SaveOptions(include_text=True),
             )
         )
