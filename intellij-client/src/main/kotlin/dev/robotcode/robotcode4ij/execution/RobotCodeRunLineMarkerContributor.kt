@@ -35,7 +35,8 @@ class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
         val info = withExecutorActions(icon)
         
         // the marker on line 1 also shows the problems that discovery reported for the file
-        val problems = if (element is RobotSuiteFile) element.project.testManger.problems(testElement.uri ?: "") else listOf()
+        val problems =
+            if (element is RobotSuiteFile) element.project.testManger.problems(testElement.uri ?: "") else listOf()
         if (problems.isEmpty()) {
             return info
         }

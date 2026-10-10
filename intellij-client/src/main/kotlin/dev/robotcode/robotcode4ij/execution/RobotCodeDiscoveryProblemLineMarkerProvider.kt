@@ -10,9 +10,9 @@ import dev.robotcode.robotcode4ij.testing.testManger
 import dev.robotcode.robotcode4ij.testing.uri
 
 /**
- * An error icon on line 1 of a suite file that Robot Framework cannot turn into a suite, for example because it has both
- * tests and tasks. Its tooltip shows the problems that discovery reported; it offers no action, because the file cannot
- * run.
+ * An error icon on line 1 of a suite file that Robot Framework cannot turn into a suite, for example because it has
+ * both tests and tasks. Its tooltip shows the problems that discovery reported; it offers no action, because the file
+ * cannot run.
  */
 class RobotCodeDiscoveryProblemLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
