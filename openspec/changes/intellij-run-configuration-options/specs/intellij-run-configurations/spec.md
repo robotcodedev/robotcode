@@ -70,7 +70,7 @@ A Robot Framework run configuration SHALL offer include tags and exclude tags be
 
 #### Scenario: Include tag
 
-- **WHEN** the configuration's target is "Configured paths", its include tags are `smoke`, and one of the project's tests has the tag `smoke`
+- **WHEN** the configuration's target is "Files and folders" with an empty list, its include tags are `smoke`, and one of the project's tests has the tag `smoke`
 - **THEN** only that test runs
 
 #### Scenario: Exclude tag

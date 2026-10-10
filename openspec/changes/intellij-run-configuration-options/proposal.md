@@ -27,11 +27,11 @@ Not part of this change: project-wide defaults for these options and merging the
 
 ### New Capabilities
 
-- `intellij-run-configurations`: the Robot Framework options, tags and macros of a Robot Framework run configuration, and the order in which runs pass them.
+_None._
 
 ### Modified Capabilities
 
-_None._
+- `intellij-run-configurations`: the Robot Framework options, tags and macros of a Robot Framework run configuration, and the order in which runs pass them.
 
 ## Impact
 
