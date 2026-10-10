@@ -145,6 +145,27 @@ def start_debugpy(
         config_done_callback = connect_debugpy
 
 
+def _run_robot(ctx: click.Context, app: Application, args: List[str]) -> int:
+    from robotcode.runner.cli.robot import robot
+
+    args = [
+        "--listener",
+        "robotcode.debugger.listeners.ListenerV3",
+        "--listener",
+        "robotcode.debugger.listeners.ListenerV2",
+        *args,
+    ]
+
+    app.verbose("Start robot")
+    try:
+        app.verbose(f"Create robot context with args: {args}")
+        robot_ctx = robot.make_context("robot", args, parent=ctx)
+        robot.invoke(robot_ctx)
+    except SystemExit as e:
+        return cast(int, e.code)
+    return 0
+
+
 @_logger.call
 def run_debugger(
     ctx: click.Context,
@@ -167,6 +188,11 @@ def run_debugger(
     output_timestamps: bool = False,
     group_output: bool = False,
 ) -> int:
+    if app.config.dry:
+        # A dry run starts neither debugpy nor the debug adapter and waits for no
+        # client; the robot command only prints what it would execute.
+        return _run_robot(ctx, app, args)
+
     if debug and debugpy and not is_debugpy_installed():
         app.warning("Debugpy not installed")
 
@@ -215,14 +241,6 @@ def run_debugger(
         if debugpy and debugpy_wait_for_client:
             debugpy_connected.wait(wait_for_client_timeout)
 
-        args = [
-            "--listener",
-            "robotcode.debugger.listeners.ListenerV3",
-            "--listener",
-            "robotcode.debugger.listeners.ListenerV2",
-            *args,
-        ]
-
         Debugger.instance.stop_on_entry = stop_on_entry
         Debugger.instance.output_messages = output_messages
         Debugger.instance.output_log = output_log
@@ -237,15 +255,7 @@ def run_debugger(
 
         exit_code = 0
         try:
-            from robotcode.runner.cli.robot import robot
-
-            app.verbose("Start robot")
-            try:
-                app.verbose(f"Create robot context with args: {args}")
-                robot_ctx = robot.make_context("robot", args, parent=ctx)
-                robot.invoke(robot_ctx)
-            except SystemExit as e:
-                exit_code = cast(int, e.code)
+            exit_code = _run_robot(ctx, app, args)
         finally:
             if server.protocol.connected:
                 server.protocol.send_event(

@@ -213,9 +213,14 @@ def repl_server(
 
     interpreter = Interpreter(list(files))
 
-    server_task = run_as_debugpy_hidden_task(run_jsonrpc_server, mode, port, bind, pipe_name, interpreter)
+    # A dry run starts no server; `run_repl` only prints what it would execute.
+    server_task = (
+        None
+        if app.config.dry
+        else run_as_debugpy_hidden_task(run_jsonrpc_server, mode, port, bind, pipe_name, interpreter)
+    )
 
-    server = wait_for_server(server_task)
+    server = wait_for_server(server_task) if server_task is not None else None
 
     try:
         run_repl(
@@ -236,4 +241,5 @@ def repl_server(
         if server is not None:
             server.loop.stop()
 
-        server_task.result(5)
+        if server_task is not None:
+            server_task.result(5)
