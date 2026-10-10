@@ -161,7 +161,7 @@ Add, remove, and refine breakpoints from the prompt — each is referenced by th
 | `.delete <n>` · `.disable <n>` / `.enable <n>` | Remove / turn off / on breakpoint `<n>`; bare form applies to all. |
 | `.commands <n>` | Attach debugger commands replayed at each hit (see logpoints). |
 
-A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway so the breakage is visible. `.ignore` skips the next *N* triggering hits.
+A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway, even past `.ignore` or with `silent` commands, and appends the error to the stop line (`— condition error: Variable '${item_id}' not found.`). A keyword breakpoint stops at the call, before the keyword's arguments are bound, so its condition sees the caller's variables; to test an argument, put a line breakpoint on the keyword's first body line instead. `.ignore` skips the next *N* triggering hits.
 
 **Logpoints (log and continue).** There's no dedicated command; you get the "print on every hit, never stop" effect by attaching commands to a breakpoint — a leading `silent` suppresses the banner and a trailing resuming command carries on:
 
