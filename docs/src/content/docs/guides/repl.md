@@ -349,7 +349,7 @@ What you **can't** type at the prompt:
 
 - `*** Settings ***` / `*** Test Cases ***` / `*** Keywords ***` headers — the REPL is already inside a test body. Use `Import Library` / `Import Resource` instead of a `Settings` section, and put reusable keywords in a `.resource` file that you import.
 - Defining new user keywords inline — same reason. Put them in a `.resource` file and import it.
-- `*** Test Cases ***`-level metadata (`[Tags]`, `[Setup]`, `[Teardown]`, …) — the REPL session is one synthetic test; per-test metadata doesn't apply.
+- Settings such as `[Tags]`, `[Setup]`, `[Teardown]` or `[Arguments]` — the REPL session is one synthetic test, so per-test settings don't apply, and keyword settings belong in a keyword definition. The REPL reports them as an error, e.g. `Setting 'Tags' is not allowed in the REPL.`
 
 ## State persists across lines
 

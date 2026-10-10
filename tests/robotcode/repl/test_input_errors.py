@@ -6,6 +6,7 @@ input that ends inside one is still reported, and a line starting with `...`
 never runs as a statement of its own.
 """
 
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -272,6 +273,35 @@ def test_setting_error_without_a_statement_is_left_to_robot(project: Path, capfd
     else:
         assert session.messages("FAIL") == ["Non-existing setting 'Foo'."]
         assert "AFTER" not in session.messages("INFO")
+
+
+@pytest.mark.parametrize(
+    ("line", "name"),
+    [("[Tags]    smoke", "Tags"), ("[Setup]    Log    x", "Setup"), ("[Arguments]    ${x}", "Arguments")],
+)
+def test_setting_is_not_allowed_in_the_repl(
+    project: Path, capfd: pytest.CaptureFixture[str], line: str, name: str
+) -> None:
+    session = _Session(lines=[line, "Log    after"])
+    session.record_failures = True
+
+    _run(project, session)
+
+    message = f"Setting '{name}' is not allowed in the REPL."
+    if RF_VERSION < (6, 1):
+        # Reported while parsing, like a non-existing setting.
+        assert message in capfd.readouterr().err
+        assert session.failures == []
+    else:
+        assert session.messages("FAIL") == [message]
+        assert len(session.failures) == 1
+    assert "after" in session.messages("INFO")
+
+
+def test_setting_fails_parsing_for_the_repl_server() -> None:
+    # The VS Code REPL and the debugger prompt parse with `get_test_body_from_string`.
+    with pytest.raises(SyntaxError, match=re.escape("Setting 'Tags' is not allowed in the REPL.")):
+        ConsoleInterpreter(app=None).get_test_body_from_string("[Tags]    smoke")
 
 
 # ---------------------------------------------------------------------------

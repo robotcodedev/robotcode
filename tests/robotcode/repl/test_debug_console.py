@@ -273,6 +273,11 @@ def test_embedded_breakpoint_keyword_stops() -> None:
     assert "Breakpoint" in stops[0]
 
 
+def test_setting_at_a_stop_is_reported() -> None:
+    messages = _run_debug(STEP_SUITE, ["[Tags]    smoke", ".continue"], stop_on_entry=True)
+    assert "! Setting 'Tags' is not allowed in the REPL." in messages
+
+
 def test_print_evaluates_variable_and_expression() -> None:
     messages = _run_debug(
         VAR_SUITE, [".up", ".print ${a}", ".print ${a} + ${b}", ".continue"], keyword_breakpoints=["Log"]

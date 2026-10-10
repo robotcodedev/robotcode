@@ -53,7 +53,7 @@ When a script file passed to `robotcode repl` contains a statement that does not
 
 ### Requirement: Parse errors without a statement on Robot Framework 5.0 and 6.0
 
-On Robot Framework 5.0 and 6.0, errors that Robot Framework reports only while parsing, because they do not produce an executable statement — such as a non-existing setting like `[Foo]` or a duplicate `[Tags]` setting — SHALL be shown as the error messages Robot Framework reports while parsing, before the input runs, and the other statements of the input SHALL run, as `robot` does. They SHALL NOT fail the REPL session test.
+On Robot Framework 5.0 and 6.0, errors that Robot Framework reports only while parsing, because they do not produce an executable statement — such as a non-existing setting like `[Foo]` — SHALL be shown as the error messages Robot Framework reports while parsing, before the input runs, and the other statements of the input SHALL run, as `robot` does. They SHALL NOT fail the REPL session test.
 
 #### Scenario: Non-existing setting on Robot Framework 5.0 and 6.0
 - **WHEN** a script file containing `Log To Console    BEFORE`, `[Foo]    bar` and `Log To Console    AFTER` runs on Robot Framework 5.0 or 6.0
@@ -130,6 +130,22 @@ Input that contains parse errors SHALL NOT be recorded for `.save`, so that an e
 - **THEN** `session.robot` contains both valid keyword calls
 - **AND** it does not contain the invalid `IF` block
 
+### Requirement: Settings are not allowed in the REPL
+
+REPL input runs as the body of the session test, so settings in it — the test settings `[Documentation]`, `[Tags]`, `[Setup]`, `[Teardown]`, `[Template]` and `[Timeout]` and the keyword settings `[Arguments]` and `[Return]` — SHALL be reported with the error `Setting '<name>' is not allowed in the REPL.` and SHALL be handled like a non-existing setting on the running Robot Framework version.
+
+#### Scenario: Test setting at the prompt
+- **WHEN** the user enters `[Tags]    smoke`
+- **THEN** the REPL reports `Setting 'Tags' is not allowed in the REPL.`
+
+#### Scenario: Keyword setting at the prompt
+- **WHEN** the user enters `[Arguments]    ${x}`
+- **THEN** the REPL reports `Setting 'Arguments' is not allowed in the REPL.`
+
+#### Scenario: Setting at a debugger stop
+- **WHEN** the user enters `[Tags]    smoke` at a `robot-debug` stop
+- **THEN** the prompt shows `! Setting 'Tags' is not allowed in the REPL.`
+
 ### Requirement: Failed input is not exported by default
 
 `.save` SHALL leave out input whose run failed or was skipped, so that the exported file runs the way the session did. Input that ended with `Pass Execution` SHALL count as passed unless failures were continued before it. With `--keep-failed`, `.save` SHALL export failed input as well. The confirmation SHALL say how many inputs were left out.
@@ -162,7 +178,7 @@ The failure message of an invalid statement in a script file SHALL be shown on t
 
 ### Requirement: Parse errors without a statement on Robot Framework 6.1 and newer
 
-On Robot Framework 6.1 and newer, errors such as a non-existing setting like `[Foo]` or a duplicate `[Tags]` setting SHALL fail where they are, like any other invalid statement.
+On Robot Framework 6.1 and newer, errors such as a non-existing setting like `[Foo]` SHALL fail where they are, like any other invalid statement.
 
 #### Scenario: Another non-existing setting
 - **WHEN** a script file containing `Log To Console    BEFORE`, `[Bar]    x` and `Log To Console    AFTER` runs on Robot Framework 6.1 or newer

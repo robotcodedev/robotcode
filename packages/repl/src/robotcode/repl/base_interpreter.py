@@ -13,10 +13,12 @@ from robot.output import LOGGER
 from robot.output import Message as OutputMessage
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import For, If, Try, While
+from robot.parsing.model.statements import Error, Statement
 from robot.result import Keyword as ResultKeyword
 from robot.running import Keyword, TestCase, TestSuite
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.running.signalhandler import STOP_SIGNAL_MONITOR, _StopSignalMonitor
+from robot.utils import normalize
 
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import iter_nodes
@@ -129,6 +131,31 @@ if RF_VERSION >= (7, 2):
 else:
     _END_BLOCKS = (For, While, If, Try)
     _BLOCK_OPENERS = frozenset({Token.FOR, Token.WHILE, Token.IF, Token.TRY})
+
+# A REPL input runs as the body of the session test, so it can't have settings: neither
+# test settings nor the keyword settings that a test reports as not allowed.
+_SETTING_TYPES = frozenset(
+    {Token.DOCUMENTATION, Token.TAGS, Token.SETUP, Token.TEARDOWN, Token.TEMPLATE, Token.TIMEOUT}
+)
+_SETTING_NAMES = frozenset({"documentation", "tags", "setup", "teardown", "template", "timeout", "arguments", "return"})
+
+
+def _mark_settings_as_errors(test: Any) -> None:
+    """Mark the settings of a REPL input as errors, as Robot Framework's lexer marks a
+    setting a test can't have, so that Robot Framework reports them like a non-existing
+    setting."""
+    for i, node in enumerate(test.body):
+        if not isinstance(node, Statement):
+            continue
+        if node.type in _SETTING_TYPES:
+            node = test.body[i] = Error(
+                [Token(Token.ERROR, t.value, t.lineno, t.col_offset) if t.type == node.type else t for t in node.tokens]
+            )
+        if isinstance(node, Error):
+            for token in node.get_tokens(Token.ERROR):
+                name = token.value[1:-1].strip() if token.value.startswith("[") and token.value.endswith("]") else ""
+                if normalize(name) in _SETTING_NAMES:
+                    token.error = f"Setting '{name}' is not allowed in the REPL."
 
 
 @dataclass
@@ -333,6 +360,7 @@ class BaseInterpreter(abc.ABC):
 
         # RF < 6.1 expects a `str` source; RF 6.1+ converts it to a `Path` itself.
         model.source = str(self.source) if self.source is not None else None
+        _mark_settings_as_errors(model.sections[0].body[0])
 
         suite: TestSuite = TestSuite.from_model(model)
 
