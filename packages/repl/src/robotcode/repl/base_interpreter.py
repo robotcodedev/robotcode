@@ -83,7 +83,14 @@ def _patch() -> None:
 if RF_VERSION >= (7, 0):
 
     def _run_keyword(kw: Keyword, context: Any) -> Any:
-        return kw.run(context.steps[-1][1], context)
+        # A keyword typed at a stop becomes a child of the running step. At a stop
+        # where no step runs any more, such as the end of a test, it goes to the
+        # test, and without a test to a detached result.
+        if context.steps:
+            parent = context.steps[-1][1]
+        else:
+            parent = context.test if context.test is not None else ResultKeyword()
+        return kw.run(parent, context)
 
 else:
 

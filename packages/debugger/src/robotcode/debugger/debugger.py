@@ -35,6 +35,7 @@ from typing import (
 from robot.api.parsing import get_model
 from robot.errors import VariableError
 from robot.output import LOGGER
+from robot.result import Keyword as ResultKeyword
 from robot.running import EXECUTION_CONTEXTS, Keyword, TestCase, TestSuite
 from robot.running.model import Try
 from robot.utils import Matcher as RobotMatcher
@@ -1103,7 +1104,7 @@ class Debugger:
             if status == "FAIL":
                 self.process_end_state(
                     status,
-                    {""},
+                    {"failed_test"},
                     "Test failed.",
                     f"Test failed{f': {v}' if (v := attributes.get('message')) else ''}",
                 )
@@ -1757,7 +1758,14 @@ class Debugger:
     if RF_VERSION >= (7, 0):
 
         def _run_keyword(self, kw: Keyword, context: Any) -> Any:
-            return kw.run(context.steps[-1][1], context)
+            # An evaluated keyword becomes a child of the running step. At a stop
+            # where no step runs, such as the end of a test or suite, it goes to the
+            # test, and without a test to a detached result.
+            if context.steps:
+                parent = context.steps[-1][1]
+            else:
+                parent = context.test if context.test is not None else ResultKeyword()
+            return kw.run(parent, context)
 
     else:
 
@@ -2135,7 +2143,7 @@ class Debugger:
                 if option.filter_id in [
                     "failed_keyword",
                     "uncaught_failed_keyword",
-                    "",
+                    "failed_test",
                     "failed_suite",
                 ]:
                     entry = ExceptionBreakpointsEntry(

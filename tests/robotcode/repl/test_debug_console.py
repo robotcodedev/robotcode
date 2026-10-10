@@ -1246,6 +1246,22 @@ def test_attached_controller_stops_on_uncaught_failure() -> None:
     assert any(m.startswith("* exception") for m in _stop_lines(messages))
 
 
+def test_keyword_runs_at_a_failed_test_stop() -> None:
+    # No step runs any more at the end of a test; a typed keyword still runs.
+    messages = _run_debug(FAIL_SUITE, ["Set Variable    hello", ".continue"], exception_filters=["failed_test"])
+    text = "\n".join(messages)
+    assert any(m.startswith("* exception") for m in _stop_lines(messages))
+    assert "=> 'hello'" in text
+
+
+def test_keywords_are_refused_at_a_failed_suite_stop() -> None:
+    # The suite is already closed in output.xml when the debugger stops there.
+    messages = _run_debug(FAIL_SUITE, ["Set Variable    hello", ".continue"], exception_filters=["failed_suite"])
+    text = "\n".join(messages)
+    assert "Keywords can't run at the end of a suite" in text
+    assert "=> 'hello'" not in text
+
+
 def test_detached_controller_does_not_stop_on_failure() -> None:
     # Armed to break on uncaught failures, but detached → nothing pauses, even
     # though the filter stays set (the non-destructive detach contract).

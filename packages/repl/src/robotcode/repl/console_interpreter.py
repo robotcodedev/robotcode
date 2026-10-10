@@ -49,7 +49,7 @@ from robotcode.robot.utils.markdown_docs import LinkResolver, anchor_link_resolv
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from .__version__ import __version__
-from ._debug.types import Breakpoint, ResumeAction, StackFrame, StopEvent
+from ._debug.types import Breakpoint, ResumeAction, StackFrame, StopEvent, StopReason
 from ._indent import compute_indent, starts_with_continuation
 from ._keyword_lookup import (
     _LIB_KEYWORDS_ATTR,
@@ -741,6 +741,11 @@ class ConsoleInterpreter(BaseInterpreter):
         don't re-trigger a stop, and in `forward_events(echo_messages=True)` so
         its log output surfaces at the prompt (suite output is muted otherwise).
         """
+        # At the end of a suite Robot Framework has already closed the suite in
+        # output.xml when we stop; a keyword written after it makes the file unreadable.
+        if self._stop is not None and self._stop.reason == StopReason.EXCEPTION and self._stop.frame.type == "SUITE":
+            self._echo("! Keywords can't run at the end of a suite: its output is already closed.")
+            return
         try:
             test, errors = self.get_test_body_from_string(line)
         except Exception as e:  # surface any parse failure to the prompt

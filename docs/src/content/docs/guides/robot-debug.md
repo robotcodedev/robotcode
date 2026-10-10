@@ -61,7 +61,7 @@ There are several ways to make a run pause; they combine freely.
 | **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first keyword. |
 | **Uncaught exception** | Pause at an uncaught failing keyword (not caught by `TRY`/`EXCEPT` or `Run Keyword And …`), *before* the failure unwinds. **Armed by default**, but it only fires while the debugger is attached — so it triggers out of the box under `robot-debug`, while the interactive `repl` (detached by default) just prints the error until you attach with `.debug on` / `--debugger-attached`. Disarm the filter with `--no-break-on-exception`. |
 | **Every exception** | `--break-on-all-exceptions` — pause at *every* failing keyword, even ones caught by `TRY`/`EXCEPT` or `Run Keyword And …`. |
-| **Failing test / suite** | `--break-on-failed-test` / `--break-on-failed-suite` — pause at the end of a failing test / suite. |
+| **Failing test / suite** | `--break-on-failed-test` / `--break-on-failed-suite` — pause at the end of a failing test / suite. At a suite end only the debug commands work; keywords can't run there, because the suite is already closed in `output.xml`. |
 
 A **keyword breakpoint** matches by exact name — either the bare keyword name (`--break "Open Browser"`) or its fully-qualified `Library.Keyword` form (`--break "SeleniumLibrary.Open Browser"`, to disambiguate a name two libraries share). Unlike Robot's own keyword lookup, the match is case- and whitespace-sensitive, so spell it as it appears in the run.
 
