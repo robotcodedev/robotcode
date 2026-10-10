@@ -33,17 +33,18 @@ Not part of this change: Robot Framework options and arguments per configuration
 
 ### New Capabilities
 
-- `intellij-run-configurations`: what a Robot Framework run configuration of the IntelliJ plugin runs, how it is stored, shared and edited, which interpreter and environment its runs use, and how gutter and context runs reuse it.
+_None._
 
 ### Modified Capabilities
 
-_None._
+- `intellij-run-configurations`: run configurations store, share and edit their target, their runs use the configuration's interpreter and environment, and gutter and context runs reuse them.
 
 ## Impact
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/`:
   - `RobotCodeRunConfiguration.kt` on PyCharm's Python run configuration base class, with a new options class returned by `RobotCodeRunConfigurationFactory.kt`;
   - `RobotCodeRunProfileState.kt` on PyCharm's Python command-line state, with the selection arguments resolved from the stored target;
+  - `RobotCodeSelectionArguments.kt`, which resolves the stored entries for its existing emit step;
   - `RobotCodeRunConfigurationEditor.kt` replaced by a fragmented editor with a Robot Framework target fragment;
   - `RobotCodeProgramRunner.kt` and `debugging/RobotCodeDebugProgramRunner.kt`, which start the run off the UI thread;
   - `RobotCodeRunConfigurationProducer.kt`, which writes and compares the stored target.
