@@ -115,8 +115,9 @@
 		<configurationType implementation="dev.robotcode.robotcode4ij.execution.RobotCodeConfigurationType"/>
 		<runConfigurationProducer
 			implementation="dev.robotcode.robotcode4ij.execution.RobotCodeRunConfigurationProducer"/>
-		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProgramRunner"/>
-		<programRunner implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner"/>
+		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProgramRunner" order="first"/>
+		<programRunner implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner" order="first"/>
+		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProfileRunner" order="first"/>
 		<xdebugger.breakpointType
 			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointType"/>
 		<xdebugger.breakpointType

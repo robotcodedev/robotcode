@@ -7,41 +7,33 @@ import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.runners.AsyncProgramRunner
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.ui.RunContentDescriptor
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugProcessStarter
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunConfiguration
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunProfileState
+import dev.robotcode.robotcode4ij.execution.startInBackground
 import org.jetbrains.concurrency.Promise
-import org.jetbrains.concurrency.resolvedPromise
 
 class RobotCodeDebugProgramRunner : AsyncProgramRunner<RunnerSettings>() {
     override fun getRunnerId(): String {
         return "dev.robotcode.robotcode4ij.execution.RobotCodeDebugProgramRunner"
     }
-    
+
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
         return (executorId == DefaultDebugExecutor.EXECUTOR_ID) && profile is RobotCodeRunConfiguration
     }
-    
+
+    // the session wraps the started run; the debug process subscribes to the handshake before the session starts it
     override fun execute(environment: ExecutionEnvironment, state: RunProfileState): Promise<RunContentDescriptor?> {
-        FileDocumentManager.getInstance().saveAllDocuments()
-        
-        return resolvedPromise(doExecute(state as RobotCodeRunProfileState, environment))
-    }
-    
-    private fun doExecute(state: RobotCodeRunProfileState, environment: ExecutionEnvironment): RunContentDescriptor? {
-        val manager = XDebuggerManager.getInstance(environment.project)
-        val started = manager.newSessionBuilder(object : XDebugProcessStarter() {
-            override fun start(session: XDebugSession): XDebugProcess {
-                val result = state.execute(environment.executor, this@RobotCodeDebugProgramRunner)
-                
-                return RobotCodeDebugProcess(session, result, state)
-            }
-        }).environment(environment).startSession()
-        
-        return started.runContentDescriptor
+        val runState = state as RobotCodeRunProfileState
+        return startInBackground(runState, environment) { result ->
+            XDebuggerManager.getInstance(environment.project).newSessionBuilder(object : XDebugProcessStarter() {
+                override fun start(session: XDebugSession): XDebugProcess {
+                    return RobotCodeDebugProcess(session, result, runState)
+                }
+            }).environment(environment).startSession().runContentDescriptor
+        }
     }
 }

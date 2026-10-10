@@ -9,22 +9,22 @@ Remote interpreters are a goal, starting with WSL. Run configurations therefore 
 ## What Changes
 
 - A run configuration stores what it runs, its target:
-  - "Configured paths": the paths of `robot.toml`, or the project folder. This is the default for new configurations.
-  - "Files and folders": the given paths, which replace the configured paths.
-  - "Tests and suites": the tests, tasks and suites a gutter or context run selected. They are stored by their names below the top-level suite, so a configuration shared as a project file still matches in a checkout with another folder name.
+  - "Files and folders": the given paths, which replace the paths of `robot.toml`; with an empty list, the paths of `robot.toml` or the project folder run, as robotcode does without paths. An empty list is the default for new configurations.
+  - "Tests and suites": the tests, tasks and suites a gutter or context run selected. They are stored with the full names, suites and paths that discovery reports, and the editor shows the full names.
 - Saved and temporary configurations keep their target across IDE restarts. "Store as project file" and configuration templates work, with paths stored relative to the project.
 - Robot Framework run configurations become PyCharm Python run configurations. Their editor is PyCharm's run configuration editor with "Modify options":
   - a "Robot Framework" section for the target;
-  - PyCharm's options for the Python interpreter (the module's interpreter by default), interpreter options, working directory, environment variables and `.env` files, and adding content and source roots to `PYTHONPATH` (off by default);
+  - PyCharm's options for the Python interpreter (the module's interpreter by default), interpreter options, working directory, environment variables and `.env` files, adding content and source roots to `PYTHONPATH` (off by default), and "Run with uv" for a uv interpreter;
   - Before launch, "Allow multiple instances" and logs.
   Every field takes effect.
-- Runs keep starting the bundled `robotcode` with the debugger connection, the test tree and the console. Run and Debug use RobotCode's runners, not PyCharm's Python runner or debugger. "Run with Coverage" is not offered.
+- Runs keep starting the bundled `robotcode` with the debugger connection, the test tree and the console. Run and Debug use RobotCode's runners, not PyCharm's Python runner or debugger. "Run with Coverage" is not offered, and "Profile", which PyCharm Professional offers for every Python run configuration, ends with a message that Robot Framework runs cannot be profiled.
 - Runs execute on the local machine. A configuration whose interpreter is remote (WSL, Docker, SSH) is refused with a message that says so.
 - Gutter and context runs recognize their configuration by its target, so edits no longer create "(1)" copies.
 
 Behaviour that users notice, for the release notes (not breaking):
 - Configurations saved by earlier versions keep their names but have no target, because earlier versions never saved one. They run the configured paths, as they did after every restart, until a target is set.
 - A virtualenv or conda interpreter is activated for runs, as PyCharm does for its own Python runs.
+- With a uv interpreter, runs start through `uv run`, as PyCharm's own Python runs do, which first adds missing packages of the project to its environment; "Run with uv" in the editor switches this off.
 - A configuration without a valid Python interpreter is flagged with an error before the run, as PyCharm's Python run configurations are.
 
 Not part of this change: Robot Framework options and arguments per configuration, such as variables, tags or the output directory; profiles per configuration; robotcode and debugger options; opening the report or log; validating the target before a run; running the test at the caret, several selected files at once, or files outside discovery; runs with remote interpreters; attaching to a running debugger; merging project settings into runs.

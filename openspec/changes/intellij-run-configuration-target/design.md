@@ -26,6 +26,7 @@ See proposal.md for the motivation. Decision D1 of the maintainer: remote interp
 - `PythonCommandLineState` (no class-level `ApiStatus`): `execute(Executor)` is the target-aware path. It resolves the interpreter's target request, calls the overridable `buildPythonExecution(HelpersAwareTargetEnvironmentRequest)`, sets the working directory, applies the environment (including virtualenv/conda activation when the registry key `python.activate.virtualenv.on.run` is on, default `true`) and the `PYTHONPATH` roots, prepares the target environment, starts the process, and calls the overridable `createProcessHandler(Process, String, TargetEnvironment, TargetedCommandLine)` and `createAndAttachConsole(Project, ProcessHandler, Executor)`. The default `buildPythonExecution` asserts a background thread. `execute(Executor, ProgramRunner)` starts a process only for PyCharm's own runners and otherwise returns a console with an empty process handler. `@Internal` members: `createAndAttachConsoleInEDT`, `buildPythonPath`, `collectPythonPath`, `canRun`.
 - `PythonExecution`, `PythonScriptExecution`, `PythonModuleExecution`, `TargetEnvironmentRequest` and `TargetEnvironment` are `@ApiStatus.Experimental`. `LocalTargetEnvironment`, `KillableColoredProcessHandler(Process, String, Charset)` and `com.jetbrains.python.sdk.PythonSdkUtil.isRemote`/`findPythonSdk` are unannotated; `com.jetbrains.python.sdk.legacy.PythonSdkUtil` is `@Internal`.
 - Runners: `PythonRunner.canRun` accepts every `AbstractPythonRunConfiguration` for Run and runs `PythonCommandLineState.execute(Executor)` in a background coroutine before it shows the content on the UI thread. `PyDebugRunner` accepts a `DebugAwareConfiguration` only if `canRunUnderDebug()` is `true`, otherwise every `AbstractPythonRunConfiguration`. PyCharm Professional adds `PythonCoverageRunner` (guarded by `canRunWithCoverage()`), and `PythonProfileRunner` and `PyConcurrencyDebugRunner`, which accept every `AbstractPythonRunConfiguration` for their executors.
+- PyCharm's run tool: `startProcess` wraps the command in a tool when the registry key `run.with.py.tool` is on (default `true`) and a `PyRunToolProvider` exists for the SDK, which in 2026.1 is only `UvRunToolProvider` for uv interpreters, with "on" as its initial state. The command then becomes `uv run <interpreter> <interpreter parameters> <script> <arguments>` with `VIRTUAL_ENV` and `UV_PROJECT_ENVIRONMENT` set. The configuration's stored `RUN_TOOL` value overrides the initial state; its accessors `getUseRunTool`/`setUseRunTool` are `@Internal`, and the editor's run-tool tag sets it.
 - `RunConfigurationProducer` calls `RunManager.setUniqueNameIfNeeded`, which adds "(1)" when a new context configuration gets the name of an existing one.
 
 ## Goals / Non-Goals
@@ -59,10 +60,10 @@ Alternative: an own `LocatableConfigurationBase` with `GeneralCommandLine` (opti
 ### Persistence: a BaseState options class next to PyCharm's fields
 
 The factory returns a RobotCode options class, a subclass of `ModuleBasedConfigurationOptions`, from `getOptionsClass()`. `RunConfigurationBase` serializes it into the configuration element through the `super` chain that `AbstractPythonRunConfiguration` already calls, next to PyCharm's own JDOM fields, and `clone()` copies it through the same write and read. The class holds:
-- the target kind: `NONE` ("Configured paths", the default), `PATHS` or `SELECTION`;
+- the target kind: `PATHS` ("Files and folders", the default) or `SELECTION` ("Tests and suites");
 - the paths of a `PATHS` target;
-- the entries of a `SELECTION` target, each with its kind (test, task or suite), its full name below the top-level suite, its `relSource`, and the full name below the top-level suite and `relSource` of the suite to pass with `-s` and `-I`;
-- the name of the top-level suite when the selection was made.
+- the entries of a `SELECTION` target, each with its kind (test, task or suite), its full name, its `relSource`, and the full name and `relSource` of the suite to pass with `-s` and `-I`, as discovery reports them;
+- the name of the top-level suite that discovery reported when the selection was made.
 
 Property names differ from PyCharm's upper-case field names. Paths are stored as entered; the platform replaces the project path with `$PROJECT_DIR$` when it writes the configuration.
 
@@ -84,14 +85,13 @@ Alternative: PyCharm's defaults, with both `PYTHONPATH` options on. Runs would t
 
 ### Resolving the target at the start of a run
 
-- `NONE`: no paths and no selection arguments.
-- `PATHS`: the paths become the last arguments after `--`.
-- `SELECTION`: each entry's names are completed with the top-level suite name from the current discovery model (the first child of the workspace item), or with the stored name when discovery has no result, and become a `ResolvedSelection` for `selectionArguments`; the kind is not needed for that. An entry the user typed in the editor has only a name: the run looks it up in the current model by full name and resolves the found item with `resolveSelection`; if it is not found, only `-bl` is passed for it.
-- A `PATHS` or `SELECTION` target without paths or entries runs like `NONE`; the editor shows a warning through the fragment's validation.
+- `PATHS`: the paths become the last arguments after `--`. An empty list passes nothing, and robotcode takes the paths of `robot.toml`, or `-dp .` when it sets none, as for any `robotcode robot` call without paths.
+- `SELECTION`: the stored entries become a `ResolvedSelection` for `selectionArguments` unchanged; the kind is not needed for that. `-N` gets the stored top-level suite, or the current model's when the target stores none. An entry the user typed in the editor has only a full name: the run looks it up in the current model and resolves the found item with `resolveSelection`; if it is not found, only `-bl` is passed for it.
+- A `SELECTION` target without entries runs like an empty `PATHS` target; the editor shows a warning through the fragment's validation.
 
-Storing names below the top-level suite follows decision D1 of the test area of the analysis: the top-level suite is named after the project folder unless `robot.toml` sets `name`, so absolute names break when the folder is renamed or checked out elsewhere.
+The plugin passes discovery's names unchanged and never rewrites the top-level suite: its name is Robot Framework's, which follows from the paths of `robot.toml` or the command line, the suite's `Name` setting and `--name` (decision of 2026-10-10).
 
-Alternative: storing absolute names and looking up everything in discovery at launch. Shared configurations then break in another checkout, and nothing runs right when discovery failed.
+Alternative: names below the top-level suite, completed with the current top-level suite at each run, so that a shared configuration matches in a checkout with another folder name. Rejected: it rewrites what Robot Framework reports and solves no real problem.
 
 ### The run state on `PythonCommandLineState`
 
@@ -107,16 +107,18 @@ Alternatives:
 
 ### Runners: first in line, start off the UI thread
 
-Both program runners get `order="first"` in `plugin.xml`, so `PythonRunner`, which accepts every `AbstractPythonRunConfiguration` for Run, does not take Robot Framework configurations. Both runners call `state.execute(executor)` on a background thread, as `PythonRunner` does, because interpreter activation and target preparation must not run on the UI thread. The Run runner then shows the content on the UI thread; the Debug runner builds the debug session on the UI thread with a starter that wraps the existing execution result. The debug process subscribes to the handshake before the platform calls `startNotify()`, as today.
+Both program runners get `order="first"` in `plugin.xml`, so `PythonRunner`, which accepts every `AbstractPythonRunConfiguration` for Run, does not take Robot Framework configurations. A third runner, also first, takes the executor `Profiler` for Robot Framework configurations and ends with an `ExecutionException` saying that Robot Framework runs cannot be profiled: PyCharm Professional's `PythonProfileRunner` accepts every `AbstractPythonRunConfiguration` without an opt-out, and the platform offers an executor whenever a runner accepts the configuration (`ExecutorRegistryImpl.RunnerHelper.canRun`), so "Profile" cannot be hidden. Without it, the profiler runs the bundled `robotcode` folder as a script and fails with `IsADirectoryError` plus IDE errors (harness, 2026-10-10). Both runners call `state.execute(executor)` on a background thread, as `PythonRunner` does, because interpreter activation and target preparation must not run on the UI thread. The Run runner then shows the content on the UI thread; the Debug runner builds the debug session on the UI thread with a starter that wraps the existing execution result. The debug process subscribes to the handshake before the platform calls `startNotify()`, as today.
 
 Alternative: keeping `execute()` on the UI thread. The default `buildPythonExecution` asserts a background thread, and reading an activated virtualenv or conda environment runs its activate script in a shell (cached per interpreter).
 
 ### The editor: PyCharm's fragments plus a Robot Framework target fragment
 
-`RobotCodeRunConfigurationEditor` extends `AbstractPythonConfigurationFragmentedEditor`. In `customizeFragments` it removes `justMyCode` and the run-tool tag, which belong to Python runs, and adds the target fragment before the editors with `addToFragmentsBeforeEditors`. The target fragment is an own `SettingsEditorFragment` built with its public constructor:
-- a choice of the three kinds;
-- a list of files and folders with a browse button for `PATHS`;
-- the stored names, one per line, for `SELECTION`.
+`RobotCodeRunConfigurationEditor` extends `AbstractPythonConfigurationFragmentedEditor`. In `customizeFragments` it removes `justMyCode`, which belongs to PyCharm's Python debugger, and adds the target fragment before the editors with `addToFragmentsBeforeEditors`. The run-tool tag ("Run with uv" for a uv interpreter) stays, because runs go through `startProcess`, which applies the tool as for Python runs (decision of 2026-10-10). Checked on the command line with the bundled `robotcode` and Robot Framework 7.5: a run through `uv run` passes, a SIGINT to `uv` stops the run with its report and log, the debug port opens, and `uv run` keeps packages that were installed into the environment by hand. The target fragment is an own `SettingsEditorFragment` built with its public constructor:
+- a choice of the two kinds;
+- for `PATHS`, a field with an expand button for the files and folders and a button that adds files and folders;
+- for `SELECTION`, the same kind of field for the stored full names.
+
+Both fields are IntelliJ's `RawCommandLineEditor`, as for "Extra args" on the General page: one line, one entry per line when expanded, and entries with spaces in quotes. Test names and paths may contain semicolons, which the semicolon-separated list field of the settings pages would split (decision of 2026-10-10).
 
 Its comments say that paths replace the paths of `robot.toml` and rename the top-level suite. When applied, lines whose name is unchanged keep their stored entry; new lines become name-only entries. All texts are in `RobotCode.properties`.
 
@@ -124,7 +126,7 @@ Alternative: PyCharm's `AbstractPyRunConfigTargetChooserFragment`, which is `@In
 
 ### The producer compares stable keys
 
-The producer turns the found test, task or suite into an entry with `resolveSelection`, which takes the suite of a test from the current model by file, stores its names below the top-level suite together with the item's kind, and writes a `NONE` target for the project folder. It still returns no configuration while RobotCode is switched off. `isConfigurationFromContext` compares the target kind and the entries' kinds and names below the top-level suite, so line shifts and refreshed discovery objects no longer break the match. The name stays "<Type> <name>"; the producer changes no other value of the configuration.
+The producer turns the found test, task or suite into an entry with `resolveSelection`, which takes the suite of a test from the current model by file, stores the entry with the item's kind and the top-level suite as discovery reports them, and writes an empty `PATHS` target for the project folder. It still returns no configuration while RobotCode is switched off. `isConfigurationFromContext` compares the target kind and, for `SELECTION`, the entries' kinds and full names, for `PATHS` the paths, so line shifts and refreshed discovery objects no longer break the match. The name stays "<Type> <name>"; the producer changes no other value of the configuration.
 
 ## Risks / Trade-offs
 
@@ -132,7 +134,8 @@ The producer turns the found test, task or suite into an entry with `resolveSele
 - [PythonCore classes change with every release] → Only the base class, the state's three overrides and the fragmented editor touch them, and each harness run uses the current PyCharm build.
 - [The options class shares the configuration element with PyCharm's JDOM fields] → Distinct property names, and unit tests for the round trip and for `clone()`. If the round trip shows interference, the RobotCode options move into a child element written with `XmlSerializer`; the stored values stay the same.
 - [Virtualenv and conda activation changes the environment of runs] → It matches PyCharm's own Python runs and helps conda on Windows; a line in the release notes.
-- [PyCharm Professional's Profile and Concurrency Diagram executors accept every `AbstractPythonRunConfiguration`] → The configuration cannot switch them off; they are not supported for Robot Framework runs. "Run with Coverage" is switched off through `canRunWithCoverage()`. The harness runs without the Professional module, so this cannot be checked there.
+- [With a uv interpreter, runs start through `uv run`, which adds missing packages of the project before each run, while the language server and discovery start the interpreter directly] → It matches PyCharm's own Python runs, "Run with uv" in the editor switches it off, and `uv run` removes no packages; a line in the release notes.
+- [PyCharm Professional offers "Profile" for every `AbstractPythonRunConfiguration`] → It cannot be hidden; RobotCode's own runner for it ends with a message instead. "Run with Coverage" is switched off through `canRunWithCoverage()`. The harness runs with a Professional license, so both are checked there.
 - [Python run-configuration extensions of other plugins, such as `.env` plugins, now apply to Robot Framework runs] → This is the same behaviour as for Python runs.
 - [The process starts off the UI thread, while the DAP handshake still runs on it] → Moving the handshake off the UI thread is separate work; this change only moves what the target API requires.
 - [A stored selection that no longer matches ends with Robot Framework's "contains no tests after model modifiers" error] → Only reruns after a rename are affected; a warning for stale entries before the run belongs to the validation of run configurations.
@@ -142,6 +145,6 @@ The producer turns the found test, task or suite into an entry with `resolveSele
 
 ## Migration Plan
 
-- Stored elements keep type and factory ids. An element without RobotCode options and without `ADD_CONTENT_ROOTS` comes from an earlier version: it opens with the `NONE` target and the defaults above, keeps its name and Before launch tasks, and runs the configured paths, as it did after every restart before.
+- Stored elements keep type and factory ids. An element without RobotCode options and without `ADD_CONTENT_ROOTS` comes from an earlier version: it opens with an empty `PATHS` target and the defaults above, keeps its name and Before launch tasks, and runs the configured paths, as it did after every restart before.
 - An old temporary configuration such as "Test First Test Passes" has no target, so the next gutter run of that test creates a new temporary configuration, which the platform names "Test First Test Passes (1)" once. Users can delete the old one; temporary configurations also age out.
 - An older plugin version reading a configuration written by this version ignores the unknown fields and runs the project, as it always did.

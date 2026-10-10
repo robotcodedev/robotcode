@@ -43,9 +43,7 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
             }
         } ${testItem.name}"
         
-        if (testItem.type != "workspace") {
-            configuration.includedTestItems = listOf(testItem)
-        }
+        setContextTarget(configuration.options, testItem, configuration.project.testManger.testItems)
         
         return true
     }
@@ -63,10 +61,10 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         }
         val testItem = configuration.project.testManger.findTestItem(psiElement) ?: return false
         
-        if (testItem.type == "workspace") {
-            return configuration.includedTestItems.isEmpty()
-        }
-        return configuration.includedTestItems == listOf(testItem)
+        // compared by kind and name, so that line shifts and refreshed discovery items still match
+        val expected = RobotCodeRunConfigurationOptions()
+        setContextTarget(expected, testItem, configuration.project.testManger.testItems)
+        return targetKey(configuration.options) == targetKey(expected)
     }
     
     override fun isPreferredConfiguration(self: ConfigurationFromContext?, other: ConfigurationFromContext?): Boolean {

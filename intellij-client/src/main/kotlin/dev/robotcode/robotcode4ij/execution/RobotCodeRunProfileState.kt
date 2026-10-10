@@ -5,27 +5,35 @@ import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.Executor
-import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
-import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.execution.runners.ProgramRunner
+import com.intellij.execution.target.TargetEnvironment
+import com.intellij.execution.target.TargetedCommandLine
 import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil
-import com.intellij.execution.testframework.sm.runner.SMRunnerConsolePropertiesProvider
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.ui.BaseTestsOutputConsoleView
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.execution.ui.ConsoleView
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.Ref
+import com.jetbrains.python.run.PythonCommandLineState
+import com.jetbrains.python.run.PythonExecution
+import com.jetbrains.python.run.PythonScriptExecution
+import com.jetbrains.python.run.target.HelpersAwareTargetEnvironmentRequest
 import com.jetbrains.rd.util.reactive.Signal
 import com.jetbrains.rd.util.reactive.adviseEternal
-import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.InterpreterKind
+import dev.robotcode.robotcode4ij.PythonInterpreter
+import dev.robotcode.robotcode4ij.RobotCodeBundle
+import dev.robotcode.robotcode4ij.RobotCodeHelpers
+import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.pythonInterpreterOf
+import dev.robotcode.robotcode4ij.robotCodeArguments
 import dev.robotcode.robotcode4ij.testing.testManger
 import dev.robotcode.robotcode4ij.utils.NetUtils.findFreePort
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +48,8 @@ import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
 import java.net.Socket
 import java.net.SocketTimeoutException
+import java.util.function.Function
+import kotlin.io.path.pathString
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -62,8 +72,30 @@ internal fun debugArguments(debug: Boolean, port: Int, robotArguments: List<Stri
     }
 }
 
+/**
+ * The arguments of a run after the bundled `robotcode`: the global options as for the other `robotcode` commands, with
+ * the selected [profiles] but without the robotcode extra args, as in VS Code, then `-dp . debug` and [debugArguments].
+ */
+internal fun runArguments(
+    profiles: List<String>, debug: Boolean, port: Int, robotArguments: List<String>
+): List<String> {
+    return robotCodeArguments(
+        extraArgs = listOf(), format = "", noColor = false, noPager = true, profiles = profiles,
+        args = listOf("-dp", ".", "debug") + debugArguments(debug, port, robotArguments)
+    )
+}
+
+/** The reason why a run cannot use [interpreter], or null when it can. */
+internal fun interpreterRefusal(interpreter: PythonInterpreter): String? {
+    return if (interpreter.kind == InterpreterKind.REMOTE) RobotCodeBundle.message("run.remoteInterpreter") else null
+}
+
+/**
+ * Starts a Robot Framework run through PyCharm's target-aware Python execution, so the configuration's interpreter,
+ * environment, working directory and `PYTHONPATH` options apply, and connects to the RobotCode debugger of the run.
+ */
 class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, environment: ExecutionEnvironment) :
-    CommandLineState(environment), ProcessListener {
+    PythonCommandLineState(config, environment), ProcessListener {
     
     companion object {
         const val DEBUGGER_DEFAULT_PORT = 6612
@@ -89,85 +121,62 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     
     private lateinit var socket: Socket
     
-    override fun startProcess(): ProcessHandler {
+    private var debugPort = DEBUGGER_DEFAULT_PORT
+    
+    private var consoleProperties: SMTRunnerConsoleProperties? = null
+    
+    override fun buildPythonExecution(helpersAwareRequest: HelpersAwareTargetEnvironmentRequest): PythonExecution {
+        interpreterRefusal(pythonInterpreterOf(sdk))?.let { throw ExecutionException(it) }
+        
         val project = environment.project
-        val profile =
-            environment.runProfile as? RobotCodeRunConfiguration ?: throw CantRunException("Invalid run configuration")
-        
-        // TODO: Add support for configurable paths
-        val defaultPaths = arrayOf("-dp", ".")
-        
         val debug = environment.runner is RobotCodeDebugProgramRunner
-
         val testManager = project.testManger
-        val selection = selectionArguments(
-            resolveSelection(profile.includedTestItems, testManager.testItems), testManager.supportsParseInclude
-        )
-
-        val port = findFreePort(DEBUGGER_DEFAULT_PORT)
-
-        val commandLine = project.buildRobotCodeCommandLine(
-            arrayOf(*defaultPaths, "debug", *debugArguments(debug, port, selection).toTypedArray()),
-            // as in VS Code, the robotcode extra args do not reach test runs
-            extraArgs = arrayOf(),
-            noColor = false
-        )
+        val robotArguments = targetArguments(config.options, testManager.testItems, testManager.supportsParseInclude)
+        debugPort = findFreePort(DEBUGGER_DEFAULT_PORT)
         
-        val handler = KillableColoredProcessHandler(commandLine) // handler.setHasPty(true)
-        handler.putUserData(DEBUG_PORT, port)
-        ProcessTerminatedListener.attach(handler)
+        return PythonScriptExecution().apply {
+            pythonScriptPath = Function { RobotCodeHelpers.robotCodePath.pathString }
+            additionalInterpreterParameters.addAll(listOf("-u", "-X", "utf8"))
+            charset = Charsets.UTF_8
+            val profiles = RobotCodePersonalConfiguration.getInstance(project).profiles.toList()
+            addParameters(runArguments(profiles, debug, debugPort, robotArguments))
+        }
+    }
+    
+    override fun createProcessHandler(
+        process: Process, commandLine: String, targetEnvironment: TargetEnvironment,
+        targetedCommandLine: TargetedCommandLine
+    ): ProcessHandler {
+        val handler = KillableColoredProcessHandler(process, commandLine, targetedCommandLine.charset)
+        handler.putUserData(DEBUG_PORT, debugPort)
         handler.addProcessListener(this)
-        
-        // RunContentManager.getInstance(project).showRunContent(environment.executor, handler)
-        
         return handler
     }
     
-    override fun execute(executor: Executor, runner: ProgramRunner<*>): ExecutionResult {
-        val processHandler = startProcess()
-        val (console, properties) = createAndAttachConsoleInEDT(processHandler, executor)
-        
-        val result = DefaultExecutionResult(console, processHandler, *createActions(console, processHandler))
-        result.setRestartActions(properties.createRerunFailedTestsAction(console))
-        
-        return result
-    }
-    
-    
-    private fun createAndAttachConsoleInEDT(
-        processHandler: ProcessHandler, executor: Executor
-    ): Pair<BaseTestsOutputConsoleView, SMTRunnerConsoleProperties> {
-        val consoleRef = Ref.create<Any>()
-        val propertiesRef = Ref.create<Any>()
-        ApplicationManager.getApplication().invokeAndWait {
-            try {
-                val propertiesProvider = config as SMRunnerConsolePropertiesProvider
-                
-                val consoleProperties = propertiesProvider.createTestConsoleProperties(executor)
-                if (consoleProperties is RobotRunnerConsoleProperties) {
-                    consoleProperties.state = this
-                }
-                
-                val splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
-                val consoleView = RobotCodeRunnerConsoleView(consoleProperties, splitterPropertyName)
-                SMTestRunnerConnectionUtil.initConsoleView(consoleView, TESTFRAMEWORK_NAME)
-                consoleView.attachToProcess(processHandler)
-                consoleRef.set(consoleView)
-                // consoleRef.set(createAndAttachConsole("RobotCode", processHandler, consoleProperties))
-                propertiesRef.set(consoleProperties)
-                
-            } catch (e: ExecutionException) {
-                consoleRef.set(e)
-            } catch (e: RuntimeException) {
-                consoleRef.set(e)
-            }
+    override fun createAndAttachConsole(
+        project: Project, processHandler: ProcessHandler, executor: Executor
+    ): ConsoleView {
+        val properties = config.createTestConsoleProperties(executor)
+        if (properties is RobotRunnerConsoleProperties) {
+            properties.state = this
         }
         
-        if (consoleRef.get() is ExecutionException) {
-            throw consoleRef.get() as ExecutionException
-        } else if (consoleRef.get() is RuntimeException) throw consoleRef.get() as RuntimeException
-        
-        return Pair(consoleRef.get() as BaseTestsOutputConsoleView, propertiesRef.get() as SMTRunnerConsoleProperties)
+        val splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
+        val consoleView = RobotCodeRunnerConsoleView(properties, splitterPropertyName)
+        SMTestRunnerConnectionUtil.initConsoleView(consoleView, TESTFRAMEWORK_NAME)
+        consoleView.attachToProcess(processHandler)
+        consoleProperties = properties
+        return consoleView
+    }
+    
+    override fun execute(executor: Executor): ExecutionResult? {
+        val result = super.execute(executor) ?: return null
+        val console = result.executionConsole
+        val properties = consoleProperties
+        if (result is DefaultExecutionResult && console is BaseTestsOutputConsoleView && properties != null) {
+            result.setRestartActions(properties.createRerunFailedTestsAction(console))
+        }
+        return result
     }
     
     private suspend fun tryConnectToServerWithTimeout(

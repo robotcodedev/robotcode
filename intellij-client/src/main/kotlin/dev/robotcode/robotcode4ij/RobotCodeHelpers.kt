@@ -56,9 +56,15 @@ internal fun pluginPathOf(classResource: URL?): Path? {
     return jar.parent?.parent
 }
 
+/** The module whose Python interpreter RobotCode uses: the first module that has one. */
+val Project.robotPythonModule: com.intellij.openapi.module.Module?
+    get() {
+        return this.modules.firstOrNull { PythonSdkUtil.findPythonSdk(it) != null }
+    }
+
 val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
     get() {
-        return this.modules.firstNotNullOfOrNull { PythonSdkUtil.findPythonSdk(it) }
+        return robotPythonModule?.let { PythonSdkUtil.findPythonSdk(it) }
     }
 
 /**

@@ -10,8 +10,7 @@ Defines what a Robot Framework run configuration of the IntelliJ plugin runs, ho
 
 A Robot Framework run configuration SHALL store its target, which is one of:
 
-- "Configured paths";
-- "Files and folders", with a list of files and folders;
+- "Files and folders", with a list of files and folders, which may be empty;
 - "Tests and suites", with a list of tests, tasks and suites.
 
 Paths inside the project SHALL be stored relative to the project folder.
@@ -40,18 +39,14 @@ Saved configurations, temporary configurations, configuration templates and conf
 - **WHEN** the user runs "First Test Passes" from the gutter, restarts the IDE without saving the configuration, and runs the temporary configuration from the run widget
 - **THEN** only "First Test Passes" runs
 
-### Requirement: The configured paths target
+### Requirement: The files and folders target
 
-A run with the "Configured paths" target SHALL pass neither paths nor selection arguments to Robot Framework, so that the paths of the selected `robot.toml` configuration apply, or the project folder when it sets none. New configurations SHALL start with this target.
+A run with the "Files and folders" target SHALL pass the listed files and folders to Robot Framework as paths, after all options. With an empty list, it SHALL pass no paths, so that the paths of the selected `robot.toml` configuration apply, or the project folder when it sets none. New configurations SHALL start with an empty list. The editor SHALL say what an empty list runs, that given paths replace the paths of `robot.toml`, and that the top-level suite is then named after the given path.
 
 #### Scenario: New configuration
 
 - **WHEN** the user adds a new Robot Framework run configuration and runs it without changes
 - **THEN** every test of the configured paths runs
-
-### Requirement: The files and folders target
-
-A run with the "Files and folders" target SHALL pass the listed files and folders to Robot Framework as paths, after all options. The editor SHALL say that these paths replace the paths of `robot.toml` and that the top-level suite is then named after the given path. A "Files and folders" target without paths SHALL run like the "Configured paths" target, and the editor SHALL show a warning for it.
 
 #### Scenario: One suite file
 
@@ -61,34 +56,24 @@ A run with the "Files and folders" target SHALL pass the listed files and folder
 #### Scenario: No paths
 
 - **WHEN** the user chooses "Files and folders" and leaves the list empty
-- **THEN** the editor shows a warning, and a run covers the configured paths
+- **THEN** the editor shows no warning, and a run covers the paths of `robot.toml`
 
 ### Requirement: The tests and suites target
 
-A run with the "Tests and suites" target SHALL run the stored items with the arguments of a run of selected items. The plugin SHALL store each item by its full name below the top-level suite, and SHALL complete the name at the start of each run with the name of the top-level suite that the current discovery reports, or with the name stored when the item was selected if discovery has no result yet.
-
-#### Scenario: Renamed project folder
-
-- **WHEN** a saved configuration selects "First Test Passes" and the project folder, which names the top-level suite, is renamed
-- **THEN** running the configuration runs only "First Test Passes"
-
-#### Scenario: Shared configuration in another checkout
-
-- **WHEN** a configuration that selects "First Test Passes" is stored as a project file and run in a checkout of the project under another folder name
-- **THEN** only "First Test Passes" runs
+A run with the "Tests and suites" target SHALL run the stored items with the arguments of a run of selected items. The plugin SHALL store each item with the full name, the suite and the paths that discovery reports for it, and SHALL pass them unchanged.
 
 #### Scenario: Discovery without a result
 
 - **WHEN** a saved configuration that selects "First Test Passes" is run before discovery has a result
-- **THEN** only "First Test Passes" runs, completed with the top-level suite name stored with the item
+- **THEN** only "First Test Passes" runs
 
 ### Requirement: Editing the tests and suites target
 
-The editor SHALL list the stored names of a "Tests and suites" target, one per line, and names the user adds there SHALL be completed the same way. A "Tests and suites" target without items SHALL run like the "Configured paths" target, and the editor SHALL show a warning for it.
+The editor SHALL list the full names of the stored items as discovery reports them, one per line, and SHALL look up a full name that the user adds there in the current discovery result. A "Tests and suites" target without items SHALL run like an empty "Files and folders" target, and the editor SHALL show a warning for it.
 
 #### Scenario: Name added in the editor
 
-- **WHEN** the user adds the line `Tests.Sample.Second Test` to the list of a configuration that selects "First Test Passes", and runs it
+- **WHEN** the user adds the full name of the test "Second Test" as discovery reports it, such as `Project.Tests.Sample.Second Test`, to the list of a configuration that selects "First Test Passes", and runs it
 - **THEN** both tests run
 
 ### Requirement: The run configuration editor
@@ -102,7 +87,7 @@ The editor of a Robot Framework run configuration SHALL be PyCharm's run configu
 
 ### Requirement: Options of the run configuration editor take effect
 
-The template of Robot Framework run configurations SHALL use the same editor as a configuration. Every option the editor shows SHALL take effect on the next run, and the editor SHALL remember for each configuration which optional fields it shows.
+The template of Robot Framework run configurations SHALL use the same editor as a configuration. Every option the editor shows SHALL take effect on the next run, and an optional field that has a value SHALL be shown again when the editor is opened again, as in PyCharm's Python run configurations.
 
 #### Scenario: Environment variable
 
@@ -111,7 +96,7 @@ The template of Robot Framework run configurations SHALL use the same editor as 
 
 #### Scenario: Working directory
 
-- **WHEN** the target is "Configured paths" and the user sets the working directory to a subfolder that holds its own `robot.toml`
+- **WHEN** the target is "Files and folders" with an empty list and the user sets the working directory to a subfolder that holds its own `robot.toml`
 - **THEN** the run uses that `robot.toml`
 
 #### Scenario: Another interpreter
@@ -121,12 +106,12 @@ The template of Robot Framework run configurations SHALL use the same editor as 
 
 #### Scenario: Optional fields are remembered
 
-- **WHEN** the user shows "Interpreter options" through "Modify options", applies, and opens the dialog again
-- **THEN** the field is still shown
+- **WHEN** the user shows "Interpreter options" through "Modify options", enters `-X dev`, applies, and opens the dialog again
+- **THEN** the field is still shown with `-X dev`
 
 ### Requirement: Runs use the configuration's interpreter and environment
 
-A run SHALL start the bundled `robotcode` with the configuration's Python interpreter, interpreter options, working directory and environment, prepared the way PyCharm prepares its own Python runs, including the activation of a virtualenv or conda interpreter. Without changes in the editor, a run SHALL use the Python interpreter that RobotCode uses for the language server, the project folder as working directory and no additional `PYTHONPATH` entries, as runs did before.
+A run SHALL start the bundled `robotcode` with the configuration's Python interpreter, interpreter options, working directory and environment, prepared the way PyCharm prepares its own Python runs, including the activation of a virtualenv or conda interpreter. Without changes in the editor, a run SHALL use the Python interpreter that RobotCode uses for the language server, the project folder as working directory and no `PYTHONPATH` entries from the project's roots, as runs did before.
 
 #### Scenario: Defaults
 
@@ -137,6 +122,15 @@ A run SHALL start the bundled `robotcode` with the configuration's Python interp
 
 - **WHEN** the user enables adding content roots to `PYTHONPATH` and runs a suite that imports a Python library from a content root that is not on the Python path otherwise
 - **THEN** the library is imported and the suite runs
+
+### Requirement: Runs with a uv interpreter
+
+For a uv interpreter, the editor SHALL offer PyCharm's "Run with uv", and a run SHALL start through `uv run` while it is on, as PyCharm's own Python runs do, and start the interpreter directly while it is off.
+
+#### Scenario: uv interpreter
+
+- **WHEN** the configuration's interpreter is a uv interpreter and the user runs a test with "Run with uv" on, and again with it off
+- **THEN** the first run starts through `uv run`, the second starts the interpreter directly, and both run the test
 
 ### Requirement: Runs with remote interpreters
 
@@ -158,7 +152,7 @@ A Robot Framework run configuration without a valid Python interpreter SHALL sho
 
 ### Requirement: Run and Debug stay with RobotCode
 
-Run SHALL show a Robot Framework run configuration in a Run tool window tab with the test tree and the console, and Debug SHALL start a session of the RobotCode debugger, whichever Python plugins are installed. "Run with Coverage" SHALL NOT be offered for Robot Framework run configurations.
+Run SHALL show a Robot Framework run configuration in a Run tool window tab with the test tree and the console, and Debug SHALL start a session of the RobotCode debugger, whichever Python plugins are installed. "Run with Coverage" SHALL NOT be offered for Robot Framework run configurations, and "Profile" SHALL end with a message that Robot Framework runs cannot be profiled, without starting a process.
 
 #### Scenario: Run
 
@@ -170,9 +164,14 @@ Run SHALL show a Robot Framework run configuration in a Run tool window tab with
 - **WHEN** the user starts a Robot Framework run configuration with Debug while a Robot Framework breakpoint is set in a test it runs
 - **THEN** the RobotCode debugger stops at the breakpoint, and PyCharm's Python debugger does not start
 
+#### Scenario: Profile in PyCharm Professional
+
+- **WHEN** the user chooses "Profile" for a Robot Framework run configuration in PyCharm Professional
+- **THEN** no process starts, the IDE shows the message that Robot Framework runs cannot be profiled, and no "IDE error occurred" notification appears
+
 ### Requirement: Gutter and context runs reuse their configuration
 
-A gutter or context run SHALL reuse the existing configuration whose target names the same items, compared by their kind and full name below the top-level suite and independent of line numbers, and SHALL NOT create a copy whose name ends with "(1)".
+A gutter or context run SHALL reuse the existing configuration whose target names the same items, compared by their kind and full name and independent of line numbers, and SHALL NOT create a copy whose name ends with "(1)".
 
 #### Scenario: Line added above the test
 
@@ -181,9 +180,9 @@ A gutter or context run SHALL reuse the existing configuration whose target name
 
 ### Requirement: Configurations of earlier versions
 
-A Robot Framework run configuration stored by an earlier version of the plugin SHALL open with the "Configured paths" target, the interpreter that RobotCode uses for the language server, the project folder as working directory and no additional `PYTHONPATH` entries. It SHALL keep its name and its Before launch tasks.
+A Robot Framework run configuration stored by an earlier version of the plugin SHALL open with the "Files and folders" target and an empty list, the interpreter that RobotCode uses for the language server, the project folder as working directory and no `PYTHONPATH` entries from the project's roots. It SHALL keep its name and its Before launch tasks.
 
 #### Scenario: Configuration from version 2.7
 
 - **WHEN** a project's `workspace.xml` holds the configuration "Test First Test Passes" written by version 2.7 of the plugin, and the user opens and runs it
-- **THEN** the editor shows the "Configured paths" target, and the run covers the configured paths
+- **THEN** the editor shows the "Files and folders" target with an empty list, and the run covers the configured paths
