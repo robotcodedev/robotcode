@@ -94,11 +94,14 @@ def _maybe_reexec_under_wrapper(
             verbose_callback=app.verbose,
         )
         # `evaluated_with_env` also applies the profile's `env` to `os.environ`,
-        # so the wrapper command can rely on it.
+        # so the wrapper command can rely on it. Profile errors are swallowed
+        # here: the command loads the config again and reports them, so they
+        # show up once. (Without a callback they would raise, and an unknown
+        # profile would make us skip the wrapper of a valid one.)
         profile = (
             load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
-            .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=lambda _: None)
+            .evaluated_with_env(verbose_callback=app.verbose, error_callback=lambda _: None)
         )
         profile_wrapper = profile.wrapper
     except Exception as e:
@@ -115,6 +118,13 @@ def _maybe_reexec_under_wrapper(
     elif profile_wrapper:
         wrapper = [str(w) for w in profile_wrapper]
     else:
+        return
+
+    # A dry run must not start the wrapper: it would set up and tear down the
+    # real environment. Show it instead; the command itself then prints its own
+    # dry-run output.
+    if app.config.dry:
+        app.echo(f"Dry run, not executing the wrapper. Would run robotcode under: {' '.join(wrapper)}")
         return
 
     # Rebuild the invocation the way this process was actually started, so the

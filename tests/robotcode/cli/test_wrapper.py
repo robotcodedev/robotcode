@@ -218,6 +218,26 @@ def test_wrapper_propagates_the_run_exit_code(project: Path) -> None:
     assert _calls(project / "wrap.py") == ["xephyr"]  # and it did run through the wrapper
 
 
+def test_dry_run_prints_the_wrapper_instead_of_running_it(project: Path) -> None:
+    """`--dry` must not start the wrapper, whose setup/teardown would bring a
+    real environment up and down; it only names the wrapper."""
+    wrapper = project / "wrap.py"
+    result = _run_robotcode(project, ["--dry", "-p", "x11", "run", "suite.robot"])
+    assert result.returncode == 251, result.stderr  # the run's own dry-run exit code
+    assert _calls(wrapper) == []
+    assert f"Would run robotcode under: {sys.executable} {wrapper}" in result.stdout
+
+
+def test_profile_errors_are_reported_once_and_the_valid_wrapper_still_applies(project: Path) -> None:
+    """The wrapper detection leaves profile errors to the command, and an
+    unknown profile must not make it drop the wrapper of a valid one."""
+    result = _run_robotcode(project, ["-p", "nope", "-p", "x11", "run", "suite.robot"])
+    assert result.returncode == 0, result.stderr
+    assert _calls(project / "wrap.py") == ["xephyr"]
+    output = result.stdout + result.stderr
+    assert output.count("Can't find any configuration profiles matching the pattern 'nope'") == 1
+
+
 # --- the wrapper is ignored or disabled, with a warning ----------------------
 
 

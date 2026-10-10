@@ -62,6 +62,8 @@ robotcode -p integration --no-wrapper run tests/   # ignore the profile's wrappe
 
 It can also be set via the `ROBOTCODE_WRAPPER` environment variable.
 
+With `--dry`, RobotCode doesn't run the wrapper. It prints which wrapper it would use, followed by the usual dry-run output.
+
 ## In VS Code
 
 As noted above, a `wrapper` in your selected profile already applies in the editor. If you want to **override** it for your editor alone — without touching `robot.toml` — set `robotcode.debug.launchWrapper`:
