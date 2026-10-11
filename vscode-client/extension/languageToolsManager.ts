@@ -305,6 +305,22 @@ export class LanguageToolsManager {
       vscode.commands.registerCommand(
         "robotcode.selectPythonEnvironment",
         async (folder: vscode.WorkspaceFolder | undefined = undefined, showRetry: boolean = false) => {
+          if (folder === undefined) {
+            folder =
+              vscode.window.activeTextEditor !== undefined
+                ? vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri)
+                : undefined;
+
+            if (!folder) {
+              if (vscode.workspace.workspaceFolders?.length === 1) {
+                folder = vscode.workspace.workspaceFolders[0];
+              } else if (vscode.workspace.workspaceFolders?.length) {
+                folder = await vscode.window.showWorkspaceFolderPick();
+              }
+            }
+          }
+          if (folder === undefined) return;
+
           await this.languageClientsManager.selectPythonEnvironment(
             `Select Environment for workspace folder '${folder?.name}'`,
             folder,
