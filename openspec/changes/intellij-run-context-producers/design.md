@@ -13,12 +13,13 @@ See proposal.md for the motivation.
 - `RobotSMTestLocator` parses the `robotcode://` location hint, finds the file with `PsiManager.findFile` and returns the leaf at the start of the hinted line, without a bounds check. The converter builds the hint with line `lineno - 1`; suite events carry no `lineno`, so suites get line 0, and folder suites carry the folder as source, which `findFile` cannot resolve.
 - Discovery items of tests carry only their start line (`range.start` equals `range.end`).
 
-**Platform facts** (javap against PyCharm 2026.1; the data keys, `containsMultipleSelection`, `suggestedName`/`setGeneratedName`/`isGeneratedName`, `RefactoringListenerProvider`, `isPreferredConfiguration`/`shouldReplace` and `isEditableInDumbMode` re-checked against 263 on 2026-10-11; the strict lookup, the Run action and PyCharm's pytest producer checked against PyCharm 2026.1.5 and the 271 sources on 2026-10-11):
+**Platform facts** (javap against PyCharm 2026.1; the data keys, `containsMultipleSelection`, `suggestedName`/`setGeneratedName`/`isGeneratedName`, `RefactoringListenerProvider`, `isPreferredConfiguration`/`shouldReplace` and `isEditableInDumbMode` re-checked against 263 on 2026-10-11; the strict lookup, the Run action, PyCharm's pytest producer and how results ask their locator checked against PyCharm 2026.1.5 and the 271 sources on 2026-10-11):
 
 - `ConfigurationContext.containsMultipleSelection()` and `getDataContext()` are public. The selection is in `PlatformCoreDataKeys.PSI_ELEMENT_ARRAY` and `CommonDataKeys.VIRTUAL_FILE_ARRAY` for the Project view and in `Location.DATA_KEYS` for the results tree; `getPsiLocation()` returns only the lead element.
 - `PreferredProducerFind` sorts the configurations of a context with `ConfigurationFromContext.COMPARATOR`. Two configurations whose producers' `isPreferredConfiguration` both return `false` count as equal; otherwise one whose producer returns `false` ranks after the other, and `shouldReplace` decides between two preferred ones. The strict lookup, which the context menu's Run, Ctrl+Shift+F10 and the gutter use, then drops every configuration that ranks after the one before it; equal ones stay, in the order in which the producers are registered. With several configurations left, the context menu shows them in a Run submenu and Ctrl+Shift+F10 runs the first. PyCharm's `PyTestsConfigurationProducer` prefers its configurations only to plain Python run configurations. With today's `false`, pytest's configuration comes first for folders, because PyCharm registers its producer earlier.
 - `LocatableConfigurationBase.setGeneratedName()` sets the name to `suggestedName()`, which returns `null` unless the configuration overrides it, and sets a stored flag. `isGeneratedName()` is true while that flag is on and `suggestedName()` is not `null`; it does not compare the current name with the suggestion.
 - `RunLineMarkerContributor`, `RunConfigurationProducer` and `ConfigurationType` are `PossiblyDumbAware`; `RefactoringListenerProvider` and `RefactoringElementListener` are unannotated. PyCharm's own `PythonConfigurationFactoryBase` overrides `isEditableInDumbMode()`.
+- A results-tree node asks its locator for its location with the location hint and the metainfo of its test event; the metainfo arrives in the `getLocation` overload that takes it. While the IDE indexes, the node asks only a `DumbAware` locator, and it keeps a location until the locator's `getLocationCacheModificationTracker` changes, by default the PSI modification count.
 - Robot Framework treats every row whose first cell starts with `*` as a section header, whatever the language of the header.
 
 ## Goals / Non-Goals
@@ -49,15 +50,19 @@ Alternatives:
 
 When `containsMultipleSelection()` is true, the producer reads the selected elements from the data keys above, maps each to a discovered item, or to its path when discovery does not know it, and reduces the set: no duplicates, and no item whose parent folder or suite is also selected. If discovery knows every item, the target is `SELECTION`. If every item is a file or folder, the target is `PATHS`, with the paths of discovered files too, stored relative to the working directory like the fallback below. Any other mix creates no configuration. `isConfigurationFromContext` compares the whole set, independent of order.
 
-### Results-tree suite nodes get file and folder locations
+### Results-tree nodes get file, folder and test locations
 
 For a hint whose path is a folder, the locator returns a `PsiLocation` of the `PsiDirectory`. For line 0, which only suites get because a test cannot start on the first line of a suite file, it returns the `PsiFile`. For a line beyond the end of the document, it returns the file. The producer's folder and file branches then apply. The `robotcode://` URL stays unchanged, so the gutter states keep their keys.
 
-Alternative: mapping a leaf at offset 0 to the file's suite in `findTestItem`. It covers file suites but not folder suites, and it also changes what the gutter marker of line 1 resolves to.
+A result keeps the line of its run, and the producer runs the test whose body holds a line, so after lines were added or removed above a test, a result would run the test that now holds its old line (review of 2026-10-11, reproduced in the harness). The test events converter therefore sends the full name of each test, task and suite as metainfo, and the locator takes the line on which discovery now sees the test or task with that name in the file; the line of the run counts only when discovery does not know the name, for example after a run of explicit paths. The locator implements `DumbAware`, since it reads only files, documents and the discovery result, and returns `ModificationTracker.EVER_CHANGED` as its cache tracker, since the location also depends on the discovery result, which changes after an edit without a PSI change.
+
+Alternatives:
+- Mapping a leaf at offset 0 to the file's suite in `findTestItem`: it covers file suites but not folder suites, and it also changes what the gutter marker of line 1 resolves to.
+- Using the line of the run only while a discovered test still starts on it, and the file otherwise: no other test runs, but the whole suite runs instead of the moved test.
 
 ### Files that discovery does not know run by path
 
-When `findTestItem` finds nothing for a `RobotSuiteFile`, or for a folder with a `.robot` file at any depth (found by walking the folder until the first match), the producer sets a `PATHS` target with that path. An `__init__.robot` file stands for its folder. Such a run passes the path to Robot Framework, which then ignores the paths of `robot.toml`, as VS Code's "Run Current File" does. The path is stored relative to the working directory of the template with `pathRelativeTo`, as the editor's add buttons store chosen paths (request of 2026-10-10); a path outside it stays absolute.
+When `findTestItem` finds nothing for a `RobotSuiteFile`, or for a folder with a `.robot` file at any depth (found by walking the folder until the first match, past hidden, ignored and excluded folders), the producer sets a `PATHS` target with that path. An `__init__.robot` file stands for its folder. Such a run passes the path to Robot Framework, which then ignores the paths of `robot.toml`, as VS Code's "Run Current File" does. The path is stored relative to the working directory of the template with `pathRelativeTo`, as the editor's add buttons store chosen paths (request of 2026-10-10); a path outside it stays absolute. The platform evaluates a context once for every existing configuration, so the result of the walk is cached per folder until files or folders are added, removed or renamed or the project's roots change.
 
 ### Ranking against pytest
 
@@ -83,13 +88,13 @@ Producers start from a copy of the template, which the platform makes, and set o
 
 ### Availability while indexing
 
-The marker contributor, the marker of discovery problems and the producer implement `DumbAware`, the configuration type returns `true` from `isDumbAware()`, and the factory returns `true` from `isEditableInDumbMode()`. None of them uses indexes: they read the discovery model, the document and the VFS.
+The marker contributor, the marker of discovery problems, the producer and the locator of results implement `DumbAware`, the configuration type returns `true` from `isDumbAware()`, and the factory returns `true` from `isEditableInDumbMode()`. None of them uses indexes: they read the discovery model, the document and the VFS.
 
 ## Risks / Trade-offs
 
 - [Discovery lags behind edits by its debounce, about a second] → Right after an edit the caret may map to a neighbouring test or to the file suite; the next discovery fixes it, and the run's command line shows what was selected.
 - [A selection that mixes results-tree tests with files that discovery does not know] → No configuration is created for it, and each part can be run on its own; a run combining paths and selections would need a target kind of its own.
-- [Walking large folders for the fallback] → The walk stops at the first `.robot` file and runs only when discovery has no item for the folder.
+- [Walking large folders for the fallback] → The walk stops at the first `.robot` file, skips hidden, ignored and excluded folders and runs only when discovery has no item for the folder; its result is cached until files, folders or the project's roots change.
 - [The registration order puts Robot Framework first for every folder that gets a Robot Framework configuration] → A folder outside the paths of `robot.toml` with `.robot` files next to pytest tests also runs as Robot Framework suites with Ctrl+Shift+F10; pytest's configuration stays in the Run submenu. Ranking first only for folders that discovery reports would drop pytest's from the menu.
 - [With `false`, a producer that prefers its configurations to all others ranks above the Robot Framework configuration, which the strict lookup then drops] → As before this change; PyCharm's pytest producer does not prefer its configurations to ours.
 - [The Python base class's editor fragments while indexing] → PyCharm marks its own Python configurations editable while indexing; the harness checks the editor during indexing.
