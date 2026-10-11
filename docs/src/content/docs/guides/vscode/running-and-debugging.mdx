@@ -51,7 +51,7 @@ An icon beside each suite, test and task in the editor shows its last result; cl
 
 ## Debugging
 
-Click left of the line numbers to set a breakpoint in a test, a keyword or a resource file, then debug the test. The context menu of the breakpoint margin also adds conditional breakpoints, breakpoints that stop after a number of hits and logpoints, which log a message instead of stopping. While the test is stopped:
+Click left of the line numbers to set a breakpoint in a test, a keyword or a resource file, then debug the test. The context menu of the breakpoint margin also adds conditional breakpoints, breakpoints with a hit count and logpoints, which log a message instead of stopping. A hit count of `3` stops at the third hit, `>= 3` from the third hit on and `% 3` at every third hit; `>`, `<` and `<=` work as well. While the test is stopped:
 
 - the **Run and Debug** view shows the variables of each scope (local, test, suite and global) and the call stack of keywords, tests and suites;
 - RobotCode shows the values of the variables at the end of the lines in the editor, and hovering over a variable shows its value;

@@ -1,4 +1,5 @@
 import itertools
+import operator
 import os
 import pathlib
 import re
@@ -290,6 +291,30 @@ class HitCountEntry(NamedTuple):
     source: pathlib.PurePath
     line: int
     type: str
+
+
+# A breakpoint's hit count is read as in debugpy: `N` or `== N` stops at the N-th hit, `>`, `>=`,
+# `<` and `<=` compare the hits with N, and `% N` stops at every N-th hit.
+_HIT_CONDITION_PATTERN = re.compile(r"^\s*(==|>=|<=|>|<|%)?\s*(\d+)\s*$")
+_HIT_CONDITION_OPERATORS: Dict[str, Callable[[int, int], bool]] = {
+    "==": operator.eq,
+    ">": operator.gt,
+    ">=": operator.ge,
+    "<": operator.lt,
+    "<=": operator.le,
+    "%": lambda hits, value: hits % value == 0,
+}
+
+
+def hit_condition_met(hit_condition: str, hits: int) -> bool:
+    """Whether a breakpoint with `hit_condition` stops at its `hits`-th hit.
+
+    Raises `ValueError` for a hit condition that has none of the forms above.
+    """
+    match = _HIT_CONDITION_PATTERN.match(hit_condition)
+    if match is None or (match.group(1) == "%" and int(match.group(2)) == 0):
+        raise ValueError(f"'{hit_condition}' is not a valid hit count; use N, == N, > N, >= N, < N, <= N or % N.")
+    return _HIT_CONDITION_OPERATORS[match.group(1) or "=="](hits, int(match.group(2)))
 
 
 class PathMapping(NamedTuple):
@@ -755,18 +780,27 @@ class Debugger:
 
                             if not hit:
                                 return
-                        if point.hit_condition is not None:
+                        if point.hit_condition:
                             hit = False
                             entry = HitCountEntry(source_path, line_no, type)
                             if entry not in self.hit_counts:
                                 self.hit_counts[entry] = 0
                             self.hit_counts[entry] += 1
                             try:
-                                hit = self.hit_counts[entry] != int(point.hit_condition)
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except BaseException:
+                                hit = hit_condition_met(point.hit_condition, self.hit_counts[entry])
+                            except ValueError as e:
                                 hit = False
+                                self.send_event(
+                                    self,
+                                    OutputEvent(
+                                        body=OutputEventBody(
+                                            output=f"Breakpoint hit count error: {e}{os.linesep}",
+                                            category=OutputCategory.STDERR,
+                                            source=Source(path=str(source_path)),
+                                            line=line_no,
+                                        )
+                                    ),
+                                )
                             if not hit:
                                 return
                         if point.log_message:
