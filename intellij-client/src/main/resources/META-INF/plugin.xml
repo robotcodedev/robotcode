@@ -114,7 +114,7 @@
 
 		<configurationType implementation="dev.robotcode.robotcode4ij.execution.RobotCodeConfigurationType"/>
 		<runConfigurationProducer
-			implementation="dev.robotcode.robotcode4ij.execution.RobotCodeRunConfigurationProducer"/>
+			implementation="dev.robotcode.robotcode4ij.execution.RobotCodeRunConfigurationProducer" order="first"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProgramRunner" order="first"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner" order="first"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProfileRunner" order="first"/>

@@ -24,4 +24,7 @@ class RobotCodeRunConfigurationFactory(type: ConfigurationType) : ConfigurationF
     override fun getOptionsClass(): Class<out BaseState> {
         return RobotCodeRunConfigurationOptions::class.java
     }
+
+    // the editor can be opened while the IDE indexes, as PyCharm's own Python configurations can
+    override fun isEditableInDumbMode(): Boolean = true
 }

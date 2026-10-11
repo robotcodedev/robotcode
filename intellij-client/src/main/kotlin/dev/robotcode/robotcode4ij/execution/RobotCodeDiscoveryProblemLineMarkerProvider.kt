@@ -4,6 +4,7 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.markup.GutterIconRenderer
+import com.intellij.openapi.project.DumbAware
 import com.intellij.psi.PsiElement
 import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.testing.testManger
@@ -14,7 +15,7 @@ import dev.robotcode.robotcode4ij.testing.uri
  * both tests and tasks. Its tooltip shows the problems that discovery reported; it offers no action, because the file
  * cannot run.
  */
-class RobotCodeDiscoveryProblemLineMarkerProvider : LineMarkerProvider {
+class RobotCodeDiscoveryProblemLineMarkerProvider : LineMarkerProvider, DumbAware {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         // the first leaf of the file
         if (element.firstChild != null || element.textRange.startOffset != 0) {

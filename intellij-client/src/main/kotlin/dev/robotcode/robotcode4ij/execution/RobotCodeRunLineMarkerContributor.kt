@@ -1,6 +1,7 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.lineMarker.RunLineMarkerContributor
+import com.intellij.openapi.project.DumbAware
 import com.intellij.psi.PsiElement
 import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl
@@ -22,7 +23,8 @@ internal fun runMarkerKind(item: RobotCodeTestItem): RunMarkerKind? {
     }
 }
 
-class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
+// the markers read the discovery result, not the indexes, so they stay while the IDE indexes
+class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor(), DumbAware {
     override fun getInfo(element: PsiElement): Info? {
         val testElement = element.project.testManger.findTestItem(element) ?: return null
         val kind = runMarkerKind(testElement) ?: return null

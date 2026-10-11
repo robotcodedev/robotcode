@@ -39,6 +39,9 @@ class RobotRunSelectionItem : BaseState() {
     // test, task or suite
     var kind by string()
     var name by string()
+
+    // the item's own name, for the name of a configuration created from context
+    var label by string()
     var relSource by string()
 
     // the suite that `-s` and `-I` select for the item

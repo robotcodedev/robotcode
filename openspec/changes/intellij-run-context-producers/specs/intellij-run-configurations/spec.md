@@ -105,8 +105,8 @@ A configuration created from the gutter or from a context SHALL take every value
 
 #### Scenario: Values set in the template
 
-- **WHEN** the template has a Before launch task, "Allow multiple instances" and the environment variable `FOO=bar`, and the user runs a test that executes `Log    %{FOO}` from the gutter
-- **THEN** the new temporary configuration has the Before launch task and "Allow multiple instances", and the log of the run contains `bar`
+- **WHEN** the template has a Before launch task, "Allow multiple instances", the environment variable `FOO=bar` and the robot arguments `--loglevel DEBUG`, and the user runs a test that executes `Log    %{FOO}` from the gutter
+- **THEN** the new temporary configuration has the Before launch task and "Allow multiple instances", the run's command line contains `--loglevel DEBUG`, and the log of the run contains `bar`
 
 ### Requirement: Generated configuration names
 

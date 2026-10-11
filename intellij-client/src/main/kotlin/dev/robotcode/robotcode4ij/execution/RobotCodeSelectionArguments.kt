@@ -52,6 +52,7 @@ internal fun selectionItemOf(
     return topLevel to RobotRunSelectionItem().apply {
         kind = item.type
         name = entry.longname
+        label = item.name
         relSource = item.relSource
         suite = entry.suite
         suiteRelSource = entry.relSource

@@ -4,20 +4,20 @@
 
 See proposal.md for the motivation.
 
-**Builds on a planned change.** This change builds on `intellij-run-configuration-target`, which is planned but not implemented. From its design it takes the stored target (`NONE`, `PATHS` with paths, `SELECTION` with entries of kind, full name below the top-level suite, `relSource` and suite), the producer that writes `SELECTION` entries and compares targets by kind and name, the run configuration on `AbstractPythonRunConfiguration`, and the factory with its options class.
+**Builds on implemented changes.** `intellij-run-configuration-target` and `intellij-run-configuration-options` are implemented. This change builds on their code: the run configuration on `AbstractPythonRunConfiguration` with the options class `RobotCodeRunConfigurationOptions`; its target of two kinds, `PATHS` (given files and folders; an empty list runs the paths of `robot.toml` or the project folder) and `SELECTION` (entries with kind, full name, suite and paths as discovery reports them, plus the top-level suite); `setContextTarget`, which writes the target of a gutter or context run, and `targetKey`, which compares targets by kind and full name or by path; `pathRelativeTo`, with which the editor's add buttons store paths relative to the working directory; and the Robot Framework options of a configuration, which the template carries like every other value.
 
-**Current plugin code** (checked on 2026-10-03):
+**Current plugin code** (checked on 2026-10-03, re-checked on 2026-10-11):
 
-- `RobotCodeRunConfigurationProducer` (a `LazyRunConfigurationProducer`) resolves only `context.psiLocation` or the source element through `RobotCodeTestManager.findTestItem(PsiElement)`. That maps a `PsiDirectory` and a `RobotSuiteFile` by URI, and any other element only if it starts at column 0 of a line on which a discovered test starts; line 0 is rejected. The Robot Framework PSI is flat (the file plus lexer leaves), so a caret inside a test body maps to nothing. `isPreferredConfiguration` returns `false`. Without a discovered item the producer creates nothing.
-- `RobotCodeRunLineMarkerContributor`, the producer and `RobotCodeConfigurationType` do not declare themselves dumb-aware, and the factory keeps the default `isEditableInDumbMode() = false`.
+- `RobotCodeRunConfigurationProducer` (a `LazyRunConfigurationProducer`) resolves only `context.psiLocation` or the source element through `RobotCodeTestManager.findTestItem(PsiElement)`. That maps a `PsiDirectory` and a `RobotSuiteFile` by URI, and any other element only if it starts at column 0 of a line on which a discovered test starts; line 0 is rejected. The Robot Framework PSI is flat (the file plus lexer leaves), so a caret inside a test body maps to nothing. `isPreferredConfiguration` returns `false`. Without a discovered item the producer creates nothing. It also creates nothing while RobotCode is switched off for the project (`isRobotCodeDisabled`), maps structure-view symbols (`DocumentSymbolData`) to their element, names the configuration "<Type> <name>" from the item's type and own name, and writes the target with `setContextTarget`.
+- `RobotCodeRunLineMarkerContributor`, `RobotCodeDiscoveryProblemLineMarkerProvider` (the error marker on line 1 of a file with discovery problems), the producer and `RobotCodeConfigurationType` do not declare themselves dumb-aware, and the factory keeps the default `isEditableInDumbMode() = false`.
 - `RobotSMTestLocator` parses the `robotcode://` location hint, finds the file with `PsiManager.findFile` and returns the leaf at the start of the hinted line, without a bounds check. The converter builds the hint with line `lineno - 1`; suite events carry no `lineno`, so suites get line 0, and folder suites carry the folder as source, which `findFile` cannot resolve.
 - Discovery items of tests carry only their start line (`range.start` equals `range.end`).
 
-**Platform facts** (javap against PyCharm 2026.1):
+**Platform facts** (javap against PyCharm 2026.1; the data keys, `containsMultipleSelection`, `suggestedName`/`setGeneratedName`/`isGeneratedName`, `RefactoringListenerProvider`, `isPreferredConfiguration`/`shouldReplace` and `isEditableInDumbMode` re-checked against 263 on 2026-10-11; the strict lookup, the Run action and PyCharm's pytest producer checked against PyCharm 2026.1.5 and the 271 sources on 2026-10-11):
 
 - `ConfigurationContext.containsMultipleSelection()` and `getDataContext()` are public. The selection is in `PlatformCoreDataKeys.PSI_ELEMENT_ARRAY` and `CommonDataKeys.VIRTUAL_FILE_ARRAY` for the Project view and in `Location.DATA_KEYS` for the results tree; `getPsiLocation()` returns only the lead element.
-- `PreferredProducerFind` sorts the configurations of a context with `ConfigurationFromContext.COMPARATOR`. A configuration whose producer's `isPreferredConfiguration` returns `false` ranks after one whose producer returns `true`; `shouldReplace` breaks ties between two preferred ones. In the strict lookup that context actions use to pick one configuration, configurations ranked after the first are dropped; the context menu lists all of them. With today's `false`, pytest's configuration ranks first for folders.
-- `LocatableConfigurationBase.setGeneratedName()` sets the name to `suggestedName()`, which returns `null` unless the configuration overrides it.
+- `PreferredProducerFind` sorts the configurations of a context with `ConfigurationFromContext.COMPARATOR`. Two configurations whose producers' `isPreferredConfiguration` both return `false` count as equal; otherwise one whose producer returns `false` ranks after the other, and `shouldReplace` decides between two preferred ones. The strict lookup, which the context menu's Run, Ctrl+Shift+F10 and the gutter use, then drops every configuration that ranks after the one before it; equal ones stay, in the order in which the producers are registered. With several configurations left, the context menu shows them in a Run submenu and Ctrl+Shift+F10 runs the first. PyCharm's `PyTestsConfigurationProducer` prefers its configurations only to plain Python run configurations. With today's `false`, pytest's configuration comes first for folders, because PyCharm registers its producer earlier.
+- `LocatableConfigurationBase.setGeneratedName()` sets the name to `suggestedName()`, which returns `null` unless the configuration overrides it, and sets a stored flag. `isGeneratedName()` is true while that flag is on and `suggestedName()` is not `null`; it does not compare the current name with the suggestion.
 - `RunLineMarkerContributor`, `RunConfigurationProducer` and `ConfigurationType` are `PossiblyDumbAware`; `RefactoringListenerProvider` and `RefactoringElementListener` are unannotated. PyCharm's own `PythonConfigurationFactoryBase` overrides `isEditableInDumbMode()`.
 - Robot Framework treats every row whose first cell starts with `*` as a section header, whatever the language of the header.
 
@@ -31,7 +31,7 @@ See proposal.md for the motivation.
 **Non-Goals:**
 
 - Rerunning failed tests, and running with a chosen profile.
-- Run markers for tasks, and gutter states keyed by names instead of lines.
+- Gutter states keyed by names instead of lines.
 - A test explorer tool window.
 
 ## Decisions
@@ -47,7 +47,7 @@ Alternatives:
 
 ### Multi-selection becomes one target
 
-When `containsMultipleSelection()` is true, the producer reads the selected elements from the data keys above, maps each to a discovered item, or to its path when discovery does not know it, and reduces the set: no duplicates, and no item whose parent folder or suite is also selected. If discovery knows every item, the target is `SELECTION`. If every item is a file or folder, the target is `PATHS`, with the paths of discovered files too. Any other mix creates no configuration. `isConfigurationFromContext` compares the whole set, independent of order.
+When `containsMultipleSelection()` is true, the producer reads the selected elements from the data keys above, maps each to a discovered item, or to its path when discovery does not know it, and reduces the set: no duplicates, and no item whose parent folder or suite is also selected. If discovery knows every item, the target is `SELECTION`. If every item is a file or folder, the target is `PATHS`, with the paths of discovered files too, stored relative to the working directory like the fallback below. Any other mix creates no configuration. `isConfigurationFromContext` compares the whole set, independent of order.
 
 ### Results-tree suite nodes get file and folder locations
 
@@ -57,13 +57,15 @@ Alternative: mapping a leaf at offset 0 to the file's suite in `findTestItem`. I
 
 ### Files that discovery does not know run by path
 
-When `findTestItem` finds nothing for a `RobotSuiteFile`, or for a folder with a `.robot` file at any depth (found by walking the folder until the first match), the producer sets a `PATHS` target with that path. An `__init__.robot` file stands for its folder. Such a run passes the path to Robot Framework, which then ignores the paths of `robot.toml`, as VS Code's "Run Current File" does.
+When `findTestItem` finds nothing for a `RobotSuiteFile`, or for a folder with a `.robot` file at any depth (found by walking the folder until the first match), the producer sets a `PATHS` target with that path. An `__init__.robot` file stands for its folder. Such a run passes the path to Robot Framework, which then ignores the paths of `robot.toml`, as VS Code's "Run Current File" does. The path is stored relative to the working directory of the template with `pathRelativeTo`, as the editor's add buttons store chosen paths (request of 2026-10-10); a path outside it stays absolute.
 
 ### Ranking against pytest
 
-`isPreferredConfiguration` returns `true`, the platform default. `shouldReplace` returns `true` against configurations of other types when the context is a folder that discovery reports as a Robot Framework suite. The context menu still lists pytest's configuration; context actions that pick one configuration pick the Robot Framework one.
+`isPreferredConfiguration` keeps returning `false`, and `shouldReplace` keeps the platform default `false`, so a Robot Framework configuration and pytest's count as equal and both stay. `plugin.xml` registers the producer with `order="first"`, so the Robot Framework configuration comes first: the Run submenu lists it first, and Ctrl+Shift+F10 on the folder runs it. The order holds for every folder for which the producer creates a configuration, including folders outside the paths of `robot.toml` that hold `.robot` files.
 
-Alternative: keeping `false`. Folders then run as pytest tests by default, although discovery found Robot Framework suites in them.
+Alternatives:
+- `shouldReplace` returning `true` for folders that discovery reports, or `isPreferredConfiguration` returning `true`: the Robot Framework configuration ranks above pytest's, and the strict lookup drops pytest's from the context menu, as the harness showed on 2026-10-11.
+- Keeping `false` without the order: folders run as pytest tests by default, although discovery found Robot Framework suites in them.
 
 ### Names and renamed paths
 
@@ -77,20 +79,21 @@ The producer calls `setGeneratedName()`; a name the user changed is kept. The co
 
 ### Templates
 
-Producers start from a copy of the template, which the platform makes, and set only the target and the name. Every other value comes from the template: interpreter, environment, working directory, Before launch tasks and "Allow multiple instances". The template stored as a project file is the IntelliJ counterpart of a committed VS Code launch configuration with purpose `default`.
+Producers start from a copy of the template, which the platform makes, and set only the target and the name. Every other value comes from the template: interpreter, environment, working directory, Before launch tasks and "Allow multiple instances". This includes the Robot Framework options of the template, such as robot arguments, variables, variable files and tags, which then apply to every gutter and context run. The template stored as a project file is the IntelliJ counterpart of a committed VS Code launch configuration with purpose `default`.
 
 ### Availability while indexing
 
-The marker contributor and the producer implement `DumbAware`, the configuration type returns `true` from `isDumbAware()`, and the factory returns `true` from `isEditableInDumbMode()`. None of them uses indexes: they read the discovery model, the document and the VFS.
+The marker contributor, the marker of discovery problems and the producer implement `DumbAware`, the configuration type returns `true` from `isDumbAware()`, and the factory returns `true` from `isEditableInDumbMode()`. None of them uses indexes: they read the discovery model, the document and the VFS.
 
 ## Risks / Trade-offs
 
 - [Discovery lags behind edits by its debounce, about a second] → Right after an edit the caret may map to a neighbouring test or to the file suite; the next discovery fixes it, and the run's command line shows what was selected.
 - [A selection that mixes results-tree tests with files that discovery does not know] → No configuration is created for it, and each part can be run on its own; a run combining paths and selections would need a target kind of its own.
 - [Walking large folders for the fallback] → The walk stops at the first `.robot` file and runs only when discovery has no item for the folder.
-- [Preferring Robot Framework configurations hides pytest's from context actions that pick one configuration] → Only for folders that discovery reports as Robot Framework suites; the context menu keeps both.
+- [The registration order puts Robot Framework first for every folder that gets a Robot Framework configuration] → A folder outside the paths of `robot.toml` with `.robot` files next to pytest tests also runs as Robot Framework suites with Ctrl+Shift+F10; pytest's configuration stays in the Run submenu. Ranking first only for folders that discovery reports would drop pytest's from the menu.
+- [With `false`, a producer that prefers its configurations to all others ranks above the Robot Framework configuration, which the strict lookup then drops] → As before this change; PyCharm's pytest producer does not prefer its configurations to ours.
 - [The Python base class's editor fragments while indexing] → PyCharm marks its own Python configurations editable while indexing; the harness checks the editor during indexing.
 
 ## Migration Plan
 
-None. Existing configurations keep their target. Names generated by earlier versions stay; the platform treats them as generated only when they equal the new suggestion.
+None. Existing configurations keep their target. Names that earlier versions set stay: they lack the stored flag that `setGeneratedName()` sets, so the platform treats them as chosen by the user.

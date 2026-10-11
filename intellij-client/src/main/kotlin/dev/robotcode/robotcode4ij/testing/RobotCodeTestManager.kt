@@ -527,6 +527,25 @@ class RobotCodeTestManager(private val project: Project, private val scope: Coro
         val result = findTestItem(containingFile.virtualFile.uri, lineNumber.toUInt())
         return result
     }
+
+    /**
+     * The discovered item that a context run of [element] runs: the suite of a folder or of a suite file, and for any
+     * other element of a suite file the test or task whose body holds it, or else the suite of the file.
+     */
+    fun findContextTestItem(element: PsiElement): RobotCodeTestItem? {
+        if (element is PsiDirectory || element is RobotSuiteFile) {
+            return findTestItem(element)
+        }
+        val file = element.containingFile as? RobotSuiteFile ?: return null
+        val suite = findTestItem(file.virtualFile?.uri ?: return null) ?: return null
+        val document = PsiDocumentManager.getInstance(project).getDocument(file) ?: return null
+        val tests = suite.children.orEmpty().filter { it.type == "test" || it.type == "task" }
+        val caretLine = document.getLineNumber(element.textRange.startOffset)
+        val line = enclosingTestLine(tests.mapNotNull { it.range?.start?.line?.toInt() }, caretLine) {
+            document.charsSequence.subSequence(document.getLineStartOffset(it), document.getLineEndOffset(it))
+        } ?: return suite
+        return tests.firstOrNull { it.range?.start?.line?.toInt() == line } ?: suite
+    }
 }
 
 /**

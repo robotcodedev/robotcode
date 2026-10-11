@@ -15,4 +15,6 @@ class RobotCodeConfigurationType : ConfigurationTypeBase(
         addFactory(configurationFactory)
     }
     
+    // gutter and context runs work while the IDE indexes
+    override fun isDumbAware(): Boolean = true
 }

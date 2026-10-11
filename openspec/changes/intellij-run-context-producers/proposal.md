@@ -19,24 +19,24 @@ VS Code runs any selection of its Test Explorer, and "Run Current File" runs any
 
 Behaviour that users notice, for the release notes (not breaking): Ctrl+Shift+F10 inside a test runs that test; several selected files run together; results-tree suites can be rerun; values of the configuration template apply to gutter runs; Robot Framework folders run as Robot Framework suites by default instead of as pytest tests.
 
-Not part of this change: rerunning only the failed tests; running with a chosen `robot.toml` profile; a test explorer tool window; run markers for tasks.
+Not part of this change: rerunning only the failed tests; running with a chosen `robot.toml` profile; a test explorer tool window.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `intellij-run-configurations`: creating and reusing Robot Framework run configurations from the editor, the Project view and the results tree, with names and template values.
-- `intellij-test-discovery`: run markers stay available while the IDE indexes.
+_None._
 
 ### Modified Capabilities
 
-_None._
+- `intellij-run-configurations`: creating and reusing Robot Framework run configurations from the editor, the Project view and the results tree, with names and template values.
+- `intellij-test-discovery`: run markers stay available while the IDE indexes.
 
 ## Impact
 
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunConfigurationProducer.kt`: caret mapping, multi-selection, path fallback, names, ranking against pytest, dumb awareness.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunConfigurationProducer.kt`: caret mapping, multi-selection, path fallback, names, ranking against pytest, dumb awareness; `intellij-client/src/main/resources/META-INF/plugin.xml`: the producer's registration order.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotSMTestLocator.kt`: locations for file and folder suite nodes.
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunConfiguration.kt`: generated names and following renamed or moved paths; `RobotCodeConfigurationType.kt`, `RobotCodeRunConfigurationFactory.kt` and `RobotCodeRunLineMarkerContributor.kt`: availability while indexing.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunConfiguration.kt`: generated names and following renamed or moved paths; `RobotCodeConfigurationType.kt`, `RobotCodeRunConfigurationFactory.kt`, `RobotCodeRunLineMarkerContributor.kt` and `RobotCodeDiscoveryProblemLineMarkerProvider.kt`: availability while indexing; `RobotCodeRunConfigurationOptions.kt` and `RobotCodeSelectionArguments.kt`: the item's own name in selection entries.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/testing/RobotCodeTestManager.kt`: lookups of the enclosing test and of items for files and folders.
 - New unit tests under `intellij-client/src/test/kotlin/`.
 - No change to the language server, the debugger, discovery or `robot.toml`.

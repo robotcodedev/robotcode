@@ -88,6 +88,8 @@ import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
                     
                     addAttribute("locationHint", uri.toString())
                 }
+                // the full name, with which a result finds its test again after lines were added or removed above it
+                args.attributes.longname?.let { addAttribute("metainfo", it) }
                 addAttribute("duration", (args.attributes.elapsedtime ?: 0).toString()).toString()
             }
             
