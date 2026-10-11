@@ -13,9 +13,13 @@
   --rc-title-gradient: linear-gradient(120deg, var(--sl-color-white) 35%, var(--sl-color-accent-high));
   --rc-glow-strong: color-mix(in srgb, var(--sl-color-accent) 30%, transparent);
   --rc-glow-soft: color-mix(in srgb, var(--sl-color-accent) 14%, transparent);
-  --rc-hero-bg:
-    radial-gradient(40rem 26rem at 72% 38%, var(--rc-glow-strong), transparent 70%),
-    radial-gradient(34rem 22rem at 18% 70%, var(--rc-glow-soft), transparent 70%);
+  /* The hero's backdrop reaches half a viewport past the content column on both sides, so the soft glow is placed in
+     the hero's own width (18% from its left edge). The strong glow sits behind the hero's picture (Hero.astro). */
+  --rc-hero-bg: radial-gradient(
+    34rem 22rem at calc(50vw + 0.18 * (100% - 100vw)) 70%,
+    var(--rc-glow-soft),
+    transparent 70%
+  );
 }
 
 :root[data-theme="light"] {

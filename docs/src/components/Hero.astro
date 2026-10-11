@@ -263,6 +263,20 @@ const first = pictures[0];
     padding: 0 2.75rem;
   }
 
+  /* The strong glow of the hero's backdrop, centred behind the picture wherever the layout puts it. */
+  rc-hero-gallery::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: 80rem;
+    height: 52rem;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, var(--rc-glow-strong), transparent 70%);
+    pointer-events: none;
+  }
+
   rc-hero-gallery .rc-picture {
     display: flex;
     padding: 0;
