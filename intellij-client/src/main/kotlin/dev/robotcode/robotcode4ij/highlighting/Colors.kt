@@ -15,7 +15,7 @@ object Colors {
     val KEYWORD_NAME: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_NAME", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION)
     val KEYWORD_CALL: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION)
+        createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL", DefaultLanguageHighlighterColors.FUNCTION_CALL)
     val KEYWORD_CALL_INNER: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL_INNER", KEYWORD_CALL)
     val NAME_CALL: TextAttributesKey =

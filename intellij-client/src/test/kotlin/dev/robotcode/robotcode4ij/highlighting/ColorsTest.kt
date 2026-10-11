@@ -18,7 +18,9 @@ class ColorsTest : BasePlatformTestCase() {
     private val brackets = listOf(Colors.VARIABLE_INDEX_BEGIN, Colors.VARIABLE_INDEX_END)
     
     fun testFallbackKeys() {
-        assertSame(DefaultLanguageHighlighterColors.FUNCTION_DECLARATION, Colors.KEYWORD_CALL.fallbackAttributeKey)
+        assertSame(DefaultLanguageHighlighterColors.FUNCTION_CALL, Colors.KEYWORD_CALL.fallbackAttributeKey)
+        assertSame(DefaultLanguageHighlighterColors.FUNCTION_DECLARATION, Colors.TESTCASE_NAME.fallbackAttributeKey)
+        assertSame(DefaultLanguageHighlighterColors.FUNCTION_DECLARATION, Colors.KEYWORD_NAME.fallbackAttributeKey)
         assertSame(Colors.KEYWORD_CALL, Colors.KEYWORD_CALL_INNER.fallbackAttributeKey)
         assertSame(Colors.KEYWORD_CALL, Colors.NAME_CALL.fallbackAttributeKey)
         assertSame(DefaultLanguageHighlighterColors.INSTANCE_FIELD, Colors.VARIABLE.fallbackAttributeKey)
@@ -40,6 +42,7 @@ class ColorsTest : BasePlatformTestCase() {
         assertNotEmpty(schemes)
         for (scheme in schemes) {
             for ((keys, fallback) in listOf(
+                listOf(Colors.KEYWORD_CALL) to DefaultLanguageHighlighterColors.FUNCTION_CALL,
                 variableParts to Colors.VARIABLE,
                 braces to DefaultLanguageHighlighterColors.BRACES,
                 brackets to DefaultLanguageHighlighterColors.BRACKETS,
