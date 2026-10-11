@@ -60,7 +60,7 @@ The line breakpoints and exception breakpoints that exist when a debug session s
 
 ### Requirement: Exception breakpoints per kind of failure
 
-The IDE SHALL offer one Robot Framework exception breakpoint for each kind of failure the RobotCode debugger stops on: "Uncaught Failed Keywords", "Failed Keywords" and "Failed Suites". Only "Uncaught Failed Keywords" SHALL be enabled by default, and it SHALL keep the enabled state and settings stored for the exception breakpoint of earlier plugin versions.
+The IDE SHALL offer one Robot Framework exception breakpoint for each kind of failure the RobotCode debugger stops on: "Uncaught Failed Keywords", "Failed Keywords", "Failed Tests" and "Failed Suites". Only "Uncaught Failed Keywords" SHALL be enabled by default, and it SHALL keep the enabled state and settings stored for the exception breakpoint of earlier plugin versions.
 
 #### Scenario: Setting stored by an earlier version
 
@@ -69,7 +69,7 @@ The IDE SHALL offer one Robot Framework exception breakpoint for each kind of fa
 
 ### Requirement: What each exception breakpoint stops at
 
-"Uncaught Failed Keywords" SHALL stop at keyword failures that are not handled by `TRY/EXCEPT` or by BuiltIn's error-handling keywords, "Failed Keywords" at every keyword failure, and "Failed Suites" when a suite fails. The debugger SHALL stop at a failure only while the matching exception breakpoint is enabled and breakpoints are not muted.
+"Uncaught Failed Keywords" SHALL stop at keyword failures that are not handled by `TRY/EXCEPT` or by BuiltIn's error-handling keywords, "Failed Keywords" at every keyword failure, "Failed Tests" when a test fails, and "Failed Suites" when a suite fails. The debugger SHALL stop at a failure only while the matching exception breakpoint is enabled and breakpoints are not muted.
 
 #### Scenario: All exception breakpoints disabled
 
@@ -85,6 +85,11 @@ The IDE SHALL offer one Robot Framework exception breakpoint for each kind of fa
 
 - **WHEN** only "Uncaught Failed Keywords" is enabled and a test runs `Fail    expected` inside `TRY/EXCEPT` and inside `Run Keyword And Ignore Error`
 - **THEN** the run does not stop at these failures
+
+#### Scenario: Failed tests
+
+- **WHEN** only "Failed Tests" is enabled and a test fails with the message `intentional failure`
+- **THEN** the run stops when that test ends and shows the message `intentional failure`
 
 #### Scenario: Failed suites
 
