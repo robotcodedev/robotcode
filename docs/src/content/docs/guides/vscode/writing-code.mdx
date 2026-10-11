@@ -1,0 +1,124 @@
+---
+title: Writing Robot Framework Code in VS Code
+description: 'Completion, signature help, hover, inlay hints, quick fixes, rename and formatting while you write Robot Framework code in VS Code.'
+sidebar:
+  label: Writing Code
+  order: 1
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+import ThemeVideo from "../../../../components/ThemeVideo.astro";
+import newTestLight from "../../../../assets/screenshots/vscode/writing-new-test-light.mp4";
+import newTestDark from "../../../../assets/screenshots/vscode/writing-new-test-dark.mp4";
+import completionLight from "../../../../assets/screenshots/vscode/writing-completion-light.png";
+import completionDark from "../../../../assets/screenshots/vscode/writing-completion-dark.png";
+import signatureLight from "../../../../assets/screenshots/vscode/writing-signature-help-light.png";
+import signatureDark from "../../../../assets/screenshots/vscode/writing-signature-help-dark.png";
+import hoverLight from "../../../../assets/screenshots/vscode/writing-hover-light.png";
+import hoverDark from "../../../../assets/screenshots/vscode/writing-hover-dark.png";
+import inlayLight from "../../../../assets/screenshots/vscode/writing-inlay-hints-light.png";
+import inlayDark from "../../../../assets/screenshots/vscode/writing-inlay-hints-dark.png";
+import quickFixLight from "../../../../assets/screenshots/vscode/writing-quick-fix-light.png";
+import quickFixDark from "../../../../assets/screenshots/vscode/writing-quick-fix-dark.png";
+
+RobotCode analyzes your files the way Robot Framework reads them: it knows the libraries, resource files and variable files a file imports, and with them every keyword and variable the file can use. While you type, it uses that knowledge to complete, explain and check your code.
+
+<ThemeVideo
+  light={newTestLight}
+  dark={newTestDark}
+  width={1036}
+  height={591}
+  label="A new test, Order Tea Express, is written in orders.robot: completion offers Create Order, the signature help shows its arguments, completion offers the named argument express= and later Order Status Should Be and the variable ${order}, and a hover shows the documentation of Create Order. The call of Order Should Ship Today, a keyword that does not exist yet, is underlined, and Quick Fix in its hover creates the keyword."
+/>
+
+## Completion
+
+Completion appears as you type, or with <kbd>Ctrl+Space</kbd>. It offers what fits at the cursor:
+
+- **Keywords** of the file itself and of everything it imports, with the keyword's arguments and documentation beside the list.
+- **Arguments** of the keyword being called, such as named arguments like `express=`.
+- **Variables** after `$`, `@`, `&` and `%`.
+- **Imports:** library names, the paths of resource and variable files, and the arguments of a library.
+- **Section headers, settings and tags.**
+
+<ThemeImage
+  light={completionLight}
+  dark={completionDark}
+  alt="The completion list for 'Cart' in a test, with the keyword Cart Should Contain selected and its arguments and documentation shown beside the list."
+/>
+
+Keywords that are tagged `robot:private` and defined in another file are not offered, and deprecated keywords are offered struck through. The settings [`robotcode.completion.hidePrivateKeywords`](/reference/vscode-settings/#robotcode.completion.hidePrivateKeywords) and [`robotcode.completion.hideDeprecatedKeywords`](/reference/vscode-settings/#robotcode.completion.hideDeprecatedKeywords) change that.
+
+## Signature help
+
+While you type the arguments of a keyword call, the signature help shows the keyword's arguments and its documentation, and highlights the argument at the cursor. <kbd>Ctrl+Shift+Space</kbd> (<kbd>Shift+Cmd+Space</kbd> on macOS) opens it at any argument.
+
+<ThemeImage
+  light={signatureLight}
+  dark={signatureDark}
+  alt="The signature help of the keyword Create Order above a call, with the argument quantity highlighted."
+/>
+
+## Hover
+
+Hover over a keyword call to see the keyword's arguments and documentation, over a variable to see what kind of variable it is and, where RobotCode can resolve it, its value, and over the name of a library or resource file, for example in its import, to see its documentation.
+
+<ThemeImage
+  light={hoverLight}
+  dark={hoverDark}
+  alt="The hover of the keyword Create Order, with its arguments product, quantity and express and its documentation."
+/>
+
+A link in the hover opens the documentation in the [Documentation Viewer](/guides/vscode/documentation-viewer/).
+
+## Inlay hints
+
+Inlay hints show what the code leaves unsaid: the names of the arguments of a keyword call and the library or resource file a keyword comes from. By default, VS Code shows them only while you hold <kbd>Ctrl+Alt</kbd> (<kbd>Ctrl+Option</kbd> on macOS). To see them all the time, set `editor.inlayHints.enabled` to `on` for Robot Framework files:
+
+```json title="settings.json"
+"[robotframework]": {
+  "editor.inlayHints.enabled": "on"
+}
+```
+
+<ThemeImage
+  light={inlayLight}
+  dark={inlayDark}
+  alt="Two tests with inlay hints: the namespace orders. before the keyword calls and argument names such as product= and expected= before their values."
+/>
+
+[`robotcode.inlayHints.parameterNames`](/reference/vscode-settings/#robotcode.inlayHints.parameterNames) and [`robotcode.inlayHints.namespaces`](/reference/vscode-settings/#robotcode.inlayHints.namespaces) switch the two kinds of hints off separately.
+
+## Semantic highlighting
+
+RobotCode colors the code by its meaning: keyword calls, their arguments, variables, settings and comments each get their own color, and the namespace part of `orders.Create Order` differs from the keyword name. The colors come from your color theme. To change them, see [Customizing Robot Framework Highlighting in VS Code](/guides/vscode-highlighting/).
+
+## Quick fixes and refactorings
+
+A light bulb, or <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS), offers quick fixes and refactorings at the cursor:
+
+- **Create Keyword** for a call of a keyword that does not exist: adds the keyword to the file.
+- **Create local variable**, **Create suite variable** and **Add argument** for a variable that is not found.
+- **Assign keyword result to variable** for a keyword call whose result is not assigned yet.
+- **Extract keyword** moves the lines selected in a test or keyword into a new keyword and calls it.
+- **Surround with TRY...EXCEPT**, **TRY...FINALLY** or **TRY...EXCEPT..FINALLY** wraps the lines selected in a test or keyword.
+
+<ThemeImage
+  light={quickFixLight}
+  dark={quickFixDark}
+  alt="The quick fix menu at the misspelt keyword call Submit Ordr, offering Create Keyword 'Submit Ordr' and Assign keyword result to variable."
+/>
+
+**Refactor...** in the context menu of the editor lists only the refactorings, for example **Extract keyword** and the **Surround with** entries for the selected lines.
+
+## Rename
+
+**Rename Symbol** in the context menu of the editor, or <kbd>F2</kbd>, renames the keyword or variable at the cursor, at its definition and at every use RobotCode finds in the workspace. Keywords with embedded arguments cannot be renamed. For a keyword of a library and for built-in, imported, command-line and environment variables, RobotCode renames only the uses and tells you so.
+
+## Formatting
+
+**Format Document** (<kbd>Shift+Alt+F</kbd> on Windows, <kbd>Ctrl+Shift+I</kbd> on Linux, <kbd>Shift+Option+F</kbd> on macOS) and **Format Selection**, both also in the context menu of the editor, use the formatter of [Robocop](https://robocop.dev/), with the Robocop configuration of your project. Install `robotframework-robocop` 6.0 or later into the Python environment of the project; without it, RobotCode reports that no formatter is available.
+
+## New files and indentation
+
+**RobotCode: New Robot Framework File**, also **New Robot Framework File** in the context menu of a folder in the Explorer and **Robot Framework File** under **File → New File...**, creates a suite file, a resource file or an `__init__.robot` file. In Robot Framework files, <kbd>Tab</kbd> inserts four spaces; [`robotcode.editor.4SpacesTab`](/reference/vscode-settings/#robotcode.editor.4SpacesTab) switches that off.

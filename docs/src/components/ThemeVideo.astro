@@ -1,0 +1,78 @@
+---
+// A screen recording made in VS Code's light and in its dark theme: the page shows the variant of the site's current
+// theme, also after the reader switches it, muted and in a loop like the other recordings of the site. A browser would
+// download a hidden autoplay video too, so the script below gives a variant its source only when it is shown and near
+// the viewport, plays it there and pauses it when it leaves; without JavaScript, the dark variant (the site's default
+// theme) plays from the noscript element.
+interface Props {
+  light: string;
+  dark: string;
+  width: number;
+  height: number;
+  label: string;
+}
+
+const { light, dark, width, height, label } = Astro.props;
+const variants = [
+  { src: light, hide: "dark:sl-hidden" },
+  { src: dark, hide: "light:sl-hidden" },
+];
+---
+
+<div class="theme-video">
+  {
+    variants.map(({ src, hide }) => (
+      <video
+        class={hide}
+        data-src={src}
+        width={width}
+        height={height}
+        muted
+        loop
+        playsinline
+        preload="none"
+        aria-label={label}
+        hidden
+      />
+    ))
+  }
+  <noscript>
+    <video src={dark} width={width} height={height} autoplay muted loop playsinline aria-label={label}></video>
+  </noscript>
+</div>
+
+<script>
+  // The variant of the other theme is not rendered, so it never intersects, also after the reader switches the theme.
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const { target, isIntersecting } of entries) {
+        const video = target as HTMLVideoElement;
+        if (!isIntersecting) {
+          video.pause();
+          continue;
+        }
+        if (!video.getAttribute("src")) video.src = video.dataset.src ?? "";
+        video.play().catch(() => undefined);
+      }
+    },
+    { rootMargin: "200px 0px" },
+  );
+
+  for (const video of document.querySelectorAll<HTMLVideoElement>(".theme-video video[data-src]")) {
+    video.hidden = false;
+    observer.observe(video);
+  }
+</script>
+
+<style>
+  .theme-video video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    box-shadow: var(--sl-shadow-md);
+  }
+  /* Starlight's content styles make videos blocks, which would override the attribute. */
+  .theme-video video[hidden] {
+    display: none;
+  }
+</style>

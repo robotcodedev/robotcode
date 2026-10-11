@@ -53,9 +53,11 @@
   width: auto;
 }
 
-/* Keys ([[KEY]] and <kbd>) look like keys, as on the VitePress site. */
+/* Keys ([[KEY]] and <kbd>) look like keys, as on the VitePress site. Starlight's gap between consecutive content
+   elements would push every further key of a paragraph down, since an inline-block box takes its margin. */
 .sl-markdown-content kbd {
   display: inline-block;
+  margin-top: 0;
   padding: 0 0.375rem;
   font-family: var(--__sl-font-mono);
   vertical-align: middle;

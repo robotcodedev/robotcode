@@ -29,7 +29,7 @@ RobotCode is a multi-package Robot Framework toolkit.
 - Docs:
 	- Owning paths: `docs/`, root Markdown files.
 	- The site is an Astro + Starlight project: pages in `docs/src/content/docs/`, images in `docs/src/assets/`.
-	- `reference/cli.md` and `reference/config.md` are generated; regenerate them with `hatch run create-cmd-line-docs` and `hatch run create-config-docs`.
+	- `reference/cli.md`, `reference/config.md` and `reference/vscode-settings.md` are generated; regenerate them with `hatch run create-cmd-line-docs`, `hatch run create-config-docs` and `hatch run create-vscode-settings-docs`.
 - Planning & design notes (not user-facing):
 	- Owning path: `dev-docs/` — versioned roadmaps, design rationale, and idea collections (unlike the git-ignored `playground/`). It is reference/ideas, not a status tracker: progress for OpenSpec work under `openspec/` is tracked there, not in `dev-docs/`.
 - Generated or bundled outputs (do not edit by hand):

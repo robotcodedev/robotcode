@@ -1,0 +1,72 @@
+---
+title: Diagnostics and Linting in VS Code
+description: 'Where RobotCode reports problems in VS Code, how to use Robocop, change or hide diagnostics, find unused keywords and variables, and clear the cache.'
+sidebar:
+  label: Diagnostics and Linting
+  order: 7
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+import problemsLight from "../../../../assets/screenshots/vscode/diagnostics-problems-light.png";
+import problemsDark from "../../../../assets/screenshots/vscode/diagnostics-problems-dark.png";
+import hoverLight from "../../../../assets/screenshots/vscode/diagnostics-hover-light.png";
+import hoverDark from "../../../../assets/screenshots/vscode/diagnostics-hover-dark.png";
+import unusedLight from "../../../../assets/screenshots/vscode/diagnostics-unused-light.png";
+import unusedDark from "../../../../assets/screenshots/vscode/diagnostics-unused-dark.png";
+
+RobotCode analyzes your Robot Framework files the way Robot Framework reads them and reports what would fail or is likely wrong: keywords and variables that do not exist, imports that cannot be loaded, wrong numbers of arguments, deprecated syntax and more. With [Robocop](https://robocop.dev/) installed, its findings appear too.
+
+## Where problems appear
+
+Problems are underlined in the editor and listed in the **Problems** view (<kbd>Ctrl+Shift+M</kbd>, <kbd>Cmd+Shift+M</kbd> on macOS, or a click on the error and warning counts in the status bar). Each entry names its source and code, such as `robotcode(KeywordNotFound)` or `robocop(VAR02-unused-variable)`; a click goes to the place.
+
+<ThemeImage
+  light={problemsLight}
+  dark={problemsDark}
+  alt="A test with a misspelt keyword call and an unused variable; the Problems view lists RobotCode's KeywordNotFound and VariableNotFound and Robocop's DOC02-missing-doc-test-case and VAR02-unused-variable."
+  full
+/>
+
+Hover over an underlined place to read the message; **Quick Fix...** offers the [quick fixes](/guides/vscode/writing-code/#quick-fixes-and-refactorings) for it:
+
+<ThemeImage
+  light={hoverLight}
+  dark={hoverDark}
+  alt="The hover of the misspelt call Order Status Shuold Be: No keyword with name 'Order Status Shuold Be' found, robotcode(KeywordNotFound), with View Problem and Quick Fix."
+/>
+
+By default, RobotCode reports the problems of the files open in the editor. With [`robotcode.analysis.diagnosticMode`](/reference/vscode-settings/#robotcode.analysis.diagnosticMode) set to `workspace`, or **Enable Workspace Wide Diagnostics** in the RobotCode menu (**RobotCode: Show Tool Menu**), it analyzes every file of the workspace. To check a project on the command line or in CI, use [`robotcode analyze code`](/guides/analyzing-code/).
+
+## Robocop
+
+When `robotframework-robocop` is installed in the Python environment of the workspace folder, RobotCode runs Robocop on the files it analyzes and shows Robocop's findings next to its own. The code of a finding links to the description of its rule. Robocop reads its usual configuration files; the [`robotcode.robocop.*`](/reference/vscode-settings/#linting-and-formatting---robocop) settings choose another configuration file or ignore them.
+
+**RobotCode: Disable RoboCop** and **RobotCode: Enable RoboCop**, or the action at the Robocop item of the [language status](/guides/vscode/#the-language-status), switch Robocop's findings off and on; the item also shows which Robocop version is installed. Robocop also formats your files, see [Formatting](/guides/vscode/writing-code/#formatting).
+
+## Changing or hiding diagnostics
+
+A comment changes the severity of RobotCode's diagnostics or hides them, for a line, a block or a whole file:
+
+```robotframework
+*** Test Cases ***
+Order Coffee
+    Keyword Only Known At Run Time    # robotcode: warn[KeywordNotFound]
+```
+
+See [Controlling Diagnostics with Modifiers](/reference/diagnostics-modifiers/) for the syntax. To change a code for the whole project, use the settings `robotcode.analysis.diagnosticModifiers.ignore`, `.error`, `.warning`, `.information` and `.hint`, or the `[tool.robotcode-analyze.modifiers]` section of `robot.toml`, which the command line uses as well. Robocop's findings are configured in Robocop's own configuration.
+
+## Unused keywords and variables
+
+With [`robotcode.analysis.findUnusedReferences`](/reference/vscode-settings/#robotcode.analysis.findUnusedReferences) switched on, RobotCode also reports keywords that are never called and variables and arguments that are never read, as warnings with the codes `KeywordNotUsed` and `VariableNotUsed`, and shows their names faded. Variables whose names start with an underscore, such as `${_}`, are left out.
+
+<ThemeImage
+  light={unusedLight}
+  dark={unusedDark}
+  alt="The keywords Submit Order and Checkout in orders.resource are shown faded and underlined; the hover of Checkout says that the keyword is not used."
+/>
+
+## The analysis cache
+
+RobotCode keeps what it learned about libraries, variable files and analyzed files in a cache, so that it does not have to load them again on every start. By default the cache lies in VS Code's storage for the workspace; [`robotcode.analysis.cache.saveLocation`](/reference/vscode-settings/#robotcode.analysis.cache.saveLocation) moves it into the workspace folder. A library whose keywords depend on its arguments can be left out of the cache with [`robotcode.analysis.cache.ignoredLibraries`](/reference/vscode-settings/#robotcode.analysis.cache.ignoredLibraries).
+
+If diagnostics stay outdated although the files are right, **RobotCode: Clear Cache and Restart Language Servers** deletes the cache and analyzes everything anew. See also [Troubleshooting](/guides/vscode/troubleshooting/).

@@ -1,0 +1,93 @@
+---
+title: The Test Explorer
+description: 'How RobotCode fills the Test Explorer with your suites, tests and tasks, how to filter, run and debug them, and how results and errors appear.'
+sidebar:
+  label: Test Explorer
+  order: 4
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+import ThemeVideo from "../../../../components/ThemeVideo.astro";
+import runLight from "../../../../assets/screenshots/vscode/test-explorer-run-light.mp4";
+import runDark from "../../../../assets/screenshots/vscode/test-explorer-run-dark.mp4";
+import windowLight from "../../../../assets/screenshots/vscode/test-explorer-window-light.png";
+import windowDark from "../../../../assets/screenshots/vscode/test-explorer-window-dark.png";
+import filterLight from "../../../../assets/screenshots/vscode/test-explorer-filter-light.png";
+import filterDark from "../../../../assets/screenshots/vscode/test-explorer-filter-dark.png";
+import profilesLight from "../../../../assets/screenshots/vscode/test-explorer-profiles-light.png";
+import profilesDark from "../../../../assets/screenshots/vscode/test-explorer-profiles-dark.png";
+
+The **Test Explorer** is VS Code's **Testing** view; open it with the flask icon in the activity bar. RobotCode lists the suites, tests and tasks of every workspace folder there, as "Robot Framework Tests/Tasks", and runs or debugs them. To run and debug from the editor, see [Running and Debugging](/guides/vscode/running-and-debugging/).
+
+<ThemeImage
+  light={windowLight}
+  dark={windowDark}
+  alt="The Testing view with the suites and tests of the demo project after a run, all passed except Login Works; in the editor, the failure message of Login Works is shown below the line that failed."
+  full
+/>
+
+## Where the tests come from
+
+RobotCode finds the tests the way [`robotcode discover`](/guides/discovering-tests/) does, in each workspace folder: with the paths, profiles and other options of the folder's `robot.toml`, and without the files that [`.robotignore`](/guides/ignoring-files/) excludes. The tree follows Robot Framework's suite structure: the workspace folder, the suites made from directories and files, and the tests and tasks in them.
+
+The tree updates when you change, save, create or delete a Robot Framework file; it also takes unsaved changes into account. After other changes, for example to `robot.toml`, **Refresh Tests** in the view's title bar reads the tests again.
+
+## Running and debugging
+
+Hover over a suite, test or task to run or debug it with the buttons beside it; **Run Tests** and **Debug Tests** in the view's title bar run all of them. A run shows its result at each entry: passed, failed or skipped, with the time it took. For a failed test, the message appears in the editor at the line that failed, also as a peek with the whole message. **Show Output** in the title bar opens the output of the run, with the messages Robot Framework logged.
+
+<ThemeVideo
+  light={runLight}
+  dark={runDark}
+  width={1036}
+  height={591}
+  label="Run Tests in the title bar of the Testing view runs all tests of the demo project: the entries in the tree turn green, 12 of 13 tests pass, and the failure message of Login Works appears in the editor below the line that failed."
+/>
+
+## Run profiles
+
+A run uses a run profile. RobotCode creates these:
+
+- **Run** and **Debug** for each workspace folder, with the folder's name added in a workspace with several folders. They run with the configuration profiles you selected with **RobotCode: Select Configuration Profiles**; **Configure Test Profiles** in VS Code opens that command for them.
+- A **Run** and a **Debug** profile for each profile of the folder's `robot.toml`, named after the profile and its description, such as "Run ci - Staging shop".
+- A **Run** and a **Debug** profile for each configuration in `launch.json` with the purpose `test-profile`, named after the configuration.
+
+The arrow beside **Run Tests** and **Debug Tests** lists the profiles to run with and offers **Select Default Profile**, which decides the profile a click on the button uses. **Execute Using Profile...** in the context menu of an entry runs it once with another profile.
+
+<ThemeImage
+  light={profilesLight}
+  dark={profilesDark}
+  alt="VS Code's choice of the default run profile lists Run, Run ci - Staging shop and Run dev - Local shop in Firefox."
+/>
+
+A test profile in `launch.json` combines the settings of a launch configuration; the snippet **RobotCode: Test Profile** creates one. For example, this profile runs the selected tests with the `ci` profile of `robot.toml`, and only those tagged `smoke`:
+
+```json title=".vscode/launch.json"
+{
+  "name": "Smoke on staging",
+  "type": "robotcode",
+  "request": "launch",
+  "purpose": "test-profile",
+  "presentation": { "hidden": true },
+  "profiles": ["ci"],
+  "include": ["smoke"]
+}
+```
+
+## Filtering
+
+The filter field above the tree takes text and `!text` to exclude, and tags with `@`: the tags of your tests are offered as `@robotCode.RobotFramework:<tag>`. VS Code adds filters such as `@failed`, `@executed` and `@openedFiles`, and the funnel button beside the field.
+
+<ThemeImage
+  light={filterLight}
+  dark={filterDark}
+  alt="The Test Explorer filtered with @robotCode.RobotFramework:smoke shows only the tests tagged smoke."
+/>
+
+## Problems while finding the tests
+
+When Robot Framework reports a problem while RobotCode reads the tests, the problem appears in the **Problems** view at the file, with the source `robotcode.discover`, for example "'Test Cases' section is not allowed in suite initialization file." or "One file cannot have both tests and tasks." Until you fix it, the suite of that file, or its tests, may be missing from the tree.
+
+## Switching the Test Explorer off
+
+The setting [`robotcode.testExplorer.enabled`](/reference/vscode-settings/#robotcode.testExplorer.enabled) switches the Test Explorer integration off, also for single workspace folders.

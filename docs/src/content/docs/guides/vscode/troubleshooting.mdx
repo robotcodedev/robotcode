@@ -1,0 +1,57 @@
+---
+title: Troubleshooting RobotCode in VS Code
+description: 'Find RobotCode''s output and logs in VS Code, check the versions in use, restart the language servers, clear the cache and report an issue.'
+sidebar:
+  label: Troubleshooting
+  order: 9
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+import statusLight from "../../../../assets/screenshots/vscode/troubleshooting-language-status-light.png";
+import statusDark from "../../../../assets/screenshots/vscode/troubleshooting-language-status-dark.png";
+import menuLight from "../../../../assets/screenshots/vscode/troubleshooting-tool-menu-light.png";
+import menuDark from "../../../../assets/screenshots/vscode/troubleshooting-tool-menu-dark.png";
+
+When RobotCode does not behave as you expect, for example when keywords are not found that exist or the Test Explorer stays empty, start with the versions RobotCode uses and its logs.
+
+## Check the versions in use
+
+Hover over the braces next to "Robot Framework" in the status bar to see the [language status](/guides/vscode/#the-language-status) of the workspace folder of the active file:
+
+<ThemeImage
+  light={statusLight}
+  dark={statusDark}
+  alt="The language status lists RobotCode 2.7.0, Robot Framework 7.5, Python 3.13.12 of the environment .venv, Robocop 9.1.0 and the configuration profiles None, with the actions Show Tool Menu, Select Environment, Disable and Select."
+/>
+
+If Robot Framework shows "not installed", or the Python environment is not the one you expect, choose the right environment with **Select Environment**, or install Robot Framework into the environment, see [The Python environment](/guides/vscode/configuration/#the-python-environment). Check the profiles too: a profile can change the paths, the Python path and the variables of a project.
+
+## The RobotCode menu
+
+**RobotCode: Show Tool Menu**, or **Show Tool Menu** at the RobotCode version of the language status, opens a menu with RobotCode's tools:
+
+<ThemeImage
+  light={menuLight}
+  dark={menuDark}
+  alt="The RobotCode Menu with Select Configuration Profiles, Start Terminal REPL, Disable Robocop, Enable Workspace Wide Diagnostics, Select Python Environment, Restart Language Server, Clear Cache and Restart, Open Log, Open Language Server Log, Enable Debug Log and Report Issue."
+/>
+
+## Output and logs
+
+RobotCode writes to two channels of the Output panel:
+
+- **RobotCode** (**Open Log** in the menu) logs what the extension does, for example the `robotcode` commands it runs to discover tests, and errors of the extension.
+- **RobotCode Language Server for folder …** (**Open Language Server Log**) is the log of the language server of the workspace folder.
+
+**Enable Debug Log** in the menu makes the language server log in detail: it sets [`robotcode.languageServer.extraArgs`](/reference/vscode-settings/#robotcode.languageServer.extraArgs) to `--verbose --log --log-level DEBUG`, which restarts the language server. **Disable Debug Log** removes the setting again.
+
+## Restart and clear the cache
+
+- **RobotCode: Restart Language Servers** stops the language servers and starts them again.
+- **RobotCode: Clear Cache and Restart Language Servers** also deletes RobotCode's [analysis cache](/guides/vscode/diagnostics-and-linting/#the-analysis-cache), so that every library and file is loaded and analyzed again. Use it when diagnostics stay outdated although the files are right.
+
+The RobotCode menu offers both for the workspace folder of the active file.
+
+## Report an issue
+
+**RobotCode: Report Issue...**, also in the RobotCode menu, opens VS Code's issue reporter for RobotCode, with the versions of Python, Robot Framework and Robocop of your workspace filled in. Describe what you did, what you expected and what happened; a small example project and the logs from above help to find the cause. You can also open an issue directly on [GitHub](https://github.com/robotcodedev/robotcode/issues).

@@ -86,6 +86,8 @@ export default defineConfig({
         { label: "Reference", items: [{ autogenerate: { directory: "reference" } }] },
         "contributing",
       ],
+      // Display names of the sidebar groups that Starlight builds from subdirectories.
+      routeMiddleware: "./src/routeData.ts",
       components: {
         Header: "./src/components/Header.astro",
         Hero: "./src/components/Hero.astro",

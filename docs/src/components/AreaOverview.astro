@@ -1,5 +1,6 @@
 ---
-// Link cards for every other page of an area, in sidebar order, from the pages' own title and description.
+// Link cards for every other page of an area, in sidebar order, from the pages' own title and description. A group of
+// pages in a subdirectory appears as the card of its overview page (its index), which lists the group's pages itself.
 import { getCollection } from "astro:content";
 import { CardGrid, LinkCard } from "@astrojs/starlight/components";
 
@@ -8,7 +9,9 @@ interface Props {
 }
 
 const { area } = Astro.props;
-const pages = (await getCollection("docs", ({ id }) => id.startsWith(`${area}/`))).sort(
+const pages = (
+  await getCollection("docs", ({ id }) => id.startsWith(`${area}/`) && !id.slice(area.length + 1).includes("/"))
+).sort(
   (a, b) =>
     (a.data.sidebar.order ?? Infinity) - (b.data.sidebar.order ?? Infinity) || a.data.title.localeCompare(b.data.title),
 );

@@ -1,0 +1,101 @@
+---
+title: Working in VS Code
+description: 'Where RobotCode shows up in the VS Code window, the commands it adds, and where to read more about each task.'
+sidebar:
+  label: Overview
+  order: 0.5
+---
+
+import AreaOverview from "../../../../components/AreaOverview.astro";
+import ThemeImage from "../../../../components/ThemeImage.astro";
+import windowLight from "../../../../assets/screenshots/vscode/overview-window-light.png";
+import windowDark from "../../../../assets/screenshots/vscode/overview-window-dark.png";
+import contextMenuLight from "../../../../assets/screenshots/vscode/overview-context-menu-light.png";
+import contextMenuDark from "../../../../assets/screenshots/vscode/overview-context-menu-dark.png";
+
+RobotCode adds Robot Framework support to VS Code: it helps you write and navigate code, shows the documentation of keywords and libraries, finds and runs your tests and reports problems while you type. This page shows where these things appear in the window and lists the commands RobotCode adds. The pages of this guide explain each task in detail; to install RobotCode and set up a project first, see [Get Started with VS Code](/getting-started/vscode/).
+
+<ThemeImage
+  light={windowLight}
+  dark={windowDark}
+  alt="The VS Code window with a Robot Framework test file in the editor, the Explorer with the Keywords view, the RobotCode output below the editor and the Robot Framework language status in the status bar."
+  markers={[
+    { x: 85, y: 20.6 },
+    { x: 18.5, y: 70.9 },
+    { x: 2.5, y: 56 },
+    { x: 89.8, y: 92.7 },
+    { x: 46.6, y: 71.2 },
+    { x: 67.6, y: 3.5 },
+  ]}
+  full
+/>
+
+1. **The editor.** RobotCode completes keywords, variables and imports, shows the documentation of keywords on hover, highlights the code by its meaning and marks problems while you type. The icons beside the tests run or debug them. See [Writing Code](/guides/vscode/writing-code/) and [Finding Information](/guides/vscode/finding-information/).
+2. **The Keywords view** in the Explorer lists the libraries and resource files whose keywords the file in the active editor can call, with their keywords. See [Finding Information](/guides/vscode/finding-information/#the-keywords-view).
+3. **The Test Explorer** opens with the Testing icon of the activity bar. It lists the suites, tests and tasks of the workspace and runs or debugs them. See [Test Explorer](/guides/vscode/test-explorer/).
+4. **The language status.** The braces next to "Robot Framework" in the status bar show RobotCode's status items when you hover over them, see [below](#the-language-status).
+5. **The output channels** of RobotCode in the Output panel, see [Output and logs](#output-and-logs).
+6. **The Command Palette** opens with <kbd>Ctrl+Shift+P</kbd> (<kbd>Cmd+Shift+P</kbd> on macOS) or a click on the search field in the title bar. Type `RobotCode` to see RobotCode's [commands](#commands).
+
+## The language status
+
+When a Robot Framework file is active, the status bar shows `{ }` next to the language name "Robot Framework". Hover over it to see RobotCode's status items for the workspace folder of the file:
+
+| Item | Shows | Action |
+| --- | --- | --- |
+| RobotCode Version | The version of the RobotCode extension. | **Show Tool Menu** opens the RobotCode menu. |
+| Robot Framework Version | The Robot Framework version of the Python environment, or "not installed". | — |
+| Python Version | The version and name of the Python environment RobotCode uses. | **Select Environment** chooses another one. |
+| Robocop Version | The Robocop version of the Python environment, or "not installed". | **Enable** or **Disable** switches Robocop's diagnostics on or off. |
+| Configuration Profiles | The `robot.toml` profiles in use, or "None". | **Select** chooses other profiles. |
+
+If the Robot Framework and Python items are marked as errors, RobotCode could not read the versions from the environment, see [Troubleshooting](/guides/vscode/troubleshooting/).
+
+## Output and logs
+
+RobotCode writes to two channels of the Output panel (**View: Toggle Output**, then choose the channel on the right of the panel's toolbar):
+
+- **RobotCode** logs what the extension does, for example the `robotcode` commands it runs to discover tests.
+- **RobotCode Language Server for folder …** is the log of the language server of each workspace folder.
+
+[Troubleshooting](/guides/vscode/troubleshooting/) explains how to make these logs more detailed.
+
+## Menus and shortcuts
+
+Many actions are in a menu too, not only behind a keyboard shortcut. A right-click in the editor opens its context menu: it goes to definitions and references, renames, formats and refactors, and in a suite file it offers RobotCode's **Run Current File** and **Debug Current File** and VS Code's commands to run or debug the test at the cursor. Its last entry opens the Command Palette.
+
+<ThemeImage
+  light={contextMenuLight}
+  dark={contextMenuDark}
+  alt="The context menu of the editor after a right-click on the keyword call Create Order in orders.robot, with Go to Definition, Go to References, Peek, Find All References, Rename Symbol, Format Document, Refactor..., Source Action..., Run Current File, Debug Current File, Run Test at Cursor, Debug Test at Cursor and Command Palette..., most of them with their keyboard shortcut."
+/>
+
+The pages of this guide name an action's keyboard shortcut and, where VS Code offers one, its menu entry or button.
+
+## Commands
+
+All of RobotCode's commands start with `RobotCode:` in the Command Palette. **RobotCode: Show Tool Menu**, or a click on the RobotCode version in the language status, opens a menu with the most important of them.
+
+| Command | What it does |
+| --- | --- |
+| RobotCode: Run Current File | Runs the tests and tasks of the file in the active editor. |
+| RobotCode: Debug Current File | Debugs the tests and tasks of the file in the active editor. |
+| RobotCode: Select Configuration Profiles | Chooses the `robot.toml` profiles that test discovery, runs and the language server use. |
+| RobotCode: Select Python Environment | Chooses the Python environment RobotCode uses for a workspace folder. |
+| RobotCode: Start Terminal REPL | Starts the interactive Robot Framework REPL in a terminal, see [REPL](/guides/vscode/repl/). |
+| RobotCode: Open Documentation Viewer | Opens the documentation of a library, resource file or keyword in a viewer, see [Documentation Viewer](/guides/vscode/documentation-viewer/). |
+| RobotCode: Open Documentation Viewer in New Window | The same in a new viewer instead of the existing one. |
+| RobotCode: New Robot Framework File | Creates a suite file, a resource file or an `__init__.robot` file. |
+| RobotCode: Enable RoboCop | Switches Robocop's diagnostics on, see [Diagnostics and Linting](/guides/vscode/diagnostics-and-linting/). |
+| RobotCode: Disable RoboCop | Switches Robocop's diagnostics off. |
+| RobotCode: Restart Language Servers | Restarts the language servers. |
+| RobotCode: Clear Cache and Restart Language Servers | Deletes the analysis cache and restarts the language servers. |
+| RobotCode: Show Tool Menu | Opens the RobotCode menu. |
+| RobotCode: Show What's New | Shows the release notes of the newest RobotCode version. |
+| RobotCode: Report Issue... | Opens VS Code's issue reporter for RobotCode. |
+| RobotCode: Add Chat Plugins Marketplace | Adds the marketplace of RobotCode's plugin for AI agents to the `chat.plugins.marketplaces` setting, see [Working with AI Agents](/guides/ai-agents/#adding-the-marketplace-from-vs-code). |
+| RobotCode: Remove Chat Plugins Marketplace | Removes the marketplace from that setting. |
+
+## Pages of this guide
+
+<AreaOverview area="guides/vscode" />

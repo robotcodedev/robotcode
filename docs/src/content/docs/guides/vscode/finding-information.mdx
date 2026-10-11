@@ -1,0 +1,114 @@
+---
+title: Finding Information in VS Code
+description: 'Go to definitions, find references, use the outline and the workspace symbols, and look up keywords in the Keywords view.'
+sidebar:
+  label: Finding Information
+  order: 2
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+import ThemeVideo from "../../../../components/ThemeVideo.astro";
+import definitionVideoLight from "../../../../assets/screenshots/vscode/finding-go-to-definition-light.mp4";
+import definitionVideoDark from "../../../../assets/screenshots/vscode/finding-go-to-definition-dark.mp4";
+import referencesVideoLight from "../../../../assets/screenshots/vscode/finding-peek-references-light.mp4";
+import referencesVideoDark from "../../../../assets/screenshots/vscode/finding-peek-references-dark.mp4";
+import peekLight from "../../../../assets/screenshots/vscode/finding-peek-definition-light.png";
+import peekDark from "../../../../assets/screenshots/vscode/finding-peek-definition-dark.png";
+import referencesLight from "../../../../assets/screenshots/vscode/finding-references-light.png";
+import referencesDark from "../../../../assets/screenshots/vscode/finding-references-dark.png";
+import codelensLight from "../../../../assets/screenshots/vscode/finding-codelens-light.png";
+import codelensDark from "../../../../assets/screenshots/vscode/finding-codelens-dark.png";
+import outlineLight from "../../../../assets/screenshots/vscode/finding-outline-light.png";
+import outlineDark from "../../../../assets/screenshots/vscode/finding-outline-dark.png";
+import symbolsLight from "../../../../assets/screenshots/vscode/finding-workspace-symbols-light.png";
+import symbolsDark from "../../../../assets/screenshots/vscode/finding-workspace-symbols-dark.png";
+import keywordsLight from "../../../../assets/screenshots/vscode/finding-keywords-view-light.png";
+import keywordsDark from "../../../../assets/screenshots/vscode/finding-keywords-view-dark.png";
+
+RobotCode resolves every keyword call, variable and import the way Robot Framework does, so VS Code's navigation works for Robot Framework code too: you can jump from a call to the keyword, find every place a keyword is used and search the whole workspace. To read the documentation of a library or keyword, see [Documentation Viewer](/guides/vscode/documentation-viewer/).
+
+## Go to Definition
+
+**Go to Definition** (<kbd>F12</kbd>, <kbd>Ctrl</kbd>+click, <kbd>Cmd</kbd>+click on macOS, or the context menu of the editor) on a keyword call opens the keyword: a user keyword in its suite or resource file, and a library keyword in the Python code that implements it. The same works for variables and for the names in imports.
+
+<ThemeVideo
+  light={definitionVideoLight}
+  dark={definitionVideoDark}
+  width={1036}
+  height={591}
+  label="F12 on the call of Create Order in orders.robot opens the keyword in orders.resource, and F12 on the call of Place Order there opens the method place_order in ShopLibrary.py."
+/>
+
+**Peek Definition** (<kbd>Alt+F12</kbd> on Windows, <kbd>Ctrl+Shift+F10</kbd> on Linux, <kbd>Option+F12</kbd> on macOS, or **Peek → Peek Definition** in the context menu) shows the definition inside the editor instead:
+
+<ThemeImage
+  light={peekLight}
+  dark={peekDark}
+  alt="Peek Definition at the call of Place Order in orders.resource shows the method place_order of ShopLibrary.py below the call."
+/>
+
+## Find references
+
+**Find All References** (<kbd>Shift+Alt+F12</kbd>, <kbd>Shift+Option+F12</kbd> on macOS) lists every use of the keyword, variable or tag at the cursor in the workspace, and every import of a library, resource or variable file. **Go to References** (<kbd>Shift+F12</kbd>) shows them inside the editor instead, in a peek view with a preview of each place. Both are in the context menu of the editor too.
+
+<ThemeImage
+  light={referencesLight}
+  dark={referencesDark}
+  alt="Go to References at the keyword Open Shop As lists its uses in four files in a peek view and previews the Test Setup of cart.robot that calls it."
+/>
+
+In the peek view, a click on an entry of the list, or the arrow keys, select a place, and the preview beside the list shows it:
+
+<ThemeVideo
+  light={referencesVideoLight}
+  dark={referencesVideoDark}
+  width={1036}
+  height={591}
+  label="Shift+F12, Go to References, on the keyword Open Shop As in shop.resource opens a peek view with six references in four files; the arrow keys expand cart.robot and login.robot in the list and select their calls of Open Shop As, which the preview shows."
+/>
+
+When the cursor is on a keyword call or a variable, RobotCode also highlights its other occurrences in the file.
+
+### References CodeLens
+
+With [`robotcode.analysis.referencesCodeLens`](/reference/vscode-settings/#robotcode.analysis.referencesCodeLens) switched on, RobotCode shows above each keyword of a file how often it is used. A click on the number peeks the references.
+
+<ThemeImage
+  light={codelensLight}
+  dark={codelensDark}
+  alt="Keywords in shop.resource with the number of their references above each keyword, such as 5 references above Open Shop As."
+/>
+
+## Outline and breadcrumbs
+
+The **Outline** view of the Explorer shows the structure of the file in the active editor: its sections, tests, tasks and keywords, and the variables they assign. Click an entry to go there. The breadcrumbs above the editor show where the cursor is; a click on one of their parts opens a list of the file's entries to jump to. **Go to Symbol in Editor** (<kbd>Ctrl+Shift+O</kbd>, <kbd>Cmd+Shift+O</kbd> on macOS, or the **Go** menu) searches the same entries.
+
+<ThemeImage
+  light={outlineLight}
+  dark={outlineDark}
+  alt="The Outline view of orders.robot with the sections Settings and Test Cases, the tests Order Coffee, Express Order and Sold Out Product Cannot Be Ordered, and the variable order."
+/>
+
+## Workspace symbols
+
+**Go to Symbol in Workspace** (<kbd>Ctrl+T</kbd>, <kbd>Cmd+T</kbd> on macOS, or the **Go** menu) searches the tests, tasks, keywords and variables of all files in the workspace:
+
+<ThemeImage
+  light={symbolsLight}
+  dark={symbolsDark}
+  alt="Go to Symbol in Workspace with the text order lists the test Order Coffee, the keywords Order Status Should Be, Create Order and Submit Order and several variables named order, each with its file."
+/>
+
+## The Keywords view
+
+The **Keywords** view of the Explorer appears while a Robot Framework file is active. It lists the libraries and resource files whose keywords the file can call; expand one to see its keywords with their arguments, and hover over a keyword to see its documentation. The actions of an entry:
+
+- **Insert Keyword** inserts the keyword's name at the cursor in the editor and opens the completion and signature help for its arguments.
+- **Show in Documentation Viewer** opens the documentation of the library, resource file or keyword in the [Documentation Viewer](/guides/vscode/documentation-viewer/); **Show in New Documentation Viewer** in the context menu opens it in a new viewer.
+- **Refresh** in the view's title bar reads the keywords again.
+
+<ThemeImage
+  light={keywordsLight}
+  dark={keywordsDark}
+  alt="The Keywords view with ShopLibrary expanded; the selected keyword Place Order shows the actions Insert Keyword and Show in Documentation Viewer."
+/>

@@ -71,17 +71,16 @@ The page Finding information SHALL explain with screenshots how to go from a key
 
 ### Requirement: Documentation Viewer page
 
-The page Documentation Viewer SHALL describe the Documentation Viewer with the content of the former section "VS Code" of the `robotcode doc` guide, with screenshots and a screen recording of a viewer in use. That guide SHALL no longer contain the section and SHALL link to the page instead, and so SHALL the home page's feature tour for the Documentation Viewer.
+The page Documentation Viewer SHALL describe the Documentation Viewer with the content of the former section "VS Code" of the `robotcode doc` guide, with screenshots and a screen recording of a viewer in use. That guide SHALL keep only a short section that links to the page, and the home page's feature tour SHALL link to the page for the Documentation Viewer.
 
 #### Scenario: Viewer page
 - **WHEN** a reader opens `/guides/vscode/documentation-viewer/`
 - **THEN** it explains how to open a viewer, the outline and filter, links, find, arranging viewers and Open as Markdown
 - **AND** a screen recording shows a viewer in use
 
-#### Scenario: Guide without the section
+#### Scenario: Guide without the viewer's description
 - **WHEN** a reader opens `/guides/browsing-documentation/`
-- **THEN** the page has no section about VS Code
-- **AND** a link leads to `/guides/vscode/documentation-viewer/`
+- **THEN** its section "VS Code" holds only a short paragraph with a link to `/guides/vscode/documentation-viewer/`
 
 #### Scenario: Feature tour link
 - **WHEN** a reader follows the Documentation Viewer link of the Code intelligence feature on the home page
@@ -207,4 +206,4 @@ The screenshots and screen recordings of the group SHALL show one example projec
 
 #### Scenario: No personal data
 - **WHEN** the screenshots and recordings of the group are reviewed
-- **THEN** no user name, host name or path of a home directory is visible in them
+- **THEN** no user name, host name or path of a real user's home directory is visible in them

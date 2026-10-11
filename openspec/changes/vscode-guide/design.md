@@ -65,18 +65,18 @@ The site is Starlight 0.42.5 (see `docs/astro.config.mjs`).
 
 ### D1 Pages under `guides/vscode/`, first in Guides
 
-The group's pages are `.mdx` files, because they use the components of D4.
+The group's pages are `.mdx` files, because they use the components of D4. Their sidebar labels are in title case, like the labels of the other pages.
 
 | File | Address | Sidebar label | Order |
 |---|---|---|---|
 | `index.mdx` | `/guides/vscode/` | Overview | 0.5 |
-| `writing-code.mdx` | `/guides/vscode/writing-code/` | Writing code | 1 |
-| `finding-information.mdx` | `/guides/vscode/finding-information/` | Finding information | 2 |
+| `writing-code.mdx` | `/guides/vscode/writing-code/` | Writing Code | 1 |
+| `finding-information.mdx` | `/guides/vscode/finding-information/` | Finding Information | 2 |
 | `documentation-viewer.mdx` | `/guides/vscode/documentation-viewer/` | Documentation Viewer | 3 |
 | `test-explorer.mdx` | `/guides/vscode/test-explorer/` | Test Explorer | 4 |
-| `running-and-debugging.mdx` | `/guides/vscode/running-and-debugging/` | Running and debugging | 5 |
+| `running-and-debugging.mdx` | `/guides/vscode/running-and-debugging/` | Running and Debugging | 5 |
 | `configuration.mdx` | `/guides/vscode/configuration/` | Configuration | 6 |
-| `diagnostics-and-linting.mdx` | `/guides/vscode/diagnostics-and-linting/` | Diagnostics and linting | 7 |
+| `diagnostics-and-linting.mdx` | `/guides/vscode/diagnostics-and-linting/` | Diagnostics and Linting | 7 |
 | `repl.mdx` | `/guides/vscode/repl/` | REPL | 8 |
 | `troubleshooting.mdx` | `/guides/vscode/troubleshooting/` | Troubleshooting | 9 |
 
@@ -109,8 +109,8 @@ Alternatives considered:
   - optional `full`, which wraps each variant in a link to its original file for the full-size view
 
   It renders both variants with `astro:assets` `<Image>`. The light variant carries `dark:sl-hidden` and the dark variant `light:sl-hidden`. `<Image>` loads lazily, so the hidden variant should not be fetched. To be verified in the browser's network log for both themes.
-- **`src/components/ThemeVideo.astro`** renders two `<video autoplay muted loop playsinline>` with width, height, an `aria-label` and the same classes. If a browser downloads or plays the hidden variant, the component adds a small script that sets the source and plays only the visible variant, and follows `data-theme` with a `MutationObserver`.
-- **Without JavaScript,** the server-rendered `data-theme="dark"` stays, so the dark variants show.
+- **`src/components/ThemeVideo.astro`** renders two muted, looping videos with width, height, an `aria-label` and the same classes. Chromium downloads a hidden `autoplay` video too, as the check of task 1.4 showed. So the videos start without a source and hidden, and a small script with an `IntersectionObserver` gives a variant its source only when it is shown and near the viewport, plays it there and pauses it when it leaves. A page with several recordings thus loads only those the reader scrolls to. The variant of the other theme is not rendered, so it never intersects, also after the reader switches the theme. A `<noscript>` video plays the dark variant.
+- **Without JavaScript,** the server-rendered `data-theme="dark"` stays, so the dark variants show. Chromium ignores `loading="lazy"` without JavaScript, so the hidden image variant loads as well.
 - **Recordings** follow the maintainer's decision for screenshots: every recording of the group exists in both themes.
 
 Alternatives considered:
@@ -134,13 +134,13 @@ Alternative considered: numbers drawn into the PNG. Every new capture would need
 Each page gets a capture script `playground/robotcode-demo/vscode/guide-<page>.js`, run by the existing harness and `setup.js`.
 
 - **Themes:** each script takes every shot twice, once with `workbench.colorTheme` set to "Default Light Modern" and once with "Default Dark Modern". After a theme switch, frames of webviews such as the Documentation Viewer are looked up again.
-- **Recordings:** they use screencast mode (keys only), `x11grab` and the encoding of the home page recordings (libx264 CRF 24, yuv420p, faststart). The viewer recording is re-recorded from `scene4.js` in both themes.
+- **Recordings:** they use screencast mode (keys only), `x11grab` and the encoding of the home page recordings (libx264 CRF 24, yuv420p, faststart). They come from the home page's scene scripts, recorded once per theme. The viewer page uses `scene4.js`, and since 2026-10-11, at the maintainer's wish, more pages show short recordings: Writing Code (scene 1), Finding Information (5, 6), Test Explorer (2), Running and Debugging (3, 9, 10), Configuration (12, 13) and REPL (14).
 - **Files:** `docs/src/assets/screenshots/vscode/<page>-<subject>-light.png` and `…-dark.png` (or `.mp4`).
 - **Documentation:** the demo README lists the scripts. They stay outside the repository like the home page's.
 
 ### D8 The viewer section moves as a page
 
-`browsing-documentation.md` from `## VS Code` to its end becomes the body of `documentation-viewer.mdx`, with each `###` turned into `##` and the text kept apart from links. The page adds screenshots and the recording. `browsing-documentation.md` keeps a short paragraph that points to the page.
+`browsing-documentation.md` from `## VS Code` to its end becomes the body of `documentation-viewer.mdx`, with each `###` turned into `##` and the text kept apart from links. The page adds screenshots and the recording. `browsing-documentation.md` keeps its heading "VS Code" with a short paragraph that points to the page, so links to `#vs-code`, such as the one in the v2.8.0 release notes, still arrive.
 
 The feature tour's link `/guides/browsing-documentation/#vs-code` changes to the new address. The build's link check finds any other link into the moved section.
 
@@ -173,6 +173,7 @@ Alternative considered: a Node script. The other generators are Python scripts r
 
 - **Checked statements:** every statement about behavior is checked in `package.json`, the extension or language server code, or in the harness. Nothing is assumed.
 - **Commands:** named by their Command Palette titles. Keyboard shortcuts are given for Windows/Linux and macOS, as on `getting-started/vscode.mdx`.
+- **Menus next to shortcuts:** many users work with the mouse (maintainer, 2026-10-11). Where VS Code also offers an action in a menu or by a button, such as the editor's context menu, the run button of the editor or the problem counts in the status bar, the page names that way next to the shortcut. The overview shows the editor's context menu of a suite file.
 - **Settings:** a page that names a setting links to its entry in the settings reference.
 - **CLI side:** where a feature also exists on the command line, the page links to that guide (`results`, `doc`, `repl`, `robot-debug`).
 - **AI:** the chat plugin commands appear in the overview's command list with a link to the AI agents guide.

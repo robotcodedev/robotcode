@@ -365,6 +365,7 @@ These commands are mainly used by maintainers, but contributors may need some of
 - `hatch run create-json-schema` — Create JSON schema for `robot.toml` configuration validation.
 - `hatch run create-cmd-line-docs` — Regenerate the command reference in `docs/src/content/docs/reference/cli.md` (the part between `<!-- START -->` and `<!-- END -->`) from the `--help` output of the commands. It runs in the default environment and documents what the help shows there: options that need a certain Robot Framework version (for example `--show-metadata`, Robot Framework 7.5+) are hidden from the help of older versions and would be dropped from the reference. The default environment does not pin Robot Framework, so check `hatch run python -c "import robot; print(robot.__version__)"` first; it must print the newest supported version, otherwise recreate the environment (`hatch env remove default`). Review the diff and keep only the hunks that belong to your change.
 - `hatch run create-config-docs` — Regenerate the configuration reference `docs/src/content/docs/reference/config.md` from `robotcode config info desc`, with the heading IDs the JSON schema links to. The frontmatter of the page is kept.
+- `hatch run create-vscode-settings-docs` — Regenerate the VS Code settings reference `docs/src/content/docs/reference/vscode-settings.md` from the settings in `package.json`, after adding or changing a setting of the extension. The frontmatter of the page is kept.
 
 **Regenerating the `robot.toml` option model:**
 

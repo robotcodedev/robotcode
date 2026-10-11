@@ -2,16 +2,16 @@
 
 ## 1. Site structure
 
-- [ ] 1.1 Create the ten pages of D1 in `docs/src/content/docs/guides/vscode/` with title, one-sentence description, sidebar label and order, each with a short body. Verify that `npm run docs:build` succeeds without link errors.
-- [ ] 1.2 Add `docs/src/routeData.ts` and register it as Starlight's `routeMiddleware` in `docs/astro.config.mjs` (D2). Verify in `npm run docs:preview`:
+- [x] 1.1 Create the ten pages of D1 in `docs/src/content/docs/guides/vscode/` with title, one-sentence description, sidebar label and order, each with a short body. Verify that `npm run docs:build` succeeds without link errors.
+- [x] 1.2 Add `docs/src/routeData.ts` and register it as Starlight's `routeMiddleware` in `docs/astro.config.mjs` (D2). Verify in `npm run docs:preview`:
   - The sidebar of a Guides page shows the group "VS Code" right after "Overview" and before "Discovering tests".
   - The group lists Overview first and Troubleshooting last.
-- [ ] 1.3 Limit `AreaOverview.astro` to pages one segment below the area, and add `<AreaOverview area="guides/vscode" />` to the group's overview (D3). Verify in the built site:
+- [x] 1.3 Limit `AreaOverview.astro` to pages one segment below the area, and add `<AreaOverview area="guides/vscode" />` to the group's overview (D3). Verify in the built site:
   - `/guides/` has exactly one link card for `/guides/vscode/` and none for the group's other pages.
   - `/guides/vscode/` has one card for each of the nine other pages.
   - `/reference/` and `/getting-started/` list the same cards as before.
   - `/llms.txt` lists the group's pages right after the Guides overview, in sidebar order.
-- [ ] 1.4 Add `ThemeImage.astro` (with `markers` and `full`) and `ThemeVideo.astro` to `docs/src/components/` (D4, D5). Verify with a sample pair on a group page in `npm run docs:preview`:
+- [x] 1.4 Add `ThemeImage.astro` (with `markers` and `full`) and `ThemeVideo.astro` to `docs/src/components/` (D4, D5). Verify with a sample pair on a group page in `npm run docs:preview`:
   - The dark site shows the dark variant, and switching to light shows the light variant without a reload.
   - The network log of each theme has no request for the hidden image variant.
   - The hidden video variant is neither requested nor playing. If it is, add the script of D4 and check again.
@@ -21,7 +21,7 @@
 
 ## 2. Settings reference
 
-- [ ] 2.1 Add `scripts/create_vscode_settings_doc.py`, the hatch script `create-vscode-settings-docs` and `docs/src/content/docs/reference/vscode-settings.md` with its frontmatter (D9), and generate the page. Verify:
+- [x] 2.1 Add `scripts/create_vscode_settings_doc.py`, the hatch script `create-vscode-settings-docs` and `docs/src/content/docs/reference/vscode-settings.md` with its frontmatter (D9), and generate the page. Verify:
   - Two runs give identical files.
   - The page has one `###` heading per property in `package.json` `contributes.configuration`, under `##` headings with the category titles in declared order.
   - The section of `robotcode.run.openOutputAfterRun` lists `none`, `report` and `log` with their descriptions.
@@ -29,11 +29,11 @@
   - The built page has the element `id="robotcode.analysis.cache.saveLocation"`, and the site builds without link errors.
   - A setting temporarily added to `package.json` appears under its category after regenerating. Revert it afterwards.
   - The sidebar lists the page after Diagnostic Modifiers.
-- [ ] 2.2 Name the generator in `AGENTS.md` (generated pages) and `CONTRIBUTING.md` (list of generator commands). Verify that `hatch run create-vscode-settings-docs` runs as written there and leaves the page unchanged.
+- [x] 2.2 Name the generator in `AGENTS.md` (generated pages) and `CONTRIBUTING.md` (list of generator commands). Verify that `hatch run create-vscode-settings-docs` runs as written there and leaves the page unchanged.
 
 ## 3. Capture
 
-- [ ] 3.1 Add to `playground/robotcode-demo/vscode/` a helper that runs a shot under "Default Light Modern" and "Default Dark Modern" and clips detail shots (D6, D7), and list the guide scripts in the demo README. Verify with one sample pair:
+- [x] 3.1 Add to `playground/robotcode-demo/vscode/` a helper that runs a shot under "Default Light Modern" and "Default Dark Modern" and clips detail shots (D6, D7), and list the guide scripts in the demo README. Verify with one sample pair:
   - Both PNGs exist with the expected size.
   - One shows the light and one the dark theme.
   - Neither shows a user name, host name or home directory path.
@@ -42,26 +42,26 @@
 
 Each task captures its page's screenshot pairs with a `guide-<page>.js` script (D7), writes the page by the rules of D10, and checks every statement against `package.json`, the extension or language server code, or the harness. Each one is verified in `npm run docs:preview` against the scenarios of its requirement in `specs/vscode-user-guide/spec.md`, in both themes.
 
-- [ ] 4.1 Overview (`index.mdx`). Content:
+- [x] 4.1 Overview (`index.mdx`). Content:
   - A window shot with markers and `full`, and the numbered list of the parts.
   - The language status items and the output channels.
   - Every command titled "RobotCode: …" except the two notebook commands, checked against `package.json`.
   - The cards of 1.3.
 
   Verify the scenarios of "Overview of the VS Code window" and "Full-size window screenshots".
-- [ ] 4.2 Writing code. Content:
+- [x] 4.2 Writing code. Content:
   - Completion with documentation, signature help, hover, inlay hints and semantic highlighting.
   - The quick fix Create Keyword, rename, formatting and a new Robot Framework file.
   - A link to `/guides/vscode-highlighting/`.
 
   Verify the scenarios of "Writing code in VS Code".
-- [ ] 4.3 Finding information. Content:
+- [x] 4.3 Finding information. Content:
   - Go to Definition into `ShopLibrary.py`.
   - References and CodeLens, the outline, workspace symbols.
   - The Keywords view and its actions.
 
   Verify the scenarios of "Finding information in VS Code".
-- [ ] 4.4 Documentation Viewer (D8).
+- [x] 4.4 Documentation Viewer (D8).
   - Move the section "VS Code" of `browsing-documentation.md` into `documentation-viewer.mdx` and leave a pointer paragraph in the guide.
   - Add screenshot pairs, and record the viewer from `scene4.js` in both themes.
   - Change the link in `FeatureTour.astro`.
@@ -70,7 +70,7 @@ Each task captures its page's screenshot pairs with a `guide-<page>.js` script (
   - The scenarios of "Documentation Viewer page".
   - `git grep -n 'browsing-documentation/#vs-code'` finds nothing.
   - The build has no link errors.
-- [ ] 4.5 Test Explorer (D11). Content:
+- [x] 4.5 Test Explorer (D11). Content:
   - Where the entries come from (`robotcode discover` with `robot.toml` and `.robotignore`) and when the tree updates.
   - The tree of workspace folders and suites, and filtering by text and tags, with the filter syntax taken from the harness.
   - The run profiles of each kind, with the names VS Code shows, and the configure button.
@@ -79,7 +79,7 @@ Each task captures its page's screenshot pairs with a `guide-<page>.js` script (
   - `robotcode.testExplorer.enabled` with a link to its entry in the settings reference.
 
   Verify the scenarios of "Test Explorer in VS Code".
-- [ ] 4.6 Running and debugging (D11). Content:
+- [x] 4.6 Running and debugging (D11). Content:
   - The icons beside the tests and Run/Debug Current File.
   - The `launch.json` configurations from `package.json`, with their purposes.
   - A debug session with breakpoint, Debug Console and inline values.
@@ -87,14 +87,14 @@ Each task captures its page's screenshot pairs with a `guide-<page>.js` script (
   - A link to the Test Explorer page.
 
   Verify the scenarios of "Running and debugging in VS Code".
-- [ ] 4.7 Configuration. Content:
+- [x] 4.7 Configuration. Content:
   - Where a setting belongs: `robot.toml`, user or workspace settings, or folder settings.
   - The Python environment (screenshot) and the profiles.
   - Several workspace folders.
   - Links into `/reference/vscode-settings/`.
 
   Verify the scenarios of "Configuration in VS Code".
-- [ ] 4.8 Diagnostics and linting. Content:
+- [x] 4.8 Diagnostics and linting. Content:
   - Diagnostics in the editor and the Problems view.
   - Enabling and disabling Robocop.
   - Severity changes and modifiers, with a link to `/reference/diagnostics-modifiers/`.
@@ -102,18 +102,44 @@ Each task captures its page's screenshot pairs with a `guide-<page>.js` script (
   - When to clear the cache.
 
   Verify the scenarios of "Diagnostics and linting in VS Code".
-- [ ] 4.9 REPL. Content: "RobotCode: Start Terminal REPL" with a screenshot and a link to `/guides/repl/`. Verify the scenarios of "REPL in VS Code", including that no page of the group mentions notebooks (`grep -ri notebook docs/src/content/docs/guides/vscode/` finds nothing).
-- [ ] 4.10 Troubleshooting. Content:
+- [x] 4.9 REPL. Content: "RobotCode: Start Terminal REPL" with a screenshot and a link to `/guides/repl/`. Verify the scenarios of "REPL in VS Code", including that no page of the group mentions notebooks (`grep -ri notebook docs/src/content/docs/guides/vscode/` finds nothing).
+- [x] 4.10 Troubleshooting. Content:
   - The output channels and logs.
   - The language status items with their versions (screenshot).
   - Restart Language Servers, Clear Cache and Restart Language Servers, and Report Issue.
 
   Verify the scenarios of "Troubleshooting in VS Code".
-- [ ] 4.11 End `getting-started/vscode.mdx` with a link to `/guides/vscode/`. Verify the scenario "From the setup to the group".
+- [x] 4.11 End `getting-started/vscode.mdx` with a link to `/guides/vscode/`. Verify the scenario "From the setup to the group".
+
+- [x] 4.12 Add short screen recordings in both themes (maintainer's wish of 2026-10-11), from the scenes of the home page recorded again under "Default Light Modern" and "Default Dark Modern" (D7). Pages and scenes:
+  - Writing Code: scene 1 (completion to quick fix).
+  - Finding Information: scene 5 (Go to Definition) and scene 6 (Find References).
+  - Test Explorer: scene 2 (a run).
+  - Running and Debugging: scene 3 (debugging), scene 9 (stopping at a failure) and scene 10 (Debug Console).
+  - Configuration: scene 12 (`robot.toml` completion) and scene 13 (profile selection).
+  - REPL: scene 14 (the REPL in VS Code).
+
+  Verify:
+  - Each recording exists as a light and dark MP4 pair.
+  - A frame of each shows the expected step and no personal data.
+  - Each page plays only the variant of the site's theme.
+  - The build has no link errors.
+
+- [x] 4.13 Name the menu ways next to the shortcuts (maintainer's wish of 2026-10-11, D10), each checked in the harness:
+  - Overview: a section on the editor's context menu of a suite file, with a light and dark picture of it (shot added to `guide-overview.js`).
+  - Writing Code: **Rename Symbol**, **Format Document** and **Format Selection** and **Refactor...** in the context menu, **New Robot Framework File** in the context menu of a folder in the Explorer and under **File → New File...**.
+  - Finding Information: **Go to Definition**, **Go to References**, **Find All References** and **Peek** in the context menu, the breadcrumbs. Correct <kbd>Shift+F12</kbd> to **Go to References**; **Peek References** has no shortcut.
+  - Running and Debugging: **Run Current File** and **Debug Current File** in the context menu and at the run button of the editor, **Run Test at Cursor** and **Debug Test at Cursor**, the **Debug Console** tab.
+  - Diagnostics and Linting: the problem counts in the status bar open **Problems**.
+  - Configuration: **Settings** in the menu of the gear at the bottom left.
+
+  Verify:
+  - The pair of the context menu exists in both themes and shows no personal data.
+  - The build has no link errors.
 
 ## 5. Integration
 
-- [ ] 5.1 Verify the whole change:
+- [x] 5.1 Verify the whole change:
   - `npm run docs:build` succeeds without link errors.
   - A browser check in `npm run docs:preview` covers every scenario of the three delta specs, with the site in both themes.
   - Every screenshot and recording of the group exists as a light and dark pair and shows no personal data.
