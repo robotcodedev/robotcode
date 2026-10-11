@@ -6,6 +6,7 @@ from robot.libdoc import USAGE, LibDoc
 from robot.version import get_full_version
 
 from robotcode.plugin import Application, pass_application
+from robotcode.plugin.click_helper.exit_codes import robot_exit_codes
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import LibDocProfile
 from robotcode.robot.config.utils import get_config_files
@@ -35,6 +36,7 @@ class LibDocEx(LibDoc):
         return super().main(arguments, **options)
 
 
+@robot_exit_codes
 @click.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,

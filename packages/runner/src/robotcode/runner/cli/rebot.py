@@ -7,6 +7,7 @@ from robot.rebot import USAGE, Rebot
 from robot.version import get_full_version
 
 from robotcode.plugin import Application, pass_application
+from robotcode.plugin.click_helper.exit_codes import robot_exit_codes
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RebotProfile
 from robotcode.robot.config.utils import get_config_files
@@ -37,6 +38,7 @@ class RebotEx(Rebot):
         return super().main(datasources, **options)
 
 
+@robot_exit_codes
 @click.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,

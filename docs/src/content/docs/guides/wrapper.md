@@ -83,6 +83,8 @@ The wrapper contract is the same everywhere, but RobotCode hands the run to the 
 
 Either way the rules you write the script against don't change: run the command in the **foreground**, pass **stdio** through, and **propagate the exit code**.
 
+If the wrapper can't be started at all, because the command doesn't exist or isn't executable, RobotCode reports it and exits with `252`, Robot Framework's code for invalid data or command line options. So a CI job can tell a broken setup from failed tests.
+
 ## Writing your own wrapper script
 
 A wrapper is just a command. RobotCode runs it with the arguments you configured first, and then appends the actual `robotcode` command line that has to run:

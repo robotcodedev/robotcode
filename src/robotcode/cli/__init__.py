@@ -6,7 +6,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, List, Literal, Optional
+from typing import IO, Any, List, Literal, Optional
 
 import click
 
@@ -20,6 +20,7 @@ from robotcode.plugin import (
 )
 from robotcode.plugin._agent_detection import is_running_in_ai_agent
 from robotcode.plugin.click_helper.aliases import AliasedGroup
+from robotcode.plugin.click_helper.exit_codes import has_robot_exit_codes
 from robotcode.plugin.click_helper.types import EnumChoice
 from robotcode.plugin.click_helper.wrappable import WRAPPER_APPLIED_ENV, is_wrappable
 from robotcode.plugin.manager import PluginManager
@@ -153,8 +154,52 @@ def _maybe_reexec_under_wrapper(
         raise click.ClickException(f"Failed to execute wrapper command {wrapper!r}: {e}") from e
 
 
+class RobotDataError(click.ClickException):
+    """An error robotcode reports itself for a command that passes on Robot Framework's
+    exit codes.
+
+    Shows the original error unchanged, but exits with Robot Framework's code for invalid
+    data or command line options instead of Click's 1 or 2.
+    """
+
+    exit_code = 252
+
+    def __init__(self, error: click.ClickException) -> None:
+        super().__init__(error.message)
+        self.error = error
+
+    def show(self, file: Optional[IO[Any]] = None) -> None:
+        self.error.show(file)
+
+
+class RobotCodeGroup(AliasedGroup):
+    """The root command group.
+
+    Commands that run Robot Framework (`wrappable`) or pass on the exit code of a Robot
+    Framework tool (`robot_exit_codes`) answer with its exit codes, where 1-250 counts the
+    failed tests. An error robotcode reports itself for such a command - a Click error with
+    exit code 1 or 2, such as a broken configuration, a wrapper that doesn't start or an
+    invalid option - exits with Robot Framework's 252 instead. Robot Framework's own exit
+    codes never arrive as Click errors, so they pass through unchanged, and so does any
+    other code.
+    """
+
+    def invoke(self, ctx: click.Context) -> Any:
+        try:
+            return super().invoke(ctx)
+        except click.ClickException as e:
+            if e.exit_code in (1, 2) and self._passes_on_robot_exit_codes(ctx):
+                raise RobotDataError(e) from e
+            raise
+
+    def _passes_on_robot_exit_codes(self, ctx: click.Context) -> bool:
+        name = ctx.invoked_subcommand
+        cmd = self.get_command(ctx, name) if name else None
+        return cmd is not None and (is_wrappable(cmd) or has_robot_exit_codes(cmd))
+
+
 @click.group(
-    cls=AliasedGroup,
+    cls=RobotCodeGroup,
     context_settings={"auto_envvar_prefix": "ROBOTCODE"},
     invoke_without_command=False,
 )

@@ -3165,6 +3165,24 @@ Use `-- --help` to see `testdoc` help.
 
 <!-- END -->
 
+## Exit codes
+
+The commands that run Robot Framework answer with Robot Framework's exit codes. These are the commands that wrap a standard Robot Framework tool (`robot`, `rebot`, `libdoc`, `testdoc`) and the commands that run Robot Framework themselves (`debug`, `robot-debug`, `repl`, `repl-server`).
+
+| Exit code | Meaning |
+|---|---|
+| `0` | All tests passed, or the command succeeded. |
+| `1`–`249` | The number of failed tests. |
+| `250` | 250 or more tests failed. |
+| `251` | Help, version information or a dry run (`robotcode --dry …`) was printed. |
+| `252` | Invalid data or command line options. This includes the errors RobotCode reports itself, such as an invalid `robot.toml`, an unknown option or a [wrapper](/guides/wrapper/) that can't be started. |
+| `253` | The run was stopped by the user. |
+| `255` | An unexpected internal error. |
+
+`libdoc` and `testdoc` don't count tests; they exit with `0` when the documentation was written. `repl` sets its exit code from the session status, see [Exit code and session status](/guides/repl/#exit-code-and-session-status).
+
+The other commands use exit codes of their own: `analyze code` reports the severities it found as a bitmask (see [Exit codes](/guides/analyzing-code/#exit-codes)), and `doc` lists its codes under [When a target cannot be loaded](/guides/browsing-documentation/#when-a-target-cannot-be-loaded). All other commands exit with `0` on success and with another code on errors.
+
 ## Getting Help
 
 The command reference above is generated directly from the CLI, so it always matches the installed version. To get the same information on the command line, append `--help` to any command or sub-command, for example `robotcode analyze --help` or `robotcode results summary --help`.

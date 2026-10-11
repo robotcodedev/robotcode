@@ -515,7 +515,7 @@ Whether a session counts as interactive depends on whether stdin is a terminal. 
 
 `.exit` without a code follows the rules above. `CODE` is passed to the operating system as it is; on Linux and macOS only its lowest 8 bits reach the caller, so `.exit 256` ends with `0`.
 
-Errors before the session starts keep Robot Framework's exit codes — for example `252` for an option in the configuration that the installed Robot Framework doesn't accept.
+Errors before the session starts keep Robot Framework's exit codes — for example `252` for an option in the configuration that the installed Robot Framework doesn't accept. Errors that RobotCode reports itself, such as an invalid `robot.toml`, an unknown option or a wrapper that can't be started, also exit with `252`, Robot Framework's code for invalid data or command line options.
 
 ## `--source`: run the session as if it lived in a file
 

@@ -204,5 +204,9 @@ def debug(
         raise
     except KeyboardInterrupt:
         app.keyboard_interrupt()
+    except click.ClickException:
+        # Errors robotcode reports itself, such as a broken configuration; the root
+        # group gives them Robot Framework's exit code.
+        raise
     except Exception as e:
         raise UnknownError(str(e)) from e

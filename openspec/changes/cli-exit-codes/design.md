@@ -24,7 +24,7 @@
 
 ### Map the exit code in the root group
 
-A subclass of `AliasedGroup` for the root group overrides `invoke`. When a `click.ClickException` with exit code 1 or 2 leaves the invocation of a covered command, its exit code becomes 252. Only 1 and 2 are mapped, so `UnknownError`'s 255 stays.
+A subclass of `AliasedGroup` for the root group overrides `invoke`. When a `click.ClickException` with exit code 1 or 2 leaves the invocation of a covered command, it is raised again as a `ClickException` subclass with exit code 252 that shows the original error unchanged, usage hint included. Click declares `exit_code` as a class variable, so the code comes from a subclass, as `UnknownError` does with 255, instead of being set on the caught exception. Only 1 and 2 are mapped, so `UnknownError`'s 255 stays.
 
 All of robotcode's own errors for these commands already are Click exceptions and Robot Framework's codes never are, so one place covers the wrapper, configuration and option errors.
 
