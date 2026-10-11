@@ -31,7 +31,9 @@
 - [x] 4.2 Run `hatch run test:test` and verify that every Robot Framework environment is green, and note the run time per environment.
 
   Note (2026-10-10): green in all nine environments. Test time per environment: rf50 181 s, rf60 163 s, rf61 189 s, rf70 162 s, rf71 151 s, rf72 146 s, rf73 162 s, rf74 158 s, rf75 207 s, together 1519 s. The run of 2026-10-09 took 1802 s; that difference also contains the selection range fix (32369fee) committed in between.
-- [ ] 4.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 4.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-11): CI run 38088107994 for f5380a91 is green, all 139 jobs. The median of the "Test Python Packages" step went from 5.2 to 4.7 min on macOS, from 4.8 to 4.1 min on Ubuntu and from 6.1 to 5.8 min on Windows, compared with run 38083182393 for e9961d86; the 135 test jobs together took 10.8 h instead of 11.8 h.
 
 ## Workflow follow-up
 
