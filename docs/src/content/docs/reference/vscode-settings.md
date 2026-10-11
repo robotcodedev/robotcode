@@ -41,7 +41,7 @@ Specifies extra arguments to be passed to the `robotcode` command line tool (i.e
 
 ### `robotcode.profiles` {#robotcode.profiles}
 
-Specifies the execution profiles to be used. Corresponds to the '--profile' option of `robotcode` commandline tool.
+Specifies the execution profiles to be used. Corresponds to the '--profile' option of the `robotcode` command line tool.
 
 - **Type:** `array` of `string`
 - **Default:** `[]`
@@ -67,7 +67,7 @@ If you want to define a default interpreter for your workspace use the `python.d
 
 ### `robotcode.editor.4SpacesTab` {#robotcode.editor.4SpacesTab}
 
-If actived insert 4 spaces if TAB is pressed.
+If activated, insert 4 spaces if TAB is pressed.
 
 - **Type:** `boolean`
 - **Default:** `true`
@@ -130,7 +130,7 @@ Defines if the report or log file should be opened after a run.
 - **Type:** `string`
 - **Default:** `"none"`
 - **Allowed values:**
-  - `none`: Do not open anyting
+  - `none`: Do not open anything
   - `report`: Open the report html file.
   - `log`: Open the log.html file.
 - **Can be set in:** user, remote, workspace and folder settings
@@ -386,7 +386,7 @@ If you change this setting, you may need to run the command `RobotCode: Clear Ca
 
 ### `robotcode.analysis.cache.ignoreArgumentsForLibrary` {#robotcode.analysis.cache.ignoreArgumentsForLibrary}
 
-Specifies a list of libraries for which arguments will be ignored during analysis. This is usefull if you have library that gets variables from a python file as arguments that contains complex data like big dictionaries or complex objects that **RobotCode** can't handle. You can specify a glob pattern that matches the library name or the source file. 
+Specifies a list of libraries for which arguments will be ignored during analysis. This is useful if you have a library that gets variables from a python file as arguments that contains complex data like big dictionaries or complex objects that **RobotCode** can't handle. You can specify a glob pattern that matches the library name or the source file. 
 
 Examples:
 - `**/mylibfolder/mylib.py`
@@ -413,7 +413,7 @@ If you change this setting, you may need to run the command `RobotCode: Clear Ca
 
 ### `robotcode.analysis.robot.globalLibrarySearchOrder` {#robotcode.analysis.robot.globalLibrarySearchOrder}
 
-Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is usefull when you have libraries containing keywords with the same name. **RobotCode** is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.
+Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is useful when you have libraries containing keywords with the same name. **RobotCode** is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.
 
 - **Type:** `array` of `string`
 - **Default:** `[]`

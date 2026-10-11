@@ -190,7 +190,7 @@ class CacheConfig(BaseOptions):
     ignore_arguments_for_library: Optional[List[str]] = field(
         description="""\
             Specifies a list of libraries for which arguments will be ignored during analysis.
-            This is usefull if you have library that gets variables from a python file as arguments that contains
+            This is useful if you have a library that gets variables from a python file as arguments that contains
             complex data like big dictionaries or complex objects that **RobotCode** can't handle.
             You can specify a glob pattern that matches the library name or the source file.
 
@@ -367,7 +367,7 @@ class AnalyzeConfig(BaseOptions):
         description="""\
             Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources)
             for libraries and resources.
-            This is usefull when you have libraries containing keywords with the same name. **RobotCode** is unable to
+            This is useful when you have libraries containing keywords with the same name. **RobotCode** is unable to
             analyze the library search order in a file specified with
                 [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order),
             so you can define a global order here. Just make sure to call the `Set Library Search Order`
