@@ -23,8 +23,13 @@
   --sl-color-accent: #0b7285;
   --sl-color-accent-high: #063b43;
 
+  /* Header and sidebar as areas of their own in one shade, as in the dark theme; Starlight's light theme leaves the
+     sidebar white like the content. Almost half of the way from gray-6 to gray-5, so they stand apart next to the bands. */
+  --sl-color-bg-nav: color-mix(in srgb, var(--sl-color-gray-5) 45%, var(--sl-color-gray-6));
+  --sl-color-bg-sidebar: var(--sl-color-bg-nav);
+
   --rc-surface: rgb(255 255 255 / 75%);
-  --rc-band-bg: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
+  --rc-band-bg: color-mix(in srgb, var(--sl-color-accent) 16%, var(--sl-color-bg));
   --rc-terminal-bg: #ffffff;
   --rc-shadow: rgb(6 59 67 / 16%);
   --rc-title-gradient: linear-gradient(120deg, var(--sl-color-white) 35%, var(--sl-color-accent));
