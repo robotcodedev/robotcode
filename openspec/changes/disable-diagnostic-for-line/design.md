@@ -28,7 +28,7 @@ See proposal.md for the motivation. The approach depends on how the language ser
 
 - No change to the modifier engine. That it ignores a modifier behind another comment stays a separate finding; the quick fix places its modifier where the engine reads it.
 - No quick fixes for Robocop older than 6.0, and none that change a severity.
-- The other quick fixes and refactorings keep their handling of `CodeActionContext.only`. That is finding A5.
+- No new handling of `CodeActionContext.only`: since finding A5, every code action checks it with the shared `code_action_kind_requested` (`code_action_helper_mixin.py`).
 
 ## Decisions
 
@@ -68,7 +68,7 @@ The first line is the simplest place that covers the whole file. Inserting after
 
 - **Titles:** "Disable '<code>' for this line" and "Disable '<code>' for this file" for both sources. The code is the one shown in Problems, for example `KeywordNotFound` or `VAR02-unused-variable`.
 - **Kind and diagnostics:** the actions keep the kind `quickfix` and carry their diagnostics, so editors show them at the diagnostic and in its hover.
-- **`CodeActionContext.only`:** for these quick fixes it is checked strictly. They are offered when `only` is empty or contains `quickfix`.
+- **`CodeActionContext.only`:** checked with the shared `code_action_kind_requested` of finding A5, like every code action: the quick fixes are offered when `only` is empty or contains `quickfix`.
 - **Sorting:** stays the existing sorting by title.
 
 ### D6 Tests

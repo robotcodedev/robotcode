@@ -2,15 +2,30 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
-from robotcode.core.lsp.types import DocumentUri, Position, Range
+from robotcode.core.lsp.types import CodeActionContext, CodeActionKind, DocumentUri, Position, Range
 from robotcode.core.text_document import TextDocument
 from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import range_from_node
 from robotcode.robot.utils.visitor import Visitor
 
 SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND = "_robotcode.codeActionShowDocumentSelectAndRename"
+
+
+def code_action_kind_requested(context: CodeActionContext, kind: Union[CodeActionKind, str]) -> bool:
+    """Whether a code action request with `context` asks for code actions of `kind`.
+
+    Without `only` it asks for every kind. With `only` it asks for the listed kinds and the kinds below them, since
+    the LSP defines kinds hierarchically: `refactor` also takes `refactor.extract.function`.
+    """
+    if not context.only:
+        return True
+    value = kind.value if isinstance(kind, CodeActionKind) else kind
+    return any(
+        value == requested or value.startswith(f"{requested}.")
+        for requested in (o.value if isinstance(o, CodeActionKind) else o for o in context.only)
+    )
 
 
 @dataclass

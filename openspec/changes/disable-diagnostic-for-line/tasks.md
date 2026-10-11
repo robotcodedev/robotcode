@@ -2,7 +2,7 @@
 
 ## 1. RobotCode's diagnostics: one line
 
-- [ ] 1.1 Offer "Disable '<code>' for this line" for the diagnostics with the source `robotcode` (D1). Check `CodeActionContext.only` strictly (D5). Verify with a new test in `tests/robotcode/language_server/robotframework/parts/`:
+- [ ] 1.1 Offer "Disable '<code>' for this line" for the diagnostics with the source `robotcode` (D1). Check `CodeActionContext.only` with `code_action_kind_requested` (D5). Verify with a new test in `tests/robotcode/language_server/robotframework/parts/`:
   - The fix is offered once per code at a `KeywordNotFound`.
   - It is not offered for diagnostics with the source `robotcode.discover` or `robocop`.
   - It is not offered for a request whose `only` holds just `refactor`.

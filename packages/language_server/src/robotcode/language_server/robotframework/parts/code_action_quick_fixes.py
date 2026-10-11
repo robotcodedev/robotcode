@@ -38,7 +38,6 @@ from robotcode.core.lsp.types import (
     CodeActionContext,
     CodeActionDisabledType,
     CodeActionKind,
-    CodeActionTriggerKind,
     Command,
     OptionalVersionedTextDocumentIdentifier,
     Position,
@@ -73,6 +72,7 @@ from .code_action_helper_mixin import (
     CodeActionDataBase,
     CodeActionHelperMixin,
     FindSectionsVisitor,
+    code_action_kind_requested,
 )
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -177,10 +177,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
 
-        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
-            CodeActionTriggerKind.INVOKED,
-            CodeActionTriggerKind.AUTOMATIC,
-        ]:
+        if code_action_kind_requested(context, CodeActionKind.QUICK_FIX):
             namespace = self.parent.documents_cache.get_namespace(document)
 
             for diagnostic in (
@@ -388,14 +385,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         if (
             range.start.line == range.end.line
             and range.start.character <= range.end.character
-            and (
-                (context.only and CodeActionKind.QUICK_FIX in context.only)
-                or context.trigger_kind
-                in [
-                    CodeActionTriggerKind.INVOKED,
-                    CodeActionTriggerKind.AUTOMATIC,
-                ]
-            )
+            and code_action_kind_requested(context, CodeActionKind.QUICK_FIX)
         ):
             all_diagnostics = [d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")]
             if all_diagnostics:
@@ -471,10 +461,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
 
-        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
-            CodeActionTriggerKind.INVOKED,
-            CodeActionTriggerKind.AUTOMATIC,
-        ]:
+        if code_action_kind_requested(context, CodeActionKind.QUICK_FIX):
             for diagnostic in (
                 d
                 for d in context.diagnostics
@@ -587,10 +574,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
 
-        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
-            CodeActionTriggerKind.INVOKED,
-            CodeActionTriggerKind.AUTOMATIC,
-        ]:
+        if code_action_kind_requested(context, CodeActionKind.QUICK_FIX):
             for diagnostic in (
                 d
                 for d in context.diagnostics
@@ -737,10 +721,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
 
-        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
-            CodeActionTriggerKind.INVOKED,
-            CodeActionTriggerKind.AUTOMATIC,
-        ]:
+        if code_action_kind_requested(context, CodeActionKind.QUICK_FIX):
             for diagnostic in (
                 d
                 for d in context.diagnostics

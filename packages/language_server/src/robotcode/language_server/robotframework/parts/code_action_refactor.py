@@ -13,7 +13,6 @@ from robotcode.core.lsp.types import (
     CodeActionContext,
     CodeActionDisabledType,
     CodeActionKind,
-    CodeActionTriggerKind,
     Command,
     OptionalVersionedTextDocumentIdentifier,
     Position,
@@ -41,6 +40,7 @@ from .code_action_helper_mixin import (
     SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
     CodeActionDataBase,
     CodeActionHelperMixin,
+    code_action_kind_requested,
 )
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -259,7 +259,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, CodeA
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
-        if range.start == range.end:
+        if range.start == range.end or not code_action_kind_requested(context, CODE_ACTION_KIND_SURROUND_WITH):
             return None
 
         model = self.parent.documents_cache.get_model(document)
@@ -491,9 +491,8 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, CodeA
     def code_action_assign_result_to_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if range.start.line != range.end.line or not (
-            (context.only and CodeActionKind.REFACTOR_EXTRACT in context.only)
-            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        if range.start.line != range.end.line or not code_action_kind_requested(
+            context, CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE
         ):
             return None
 
@@ -575,7 +574,9 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, CodeA
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
-        if range.start == range.end:
+        if range.start == range.end or not code_action_kind_requested(
+            context, CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION
+        ):
             return None
 
         model = self.parent.documents_cache.get_model(document)
