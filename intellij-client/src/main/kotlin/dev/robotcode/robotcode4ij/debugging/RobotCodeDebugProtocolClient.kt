@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+import java.util.concurrent.CompletableFuture
 
 data class RobotEnqueuedArguments(var items: Array<String>) {
     override fun equals(other: Any?): Boolean {
@@ -160,7 +161,16 @@ data class RobotLogMessageEventArguments(
     val onRobotLog = Signal<RobotLogMessageEventArguments>()
     val onRobotMessage = Signal<RobotLogMessageEventArguments>()
     val onOutput = Signal<OutputEventArguments>()
-    
+
+    // completed when the debugger accepts configuration requests; it exists before `initialize` is sent, because the
+    // debugger sends the event before its response
+    val initializedEvent = CompletableFuture<Unit>()
+
+    override fun initialized() {
+        super.initialized()
+        initializedEvent.complete(Unit)
+    }
+
     override fun exited(args: ExitedEventArguments?) {
         super.exited(args)
         onExited.fire(args)

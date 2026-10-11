@@ -22,7 +22,6 @@ import com.jetbrains.python.run.PythonCommandLineState
 import com.jetbrains.python.run.PythonExecution
 import com.jetbrains.python.run.PythonScriptExecution
 import com.jetbrains.python.run.target.HelpersAwareTargetEnvironmentRequest
-import com.jetbrains.rd.util.reactive.Signal
 import com.jetbrains.rd.util.reactive.adviseEternal
 import dev.robotcode.robotcode4ij.InterpreterKind
 import dev.robotcode.robotcode4ij.PythonInterpreter
@@ -43,8 +42,10 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
 import java.net.Socket
 import java.net.SocketTimeoutException
@@ -90,6 +91,45 @@ internal fun interpreterRefusal(interpreter: PythonInterpreter): String? {
     return if (interpreter.kind == InterpreterKind.REMOTE) RobotCodeBundle.message("run.remoteInterpreter") else null
 }
 
+@OptIn(ExperimentalUuidApi::class)
+private fun initializeArguments() = InitializeRequestArguments().apply {
+    clientID = Uuid.random().toString()
+    adapterID = Uuid.random().toString()
+    
+    clientName = "RobotCode4IJ"
+    locale = "en_US"
+    
+    supportsRunInTerminalRequest = false
+    supportsStartDebuggingRequest = false
+    pathFormat = "path"
+    supportsVariableType = true
+    supportsVariablePaging = false
+    
+    linesStartAt1 = true
+    columnsStartAt1 = true
+}
+
+/**
+ * The DAP handshake with the RobotCode debugger, with one configuration phase before the run starts: [configure] sends
+ * the breakpoints once the debugger has sent `initialized`, and the debugger is attached before `configurationDone`
+ * starts Robot Framework, because only an attached debugger pauses the run at a stop.
+ */
+internal suspend fun handshake(
+    server: IDebugProtocolServer,
+    client: RobotCodeDebugProtocolClient,
+    configure: (suspend () -> Unit)?,
+    initializedTimeoutMillis: Long = 5000,
+) {
+    val capabilities = server.initialize(initializeArguments()).await()
+    // the debugger accepts configuration requests at any time after `initialize`, so a missing event only delays them
+    withTimeoutOrNull(initializedTimeoutMillis) { client.initializedEvent.await() }
+    configure?.invoke()
+    server.attach(emptyMap<String, Any>()).await()
+    if (capabilities.supportsConfigurationDoneRequest == true) {
+        server.configurationDone(ConfigurationDoneArguments()).await()
+    }
+}
+
 /**
  * Starts a Robot Framework run through PyCharm's target-aware Python execution, so the configuration's interpreter,
  * environment, working directory and `PYTHONPATH` options apply, and connects to the RobotCode debugger of the run.
@@ -105,13 +145,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     
     val debugClient = RobotCodeDebugProtocolClient()
     lateinit var debugServer: IRobotCodeDebugProtocolServer
-    var isInitialized = false
-        private set
-    var isConfigurationDone = false
-        private set
-    
-    val afterInitialize = Signal<Unit>()
-    val afterConfigurationDone = Signal<Unit>()
+
+    // the configuration phase of the handshake, provided by the debug process; a run without one configures nothing
+    var configuration: (suspend () -> Unit)? = null
 
     // the handler of the started process, whose output fence orders the process output before the debugger events
     var processHandler: RobotCodeProcessHandler? = null
@@ -215,7 +251,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         }
     }
     
-    @OptIn(ExperimentalUuidApi::class) override fun startNotified(event: ProcessEvent) {
+    override fun startNotified(event: ProcessEvent) {
         runBlocking(Dispatchers.IO) {
             
             val port = event.processHandler.getUserData(DEBUG_PORT) ?: throw CantRunException("No debug port found.")
@@ -235,35 +271,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             debugServer = launcher.remoteProxy
             debugClient.server = debugServer
             
-            val arguments = InitializeRequestArguments().apply {
-                clientID = Uuid.random().toString()
-                adapterID = Uuid.random().toString()
-                
-                clientName = "RobotCode4IJ"
-                locale = "en_US"
-                
-                supportsRunInTerminalRequest = false
-                supportsStartDebuggingRequest = false
-                pathFormat = "path"
-                supportsVariableType = true
-                supportsVariablePaging = false
-                
-                linesStartAt1 = true
-                columnsStartAt1 = true
-            }
-            
-            val response = debugServer.initialize(arguments).await()
-            isInitialized = true
-            
-            afterInitialize.fire(Unit)
-            
-            if (response.supportsConfigurationDoneRequest) {
-                debugServer.configurationDone(ConfigurationDoneArguments()).await()
-                isConfigurationDone = true
-            }
-            
-            afterConfigurationDone.fire(Unit)
-            debugServer.attach(emptyMap<String, Any>())
+            handshake(debugServer, debugClient, configuration)
         }
     }
     

@@ -7,7 +7,6 @@ class RobotCodeExceptionBreakpointProperties : XBreakpointProperties<RobotCodeEx
         return this
     }
     
-    override fun loadState(state: RobotCodeExceptionBreakpointProperties) {
-        TODO("Not yet implemented")
-    }
+    // the properties have no fields, so a stored state has nothing to load
+    override fun loadState(state: RobotCodeExceptionBreakpointProperties) {}
 }

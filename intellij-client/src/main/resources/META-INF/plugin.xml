@@ -121,7 +121,13 @@
 		<xdebugger.breakpointType
 			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointType"/>
 		<xdebugger.breakpointType
-			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointType"/>
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeUncaughtFailedKeywordsBreakpointType"/>
+		<xdebugger.breakpointType
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedKeywordsBreakpointType"/>
+		<xdebugger.breakpointType
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedTestsBreakpointType"/>
+		<xdebugger.breakpointType
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedSuitesBreakpointType"/>
 
 		<internalFileTemplate name="Robot Suite File"/>
 		<internalFileTemplate name="Robot Resource File"/>

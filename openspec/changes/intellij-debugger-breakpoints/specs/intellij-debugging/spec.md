@@ -37,7 +37,7 @@ Force Step Over and Force Run to Cursor SHALL ignore all breakpoints until they 
 
 ### Requirement: Run to Cursor always continues to the target line
 
-Run to Cursor SHALL continue the paused run and stop it at the target line, whether or not that line has a breakpoint. The temporary stop SHALL not remain in effect after the run has stopped again, at the target line or anywhere else.
+Run to Cursor SHALL continue the paused run and stop it at the target line, whether or not that line has a breakpoint. The temporary stop SHALL not remain in effect after the session has shown a stop again, at the target line or anywhere else. A failure that an exception breakpoint passes over without pausing SHALL not end Run to Cursor.
 
 #### Scenario: Target line with a breakpoint
 
@@ -48,6 +48,11 @@ Run to Cursor SHALL continue the paused run and stop it at the target line, whet
 
 - **WHEN** the user runs to the cursor on a line without a breakpoint, the run stops there, and the run reaches that line again after resuming
 - **THEN** the run does not stop at that line again
+
+#### Scenario: Failure passed over on the way
+
+- **WHEN** "Failed Keywords" is enabled with the suspend policy None and the user runs to the cursor on a line behind a failing keyword
+- **THEN** the run passes the failure and stops at the target line
 
 ### Requirement: Breakpoints are in effect from the first keyword
 

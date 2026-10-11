@@ -37,7 +37,7 @@ Alternative: keep the line keys and only drop the early return. That fixes remov
 
 ### Run to Cursor as a temporary entry in the file's list
 
-Run to Cursor always resumes. If a registered breakpoint is already on the target line, it only resumes. Otherwise it adds a temporary entry for that line to the file's list, sends the list and resumes. At the next stop, whatever the reason, it removes the entry and sends the list again, even if it is now empty. Force Run to Cursor needs nothing extra: the platform unregisters all breakpoints first, so only the temporary entry is sent.
+Run to Cursor always resumes. If a registered breakpoint is already on the target line, it only resumes. Otherwise it adds a temporary entry for that line to the file's list, sends the list and resumes. At the next stop that the session shows, whatever its reason, it removes the entry and sends the list again, even if it is now empty, before the session shows the stop. A failure that an exception breakpoint passes over, for example with the suspend policy None, does not end Run to Cursor. Force Run to Cursor needs nothing extra: the platform unregisters all breakpoints first, so only the temporary entry is sent.
 
 ### One configuration phase before the run starts
 
@@ -45,11 +45,11 @@ The handshake becomes:
 
 1. connect and send `initialize`, keeping the capabilities;
 2. wait for `initialized`. The protocol client completes a latch that exists before `initialize` is sent, because the event arrives before the response. The wait is bounded to five seconds; without the event the phase goes on, since the debugger accepts configuration requests at any time after `initialize`;
-3. the debug process sends `setBreakpoints` for every file with registered breakpoints and `setExceptionBreakpoints`, and the handshake waits for all responses. In Run mode, which has no debug process and passes `--no-debug`, this step sends nothing;
+3. the debug process sends `setBreakpoints` for every file with registered breakpoints and `setExceptionBreakpoints`, and the handshake waits for all responses. A request that fails is logged, and the breakpoints of its file are marked invalid; the run still starts. In Run mode, which has no debug process and passes `--no-debug`, this step sends nothing;
 4. `attach`, awaited;
 5. `configurationDone`, awaited.
 
-`attach` comes before `configurationDone`, unlike VS Code's launcher. The run starts on `configurationDone`, and only an attached debugger pauses at a stop. With the launcher's order, the run could reach a breakpoint on one of its first keywords before `attach` has arrived; the debugger would then report a stop without pausing the run. The debugger accepts both orders. The 10 s connect wait stays until the handshake moves off the EDT. The `afterInitialize` and `afterConfigurationDone` signals and the `isConfigurationDone` flag, which nothing needs afterwards, go away.
+`attach` comes before `configurationDone`, unlike VS Code's launcher. The run starts on `configurationDone`, and only an attached debugger pauses at a stop. With the launcher's order, the run could reach a breakpoint on one of its first keywords before `attach` has arrived; the debugger would then report a stop without pausing the run. The debugger accepts both orders. The 10 s connect wait stays until the handshake moves off the EDT. The `afterInitialize` and `afterConfigurationDone` signals and the `isInitialized` and `isConfigurationDone` flags, which nothing needs afterwards, go away; the debug process keeps its own flag for whether the configuration phase has begun.
 
 Alternatives:
 
