@@ -4,7 +4,7 @@
 
 - [ ] 1.1 Add a pure function that plans the children requests of a value or scope from the debugger's counts: named children once plus `indexed` pages of 100 for values with indexed children, no filter for values without them and for scopes. Verify with JUnit tests: a list of 3 items, a list of 300 items (named children, items 0–99, 200 remaining), a dictionary, a scope.
 - [ ] 1.2 Use the plan in `RobotCodeNamedValue.computeChildren`, offering further pages through `tooManyChildren(remaining, Runnable)`; set `supportsVariablePaging = true` in the `initialize` request; remove the unused variables cache. Verify with harness check Q51 in task 4.2.
-- [ ] 1.3 Let `RobotCodeStackFrame.computeChildren` show the Local variables inline and add the other scopes as groups that request their variables in `RobotCodeValueGroup.computeChildren`; show nothing and log nothing for a frame without scopes. Verify with harness checks Q51 and Q53.
+- [ ] 1.3 Let `RobotCodeStackFrame.computeChildren` show the Local variables inline and add the other scopes as groups that request their variables in `RobotCodeValueGroup.computeChildren`; show nothing and log nothing for a frame without scopes, also for a frame that is gone because the run went on. Verify with harness checks Q51 and Q53, and that resuming at once after a stop logs no error.
 - [ ] 1.4 Shorten type strings of the form `<class '…'>` to the part after the last dot. Verify with a JUnit test for `str`, `list`, `robot.utils.dotdict.DotDict` and a string in another form.
 
 ## 2. Set Value

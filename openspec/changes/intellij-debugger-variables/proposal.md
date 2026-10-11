@@ -9,6 +9,7 @@ When a Robot Framework run is paused in PyCharm or IntelliJ IDEA, the Variables 
 - Frames show only `file:line`, such as `sample.robot:15`, not the keyword, test or suite they belong to.
 - Groups and values the user expanded, such as the Suite and Global variables, collapse again after every step.
 - Types are shown as `{<class 'str'>}`.
+- If the run goes on while the Variables view is still loading the variables of a frame, RobotCode reports an IDE error.
 
 ## What Changes
 
