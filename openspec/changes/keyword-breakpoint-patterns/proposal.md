@@ -23,7 +23,7 @@ None.
 
 ## Impact
 
-- `packages/repl` (`_debug/controller.py`): the keyword breakpoint match; the definition name of keywords with embedded arguments, looked up through Robot Framework's namespace.
+- `packages/repl` (`_debug/controller.py`, `_debug/types.py`, `base_interpreter.py`): the keyword breakpoint match; the definition name of keywords with embedded arguments, taken from Robot Framework's result keyword.
 - `packages/repl` (`cli.py`, `console_interpreter.py`): the `--break` help and the `.break`/`.tbreak` docstrings; the generated CLI reference picks up the `--break` help.
 - Docs: `docs/src/content/docs/guides/robot-debug.md`; the agent skill (`references/debugging.md` in agent-plugins) states the exact match too and needs the same update and a sync.
 - Tests in `tests/robotcode/repl/`.

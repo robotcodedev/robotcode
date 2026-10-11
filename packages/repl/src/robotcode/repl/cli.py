@@ -385,7 +385,8 @@ DEBUG_OPTIONS = [
         "break_at",
         metavar="LOCATION",
         multiple=True,
-        help="Break at LOCATION — a `file:line` or a keyword name. Repeatable.",
+        help="Break at LOCATION — a `file:line`, or a keyword name or glob pattern "
+        "matched like Robot Framework. Repeatable.",
     ),
     click.option(
         "--break-on-exception/--no-break-on-exception",

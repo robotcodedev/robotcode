@@ -63,7 +63,7 @@ There are several ways to make a run pause; they combine freely.
 | **Every exception** | `--break-on-all-exceptions` — pause at *every* failing keyword, even ones caught by `TRY`/`EXCEPT` or `Run Keyword And …`. |
 | **Failing test / suite** | `--break-on-failed-test` / `--break-on-failed-suite` — pause at the end of a failing test / suite. At a suite end only the debug commands work; keywords can't run there, because the suite is already closed in `output.xml`. |
 
-A **keyword breakpoint** matches by exact name — either the bare keyword name (`--break "Open Browser"`) or its fully-qualified `Library.Keyword` form (`--break "SeleniumLibrary.Open Browser"`, to disambiguate a name two libraries share). Unlike Robot's own keyword lookup, the match is case- and whitespace-sensitive, so spell it as it appears in the run.
+A **keyword breakpoint** matches keyword names the way Robot Framework does: case, spaces and underscores don't matter, so `--break "open browser"` and `--break Open_Browser` stop at `Open Browser`. The name can carry the owner prefix (`--break "SeleniumLibrary.Open Browser"`) to pick one of two keywords that share a name. It can also be a glob pattern with `*`, `?` and `[chars]`, as in Robot Framework's `--removekeywords name:` option: `--break "BuiltIn.*"` stops at every BuiltIn keyword, `--break "*Login*"` at every keyword with `Login` in its name. A literal `[` is written `[[]`. For a keyword with embedded arguments, the definition name stops at every call: `.break Select ${animal} From List`, or the pattern `.break Select * From List`, stops at `Select dog From List` and at `Select cat From List`. The name of one call, `.break Select dog From List`, stops only at the calls written that way. Argument values aren't compared, so it doesn't stop at `Select ${pet} From List`; to stop only for certain values, set a line breakpoint with a condition on the keyword's first body line.
 
 The exception breakpoints are armed on both `repl` and `robot-debug` (`--break-on-exception` on by default, `--no-break-on-exception` to disarm), but they only pause **while the debugger is attached**. `robot-debug` is attached out of the box; the interactive `repl` starts detached — a failing keyword just prints its error — until you attach with `.debug on` or `--debugger-attached`. (Conversely, `robotcode robot-debug --no-debugger-attached` runs the suite straight through without ever pausing — the same as `robotcode robot`.) Adjust the active exception filters at runtime with `.catch`, and attach/detach with `.debug` (see [Exception breakpoints](#debug-commands) under Debug commands below).
 
@@ -157,7 +157,7 @@ You can also just type a keyword at the `(rdb)` prompt to run it in the paused c
 
 | Command | Effect |
 | --- | --- |
-| `.break <loc>[, <cond>]` / `.b` | Add a breakpoint — `file:line` or a keyword name, optionally conditional (`.break Login, ${retries} > 3`). |
+| `.break <loc>[, <cond>]` / `.b` | Add a breakpoint — `file:line` or a keyword name or pattern, optionally conditional (`.break Login, ${retries} > 3`). |
 | `.tbreak <loc>[, <cond>]` | Same, but one-shot: removed after it first stops. |
 | `.breakpoints` / `.bp` | List the breakpoints, numbered, with their attributes and the active exception filters. |
 | `.condition <n> <expr>` | Set a condition on breakpoint `<n>` (bare `.condition <n>` clears it). |

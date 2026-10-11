@@ -2,7 +2,7 @@
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Protocol, runtime_checkable
+from typing import Any, List, Optional, Protocol, Tuple, runtime_checkable
 
 
 class DebugTerminated(BaseException):
@@ -53,6 +53,9 @@ class StackFrame:
     executed: bool = True
     context: Any = field(default=None, repr=False, compare=False)
     variables: Any = field(default=None, repr=False, compare=False)
+    # For a keyword with embedded arguments, its definition name (`Select ${animal}
+    # From List`), bare and qualified; empty for other frames.
+    definition_names: Tuple[str, ...] = ()
 
     @property
     def short_name(self) -> str:

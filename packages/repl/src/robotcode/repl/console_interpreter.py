@@ -1731,7 +1731,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("break", "b", group="Debugger")
     def _break(self, arg: str) -> None:
-        """Add a breakpoint — `.break file:line` / `.break Keyword Name` / `.break <loc>, <condition>`."""
+        """Add a breakpoint — `.break file:line` / `.break Keyword Name or pattern` / `.break <loc>, <condition>`."""
         self._add_breakpoint(arg, temporary=False)
 
     @dot_command("tbreak", group="Debugger")

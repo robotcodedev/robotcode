@@ -121,6 +121,32 @@ def result_qualified_name(result: Any) -> Optional[str]:
     return _keyword_qualified_name(result) if isinstance(result, ResultKeyword) else None
 
 
+# The definition name of a keyword with embedded arguments (`Select ${animal} From List`),
+# bare and qualified with its owner. Robot Framework sets it before the keyword starts, as
+# `source_name` from version 7 on and as `sourcename` before; other keywords have none.
+if RF_VERSION >= (7, 0):
+
+    def _keyword_definition_names(keyword: ResultKeyword) -> Tuple[str, ...]:
+        if not keyword.source_name:
+            return ()
+        if not keyword.owner:
+            return (keyword.source_name,)
+        return (keyword.source_name, f"{keyword.owner}.{keyword.source_name}")
+
+else:
+
+    def _keyword_definition_names(keyword: ResultKeyword) -> Tuple[str, ...]:
+        if not keyword.sourcename:
+            return ()
+        if not keyword.libname:
+            return (keyword.sourcename,)
+        return (keyword.sourcename, f"{keyword.libname}.{keyword.sourcename}")
+
+
+def result_definition_names(result: Any) -> Tuple[str, ...]:
+    return _keyword_definition_names(result) if isinstance(result, ResultKeyword) else ()
+
+
 # Blocks that stay open until their END. Their branches (ELSE, EXCEPT, …) are blocks of
 # the same classes with another header and never get an END of their own.
 if RF_VERSION >= (7, 2):

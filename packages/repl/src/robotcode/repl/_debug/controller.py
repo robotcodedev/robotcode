@@ -12,16 +12,18 @@ import contextlib
 import re
 import reprlib
 import weakref
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Mapping, Optional, Set
 
 from robot.running.context import EXECUTION_CONTEXTS
+from robot.utils import Matcher
 from robot.variables import evaluate_expression
 
 from robotcode.core.utils.path import normalized_path
 from robotcode.robot.utils import RF_VERSION
 
-from ..base_interpreter import result_qualified_name
+from ..base_interpreter import result_definition_names, result_qualified_name
 from .types import (
     Breakpoint,
     DebugTerminated,
@@ -70,6 +72,15 @@ _CATCHING_KEYWORDS = frozenset(
         "Run Keyword And Return Status",
     }
 )
+
+
+@lru_cache(maxsize=None)
+def _keyword_matcher(name: str) -> Matcher:
+    """A keyword breakpoint's name as Robot Framework matches keyword names in
+    `--removekeywords name:`: ignoring case, spaces and underscores, with the
+    glob patterns `*`, `?` and `[chars]`."""
+    return Matcher(name, ignore="_")
+
 
 # The `Breakpoint` marker keyword from `robotcode.repl.Repl` (see Repl/repl.py):
 # the debugger stops where it runs. Its qualified name is stable across RF 5/6/7.
@@ -655,7 +666,7 @@ class DebugController:
         for bp in self._breakpoints:
             if not bp.enabled:
                 continue
-            if bp.kind == "keyword" and bp.name in (frame.short_name, frame.name):
+            if bp.kind == "keyword" and bp.name is not None and self._keyword_matches(bp.name, frame):
                 return bp
             if (
                 bp.kind == "line"
@@ -666,6 +677,13 @@ class DebugController:
             ):
                 return bp
         return None
+
+    @staticmethod
+    def _keyword_matches(name: str, frame: StackFrame) -> bool:
+        if frame.type not in _KEYWORD_FRAME_TYPES:
+            return False
+        matcher = _keyword_matcher(name)
+        return bool(matcher.match_any((frame.name, frame.short_name, *frame.definition_names)))
 
     def _emit_logpoint(self, frame: StackFrame, message: str) -> None:
         try:
@@ -748,4 +766,5 @@ class DebugController:
             executed=(status != _NOT_RUN),
             context=context_ref,
             variables=variables_ref,
+            definition_names=result_definition_names(result),
         )

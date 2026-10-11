@@ -285,6 +285,86 @@ def test_keyword_name_breakpoint_stops() -> None:
     assert [(reason, name) for reason, name, _line in frontend.stops] == [(StopReason.BREAKPOINT, "Inner Keyword")]
 
 
+NAMES_SUITE = """\
+*** Keywords ***
+Get Price
+    [Arguments]    ${item_id}
+    RETURN    ${item_id}
+
+*** Test Cases ***
+Probe Test
+    ${price}=    Get Price    2
+    Should Be Equal    ${price}    2
+    Log    done
+"""
+
+
+def _keyword_breakpoint_stops(suite_text: str, *names: str) -> List[str]:
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.set_keyword_breakpoints(list(names))
+    _run_with_observers(suite_text, controller)
+    return [name for _reason, name, _line in frontend.stops]
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("Get Price", ["Get Price"]),
+        ("get_price", ["Get Price"]),
+        ("GetPrice", ["Get Price"]),
+        ("should be equal", ["Should Be Equal"]),
+        ("BuiltIn.Should Be Equal", ["Should Be Equal"]),
+        ("*Price", ["Get Price"]),
+        ("BuiltIn.*", ["Should Be Equal", "Log"]),
+        # Patterns match keywords only, not the RETURN inside `Get Price`.
+        ("*", ["Get Price", "Should Be Equal", "Log"]),
+    ],
+)
+def test_keyword_breakpoint_matches_names_like_robot_framework(name: str, expected: List[str]) -> None:
+    assert _keyword_breakpoint_stops(NAMES_SUITE, name) == expected
+
+
+EMBEDDED_SUITE = """\
+*** Keywords ***
+Select ${animal} From List
+    No Operation
+
+*** Test Cases ***
+Probe Test
+    Select dog From List
+    Select cat From List
+    ${pet}=    Set Variable    dog
+    Select ${pet} From List
+"""
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        # The definition name and a pattern reach every call.
+        ("Select ${animal} From List", ["Select dog From List", "Select cat From List", "Select ${pet} From List"]),
+        ("Select * From List", ["Select dog From List", "Select cat From List", "Select ${pet} From List"]),
+        # The name of one call reaches the calls written that way; values aren't evaluated.
+        ("Select dog From List", ["Select dog From List"]),
+        ("select DOG from list", ["Select dog From List"]),
+    ],
+)
+def test_keyword_breakpoint_on_a_keyword_with_embedded_arguments(name: str, expected: List[str]) -> None:
+    assert _keyword_breakpoint_stops(EMBEDDED_SUITE, name) == expected
+
+
+def test_break_option_matches_names_like_robot_framework() -> None:
+    from robotcode.repl.cli import _apply_break_specs
+
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    _apply_break_specs(controller, ("get_price",))
+    _run_with_observers(NAMES_SUITE, controller)
+
+    assert [name for _reason, name, _line in frontend.stops] == ["Get Price"]
+
+
 def test_stepping_in_over_out() -> None:
     frontend = RecordingFrontend(
         script=[

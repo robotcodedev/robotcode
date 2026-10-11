@@ -2149,7 +2149,7 @@ robotcode repl [OPTIONS] [FILES]...
 
 - `--break LOCATION *`
 
-   Break at LOCATION — a `file:line` or a keyword name. Repeatable.
+   Break at LOCATION — a `file:line`, or a keyword name or glob pattern matched like Robot Framework. Repeatable.
 
 
 - `--break-on-exception / --no-break-on-exception`
@@ -3090,7 +3090,7 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--break LOCATION *`
 
-   Break at LOCATION — a `file:line` or a keyword name. Repeatable.
+   Break at LOCATION — a `file:line`, or a keyword name or glob pattern matched like Robot Framework. Repeatable.
 
 
 - `--break-on-exception / --no-break-on-exception`
