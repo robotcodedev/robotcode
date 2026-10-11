@@ -7,12 +7,6 @@ sidebar:
 ---
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
-import problemsLight from "../../../../assets/screenshots/vscode/diagnostics-problems-light.png";
-import problemsDark from "../../../../assets/screenshots/vscode/diagnostics-problems-dark.png";
-import hoverLight from "../../../../assets/screenshots/vscode/diagnostics-hover-light.png";
-import hoverDark from "../../../../assets/screenshots/vscode/diagnostics-hover-dark.png";
-import unusedLight from "../../../../assets/screenshots/vscode/diagnostics-unused-light.png";
-import unusedDark from "../../../../assets/screenshots/vscode/diagnostics-unused-dark.png";
 
 RobotCode analyzes your Robot Framework files the way Robot Framework reads them and reports what would fail or is likely wrong: keywords and variables that do not exist, imports that cannot be loaded, wrong numbers of arguments, deprecated syntax and more. With [Robocop](https://robocop.dev/) installed, its findings appear too.
 
@@ -21,8 +15,7 @@ RobotCode analyzes your Robot Framework files the way Robot Framework reads them
 Problems are underlined in the editor and listed in the **Problems** view (<kbd>Ctrl+Shift+M</kbd>, <kbd>Cmd+Shift+M</kbd> on macOS, or a click on the error and warning counts in the status bar). Each entry names its source and code, such as `robotcode(KeywordNotFound)` or `robocop(VAR02-unused-variable)`; a click goes to the place.
 
 <ThemeImage
-  light={problemsLight}
-  dark={problemsDark}
+  name="diagnostics-problems"
   alt="A test with a misspelt keyword call and an unused variable; the Problems view lists RobotCode's KeywordNotFound and VariableNotFound and Robocop's DOC02-missing-doc-test-case and VAR02-unused-variable."
   full
 />
@@ -30,8 +23,7 @@ Problems are underlined in the editor and listed in the **Problems** view (<kbd>
 Hover over an underlined place to read the message; **Quick Fix...** offers the [quick fixes](/guides/vscode/writing-code/#quick-fixes-and-refactorings) for it:
 
 <ThemeImage
-  light={hoverLight}
-  dark={hoverDark}
+  name="diagnostics-hover"
   alt="The hover of the misspelt call Order Status Shuold Be: No keyword with name 'Order Status Shuold Be' found, robotcode(KeywordNotFound), with View Problem and Quick Fix."
 />
 
@@ -60,8 +52,7 @@ See [Controlling Diagnostics with Modifiers](/reference/diagnostics-modifiers/) 
 With [`robotcode.analysis.findUnusedReferences`](/reference/vscode-settings/#robotcode.analysis.findUnusedReferences) switched on, RobotCode also reports keywords that are never called and variables and arguments that are never read, as warnings with the codes `KeywordNotUsed` and `VariableNotUsed`, and shows their names faded. Variables whose names start with an underscore, such as `${_}`, are left out.
 
 <ThemeImage
-  light={unusedLight}
-  dark={unusedDark}
+  name="diagnostics-unused"
   alt="The keywords Submit Order and Checkout in orders.resource are shown faded and underlined; the hover of Checkout says that the keyword is not used."
 />
 

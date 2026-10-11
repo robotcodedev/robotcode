@@ -6,8 +6,8 @@ import type { ImageMetadata } from "astro";
 import { Image } from "astro:assets";
 
 interface Props {
-  light: ImageMetadata;
-  dark: ImageMetadata;
+  /** The pair `<name>-light.png` and `<name>-dark.png` in `src/assets/screenshots/vscode/`. */
+  name: string;
   alt: string;
   /** Numbered markers in percent of the image's width and height; the list below the picture explains them. */
   markers?: { x: number; y: number }[];
@@ -15,11 +15,14 @@ interface Props {
   full?: boolean;
 }
 
-const { light, dark, alt, markers, full = false } = Astro.props;
-const variants = [
-  { image: light, hide: "dark:sl-hidden" },
-  { image: dark, hide: "light:sl-hidden" },
-];
+const screenshots = import.meta.glob<{ default: ImageMetadata }>("../assets/screenshots/vscode/*.png", { eager: true });
+
+const { name, alt, markers, full = false } = Astro.props;
+const variants = (["light", "dark"] as const).map((theme) => {
+  const image = screenshots[`../assets/screenshots/vscode/${name}-${theme}.png`]?.default;
+  if (!image) throw new Error(`ThemeImage: src/assets/screenshots/vscode/${name}-${theme}.png does not exist`);
+  return { image, hide: theme === "light" ? "dark:sl-hidden" : "light:sl-hidden" };
+});
 ---
 
 <figure class="theme-image">

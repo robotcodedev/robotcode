@@ -5,14 +5,22 @@
 // the viewport, plays it there and pauses it when it leaves; without JavaScript, the dark variant (the site's default
 // theme) plays from the noscript element.
 interface Props {
-  light: string;
-  dark: string;
-  width: number;
-  height: number;
+  /** The pair `<name>-light.mp4` and `<name>-dark.mp4` in `src/assets/screenshots/vscode/`. */
+  name: string;
   label: string;
+  /** The size on the page; by default half the 2072×1182 pixels of the harness recordings. */
+  width?: number;
+  height?: number;
 }
 
-const { light, dark, width, height, label } = Astro.props;
+const recordings = import.meta.glob<string>("../assets/screenshots/vscode/*.mp4", { eager: true, import: "default" });
+
+const { name, label, width = 1036, height = 591 } = Astro.props;
+const [light, dark] = (["light", "dark"] as const).map((theme) => {
+  const src = recordings[`../assets/screenshots/vscode/${name}-${theme}.mp4`];
+  if (!src) throw new Error(`ThemeVideo: src/assets/screenshots/vscode/${name}-${theme}.mp4 does not exist`);
+  return src;
+});
 const variants = [
   { src: light, hide: "dark:sl-hidden" },
   { src: dark, hide: "light:sl-hidden" },

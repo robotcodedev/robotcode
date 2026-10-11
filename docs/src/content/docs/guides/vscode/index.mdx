@@ -8,16 +8,11 @@ sidebar:
 
 import AreaOverview from "../../../../components/AreaOverview.astro";
 import ThemeImage from "../../../../components/ThemeImage.astro";
-import windowLight from "../../../../assets/screenshots/vscode/overview-window-light.png";
-import windowDark from "../../../../assets/screenshots/vscode/overview-window-dark.png";
-import contextMenuLight from "../../../../assets/screenshots/vscode/overview-context-menu-light.png";
-import contextMenuDark from "../../../../assets/screenshots/vscode/overview-context-menu-dark.png";
 
 RobotCode adds Robot Framework support to VS Code: it helps you write and navigate code, shows the documentation of keywords and libraries, finds and runs your tests and reports problems while you type. This page shows where these things appear in the window and lists the commands RobotCode adds. The pages of this guide explain each task in detail; to install RobotCode and set up a project first, see [Get Started with VS Code](/getting-started/vscode/).
 
 <ThemeImage
-  light={windowLight}
-  dark={windowDark}
+  name="overview-window"
   alt="The VS Code window with a Robot Framework test file in the editor, the Explorer with the Keywords view, the RobotCode output below the editor and the Robot Framework language status in the status bar."
   markers={[
     { x: 85, y: 20.6 },
@@ -65,8 +60,7 @@ RobotCode writes to two channels of the Output panel (**View: Toggle Output**, t
 Many actions are in a menu too, not only behind a keyboard shortcut. A right-click in the editor opens its context menu: it goes to definitions and references, renames, formats and refactors, and in a suite file it offers RobotCode's **Run Current File** and **Debug Current File** and VS Code's commands to run or debug the test at the cursor. Its last entry opens the Command Palette.
 
 <ThemeImage
-  light={contextMenuLight}
-  dark={contextMenuDark}
+  name="overview-context-menu"
   alt="The context menu of the editor after a right-click on the keyword call Create Order in orders.robot, with Go to Definition, Go to References, Peek, Find All References, Rename Symbol, Format Document, Refactor..., Source Action..., Run Current File, Debug Current File, Run Test at Cursor, Debug Test at Cursor and Command Palette..., most of them with their keyboard shortcut."
 />
 

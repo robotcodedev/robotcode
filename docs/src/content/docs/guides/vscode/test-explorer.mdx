@@ -8,20 +8,11 @@ sidebar:
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
-import runLight from "../../../../assets/screenshots/vscode/test-explorer-run-light.mp4";
-import runDark from "../../../../assets/screenshots/vscode/test-explorer-run-dark.mp4";
-import windowLight from "../../../../assets/screenshots/vscode/test-explorer-window-light.png";
-import windowDark from "../../../../assets/screenshots/vscode/test-explorer-window-dark.png";
-import filterLight from "../../../../assets/screenshots/vscode/test-explorer-filter-light.png";
-import filterDark from "../../../../assets/screenshots/vscode/test-explorer-filter-dark.png";
-import profilesLight from "../../../../assets/screenshots/vscode/test-explorer-profiles-light.png";
-import profilesDark from "../../../../assets/screenshots/vscode/test-explorer-profiles-dark.png";
 
 The **Test Explorer** is VS Code's **Testing** view; open it with the flask icon in the activity bar. RobotCode lists the suites, tests and tasks of every workspace folder there, as "Robot Framework Tests/Tasks", and runs or debugs them. To run and debug from the editor, see [Running and Debugging](/guides/vscode/running-and-debugging/).
 
 <ThemeImage
-  light={windowLight}
-  dark={windowDark}
+  name="test-explorer-window"
   alt="The Testing view with the suites and tests of the demo project after a run, all passed except Login Works; in the editor, the failure message of Login Works is shown below the line that failed."
   full
 />
@@ -37,10 +28,7 @@ The tree updates when you change, save, create or delete a Robot Framework file;
 Hover over a suite, test or task to run or debug it with the buttons beside it; **Run Tests** and **Debug Tests** in the view's title bar run all of them. A run shows its result at each entry: passed, failed or skipped, with the time it took. For a failed test, the message appears in the editor at the line that failed, also as a peek with the whole message. **Show Output** in the title bar opens the output of the run, with the messages Robot Framework logged.
 
 <ThemeVideo
-  light={runLight}
-  dark={runDark}
-  width={1036}
-  height={591}
+  name="test-explorer-run"
   label="Run Tests in the title bar of the Testing view runs all tests of the demo project: the entries in the tree turn green, 12 of 13 tests pass, and the failure message of Login Works appears in the editor below the line that failed."
 />
 
@@ -55,8 +43,7 @@ A run uses a run profile. RobotCode creates these:
 The arrow beside **Run Tests** and **Debug Tests** lists the profiles to run with and offers **Select Default Profile**, which decides the profile a click on the button uses. **Execute Using Profile...** in the context menu of an entry runs it once with another profile.
 
 <ThemeImage
-  light={profilesLight}
-  dark={profilesDark}
+  name="test-explorer-profiles"
   alt="VS Code's choice of the default run profile lists Run, Run ci - Staging shop and Run dev - Local shop in Firefox."
 />
 
@@ -79,8 +66,7 @@ A test profile in `launch.json` combines the settings of a launch configuration;
 The filter field above the tree takes text and `!text` to exclude, and tags with `@`: the tags of your tests are offered as `@robotCode.RobotFramework:<tag>`. VS Code adds filters such as `@failed`, `@executed` and `@openedFiles`, and the funnel button beside the field.
 
 <ThemeImage
-  light={filterLight}
-  dark={filterDark}
+  name="test-explorer-filter"
   alt="The Test Explorer filtered with @robotCode.RobotFramework:smoke shows only the tests tagged smoke."
 />
 

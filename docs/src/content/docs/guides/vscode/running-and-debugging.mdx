@@ -8,22 +8,6 @@ sidebar:
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
-import steppingLight from "../../../../assets/screenshots/vscode/running-stepping-light.mp4";
-import steppingDark from "../../../../assets/screenshots/vscode/running-stepping-dark.mp4";
-import failureLight from "../../../../assets/screenshots/vscode/running-stop-at-failure-light.mp4";
-import failureDark from "../../../../assets/screenshots/vscode/running-stop-at-failure-dark.mp4";
-import evaluateLight from "../../../../assets/screenshots/vscode/running-evaluate-in-console-light.mp4";
-import evaluateDark from "../../../../assets/screenshots/vscode/running-evaluate-in-console-dark.mp4";
-import gutterLight from "../../../../assets/screenshots/vscode/running-gutter-menu-light.png";
-import gutterDark from "../../../../assets/screenshots/vscode/running-gutter-menu-dark.png";
-import debugLight from "../../../../assets/screenshots/vscode/running-debug-light.png";
-import debugDark from "../../../../assets/screenshots/vscode/running-debug-dark.png";
-import consoleLight from "../../../../assets/screenshots/vscode/running-debug-console-light.png";
-import consoleDark from "../../../../assets/screenshots/vscode/running-debug-console-dark.png";
-import profilesLight from "../../../../assets/screenshots/vscode/running-select-profiles-light.png";
-import profilesDark from "../../../../assets/screenshots/vscode/running-select-profiles-dark.png";
-import logLight from "../../../../assets/screenshots/vscode/running-log-light.png";
-import logDark from "../../../../assets/screenshots/vscode/running-log-dark.png";
 
 RobotCode runs and debugs your tests and tasks with Robot Framework in the Python environment of the workspace folder. This page covers runs started from the editor and debugging; the [Test Explorer](/guides/vscode/test-explorer/) runs and debugs them from its tree, with run profiles.
 
@@ -32,8 +16,7 @@ RobotCode runs and debugs your tests and tasks with Robot Framework in the Pytho
 An icon beside each suite, test and task in the editor shows its last result; click it to run the test. Its context menu also debugs the test, runs it with another run profile (**Execute Using Profile...**), shows it in the Test Explorer and adds breakpoints:
 
 <ThemeImage
-  light={gutterLight}
-  dark={gutterDark}
+  name="running-gutter-menu"
   alt="The context menu of the icon beside the test Order Coffee with Run Test, Debug Test, Execute Using Profile..., Reveal in Test Explorer and the breakpoint actions."
 />
 
@@ -44,8 +27,7 @@ An icon beside each suite, test and task in the editor shows its last result; cl
 **RobotCode: Select Configuration Profiles**, or **Select** at the profiles item of the [language status](/guides/vscode/#the-language-status), chooses the profiles of `robot.toml` that runs, test discovery and the language server use, for each workspace folder. The choice is stored in the setting [`robotcode.profiles`](/reference/vscode-settings/#robotcode.profiles) of the workspace folder.
 
 <ThemeImage
-  light={profilesLight}
-  dark={profilesDark}
+  name="running-select-profiles"
   alt="Select Configuration Profiles for the folder robotcode-demo lists the profiles ci, Staging shop, and dev, Local shop in Firefox."
 />
 
@@ -58,17 +40,13 @@ Click left of the line numbers to set a breakpoint in a test, a keyword or a res
 - the debug toolbar continues (<kbd>F5</kbd>), steps over (<kbd>F10</kbd>), into (<kbd>F11</kbd>) and out of (<kbd>Shift+F11</kbd>) a keyword, and stops the run.
 
 <ThemeImage
-  light={debugLight}
-  dark={debugDark}
+  name="running-debug"
   alt="A debug session stopped at a breakpoint in the keyword Create Order: the Run and Debug view shows the local variables express, product and quantity and the call stack, the editor highlights the line with the breakpoint."
   full
 />
 
 <ThemeVideo
-  light={steppingLight}
-  dark={steppingDark}
-  width={1036}
-  height={591}
+  name="running-stepping"
   label="A breakpoint on the line of Order Coffee that calls Create Order, then Debug Test in the context menu of the test's icon: Step Into goes into Create Order in orders.resource, Step Over runs its lines one by one while the variables in the Run and Debug view and the values at the end of the lines change, Continue lets the test finish, and the Test Explorer shows that it passed."
 />
 
@@ -77,10 +55,7 @@ Click left of the line numbers to set a breakpoint in a test, a keyword or a res
 The **Breakpoints** section of the Run and Debug view also stops at failures: **Uncaught Failed Keywords** is on by default and stops where a keyword fails unless the failure is handled, by a matching `EXCEPT` branch of a surrounding `TRY` or by a BuiltIn keyword that handles failures, such as `Run Keyword And Expect Error`, `Run Keyword And Ignore Error` or `Wait Until Keyword Succeeds`. **Failed Keywords**, **Failed Test** and **Failed Suite** stop at every failed keyword, test or suite. Each of them takes a condition, with **Edit Condition** in its context menu.
 
 <ThemeVideo
-  light={failureLight}
-  dark={failureDark}
-  width={1036}
-  height={591}
+  name="running-stop-at-failure"
   label="Debug Test in the context menu of the icon beside Login Works, without a breakpoint: the run stops at Should Be Equal in shop.resource, where the test fails, with the message Welcome back, alice! != Welcome back, Alice! and the values of the variables at the end of the lines."
 />
 
@@ -89,16 +64,12 @@ The **Breakpoints** section of the Run and Debug view also stops at failures: **
 While a test is stopped, the **Debug Console** (<kbd>Ctrl+Shift+Y</kbd>, <kbd>Cmd+Shift+Y</kbd> on macOS, or its tab in the panel) evaluates what you type in the context of the current keyword: a variable such as `${product}` shows its value, and a keyword call, written as in a test with its arguments, runs the keyword and shows what it returns.
 
 <ThemeImage
-  light={consoleLight}
-  dark={consoleDark}
+  name="running-debug-console"
   alt="The Debug Console of the stopped test: ${product} evaluates to 'coffee' and the keyword call Price Of ${product} returns 4.5."
 />
 
 <ThemeVideo
-  light={evaluateLight}
-  dark={evaluateDark}
-  width={1036}
-  height={591}
+  name="running-evaluate-in-console"
   label="Order Coffee stops at a breakpoint after the order is placed; Ctrl+Shift+Y opens the Debug Console, where ${order} evaluates to 'order-4711' and the keyword call Order Status ${order} returns 'placed'."
 />
 
@@ -124,8 +95,7 @@ A configuration takes the options of a run, such as `profiles`, `variables`, `in
 With [`robotcode.run.openOutputAfterRun`](/reference/vscode-settings/#robotcode.run.openOutputAfterRun) set to `log` or `report`, RobotCode opens the log or report of a run when it ends, by default in VS Code's browser beside the editor; [`robotcode.run.openOutputTarget`](/reference/vscode-settings/#robotcode.run.openOutputTarget) opens it in your web browser instead.
 
 <ThemeImage
-  light={logLight}
-  dark={logDark}
+  name="running-log"
   alt="The log of a run of Order Coffee in VS Code's browser beside the test file, with its statistics and the execution log."
   full
 />

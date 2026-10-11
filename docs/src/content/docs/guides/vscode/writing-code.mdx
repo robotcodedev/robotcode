@@ -8,26 +8,11 @@ sidebar:
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
-import newTestLight from "../../../../assets/screenshots/vscode/writing-new-test-light.mp4";
-import newTestDark from "../../../../assets/screenshots/vscode/writing-new-test-dark.mp4";
-import completionLight from "../../../../assets/screenshots/vscode/writing-completion-light.png";
-import completionDark from "../../../../assets/screenshots/vscode/writing-completion-dark.png";
-import signatureLight from "../../../../assets/screenshots/vscode/writing-signature-help-light.png";
-import signatureDark from "../../../../assets/screenshots/vscode/writing-signature-help-dark.png";
-import hoverLight from "../../../../assets/screenshots/vscode/writing-hover-light.png";
-import hoverDark from "../../../../assets/screenshots/vscode/writing-hover-dark.png";
-import inlayLight from "../../../../assets/screenshots/vscode/writing-inlay-hints-light.png";
-import inlayDark from "../../../../assets/screenshots/vscode/writing-inlay-hints-dark.png";
-import quickFixLight from "../../../../assets/screenshots/vscode/writing-quick-fix-light.png";
-import quickFixDark from "../../../../assets/screenshots/vscode/writing-quick-fix-dark.png";
 
 RobotCode analyzes your files the way Robot Framework reads them: it knows the libraries, resource files and variable files a file imports, and with them every keyword and variable the file can use. While you type, it uses that knowledge to complete, explain and check your code.
 
 <ThemeVideo
-  light={newTestLight}
-  dark={newTestDark}
-  width={1036}
-  height={591}
+  name="writing-new-test"
   label="A new test, Order Tea Express, is written in orders.robot: completion offers Create Order, the signature help shows its arguments, completion offers the named argument express= and later Order Status Should Be and the variable ${order}, and a hover shows the documentation of Create Order. The call of Order Should Ship Today, a keyword that does not exist yet, is underlined, and Quick Fix in its hover creates the keyword."
 />
 
@@ -42,8 +27,7 @@ Completion appears as you type, or with <kbd>Ctrl+Space</kbd>. It offers what fi
 - **Section headers, settings and tags.**
 
 <ThemeImage
-  light={completionLight}
-  dark={completionDark}
+  name="writing-completion"
   alt="The completion list for 'Cart' in a test, with the keyword Cart Should Contain selected and its arguments and documentation shown beside the list."
 />
 
@@ -54,8 +38,7 @@ Keywords that are tagged `robot:private` and defined in another file are not off
 While you type the arguments of a keyword call, the signature help shows the keyword's arguments and its documentation, and highlights the argument at the cursor. <kbd>Ctrl+Shift+Space</kbd> (<kbd>Shift+Cmd+Space</kbd> on macOS) opens it at any argument.
 
 <ThemeImage
-  light={signatureLight}
-  dark={signatureDark}
+  name="writing-signature-help"
   alt="The signature help of the keyword Create Order above a call, with the argument quantity highlighted."
 />
 
@@ -64,8 +47,7 @@ While you type the arguments of a keyword call, the signature help shows the key
 Hover over a keyword call to see the keyword's arguments and documentation, over a variable to see what kind of variable it is and, where RobotCode can resolve it, its value, and over the name of a library or resource file, for example in its import, to see its documentation.
 
 <ThemeImage
-  light={hoverLight}
-  dark={hoverDark}
+  name="writing-hover"
   alt="The hover of the keyword Create Order, with its arguments product, quantity and express and its documentation."
 />
 
@@ -82,8 +64,7 @@ Inlay hints show what the code leaves unsaid: the names of the arguments of a ke
 ```
 
 <ThemeImage
-  light={inlayLight}
-  dark={inlayDark}
+  name="writing-inlay-hints"
   alt="Two tests with inlay hints: the namespace orders. before the keyword calls and argument names such as product= and expected= before their values."
 />
 
@@ -104,8 +85,7 @@ A light bulb, or <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS), offers quick fix
 - **Surround with TRY...EXCEPT**, **TRY...FINALLY** or **TRY...EXCEPT..FINALLY** wraps the lines selected in a test or keyword.
 
 <ThemeImage
-  light={quickFixLight}
-  dark={quickFixDark}
+  name="writing-quick-fix"
   alt="The quick fix menu at the misspelt keyword call Submit Ordr, offering Create Keyword 'Submit Ordr' and Assign keyword result to variable."
 />
 

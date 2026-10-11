@@ -8,16 +8,6 @@ sidebar:
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
-import tomlVideoLight from "../../../../assets/screenshots/vscode/config-robot-toml-editing-light.mp4";
-import tomlVideoDark from "../../../../assets/screenshots/vscode/config-robot-toml-editing-dark.mp4";
-import profileVideoLight from "../../../../assets/screenshots/vscode/config-profile-debug-light.mp4";
-import profileVideoDark from "../../../../assets/screenshots/vscode/config-profile-debug-dark.mp4";
-import settingsLight from "../../../../assets/screenshots/vscode/config-settings-editor-light.png";
-import settingsDark from "../../../../assets/screenshots/vscode/config-settings-editor-dark.png";
-import tomlLight from "../../../../assets/screenshots/vscode/config-robot-toml-light.png";
-import tomlDark from "../../../../assets/screenshots/vscode/config-robot-toml-dark.png";
-import pythonLight from "../../../../assets/screenshots/vscode/config-python-environment-light.png";
-import pythonDark from "../../../../assets/screenshots/vscode/config-python-environment-dark.png";
 
 RobotCode takes its configuration from two places: the `robot.toml` of your project and the settings of VS Code. This page explains which belongs where, and how to choose the Python environment and the profiles.
 
@@ -34,16 +24,12 @@ The settings `robotcode.robot.args`, `robotcode.robot.paths`, `robotcode.robot.p
 With the extension [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml) installed, VS Code completes the settings and values of `robot.toml` and shows their documentation on hover, from RobotCode's JSON schema:
 
 <ThemeImage
-  light={tomlLight}
-  dark={tomlDark}
+  name="config-robot-toml"
   alt="In robot.toml, completion after console = offers the values verbose, dotted, quiet and none."
 />
 
 <ThemeVideo
-  light={tomlVideoLight}
-  dark={tomlVideoDark}
-  width={1036}
-  height={591}
+  name="config-robot-toml-editing"
   label="In robot.toml, Ctrl+Space after console = offers the values of the setting and dotted is chosen; a hover over output-dir then shows the documentation of that setting."
 />
 
@@ -52,8 +38,7 @@ With the extension [Even Better TOML](https://marketplace.visualstudio.com/items
 **Preferences: Open Settings (UI)** (<kbd>Ctrl+,</kbd>, <kbd>Cmd+,</kbd> on macOS, or **Settings** in the menu of the gear at the bottom left) shows the settings; the filter `@ext:d-biehl.robotcode` lists RobotCode's, grouped by their categories:
 
 <ThemeImage
-  light={settingsLight}
-  dark={settingsDark}
+  name="config-settings-editor"
   alt="The Settings editor filtered with @ext:d-biehl.robotcode lists 69 settings and the categories of RobotCode: General, Editing, Run, Debug, Robot, Analysis and more."
   full
 />
@@ -71,8 +56,7 @@ Most of RobotCode's settings can be set on every level; the [VS Code settings](/
 RobotCode runs Robot Framework, its language server and its tools in the Python environment that VS Code's Python extension uses for the workspace folder. To choose another one, use **RobotCode: Select Python Environment**, or **Select Environment** at the Python item of the [language status](/guides/vscode/#the-language-status):
 
 <ThemeImage
-  light={pythonLight}
-  dark={pythonDark}
+  name="config-python-environment"
   alt="Select Environment for workspace folder robotcode-demo offers Select Python Interpreter..., Create Virtual Environment..., Ignore and Disable."
 />
 
@@ -83,10 +67,7 @@ RobotCode runs Robot Framework, its language server and its tools in the Python 
 The profiles of `robot.toml` let one project run against different environments, for example a local shop and a staging server. **RobotCode: Select Configuration Profiles** chooses the profiles that runs, test discovery and the language server use in a workspace folder; see [Choosing the configuration profiles](/guides/vscode/running-and-debugging/#choosing-the-configuration-profiles). The Test Explorer also offers each profile as a run profile, see [Run profiles](/guides/vscode/test-explorer/#run-profiles).
 
 <ThemeVideo
-  light={profileVideoLight}
-  dark={profileVideoDark}
-  width={1036}
-  height={591}
+  name="config-profile-debug"
   label="RobotCode: Select Configuration Profiles from the command palette selects the profile ci, Staging shop, for the folder robotcode-demo; Debug Test on Order Coffee then stops at a breakpoint in Open Shop As, where the values at the end of the lines show the BASE_URL of the profile, https://staging.shop.example."
 />
 

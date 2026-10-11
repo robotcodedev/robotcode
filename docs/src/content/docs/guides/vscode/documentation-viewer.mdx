@@ -8,27 +8,17 @@ sidebar:
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
-import windowLight from "../../../../assets/screenshots/vscode/viewer-window-light.png";
-import windowDark from "../../../../assets/screenshots/vscode/viewer-window-dark.png";
-import actionLight from "../../../../assets/screenshots/vscode/viewer-source-action-light.png";
-import actionDark from "../../../../assets/screenshots/vscode/viewer-source-action-dark.png";
-import browsingLight from "../../../../assets/screenshots/vscode/viewer-browsing-light.mp4";
-import browsingDark from "../../../../assets/screenshots/vscode/viewer-browsing-dark.mp4";
 
 The **Documentation Viewer** shows the documentation of a library, a resource file or a suite file in an editor tab. It shows the same documentation as [`robotcode doc`](/guides/browsing-documentation/): the viewer runs `robotcode doc lib` for you and renders the page with VS Code's built-in Markdown support, styled like VS Code's Markdown preview. Code blocks marked `robotframework` or `robot` are highlighted as Robot Framework code, in the viewer and in the Markdown preview of any Markdown file.
 
 <ThemeImage
-  light={windowLight}
-  dark={windowDark}
+  name="viewer-window"
   alt="The Documentation Viewer with ShopLibrary: the toolbar with the target field, the outline with the keywords and data types on the left and the page of the library on the right."
   full
 />
 
 <ThemeVideo
-  light={browsingLight}
-  dark={browsingDark}
-  width={1036}
-  height={591}
+  name="viewer-browsing"
   label="A hover over a keyword of Collections: a click on its heading opens the Documentation Viewer beside the editor at that keyword, a double click on its tab gives it the whole editor area, and a link to a data type moves within the page."
 />
 
@@ -42,8 +32,7 @@ The **Documentation Viewer** shows the documentation of a library, a resource fi
 - **RobotCode: Open Documentation Viewer in New Window**, in the command palette and in the context menu of a viewer's tab, opens a second viewer in a new window, with the target of the active viewer, or else of the viewer you used last, or `BuiltIn` without any viewer. From a tab's context menu it also copies the active viewer, which need not be the viewer whose tab you clicked.
 
 <ThemeImage
-  light={actionLight}
-  dark={actionDark}
+  name="viewer-source-action"
   alt="The Source Action menu at the import of ShopLibrary offers Show in Documentation Viewer, Show in New Documentation Viewer and Open Documentation (deprecated)."
 />
 

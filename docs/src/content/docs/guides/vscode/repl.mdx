@@ -8,28 +8,20 @@ sidebar:
 
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
-import startLight from "../../../../assets/screenshots/vscode/repl-start-light.mp4";
-import startDark from "../../../../assets/screenshots/vscode/repl-start-dark.mp4";
-import replLight from "../../../../assets/screenshots/vscode/repl-terminal-light.png";
-import replDark from "../../../../assets/screenshots/vscode/repl-terminal-dark.png";
 
 RobotCode's REPL runs Robot Framework statements one by one: import a library, call a keyword and see its result at once, without writing a test. It is a good place to try out a library or to find the right arguments for a keyword.
 
 **RobotCode: Start Terminal REPL**, also in the RobotCode menu (**RobotCode: Show Tool Menu**), opens a terminal named "Robot REPL" in the workspace folder of the active file and starts `robotcode repl` there, with the folder's Python environment and the [configuration profiles](/guides/vscode/configuration/#configuration-profiles) you selected:
 
 <ThemeImage
-  light={replLight}
-  dark={replDark}
+  name="repl-terminal"
   alt="The terminal Robot REPL: robotcode repl started in the folder robotcode-demo, Import Library ShopLibrary, and the keyword call ${price}= Price Of coffee, which logs ${price} = 4.5."
 />
 
 Type statements as you would write them in a test, with at least two spaces between the keyword and its arguments. In a workspace with several folders, the terminal carries the folder's name.
 
 <ThemeVideo
-  light={startLight}
-  dark={startDark}
-  width={1036}
-  height={591}
+  name="repl-start"
   label="RobotCode: Start Terminal REPL from the command palette opens the terminal Robot REPL with robotcode repl in the folder robotcode-demo; there, Import Library ShopLibrary and ${price}= Price Of coffee log ${price} = 4.5."
 />
 
