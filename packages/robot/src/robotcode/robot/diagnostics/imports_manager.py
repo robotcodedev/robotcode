@@ -1696,7 +1696,8 @@ class ImportsManager:
             if not wait([receiver, process.sentinel], min(self.load_library_timeout, MAX_LOAD_WAIT_SECONDS)):
                 raise LoadTimeoutError(
                     f"{timeout_msg} "
-                    f"timed out after {self.load_library_timeout} seconds. "
+                    f"timed out after {self.load_library_timeout} "
+                    f"{'second' if self.load_library_timeout == 1 else 'seconds'}. "
                     "The import may be slow or blocked. "
                     "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
                     "environment variable."

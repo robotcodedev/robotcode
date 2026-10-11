@@ -107,7 +107,7 @@ class TestHardTimeout:
         elapsed = time.monotonic() - start
 
         assert isinstance(exc_info.value, RuntimeError)
-        assert str(exc_info.value).startswith("Loading library 'HangingLib' timed out after 1 seconds.")
+        assert str(exc_info.value).startswith("Loading library 'HangingLib' timed out after 1 second.")
         assert "ROBOTCODE_LOAD_LIBRARY_TIMEOUT" in str(exc_info.value)
         assert elapsed < HANGING_SLEEP - 1
 
@@ -174,7 +174,7 @@ class TestHardTimeout:
         imports_manager.load_library_timeout = 1
 
         start = time.monotonic()
-        with pytest.raises(LoadTimeoutError, match="timed out after 1 seconds"):
+        with pytest.raises(LoadTimeoutError, match=r"timed out after 1 second\."):
             imports_manager._run_in_subprocess(
                 get_variables_doc,
                 (str(variables), (), str(tmp_path), str(tmp_path), None, None),
@@ -205,7 +205,7 @@ def _assert_timeout_result(results: List[Any], source: Path, code: str) -> None:
         assert meta is None
         assert doc.errors is not None
         assert len(doc.errors) == 1
-        assert "timed out after 1 seconds" in doc.errors[0].message
+        assert "timed out after 1 second." in doc.errors[0].message
         assert doc.errors[0].type_name == code
         assert doc.errors[0].source is None
         assert Path(doc.source).samefile(source)
@@ -340,7 +340,7 @@ class TestTimedOutImportInTheAnalysis:
         assert len(diagnostics) == 1
         assert diagnostics[0].code == DiagnosticError.LIBRARY_TIMEOUT_ERROR
         assert diagnostics[0].message == (
-            "Loading library 'HangingLib.py' with args () timed out after 1 seconds. "
+            "Loading library 'HangingLib.py' with args () timed out after 1 second. "
             "The import may be slow or blocked. "
             "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT environment variable."
         )

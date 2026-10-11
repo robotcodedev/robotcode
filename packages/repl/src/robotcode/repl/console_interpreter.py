@@ -1430,7 +1430,7 @@ class ConsoleInterpreter(BaseInterpreter):
             self.app.echo(f"Could not write {opts.filename}: {e}")
             return
 
-        summary = f"{len(lines)} entries"
+        summary = f"{len(lines)} {'entry' if len(lines) == 1 else 'entries'}"
         left_out = len(recorded) - len(lines)
         if left_out:
             summary += f"; {left_out} failed {'input' if left_out == 1 else 'inputs'} left out, see --keep-failed"
@@ -1762,7 +1762,7 @@ class ConsoleInterpreter(BaseInterpreter):
             if bp.log_message is not None:
                 flags.append("logpoint")
             if bp.commands:
-                flags.append(f"{len(bp.commands)} cmds")
+                flags.append(f"{len(bp.commands)} {'cmd' if len(bp.commands) == 1 else 'cmds'}")
             suffix = ("  " + ", ".join(flags)) if flags else ""
             self._echo(f"  #{bp.id}  {bp.kind:<7} {loc}{suffix}")
         filters = controller.exception_filters

@@ -271,7 +271,9 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
                     entries = [e for e in db.list_entries(section) if _entry_matches(e.entry_name, patterns)]
                     if not entries:
                         continue
-                    lines.append(f"### {section.name.lower()} ({len(entries)} entries)")
+                    lines.append(
+                        f"### {section.name.lower()} ({len(entries)} {'entry' if len(entries) == 1 else 'entries'})"
+                    )
                     lines.append("")
                     lines.append("| Name | Size | Created | Modified |")
                     lines.append("|---|---:|---|---|")
@@ -292,7 +294,7 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
                     if not entries:
                         continue
                     found = True
-                    app.echo(f"[{section.name.lower()}] ({len(entries)} entries)")
+                    app.echo(f"[{section.name.lower()}] ({len(entries)} {'entry' if len(entries) == 1 else 'entries'})")
                     for entry in entries:
                         size = _format_bytes(entry.meta_bytes + entry.data_bytes)
                         created = entry.created_at or "—"
@@ -360,11 +362,11 @@ def cache_clear(app: Application, sections: Tuple[str, ...], paths: Tuple[Path, 
             for section in selected:
                 count = db.clear_section(section)
                 total += count
-                app.echo(f"Cleared {count} entries from {section.name.lower()}.")
+                app.echo(f"Cleared {count} {'entry' if count == 1 else 'entries'} from {section.name.lower()}.")
         else:
             total = db.clear_all()
 
-        app.echo(f"Removed {total} entries total.")
+        app.echo(f"Removed {total} {'entry' if total == 1 else 'entries'} total.")
     finally:
         db.close()
 

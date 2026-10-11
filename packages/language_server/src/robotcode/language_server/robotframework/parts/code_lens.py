@@ -110,7 +110,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
                         document, kw_doc, include_declaration=False
                     )
                     code_lens.command = Command(
-                        f"{len(references)} references",
+                        f"{len(references)} {'reference' if len(references) == 1 else 'references'}",
                         "editor.action.showReferences",
                         [str(document.uri), code_lens.range.start, references],
                     )

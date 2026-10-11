@@ -168,7 +168,12 @@ class CodeAnalyzer(DiagnosticsContext):
                     self.app.error(f"Error reading {file}: {e}")
                     continue
 
-        self.app.verbose(f"{file_counter} files in workspace folder '{folder.uri.to_path()}'")
-        self.app.verbose(f"Collected {len(documents)} files for analyzing in workspace folder '{folder.uri.to_path()}'")
+        self.app.verbose(
+            f"{file_counter} {'file' if file_counter == 1 else 'files'} in workspace folder '{folder.uri.to_path()}'"
+        )
+        self.app.verbose(
+            f"Collected {len(documents)} {'file' if len(documents) == 1 else 'files'} for analyzing "
+            f"in workspace folder '{folder.uri.to_path()}'"
+        )
 
         return documents

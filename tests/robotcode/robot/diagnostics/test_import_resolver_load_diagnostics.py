@@ -17,7 +17,7 @@ from robotcode.robot.diagnostics.library_doc import Error
 _SOURCE = "/project/suite.robot"
 
 _TIMEOUT_MESSAGE = (
-    "Loading library 'BuiltIn' with args () timed out after 1 seconds. The import may be slow or blocked. "
+    "Loading library 'BuiltIn' with args () timed out after 1 second. The import may be slow or blocked. "
     "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT environment variable."
 )
 
