@@ -161,3 +161,12 @@ When discovery reports problems for a suite file, the tooltip of the file's run 
 
 - **WHEN** a suite file sets `Test Template` twice and still has tests
 - **THEN** the tooltip of its line 1 run marker shows that the setting is allowed only once, and the run actions stay
+
+### Requirement: Run markers while indexing
+
+The run markers of discovered tests, tasks and suites SHALL stay in the editor gutter while the IDE indexes the project, as long as discovery has a result for the file.
+
+#### Scenario: Markers during indexing
+
+- **WHEN** a suite file with discovered tests is open and the IDE starts indexing the project
+- **THEN** the run markers of the file stay visible, and their Run and Debug actions work
