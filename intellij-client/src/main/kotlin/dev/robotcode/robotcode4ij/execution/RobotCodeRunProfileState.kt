@@ -5,7 +5,6 @@ import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.Executor
-import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
@@ -113,6 +112,10 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     
     val afterInitialize = Signal<Unit>()
     val afterConfigurationDone = Signal<Unit>()
+
+    // the handler of the started process, whose output fence orders the process output before the debugger events
+    var processHandler: RobotCodeProcessHandler? = null
+        private set
     
     init {
         debugClient.onTerminated.adviseEternal {
@@ -154,7 +157,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         process: Process, commandLine: String, targetEnvironment: TargetEnvironment,
         targetedCommandLine: TargetedCommandLine
     ): ProcessHandler {
-        val handler = KillableColoredProcessHandler(process, commandLine, targetedCommandLine.charset)
+        val handler = RobotCodeProcessHandler(process, commandLine, targetedCommandLine.charset)
+        processHandler = handler
         handler.putUserData(DEBUG_PORT, debugPort)
         handler.addProcessListener(this)
         return handler

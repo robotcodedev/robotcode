@@ -8,9 +8,9 @@ In PyCharm and IntelliJ IDEA, the results of a Robot Framework run do not always
 
 - Tests whose suite teardown fails are shown as failed, with Robot Framework's message ("Parent suite teardown failed: …"), in the results tree, in the run's status line and in the gutter. When the suite teardown is skipped, they are shown as skipped ("Skipped in parent suite teardown: …").
 - The run console shows the output of the Robot Framework process in the order the process wrote it, as a terminal does. Output that a test writes while it runs, for example with `Log To Console`, appears under that test when the test is selected, and only there. This includes the `[ WARN ]` and `[ ERROR ]` lines that Robot Framework writes to its console for warnings and errors.
-- The results tree no longer waits for the process's first console line, and a run leaves no thread behind.
+- A run leaves no thread behind.
 - The RobotCode debugger builds the test id it sends for a failed suite teardown from the same normalized path as the ids of its other events. The plugin needs this to find the test when the path is spelled differently in the two places, for example with another drive-letter case on Windows. VS Code finds its tests by the same id.
-- A normal run shows the same tree, statuses, durations, failure messages and navigation as before.
+- A normal run shows the same tree, statuses, durations, failure messages and navigation as before, and results keep sending the full name of their test, with which they find it after lines were added or removed above it.
 
 Behaviour that users notice, for the release notes (not breaking): tests of a suite whose teardown fails turn red, tests of a suite whose teardown is skipped turn skipped, and the console output of a run keeps its order and belongs to the right test (#458).
 
@@ -29,7 +29,7 @@ _None._
 ## Impact
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotOutputToGeneralTestEventsConverter.kt`: reports to the results tree directly instead of through service messages, applies robot events and process output in one order, and re-marks tests on a failed suite teardown.
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunProfileState.kt`: a process handler whose output readers say when they have delivered everything the process wrote so far.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunProfileState.kt`: `createProcessHandler` creates a process handler whose output readers say when they have delivered everything the process wrote so far.
 - `packages/debugger/src/robotcode/debugger/listeners.py`: the id of the `robotSetFailed` event.
 - New tests under `intellij-client/src/test/kotlin/` and `tests/robotcode/debugger/`.
 - No change to the language server, the VS Code extension or `robot.toml`.

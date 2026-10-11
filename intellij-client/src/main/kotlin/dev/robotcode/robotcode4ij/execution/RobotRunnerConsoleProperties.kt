@@ -38,7 +38,10 @@ class RobotRunnerConsoleProperties(
         if (consoleProperties !is RobotRunnerConsoleProperties) {
             return OutputToGeneralTestEventsConverter(testFrameworkName, consoleProperties)
         }
-        return RobotOutputToGeneralTestEventsConverter(testFrameworkName, consoleProperties)
+        val state = consoleProperties.state
+        return RobotOutputToGeneralTestEventsConverter(testFrameworkName, state?.debugClient) {
+            state?.processHandler?.outputFence?.await()
+        }
     }
     
     override fun isEditable(): Boolean {

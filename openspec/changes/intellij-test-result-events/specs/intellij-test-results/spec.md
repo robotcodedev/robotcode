@@ -8,13 +8,26 @@ Defines how the IntelliJ plugin turns the events of a Robot Framework run into t
 
 ### Requirement: Results tree built from Robot Framework's events
 
-The plugin SHALL show each suite and each test of a Robot Framework run in the results tree of the run tab as soon as it starts, below its parent suite. When a test ends, the tree SHALL show the status Robot Framework reports for it: passed, failed with Robot Framework's failure message, or skipped with its message, together with the test's duration. Navigating from a suite node, or from a test node that passed or was skipped, SHALL open its source line.
+The plugin SHALL show each suite and each test of a Robot Framework run in the results tree of the run tab as soon as it starts, below its parent suite. When a test ends, the tree SHALL show the status Robot Framework reports for it: passed, failed with Robot Framework's failure message, or skipped with its message, together with the test's duration.
 
 #### Scenario: Run with a failing test
 
 - **WHEN** a suite file with two passing tests and one test that fails with the message `intentional failure` is run
 - **THEN** the results tree shows the file's suite with its three tests, two as passed and one as failed with the message `intentional failure`, each with its duration
-- **AND** navigating from a passed test node opens the test's first line
+
+### Requirement: Navigation from result nodes
+
+Navigating from the node of a file suite SHALL open its file, and from a test node that passed or was skipped the line on which the test starts now, found by its full name.
+
+#### Scenario: Passed test
+
+- **WHEN** the user navigates from the node of a passed test after the run
+- **THEN** the test's first line opens
+
+#### Scenario: Lines added above the test
+
+- **WHEN** lines were added above a test after the run, and the user navigates from that test's node
+- **THEN** the line on which the test starts now opens
 
 ### Requirement: Results without console output
 

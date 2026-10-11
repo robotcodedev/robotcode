@@ -1,0 +1,341 @@
+package dev.robotcode.robotcode4ij.execution
+
+import com.intellij.execution.filters.HyperlinkInfo
+import com.intellij.execution.process.ProcessOutputType
+import com.intellij.execution.process.ProcessOutputTypes
+import com.intellij.execution.testframework.Printable
+import com.intellij.execution.testframework.Printer
+import com.intellij.execution.testframework.sm.runner.GeneralIdBasedToSMTRunnerEventsConvertor
+import com.intellij.execution.testframework.sm.runner.GeneralTestEventsProcessor
+import com.intellij.execution.testframework.sm.runner.SMTestProxy
+import com.intellij.execution.testframework.sm.runner.TestProxyPrinterProvider
+import com.intellij.execution.testframework.sm.runner.events.TestFailedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestFinishedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestIgnoredEvent
+import com.intellij.execution.testframework.sm.runner.events.TestOutputEvent
+import com.intellij.execution.testframework.sm.runner.events.TestStartedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestSuiteFinishedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestSuiteStartedEvent
+import com.intellij.execution.testframework.sm.runner.states.TestStateInfo
+import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.openapi.util.Key
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.Urls
+import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.debugging.RobotExecutionAttributes
+import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
+import org.eclipse.lsp4j.debug.OutputEventArguments
+import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
+import java.nio.file.Path
+
+class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
+
+    // the calls the converter makes, one line each
+    private inner class RecordingProcessor :
+        GeneralTestEventsProcessor(project, "RobotCode", SMTestProxy.SMRootTestProxy()) {
+        val calls = mutableListOf<String>()
+
+        override fun onStartTesting() {
+            calls.add("startTesting")
+        }
+
+        override fun onTestsCountInSuite(count: Int) {
+            calls.add("count $count")
+        }
+
+        override fun onSuiteStarted(event: TestSuiteStartedEvent) {
+            calls.add("suiteStarted ${event.name} ${event.id} ${event.parentId} ${event.locationUrl} ${event.metainfo}")
+        }
+
+        override fun onTestStarted(event: TestStartedEvent) {
+            calls.add("testStarted ${event.name} ${event.id} ${event.parentId} ${event.locationUrl} ${event.metainfo}")
+        }
+
+        override fun onTestFinished(event: TestFinishedEvent) {
+            calls.add("testFinished ${event.name} ${event.id} ${event.duration}")
+        }
+
+        override fun onTestFailure(event: TestFailedEvent) {
+            calls.add("testFailed ${event.name} ${event.id} ${event.localizedFailureMessage} ${event.durationMillis}")
+        }
+
+        override fun onTestIgnored(event: TestIgnoredEvent) {
+            calls.add("testIgnored ${event.name} ${event.id} ${event.ignoreComment}")
+        }
+
+        override fun onSuiteFinished(event: TestSuiteFinishedEvent) {
+            calls.add("suiteFinished ${event.name} ${event.id}")
+        }
+
+        override fun onTestOutput(event: TestOutputEvent) {
+            calls.add("output ${event.id} ${event.outputType} ${event.text}")
+        }
+
+        override fun onUncapturedOutput(text: String, outputType: Key<*>) {
+            calls.add("uncaptured $outputType $text")
+        }
+
+        override fun onError(localizedMessage: String, stackTrace: String?, isCritical: Boolean) {
+            calls.add("error $localizedMessage")
+        }
+
+        override fun onTestsReporterAttached() {}
+
+        override fun setPrinterProvider(printerProvider: TestProxyPrinterProvider) {}
+    }
+
+    private val client = RobotCodeDebugProtocolClient()
+    private var awaitedOutput = 0
+    private lateinit var converter: RobotOutputToGeneralTestEventsConverter
+    private lateinit var processor: RecordingProcessor
+    private val source = Path.of(System.getProperty("java.io.tmpdir"), "suite.robot").toString()
+
+    override fun setUp() {
+        super.setUp()
+        processor = RecordingProcessor()
+        converter = RobotOutputToGeneralTestEventsConverter("RobotCode", client) { awaitedOutput++ }
+        converter.setProcessor(processor)
+    }
+
+    override fun tearDown() {
+        try {
+            converter.dispose()
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    private fun item(
+        type: String, id: String, name: String, parentId: String?, line: Int? = null, status: String? = null,
+        message: String? = null, elapsed: Int? = null
+    ) = RobotExecutionEventArguments(
+        type = type, id = id, name = name, parentId = parentId,
+        attributes = RobotExecutionAttributes(
+            longname = if (parentId == null) name else "Suite.$name", status = status, message = message,
+            elapsedtime = elapsed, source = source, lineno = line
+        )
+    )
+
+    private fun suite(status: String? = null) = item("suite", "s1", "Suite", null, status = status)
+
+    private fun test(
+        id: String, name: String, line: Int, status: String? = null, message: String? = null, elapsed: Int? = null
+    ) = item("test", id, name, "s1", line, status, message, elapsed)
+
+    private fun url(line: Int) = Urls.newUrl("robotcode", "/", Urls.newLocalFileUrl(source).toString())
+        .addParameters(mapOf("line" to line.toString())).toString()
+
+    // the text the console shows for a node when it is selected
+    private fun printed(proxy: SMTestProxy): String {
+        val out = StringBuilder()
+        proxy.printOn(object : Printer {
+            override fun print(text: String, contentType: ConsoleViewContentType) {
+                out.append(text)
+            }
+
+            override fun onNewAvailable(printable: Printable) {
+                printable.printOn(this)
+            }
+
+            override fun printHyperlink(text: String, info: HyperlinkInfo?) {
+                out.append(text)
+            }
+
+            override fun mark() {}
+        })
+        return out.toString()
+    }
+
+    fun testEventsOfARunBecomeTheResultsTree() {
+        converter.startTesting()
+        client.onRobotStarted.fire(suite())
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        client.onRobotEnded.fire(test("t1", "First", 5, "PASS", elapsed = 12))
+        client.onRobotStarted.fire(test("t2", "Second", 8))
+        client.onRobotEnded.fire(test("t2", "Second", 8, "FAIL", "intentional failure", 5))
+        client.onRobotStarted.fire(test("t3", "Third", 11))
+        client.onRobotEnded.fire(test("t3", "Third", 11, "SKIP"))
+        client.onRobotEnded.fire(suite("FAIL"))
+
+        assertEquals(
+            listOf(
+                "startTesting",
+                "suiteStarted Suite s1 0 ${url(0)} Suite",
+                "testStarted First t1 s1 ${url(4)} Suite.First",
+                "testFinished First t1 12",
+                "testStarted Second t2 s1 ${url(7)} Suite.Second",
+                "testFailed Second t2 intentional failure 5",
+                "testStarted Third t3 s1 ${url(10)} Suite.Third",
+                "testIgnored Third t3 Skipped",
+                "suiteFinished Suite s1",
+            ),
+            processor.calls
+        )
+        // every debugger event waits for the process output written before it
+        assertEquals(8, awaitedOutput)
+    }
+
+    fun testItemsBeforeTheStartAreAppliedAfterItInTheirOrder() {
+        // the command line comes before any debugger event and goes through at once, as before
+        converter.process("robotcode debug\n", ProcessOutputTypes.SYSTEM)
+        client.onRobotStarted.fire(suite())
+        converter.process("Suite\n", ProcessOutputTypes.STDOUT)
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        assertEquals(listOf("uncaptured system robotcode debug\n"), processor.calls)
+
+        converter.startTesting()
+
+        assertEquals(
+            listOf(
+                "uncaptured system robotcode debug\n",
+                "startTesting",
+                "suiteStarted Suite s1 0 ${url(0)} Suite",
+                "output s1 stdout Suite\n",
+                "testStarted First t1 s1 ${url(4)} Suite.First",
+            ),
+            processor.calls
+        )
+    }
+
+    fun testItemsAfterTheFinishAreDropped() {
+        converter.startTesting()
+        converter.finishTesting()
+
+        client.onRobotStarted.fire(suite())
+        converter.process("late\n", ProcessOutputTypes.STDOUT)
+
+        assertEquals(listOf("startTesting"), processor.calls)
+    }
+
+    fun testProcessTextWithoutALineEndArrivesAtOnce() {
+        converter.startTesting()
+
+        converter.process("First", ProcessOutputTypes.STDOUT)
+
+        assertEquals(listOf("startTesting", "uncaptured stdout First"), processor.calls)
+    }
+
+    fun testProcessOutputBelongsToTheInnermostRunningItem() {
+        converter.startTesting()
+        client.onRobotStarted.fire(suite())
+        converter.process("Suite\n", ProcessOutputTypes.STDOUT)
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        converter.process("first console\n", ProcessOutputTypes.STDOUT)
+        converter.process("[ WARN ] a warning\n", ProcessOutputTypes.STDERR)
+        client.onRobotEnded.fire(test("t1", "First", 5, "PASS", elapsed = 1))
+        // a status line in the colors that Robot Framework writes when console colors are switched on
+        converter.process("| PASS |\n", ProcessOutputType("\u001b[32m", ProcessOutputType.STDOUT))
+        converter.process("Process finished\n", ProcessOutputTypes.SYSTEM)
+
+        assertEquals(
+            listOf(
+                "output s1 stdout Suite\n",
+                "output t1 stdout first console\n",
+                "output t1 stderr [ WARN ] a warning\n",
+                "output s1 stdout \u001b[32m| PASS |\n",
+                "uncaptured system Process finished\n",
+            ),
+            processor.calls.filter { it.startsWith("output") || it.startsWith("uncaptured") }
+        )
+    }
+
+    fun testProcessOutputKeepsItsOrderWithNestedSuites() {
+        val root = SMTestProxy.SMRootTestProxy()
+        converter.setProcessor(GeneralIdBasedToSMTRunnerEventsConvertor(project, root, "RobotCode"))
+        converter.startTesting()
+        // with these ids, the platform keeps the outer suite first among the running suites, where it puts uncaptured
+        // output that is written between two tests
+        client.onRobotStarted.fire(item("suite", "A", "Tests", null))
+        client.onRobotStarted.fire(item("suite", "B", "Inner", "A"))
+        converter.process("First    ", ProcessOutputTypes.STDOUT)
+        client.onRobotStarted.fire(item("test", "t1", "First", "B", 5))
+        converter.process("first console\n", ProcessOutputTypes.STDOUT)
+        client.onRobotEnded.fire(item("test", "t1", "First", "B", 5, "PASS", elapsed = 1))
+        converter.process("| PASS |\nSecond    ", ProcessOutputTypes.STDOUT)
+        client.onRobotStarted.fire(item("test", "t2", "Second", "B", 8))
+        converter.process("second console\n", ProcessOutputTypes.STDOUT)
+        client.onRobotEnded.fire(item("test", "t2", "Second", "B", 8, "PASS", elapsed = 1))
+        converter.process("| PASS |\n", ProcessOutputTypes.STDOUT)
+        client.onRobotEnded.fire(item("suite", "B", "Inner", "A", status = "PASS"))
+        client.onRobotEnded.fire(item("suite", "A", "Tests", null, status = "PASS"))
+        converter.finishTesting()
+
+        val written = "First    first console\n| PASS |\nSecond    second console\n| PASS |\n"
+        // the root shows the output in the order it was written, also when it is selected again after the run
+        assertEquals(written, printed(root))
+        // the test names and status lines belong to the suite that runs the tests
+        assertEquals(written, printed(root.children.single().children.single()))
+    }
+
+    fun testDebuggerOutputBelongsToTheInnermostRunningItem() {
+        converter.startTesting()
+        client.onOutput.fire(OutputEventArguments().apply {
+            output = "before"
+            category = OutputEventArgumentsCategory.STDOUT
+        })
+        client.onRobotStarted.fire(suite())
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        client.onOutput.fire(OutputEventArguments().apply {
+            output = "a log message"
+            category = OutputEventArgumentsCategory.STDERR
+        })
+
+        assertEquals(
+            listOf(
+                "output 0 stdout \u001b[38;5;243mbefore\u001b[0m",
+                "output t1 stderr \u001b[38;5;243ma log message\u001b[0m",
+            ),
+            processor.calls.filter { it.startsWith("output") }
+        )
+    }
+
+    fun testRobotEventsAfterDisposeAreIgnored() {
+        converter.startTesting()
+        converter.dispose()
+
+        client.onRobotStarted.fire(suite())
+
+        assertEquals(0, awaitedOutput)
+        assertEquals(listOf("startTesting"), processor.calls)
+    }
+
+    fun testFailedOrSkippedSuiteTeardownMarksTheTestsAgain() {
+        converter.startTesting()
+        client.onRobotStarted.fire(suite())
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        client.onRobotEnded.fire(test("t1", "First", 5, "PASS", elapsed = 1))
+
+        client.onRobotSetFailed.fire(test("t1", "First", 5, "FAIL", "Parent suite teardown failed:\nteardown broke"))
+        client.onRobotSetFailed.fire(test("t2", "Second", 8, "SKIP", "Skipped in parent suite teardown:\nskipped"))
+        client.onRobotSetFailed.fire(test("t3", "Third", 11, "PASS"))
+
+        assertEquals(
+            listOf(
+                "testFailed First t1 Parent suite teardown failed:\nteardown broke -1",
+                "testIgnored Second t2 Skipped in parent suite teardown:\nskipped",
+            ),
+            processor.calls.drop(4)
+        )
+    }
+
+    fun testMarkedTestsChangeTheirStateInTheResultsTree() {
+        val root = SMTestProxy.SMRootTestProxy()
+        converter.setProcessor(GeneralIdBasedToSMTRunnerEventsConvertor(project, root, "RobotCode"))
+        converter.startTesting()
+        client.onRobotStarted.fire(suite())
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        client.onRobotEnded.fire(test("t1", "First", 5, "PASS", elapsed = 1))
+        client.onRobotStarted.fire(test("t2", "Second", 8))
+        client.onRobotEnded.fire(test("t2", "Second", 8, "PASS", elapsed = 1))
+
+        client.onRobotSetFailed.fire(test("t1", "First", 5, "FAIL", "Parent suite teardown failed:\nteardown broke"))
+        client.onRobotSetFailed.fire(test("t2", "Second", 8, "SKIP", "Skipped in parent suite teardown:\nskipped"))
+        client.onRobotEnded.fire(suite("FAIL"))
+        converter.finishTesting()
+
+        val (first, second) = root.children.single().children
+        assertEquals(TestStateInfo.Magnitude.FAILED_INDEX, first.magnitudeInfo)
+        assertEquals("Parent suite teardown failed:\nteardown broke", first.errorMessage)
+        assertEquals(TestStateInfo.Magnitude.IGNORED_INDEX, second.magnitudeInfo)
+    }
+}

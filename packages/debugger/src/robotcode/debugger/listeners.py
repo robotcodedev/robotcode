@@ -404,7 +404,8 @@ class ListenerV3:
                                 "lineno": data_item.lineno if data_item is not None else 0,
                                 "message": result_item.message,
                             },
-                            id=f"{result_item.source or ''};{result_item.longname or ''}"
+                            id=f"{normalized_path(Path(result_item.source)) if result_item.source else ''};"
+                            f"{result_item.longname or ''}"
                             + (
                                 f";{data_item.lineno if data_item is not None else 0}"
                                 if isinstance(result_item, result.TestCase)
