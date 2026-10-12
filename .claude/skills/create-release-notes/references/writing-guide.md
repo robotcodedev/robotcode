@@ -31,10 +31,18 @@ tags:
 ## <headline chapter, for example "Robot Framework X.Y Support">
 ### <big feature that needs the new version>
 ### Also on Robot Framework X.Y
-## <big editor feature>
+## VS Code
+### <big VS Code feature>
+### Also in VS Code
 ## PyCharm and IntelliJ IDEA
-## Editor and CLI Polish
-## <power-user chapter: command line, REPL>
+## In Every Editor
+### <language server feature>
+### Also in every editor
+## AI Agents
+## Command Line and REPL
+### <command-line feature>
+### Also on the command line
+## A New Website
 ## Bug Fixes
 ## Under the Hood
 
@@ -86,7 +94,7 @@ A commit body says how the code changed. The post says what changes for the user
 
 ## Ordering
 
-- Weigh the audience: VS Code users first, then PyCharm and IntelliJ users, then command-line power users.
+- Order by what users see first: a new Robot Framework version and its features, then VS Code, PyCharm, IntelliJ IDEA and other IDEs, language server features for every editor, AI agents, command-line tools and the terminal, the website, everything else, Bug Fixes and Under the Hood. SKILL.md lists this order.
 - Use tiers. Headline features get a chapter or subsection with an explanation and, if useful, an example. Secondary changes get one bullet. The long tail stays in the changelog. Not every change needs a highlight.
 - Space signals importance: a long section reads as an important feature. Don't spend a paragraph on a deprecation or a cosmetic fix.
 - Inside each list, what most readers notice comes first. Rarely used features and deprecations come last; cosmetic changes are left out.
@@ -131,9 +139,9 @@ The chapter for PyCharm and IntelliJ IDEA uses bullets with a bold lead sentence
 
 Keep changes to the command line, the REPL and `robotcode doc` short: what the tool does, one or two example commands, and a link to the reference. When the AI chat plugins start using a new command or behave differently, say so in one sentence where the feature is described.
 
-### Editor and CLI Polish
+### Small Items: the "Also in …" Lists
 
-One short line per fix, saying in a few words what the user notices now. No error messages, internals, reasons or lists of the places where it shows:
+Small changes go into an "Also in …" list at the end of the chapter of their category, such as "Also in VS Code", "Also in every editor" or "Also on the command line", not into one list for everything. One short line per item, saying in a few words what the user notices now. No error messages, internals, reasons or lists of the places where it shows:
 
 > - On Windows, paths on another drive no longer break commands.
 > - Two library classes from one Python module are no longer mixed up.
@@ -153,6 +161,6 @@ Experimental or internal work that users can opt into. One paragraph, last befor
 - No hype: no "excited", "proud", "ultimate" or "powerful", and no exclamation marks. Address the reader as "you".
 - A heading names what the user gets: "Richer Keyword Documentation", "More Robust Library Loading".
 - Give a reason only if a commit, the code or the docs back it.
-- When a change brings many things of one kind, such as settings, name the areas they cover instead of picking a few. "The General, Editing, Analysis, Robocop and Language Server pages …, among them the switches for private and deprecated keywords and extra arguments" read as if only those settings had been added; "Many settings of the VS Code extension can now be changed here too. Settings pages … cover editing and completion, analysis and diagnostics, Robocop, the language server and the command line" replaced it.
+- When a change brings many things of one kind, such as settings, name the areas they cover instead of picking a few. "The General, Editing, Analysis, Robocop and Language Server pages …, among them the switches for private and deprecated keywords and extra arguments" read as if only those settings had been added; "Almost everything you can set in VS Code, you can now set here too. Settings pages … cover editing and completion, analysis and diagnostics, Robocop, the language server and the command line" replaced it.
 - Use an example only if it is real and shows the point. "Its heading, such as `Keyword Log`" was cut: readers take `Keyword Log` for a keyword, but the keyword is `Log`, and its documentation has no links. An example taken from the docs needs the same check. If no example fits, write the sentence without one.
 - Write plain English, one idea per sentence where possible.

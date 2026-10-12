@@ -46,7 +46,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
     - Find the newest stable tag, for example `v2.7.0`.
     - Date the post today unless the user gave a release date.
 
-2. **Check the state.** Run `git status --short -- docs/src/content/docs/news` and keep unrelated changes. An untracked or modified `docs/src/content/docs/news/vX-Y-Z.md` for a version newer than the last stable tag is the current draft. Its version can differ from the one in step 1, because a later commit can change the next version. If there is a draft and the user asks to update it, follow step 9 and then steps 10 and 11. If there is a draft and the request is unclear, ask before you overwrite or merge it.
+2. **Check the state.** Run `git status --short -- docs/src/content/docs/news` and keep unrelated changes. An untracked or modified `docs/src/content/docs/news/vX-Y-Z.md` or `.mdx` for a version newer than the last stable tag is the current draft. Its version can differ from the one in step 1, because a later commit can change the next version. If there is a draft and the user asks to update it, follow step 9 and then steps 10 and 11. If there is a draft and the request is unclear, ask before you overwrite or merge it.
 
 3. **Collect the changes.**
     - Read the full log, not only the subjects: `git log --format='%h %s%n%b' <tag>..HEAD`.
@@ -58,22 +58,24 @@ Readers want to know three things: what will I notice, what can I do now, and do
     - Include what users notice or must act on: new features, fixes of released behavior, breaking changes, new minimum versions, required installation steps.
     - Check that users actually see a difference. A commit body says how the code changed, which is not always what users notice; see "Changes Users See" in the writing guide.
     - Leave out internal refactors, CI and tooling, work on the documentation site itself (build, theme, preview, single pages), OpenSpec planning, dependency bumps and synced vendored files. Also leave out fixes for features added after the last tag; those bugs never reached users. A correction of the documentation that closes an issue is a fix and goes into Bug Fixes.
-    - Leave out cosmetic changes that don't change how anything works, such as new translations of section headers. A fix of visibly wrong output, such as empty lines when output is paged, is not cosmetic; it gets a line in Editor and CLI Polish. If you think a cosmetic change matters to users, ask.
+    - Leave out cosmetic changes that don't change how anything works, such as new translations of section headers. A fix of visibly wrong output, such as empty lines when output is paged, is not cosmetic; it gets a line in the "Also in …" list of its chapter. If you think a cosmetic change matters to users, ask.
     - A website that moved to a new platform or was reorganized is news for every reader, unlike work on single pages. Give it a chapter of its own with a few paragraphs: why the site changed, as the planning documents give the reason, what is new for readers, and what they must do, such as updating bookmarks when addresses change.
     - Give a deprecation of a rarely used feature one sentence, last in its list, never a section of its own.
     - Mention each change once. A new minimum IDE version goes into Breaking Changes and not again in the chapter for that IDE.
     - If you are unsure whether something matters or whether it is breaking, ask (see Decision Points).
 
-5. **Order everything by user impact.** At every level (chapters, subsections, list items), put first what most readers notice or must act on. A list never starts with its least important item. A typical chapter order:
+5. **Order everything by what users see first.** At every level (chapters, subsections, list items), put first what most readers notice or must act on. A list never starts with its least important item. The chapters usually come in this order:
     1. Breaking Changes, if there are any
-    2. the headline chapters, such as support for a new Robot Framework version or a big editor feature
-    3. other improvements that most editor users notice
-    4. the chapter for PyCharm and IntelliJ IDEA
-    5. a website that moved or was reorganized, if there is one
-    6. Editor and CLI Polish, with one-line fixes
-    7. command-line and REPL changes for power users
-    8. Bug Fixes
-    9. Under the Hood, for experimental features that users can opt into
+    2. a new Robot Framework version and its features
+    3. VS Code
+    4. PyCharm, IntelliJ IDEA and other IDEs
+    5. language server features that every editor gets
+    6. AI agents
+    7. command-line tools and the terminal, such as the REPL
+    8. the website
+    9. everything else that fits none of these chapters
+    10. Bug Fixes
+    11. Under the Hood, for experimental features that users can opt into
 
 6. **Write the chapters.** Read `references/writing-guide.md` before you draft or restructure a post. It explains how each part of the post works: the chapter patterns (breaking changes, support for a new Robot Framework version, editor chapters, polish lists, bug fixes), the wording, and how much space an item gets. It also contains openings that worked and openings the maintainer rejected.
 
@@ -117,7 +119,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 ## Post Format
 
-- File: `docs/src/content/docs/news/vX-Y-Z.md`, the version with dashes, such as `v2-8-0.md`. The post is published at `/news/vX-Y-Z/`.
+- File: `docs/src/content/docs/news/vX-Y-Z.md`, the version with dashes, such as `v2-8-0.md`, or `vX-Y-Z.mdx` when the post shows a screenshot. The post is published at `/news/vX-Y-Z/`.
 - Frontmatter:
 
     ```markdown
@@ -134,12 +136,12 @@ Readers want to know three things: what will I notice, what can I do now, and do
 - `description:` names the main changes in one sentence, the headline chapters in a few words each, not their details. The site does not show it: it is the page's meta description for search results and link previews, and the summary of the post in the RSS feed. The news list shows the lede instead.
 - `tags:` has exactly one kind tag, `release` for a release post (the other kinds are `tips` and `april-fools`), followed by one topic tag for each topic the post has its own section about. Use only these topic tags: `analysis`, `editor`, `vscode`, `intellij`, `cli`, `configuration`, `ci`, `debugging`, `ai-agents`, `performance`.
 - No heading of level 1: the page shows `title:` as its heading, and the post starts with the lede.
-- Put `<!-- excerpt -->` on a line of its own after the first paragraph. The news list shows the post up to that marker.
+- Put `<!-- excerpt -->` on a line of its own after the first paragraph, or `{/* excerpt */}` in an `.mdx` post. The news list shows the post up to that marker.
 - Write in English. Write the product name in prose as `**RobotCode**`.
 - Link documentation pages by their path on the site, with the trailing slash (`/guides/repl/#exit-code-and-session-status`). Link issues as `([#123](https://github.com/robotcodedev/robotcode/issues/123))`.
 - Anchors follow Starlight: the heading in lowercase, spaces turned into `-`, other punctuation dropped. `Robot Framework 7.5 Support` becomes `#robot-framework-75-support`, and `In VS Code: the Documentation Viewer` becomes `#in-vs-code-the-documentation-viewer`.
 - Use code blocks only for commands and configuration that users can run. One to three lines are usually enough.
-- No videos in the post. A video that shows how a feature works belongs in the documentation, which the post links.
+- No videos in the post. A video that shows how a feature works belongs in the documentation, which the post links. A screenshot of a headline feature is fine when the user asks for one: reuse a screenshot of the VS Code guide with the `ThemeImage` component, which shows the light or dark variant to match the site's theme. Import it after the frontmatter (`import ThemeImage from "../../../components/ThemeImage.astro";`), write `<ThemeImage name="…" alt="…" full />` after the text it shows, and name the post `.mdx`. For PyCharm, capture the dialog with the PyCharm harness of the demo project (`playground/robotcode-demo/pycharm`, see its README), put it next to the other `pycharm-*.png` in `docs/src/assets/screenshots/`, and embed it as a Markdown image, indented under the list item it shows. In `.mdx`, `{`, `}` and `<` outside code are syntax.
 - Put something the reader must do into a `caution` aside, with what to do as its title:
 
     ```markdown
@@ -168,7 +170,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 - The post describes what RobotCode does. Robot Framework's own features are explained only as far as the reader needs them to understand RobotCode's part.
 - The text is factual, concise and neutral, with no hype and no "would otherwise have failed" framing.
 - Every Bug Fixes entry links an issue that the commit closes.
-- The Markdown is valid for Starlight, with YAML frontmatter. Exactly one post is created or changed.
+- The Markdown or MDX is valid for Starlight, with YAML frontmatter. Exactly one post is created or changed.
 - No docs build, changelog update, version edit, commit, tag or push happened.
 
 ## Example Prompts
