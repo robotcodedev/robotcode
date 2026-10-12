@@ -253,11 +253,12 @@ export class LanguageClientsManager {
 
       vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => this.refresh()),
       vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document)),
-      vscode.commands.registerCommand(
-        "robotcode.restartLanguageServers",
-        async (uri?: vscode.Uri) => await this.restart(uri),
-      ),
+      vscode.commands.registerCommand("robotcode.restartLanguageServers", async (uri?: vscode.Uri) => {
+        this.forgetCanceledPythonEnvironment(uri);
+        await this.restart(uri);
+      }),
       vscode.commands.registerCommand("robotcode.clearCacheRestartLanguageServers", async (uri?: vscode.Uri) => {
+        this.forgetCanceledPythonEnvironment(uri);
         await this.clearCaches(uri);
         await this.restart(uri);
       }),
@@ -421,7 +422,8 @@ export class LanguageClientsManager {
         if (!showRetry) return;
     }
 
-    if (folder !== undefined && !this.inselectPythonEnvironment) {
+    // only the dialog for an invalid environment remembers a cancel, a selection the user started does not
+    if (folder !== undefined && showRetry && !this.inselectPythonEnvironment) {
       this._pythonCanceledPythonAndRobotEnv.set(folder, true);
 
       throw new Error(`Select Python Interpreter for folder '${folder.name}' canceled.`);
@@ -433,7 +435,7 @@ export class LanguageClientsManager {
     showDialogs?: boolean,
   ): Promise<boolean> {
     return this._pythonValidPythonAndRobotEnvMutex.dispatch(async () => {
-      if (this._pythonCanceledPythonAndRobotEnv.has(folder)) {
+      if (this._pythonCanceledPythonAndRobotEnv.get(folder)) {
         return false;
       }
 
@@ -799,6 +801,16 @@ export class LanguageClientsManager {
   public async restart(uri?: vscode.Uri): Promise<void> {
     this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
     await this.refresh(uri, true);
+  }
+
+  // a restart the user asks for checks the environment again, even after a canceled dialog
+  private forgetCanceledPythonEnvironment(uri?: vscode.Uri): void {
+    const folder = uri !== undefined ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
+    if (folder !== undefined) {
+      this._pythonCanceledPythonAndRobotEnv.delete(folder);
+    } else {
+      this._pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
+    }
   }
 
   public async refresh(uri?: vscode.Uri, restart?: boolean): Promise<void> {

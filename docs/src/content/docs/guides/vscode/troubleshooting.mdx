@@ -41,7 +41,7 @@ RobotCode writes to two channels of the Output panel:
 
 ## Restart and clear the cache
 
-- **RobotCode: Restart Language Servers** stops the language servers and starts them again.
+- **RobotCode: Restart Language Servers** stops the language servers and starts them again. It also checks the Python environment again, for example after you dismissed RobotCode's prompt about a missing Robot Framework and installed it yourself.
 - **RobotCode: Clear Cache and Restart Language Servers** also deletes RobotCode's [analysis cache](/guides/vscode/diagnostics-and-linting/#the-analysis-cache), so that every library and file is loaded and analyzed again. Use it when diagnostics stay outdated although the files are right.
 
 The RobotCode menu offers both for the workspace folder of the active file.
