@@ -37,6 +37,11 @@ Commands that run Robot Framework (`robot`, `debug`, `repl`, `robot-debug`, `rep
 - **WHEN** `robotcode --wrapper ./does-not-exist.sh robot --nostatusrc t.robot` runs
 - **THEN** the process exits with code 252
 
+#### Scenario: Invalid robot.toml for repl-server
+- **WHEN** `robot.toml` is not valid TOML and `robotcode repl-server` runs
+- **THEN** robotcode reports the invalid file instead of a traceback
+- **AND** the process exits with code 252 instead of running on
+
 ### Requirement: Robot Framework's exit codes pass through
 
 The commands covered by the requirement "Own errors exit with 252" SHALL pass on the exit code that Robot Framework or the Robot Framework tool returns unchanged, including the number of failed tests and Robot Framework's own 252 for options it rejects.
