@@ -219,7 +219,7 @@ export class LanguageClientsManager {
     public readonly outputChannel: vscode.OutputChannel,
   ) {
     const fileWatcher1 = vscode.workspace.createFileSystemWatcher(
-      `**/{pyproject.toml,robot.toml,.robot.toml,robocop.toml,.gitignore,.robotignore,robocop.toml}`,
+      `**/{pyproject.toml,robot.toml,.robot.toml,robocop.toml,.gitignore,.robotignore}`,
     );
     fileWatcher1.onDidCreate((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
     fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));

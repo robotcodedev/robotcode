@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how RobotCode's Test Explorer in VS Code keeps its tree of suites, tests and tasks current with the files and folders on disk, without a manual refresh.
+Defines how RobotCode's Test Explorer in VS Code shows the discovered suites, tests and tasks and keeps the tree current with the files and folders on disk, without a manual refresh.
 
 ## ADDED Requirements
 
@@ -74,7 +74,7 @@ When a file that the Test Explorer shows as a suite is deleted, renamed or moved
 
 ### Requirement: Other files start no discovery
 
-Creating, changing or deleting a file or folder that is neither a Robot Framework file, nor a folder with Robot Framework files, nor shown in the tree SHALL NOT start a discovery of tests.
+Creating, changing or deleting a file or folder that is neither a Robot Framework file, nor a folder with Robot Framework files, nor shown in the tree SHALL NOT start a discovery of tests. Configuration files of the language server are not covered: `robot.toml`, `.robot.toml`, `pyproject.toml`, `robocop.toml`, `.gitignore` and `.robotignore` restart the language server of their workspace folder, and the restart reads the tests again.
 
 #### Scenario: Output files of a run
 
@@ -94,3 +94,12 @@ Folder changes that arrive within a short time SHALL lead to one discovery of th
 
 - **WHEN** three folders that the tree shows as suites are deleted with one `rm -rf` command
 - **THEN** the Test Explorer runs one discovery of the workspace folder, and none of the three folders remains in the tree
+
+### Requirement: A failed discovery replaces the shown suites
+
+When the discovery of a workspace folder fails, the Test Explorer SHALL show the error at the workspace folder and SHALL NOT keep the suites, tests and tasks of an earlier discovery of that folder in the tree.
+
+#### Scenario: Test path that does not exist
+
+- **WHEN** the tree shows the suite "Tests" of `src/tests`, and `robot.toml` is changed to `paths = ["missing"]`, a folder that does not exist
+- **THEN** within a few seconds the tree shows the workspace folder with the error of the discovery and no longer shows "Tests" or any suite below it

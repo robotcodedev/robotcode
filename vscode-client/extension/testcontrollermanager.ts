@@ -2,6 +2,7 @@ import { red, yellow, blue } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 import * as fs from "fs";
+import * as path from "path";
 
 import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
 import { escapeRobotGlobPatterns, filterAsync, Mutex, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
@@ -238,18 +239,18 @@ export class TestControllerManager {
       (_) => undefined,
     );
 
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(
-      `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`,
-    );
+    // Watches everything: VS Code reports an operation on a whole folder as one event for the folder,
+    // without events for the files in it.
+    const fileWatcher = vscode.workspace.createFileSystemWatcher("**");
 
     fileWatcher.onDidCreate(async (uri) => {
-      await this.refreshUri(uri);
+      if (this.hasRobotFileExtension(uri.path) || (await this.containsRobotFile(uri))) await this.refreshUri(uri);
     });
     fileWatcher.onDidDelete(async (uri) => {
-      await this.refreshUri(uri);
+      if (this.hasRobotFileExtension(uri.path) || this.isDiscoveredSuiteOrAbove(uri)) await this.refreshUri(uri);
     });
     fileWatcher.onDidChange(async (uri) => {
-      await this.refreshUri(uri);
+      if (this.hasRobotFileExtension(uri.path)) await this.refreshUri(uri);
     });
 
     this.activeStepDecorationType = vscode.window.createTextEditorDecorationType({
@@ -1054,7 +1055,7 @@ export class TestControllerManager {
         }
       }
 
-      return [
+      const errorItems: RobotTestItem[] = [
         {
           name: folder.name,
           type: RobotItemType.WORKSPACE,
@@ -1065,6 +1066,10 @@ export class TestControllerManager {
           children: [],
         },
       ];
+      // Indexed like a discovery result: findRobotItem would otherwise return the workspace item of the
+      // last successful discovery, and its suites would stay in the tree next to the error.
+      this.indexRobotTree(errorItems);
+      return errorItems;
     }
   }
 
@@ -1424,6 +1429,98 @@ export class TestControllerManager {
       }
       await this.refresh(undefined, token);
     });
+  }
+
+  private hasRobotFileExtension(name: string): boolean {
+    const lowerName = name.toLowerCase();
+    return this.languageClientsManager.fileExtensions.some((ext) => lowerName.endsWith(`.${ext}`));
+  }
+
+  // Whether a deleted path is the source of a suite in the folder's discovery result, or lies above one.
+  // relSource is relative to the project root that discovery changes into, the source of the workspace
+  // item. That path has symbolic links resolved, so for a workspace folder opened through one, the paths
+  // VS Code reports are taken relative to the workspace folder instead.
+  private isDiscoveredSuiteOrAbove(uri: vscode.Uri): boolean {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (uri.scheme !== "file" || folder === undefined) return false;
+
+    const items = this.robotTestItems.get(folder)?.items;
+    if (items === undefined) return false;
+
+    const root = this.findWorkspaceRobotItem(folder)?.source;
+    const fromRoot = root !== undefined ? path.relative(root, uri.fsPath) : undefined;
+    const relativePath =
+      fromRoot !== undefined && fromRoot !== ".." && !fromRoot.startsWith(`..${path.sep}`) && !path.isAbsolute(fromRoot)
+        ? fromRoot
+        : path.relative(folder.uri.fsPath, uri.fsPath);
+
+    // Like VS Code's own glob matching, case-insensitive on Windows and macOS.
+    const ignoreCase = process.platform === "win32" || process.platform === "darwin";
+    const normalize = (p: string) => (ignoreCase ? p.toLowerCase() : p);
+    const deleted = normalize(relativePath.split(path.sep).join("/"));
+
+    const matches = (list: RobotTestItem[] | undefined): boolean =>
+      list?.some((item) => {
+        if (item.type === RobotItemType.SUITE && item.relSource !== undefined) {
+          const source = normalize(item.relSource);
+          if (source === deleted || source.startsWith(`${deleted}/`)) return true;
+        }
+        return matches(item.children);
+      }) ?? false;
+
+    return matches(items);
+  }
+
+  // Whether a created directory contains a Robot Framework file. The walk does not follow symbolic links
+  // and skips what files.watcherExclude excludes, so it looks at what the watcher would report.
+  private async containsRobotFile(uri: vscode.Uri): Promise<boolean> {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (uri.scheme !== "file" || folder === undefined) return false;
+
+    try {
+      if (!(await fs.promises.stat(uri.fsPath)).isDirectory()) return false;
+    } catch {
+      return false;
+    }
+
+    // Like VS Code, relative patterns apply to the workspace folder, and a trailing "/**" also excludes
+    // the folder itself, which path.matchesGlob alone does not.
+    const resolve = (pattern: string) =>
+      pattern.startsWith("**") || path.isAbsolute(pattern) ? pattern : path.join(folder.uri.fsPath, pattern);
+    const excludes = Object.entries(
+      vscode.workspace.getConfiguration("files", folder).get<Record<string, boolean>>("watcherExclude", {}),
+    )
+      .filter(([, enabled]) => enabled)
+      .map(([pattern]) => ({
+        pattern: resolve(pattern),
+        folderPattern: pattern.endsWith("/**") ? resolve(pattern.slice(0, -3)) : undefined,
+      }));
+    const isExcluded = (p: string, isDirectory: boolean) =>
+      excludes.some(
+        ({ pattern, folderPattern }) =>
+          path.matchesGlob(p, pattern) ||
+          (isDirectory && folderPattern !== undefined && path.matchesGlob(p, folderPattern)),
+      );
+
+    const walk = async (dir: string): Promise<boolean> => {
+      let entries: fs.Dirent[];
+      try {
+        entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      } catch {
+        return false;
+      }
+      for (const entry of entries) {
+        const entryPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (!isExcluded(entryPath, true) && (await walk(entryPath))) return true;
+        } else if (this.hasRobotFileExtension(entry.name) && !isExcluded(entryPath, false)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    return walk(uri.fsPath);
   }
 
   private async refreshUri(uri?: vscode.Uri) {

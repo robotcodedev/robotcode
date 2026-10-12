@@ -21,7 +21,7 @@ The **Test Explorer** is VS Code's **Testing** view; open it with the flask icon
 
 RobotCode finds the tests the way [`robotcode discover`](/guides/discovering-tests/) does, in each workspace folder: with the paths, profiles and other options of the folder's `robot.toml`, and without the files that [`.robotignore`](/guides/ignoring-files/) excludes. The tree follows Robot Framework's suite structure: the workspace folder, the suites made from directories and files, and the tests and tasks in them.
 
-The tree updates when you change, save, create or delete a Robot Framework file; it also takes unsaved changes into account. After other changes, for example to `robot.toml`, **Refresh Tests** in the view's title bar reads the tests again.
+The tree updates when you change, save, create or delete a Robot Framework file, and when you create, copy, rename, move or delete a folder; it also takes unsaved changes into account. Files and folders that are created, copied, renamed, moved or deleted outside VS Code, for example by `git` or in a terminal, update the tree as well. After other changes, for example to `robot.toml`, **Refresh Tests** in the view's title bar reads the tests again.
 
 ## Running and debugging
 
