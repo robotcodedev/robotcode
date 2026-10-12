@@ -27,13 +27,9 @@ import com.jetbrains.rd.util.threading.coroutines.adviseSuspend
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointHandler
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointProperties
-import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointType
-import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedKeywordsBreakpointType
-import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedSuitesBreakpointType
-import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedTestsBreakpointType
+import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailureKind
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointHandler
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointProperties
-import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeUncaughtFailedKeywordsBreakpointType
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunProfileState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +86,7 @@ class RobotCodeDebugProcess(
         { it.sourcePosition?.file }, { it.line }
     )
     private val exceptionBreakpoints = RobotCodeExceptionBreakpoints<ExceptionBreakpoint> {
-        (it.type as RobotCodeExceptionBreakpointType).filterId
+        RobotCodeFailureKind.of(it.properties).filterId
     }
     private val breakpointsMutex = Mutex()
     private var configured = false
@@ -98,10 +94,7 @@ class RobotCodeDebugProcess(
     private val editorsProvider = RobotCodeXDebuggerEditorsProvider()
     private val breakpointHandlers = arrayOf(
         RobotCodeLineBreakpointHandler(this),
-        RobotCodeExceptionBreakpointHandler(this, RobotCodeUncaughtFailedKeywordsBreakpointType::class.java),
-        RobotCodeExceptionBreakpointHandler(this, RobotCodeFailedKeywordsBreakpointType::class.java),
-        RobotCodeExceptionBreakpointHandler(this, RobotCodeFailedTestsBreakpointType::class.java),
-        RobotCodeExceptionBreakpointHandler(this, RobotCodeFailedSuitesBreakpointType::class.java),
+        RobotCodeExceptionBreakpointHandler(this),
     )
 
     init {

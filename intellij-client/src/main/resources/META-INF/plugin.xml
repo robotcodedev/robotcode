@@ -68,6 +68,8 @@
 			implementationClass="dev.robotcode.robotcode4ij.lsp.RobotCodeTokensFileViewProviderFactory"/>
 
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
+		<postStartupActivity
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointCleanup"/>
 
 		<projectConfigurable parentId="language"
 							 provider="dev.robotcode.robotcode4ij.configuration.RobotCodeProjectSettingsConfigurableProvider"
@@ -125,13 +127,7 @@
 		<xdebugger.breakpointType
 			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointType"/>
 		<xdebugger.breakpointType
-			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeUncaughtFailedKeywordsBreakpointType"/>
-		<xdebugger.breakpointType
-			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedKeywordsBreakpointType"/>
-		<xdebugger.breakpointType
-			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedTestsBreakpointType"/>
-		<xdebugger.breakpointType
-			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailedSuitesBreakpointType"/>
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointType"/>
 
 		<internalFileTemplate name="Robot Suite File"/>
 		<internalFileTemplate name="Robot Resource File"/>

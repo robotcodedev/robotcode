@@ -5,8 +5,8 @@ import com.intellij.xdebugger.breakpoints.XBreakpointHandler
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProcess
 
 class RobotCodeExceptionBreakpointHandler(
-    val process: RobotCodeDebugProcess, type: Class<out RobotCodeExceptionBreakpointType>
-) : XBreakpointHandler<XBreakpoint<RobotCodeExceptionBreakpointProperties>>(type) {
+    val process: RobotCodeDebugProcess
+) : XBreakpointHandler<XBreakpoint<RobotCodeExceptionBreakpointProperties>>(RobotCodeExceptionBreakpointType::class.java) {
     override fun registerBreakpoint(breakpoint: XBreakpoint<RobotCodeExceptionBreakpointProperties>) {
         process.registerExceptionBreakpoint(breakpoint)
     }

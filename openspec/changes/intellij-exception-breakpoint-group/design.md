@@ -31,7 +31,7 @@ See proposal.md for the motivation. The current state that shapes the approach:
 
 ### One type whose breakpoints carry their kind
 
-A single, no longer abstract `RobotCodeExceptionBreakpointType` with the id `robotcode-exception` and the title "Robot Framework Exception Breakpoints" replaces the four types. Its properties get a `kind`, the filter id of the debugger, stored as text; `loadState` copies the stored bean with `XmlSerializerUtil.copyBean`, as the line breakpoint properties do. `createDefaultBreakpoint` creates "Uncaught Failed Keywords", enabled, and `getDisplayText` shows the name of the breakpoint's kind. A breakpoint whose stored properties have no kind, such as the default breakpoint of earlier versions, counts as "Uncaught Failed Keywords". Keeping the id carries over the state that v2.7.0 stored for "Any Exception".
+A single, no longer abstract `RobotCodeExceptionBreakpointType` with the id `robotcode-exception` and the title "Robot Framework Exception Breakpoints" replaces the four types. Its properties get a `kind`, the filter id of the debugger, stored as text; `loadState` copies the stored bean with `XmlSerializerUtil.copyBean`, as the line breakpoint properties do. `createDefaultBreakpoint` creates "Uncaught Failed Keywords", enabled, and `getDisplayText` shows the name of the breakpoint's kind. A breakpoint whose stored properties have no kind, such as the default breakpoint of earlier versions, counts as "Uncaught Failed Keywords". A stored breakpoint whose kind this version does not know, such as one written by hand or by a newer version, is removed by a startup activity when the project opens; the platform cannot hide single breakpoints of a type in the dialog. Keeping the id carries over the state that v2.7.0 stored for "Any Exception".
 
 Alternatives:
 
@@ -40,7 +40,7 @@ Alternatives:
 
 ### Adding kinds with the dialog's add button
 
-The type shows the add button. `addBreakpoint` opens a modal `ChooseElementsDialog` with the kinds the project does not have yet, in which several can be chosen, adds each chosen kind as an enabled breakpoint through the breakpoint manager in a write action, and returns the first one, which the dialog then selects. When every kind is already in the group, it says so with an info message and returns `null`; a cancelled chooser returns `null` as well.
+The type shows the add button. `addBreakpoint` opens a modal `ChooseElementsDialog` with the kinds the project does not have yet, in which several can be chosen, adds each chosen kind as an enabled breakpoint through the breakpoint manager, which takes its own lock and needs no write action, as PyCharm's Python exception breakpoints do, and returns the first one, which the dialog then selects. When every kind is already in the group, it says so with an info message and returns `null`; a cancelled chooser returns `null` as well.
 
 Alternative: a popup instead of the dialog. It answers after `addBreakpoint` has returned, so the dialog could not select the new breakpoint.
 

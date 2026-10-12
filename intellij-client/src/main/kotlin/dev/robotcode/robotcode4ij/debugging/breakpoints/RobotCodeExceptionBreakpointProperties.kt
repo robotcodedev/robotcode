@@ -1,12 +1,17 @@
 package dev.robotcode.robotcode4ij.debugging.breakpoints
 
+import com.intellij.util.xmlb.XmlSerializerUtil
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
 
 class RobotCodeExceptionBreakpointProperties : XBreakpointProperties<RobotCodeExceptionBreakpointProperties>() {
-    override fun getState(): RobotCodeExceptionBreakpointProperties? {
+    // the exception filter of the debugger that the breakpoint stands for; the breakpoint of earlier versions has none
+    var kind: String? = null
+
+    override fun getState(): RobotCodeExceptionBreakpointProperties {
         return this
     }
-    
-    // the properties have no fields, so a stored state has nothing to load
-    override fun loadState(state: RobotCodeExceptionBreakpointProperties) {}
+
+    override fun loadState(state: RobotCodeExceptionBreakpointProperties) {
+        XmlSerializerUtil.copyBean(state, this)
+    }
 }
