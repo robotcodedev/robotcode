@@ -228,7 +228,6 @@ def _create_task_in_thread(
         _running_tasks[future] = thread
         future.add_done_callback(_remove_future_from_running_tasks)
 
-    # TODO: don't set daemon=True because it can be deprecated in future pyhton versions
     thread.daemon = True
     return future, thread
 
