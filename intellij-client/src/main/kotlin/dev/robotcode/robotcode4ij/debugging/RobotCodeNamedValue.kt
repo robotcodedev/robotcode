@@ -81,7 +81,7 @@ class RobotCodeNamedValue(
 
 // the debugger sends the name of the exception as the message and the whole text in the body of the error, which
 // lsp4j passes on as a map
-private fun messageOf(error: ResponseError): String {
+internal fun messageOf(error: ResponseError): String {
     val format = ((error.data as? Map<*, *>)?.get("error") as? Map<*, *>)?.get("format") as? String
     return format ?: error.message
 }

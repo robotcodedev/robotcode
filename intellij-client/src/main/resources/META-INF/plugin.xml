@@ -118,6 +118,10 @@
 		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProgramRunner" order="first"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner" order="first"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProfileRunner" order="first"/>
+		<completion.contributor language="robotframework"
+			implementationClass="dev.robotcode.robotcode4ij.debugging.RobotCodeDebuggerCompletionContributor"/>
+		<typedHandler implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebuggerTypedHandler"/>
+		<scratch.rootType implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebugConsoleRootType"/>
 		<xdebugger.breakpointType
 			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointType"/>
 		<xdebugger.breakpointType
