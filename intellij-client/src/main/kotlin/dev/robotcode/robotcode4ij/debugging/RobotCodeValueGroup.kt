@@ -1,27 +1,21 @@
 package dev.robotcode.robotcode4ij.debugging
 
-import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.frame.XCompositeNode
 import com.intellij.xdebugger.frame.XValueChildrenList
 import com.intellij.xdebugger.frame.XValueGroup
-import org.eclipse.lsp4j.debug.VariablesResponse
+import kotlinx.coroutines.runBlocking
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 
+// a scope of a frame, whose variables are requested when the user expands it
 class RobotCodeValueGroup(
     groupName: String,
-    val variables: VariablesResponse,
     val variableRef: Int,
     val debugServer: IDebugProtocolServer,
-    val session: XDebugSession,
 ) : XValueGroup(groupName) {
     override fun computeChildren(node: XCompositeNode) {
-        val list = XValueChildrenList()
-        variables.variables.forEach {
-            list.add(
-                it.name,
-                RobotCodeNamedValue(it, variableRef, debugServer, session)
-            )
-        }
-        node.addChildren(list, true)
+        val children = runBlocking { debugServer.children(variableRef, planChildren()) }
+        node.addChildren(XValueChildrenList().apply {
+            children.forEach { add(it.name, RobotCodeNamedValue(it, null, debugServer)) }
+        }, true)
     }
 }

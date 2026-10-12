@@ -1,9 +1,10 @@
 package dev.robotcode.robotcode4ij.debugging
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.ui.ColoredTextContainer
 import com.intellij.ui.SimpleTextAttributes
-import com.intellij.xdebugger.XDebugSession
+import com.intellij.util.PathUtil
 import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.XSourcePosition
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
@@ -14,62 +15,64 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.StackFrame
-import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.StackFramePresentationHint
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import kotlin.io.path.Path
 
-class RobotCodeStackFrame(val frame: StackFrame, val debugServer: IDebugProtocolServer, val session: XDebugSession) :
-    XStackFrame() {
+/**
+ * A frame of the stack at a stop. [depth] is its distance from the bottom of the stack, and [innermost] is set for the
+ * top frame, whose Local variables can be changed.
+ */
+class RobotCodeStackFrame(
+    val frame: StackFrame,
+    val debugServer: IDebugProtocolServer,
+    private val depth: Int,
+    private val innermost: Boolean,
+) : XStackFrame() {
     override fun getSourcePosition(): XSourcePosition? {
         val file = VfsUtil.findFile(Path(frame.source?.path ?: return null), false)
-        return XDebuggerUtil.getInstance().createPosition(file, frame.line - 1, frame.column)
+        // the debugger counts columns from 1, the position from 0
+        return XDebuggerUtil.getInstance().createPosition(file, frame.line - 1, maxOf(frame.column - 1, 0))
     }
-    
+
     override fun getEvaluator(): XDebuggerEvaluator {
         return RobotCodeDebuggerEvaluator(debugServer, this)
     }
-    
-    override fun customizePresentation(component: ColoredTextContainer) {
-        if (frame.source == null) {
-            component.append(frame.name.orEmpty(), SimpleTextAttributes.REGULAR_ATTRIBUTES)
-        } else {
-            super.customizePresentation(component)
-        }
+
+    // without the line, so that the Variables view keeps what the user expanded after a step in the same keyword, test
+    // or suite; the depth tells apart the two frames of one stack entry and calls of a keyword at different depths
+    override fun getEqualityObject(): Any {
+        return Triple(frame.name, frame.source?.path, depth)
     }
-    
+
+    // the name, then the file and line in grey; a frame without a source file, such as a directory suite, is grey
+    override fun customizePresentation(component: ColoredTextContainer) {
+        val subtle = frame.presentationHint == StackFramePresentationHint.SUBTLE
+        component.append(
+            frame.name.orEmpty(),
+            if (subtle) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
+        )
+        val path = frame.source?.path ?: return
+        component.append(", ${PathUtil.getFileName(path)}:${frame.line}", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        component.setIcon(AllIcons.Debugger.Frame)
+    }
+
+    // the Local variables inline, the other scopes as groups; a frame that is gone because the run went on has no scopes
     override fun computeChildren(node: XCompositeNode) {
-        // TODO: Implement this method
+        val list = XValueChildrenList()
         runBlocking {
-            val scopesResponse = debugServer.scopes(ScopesArguments().apply { frameId = frame.id }).await()
-            val list = XValueChildrenList()
-            val localScope = scopesResponse.scopes.first { scope -> scope.name.lowercase() == "local" }
-            val localVariables = debugServer.variables(VariablesArguments().apply {
-                variablesReference = localScope.variablesReference
-            }).await()
-            localVariables.variables.forEach {
-                list.add(
-                    it.name,
-                    RobotCodeNamedValue(
-                        it,
-                        localScope.variablesReference,
-                        debugServer,
-                        session
-                    )
-                )
+            val scopes = debugServer.scopes(ScopesArguments().apply { frameId = frame.id }).await().scopes.orEmpty()
+            val localScope = scopes.firstOrNull { scope -> scope.name.lowercase() == "local" }
+            if (localScope != null) {
+                val localScopeReference = localScope.variablesReference.takeIf { innermost }
+                debugServer.children(localScope.variablesReference, planChildren()).forEach {
+                    list.add(it.name, RobotCodeNamedValue(it, localScopeReference, debugServer))
+                }
             }
-            
-            scopesResponse.scopes.filter { x -> x.name.lowercase() != "local" }.forEach {
-                val variableRef = it.variablesReference
-                val groupName = it.name
-                val variables = debugServer.variables(VariablesArguments().apply {
-                    variablesReference = variableRef
-                }).await()
-                val group =
-                    RobotCodeValueGroup(groupName, variables, variableRef, debugServer, session)
-                list.addBottomGroup(group)
+            scopes.filter { it !== localScope }.forEach {
+                list.addBottomGroup(RobotCodeValueGroup(it.name, it.variablesReference, debugServer))
             }
-            
-            node.addChildren(list, true)
         }
+        node.addChildren(list, true)
     }
 }

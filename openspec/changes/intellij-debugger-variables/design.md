@@ -6,6 +6,7 @@ See proposal.md for the motivation. The current state that shapes the approach:
 
 - **Frames and scopes** (`debugging/RobotCodeStackFrame.kt`): `computeChildren` requests the scopes, picks the Local scope with `first { … }`, which throws when a frame has none, shows its variables inline, and fetches the variables of every other scope right away to hand them to `RobotCodeValueGroup`. `customizePresentation` falls back to the platform default, `file:line`, whenever a frame has a source. The DAP column, which starts at 1, goes unchanged into `createPosition`, which counts from 0. `RobotCodeExecutionStack` and `RobotCodeSuspendContext` create new frame objects on every call, and no frame overrides `getEqualityObject()`.
 - **Values** (`RobotCodeNamedValue.kt`): children are requested without a filter. `getModifier()` is not overridden. A variables cache is read but never filled. The type is passed as the debugger sends it, `<class 'str'>`, which the platform shows in braces. The `initialize` request (`initializeArguments()` in `execution/RobotCodeRunProfileState.kt`) sets `supportsVariablePaging = false`.
+- **Evaluation results** (`RobotCodeDebuggerEvaluator.kt`): the value is built from the `evaluate` response without `namedVariables` and `indexedVariables`, so a list result in Evaluate Expression or a watch expands only to `len()` as well.
 - **What the debugger returns** (`packages/debugger/src/robotcode/debugger/debugger.py`):
   - a list has one named child (`len()`) and one indexed child per item; without a filter only `len()` is returned; the `indexed` filter with `start` and `count` pages correctly;
   - a dictionary has its entries plus `len()` as named children and no indexed children; without a filter it returns `len()` and at most 500 entries followed by a marker entry; the `named` filter ignores `start`, it only renumbers;
@@ -37,6 +38,7 @@ See proposal.md for the motivation. The current state that shapes the approach:
 - A value with indexed children (a list) requests its named children once, which gives `len()`, and its items with the `indexed` filter in pages of 100. When more items remain, `tooManyChildren(remaining, loadNextPage)` offers them.
 - A value without indexed children (a dictionary or another container) requests its children without a filter. The debugger then returns `len()` and up to 500 entries, so no paging is needed, and the `named` filter, which ignores `start`, is never used with an offset.
 - A scope requests its variables without a filter.
+- An evaluation result takes the counts from the `evaluate` response, so a list result is paged like a variable.
 
 The decision is a small pure function of the counts the debugger sends, so JUnit tests cover it. The `initialize` request sets `supportsVariablePaging = true`.
 
@@ -48,7 +50,7 @@ The frame requests the scopes, shows the Local variables inline as today and add
 
 ### Set Value only for the Local scope of the innermost frame
 
-`getModifier()` returns a modifier only for a variable that is a direct child of the Local scope of the innermost frame. The modifier sends `setVariable` with the scope reference, the name and the expression text, and reports `valueModified()` on success, after which the platform rebuilds the Variables view, or `errorOccurred` with the debugger's message. Its initial editor text is the current value as the debugger shows it, which is already a valid Python expression for strings, numbers, lists and dictionaries.
+`getModifier()` returns a modifier only for a variable that is a direct child of the Local scope of the innermost frame. The modifier sends `setVariable` with the scope reference, the name and the expression text, and reports `valueModified()` on success, after which the platform rebuilds the Variables view, or `errorOccurred` with the debugger's message. Its initial editor text is the current value as the debugger shows it, which is already a valid Python expression for strings, numbers, lists and dictionaries. The debugger shortens long values for the view, so this text can be shortened; as in VS Code, an unchanged text is not sent, and the modifier reports `valueModified()` without a request.
 
 The debugger assigns every value in the innermost variable scope. For a variable shown in the Suite or Global group, or in the Local scope of an outer frame, the change would only shadow the variable in the paused keyword, while the group would keep showing the old value. So the modifier is not offered there.
 
@@ -75,6 +77,7 @@ The type string `<class 'robot.utils.dotdict.DotDict'>` is shortened to the part
 - [A restored expansion state requests the children of every expanded node at the next stop] → That is what the user asked to see; the requests run in the background.
 - [Equal frames at the same depth in different calls of a keyword restore each other's state] → The variable names of a keyword are usually the same in each call, so the restored state fits.
 - [Set Value is narrower than in VS Code] → It is offered where the debugger's assignment matches what the view shows.
+- [A shortened value that the user edits is written back shortened] → The same holds in VS Code and in PyCharm's Python debugger, which also start from the value as shown; an unchanged text is not sent.
 
 ## Migration Plan
 

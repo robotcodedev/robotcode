@@ -95,8 +95,7 @@ class RobotCodeDebugProcess(
         return RobotCodeSuspendContext(
             debugServer.stackTrace(StackTraceArguments().apply { this.threadId = threadId }).await(),
             threadId,
-            debugServer,
-            session
+            debugServer
         )
     }
 

@@ -103,7 +103,7 @@ private fun initializeArguments() = InitializeRequestArguments().apply {
     supportsStartDebuggingRequest = false
     pathFormat = "path"
     supportsVariableType = true
-    supportsVariablePaging = false
+    supportsVariablePaging = true
     
     linesStartAt1 = true
     columnsStartAt1 = true

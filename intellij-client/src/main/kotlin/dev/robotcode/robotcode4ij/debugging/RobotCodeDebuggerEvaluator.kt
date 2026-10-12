@@ -24,6 +24,8 @@ class RobotCodeDebuggerEvaluator(val debugServer: IDebugProtocolServer, val fram
                 value = result.result
                 evaluateName = expression
                 variablesReference = result.variablesReference
+                namedVariables = result.namedVariables
+                indexedVariables = result.indexedVariables
                 type = result.type
                 presentationHint = result.presentationHint
             }
@@ -31,8 +33,7 @@ class RobotCodeDebuggerEvaluator(val debugServer: IDebugProtocolServer, val fram
                 RobotCodeNamedValue(
                     variable,
                     null,
-                    debugServer,
-                    frame.session
+                    debugServer
                 )
             )
         }

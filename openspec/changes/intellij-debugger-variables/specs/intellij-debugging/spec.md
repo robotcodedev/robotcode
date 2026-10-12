@@ -13,7 +13,7 @@ While a run is paused, the Variables view SHALL show the Local scope of the sele
 
 ### Requirement: Variables expand into their items
 
-A list variable SHALL expand into its length and its items, shown in pages of 100 items with an entry that loads the next page. A dictionary variable SHALL expand into its length and its entries. Each variable SHALL show the name of its Python type, such as `str`, `list` or `DotDict`.
+A list variable SHALL expand into its length and its items, shown in pages of 100 items with an entry that loads the next page. A dictionary variable SHALL expand into its length and its entries. Each variable SHALL show the name of its Python type, such as `str`, `list` or `DotDict`. The same SHALL apply to a value that an evaluation returns, such as a watch.
 
 #### Scenario: Expand a list
 
@@ -29,6 +29,11 @@ A list variable SHALL expand into its length and its items, shown in pages of 10
 
 - **WHEN** the run is paused after `&{options}=    Create Dictionary    a=1    b=2` and the user expands `&{options}`
 - **THEN** the entries `'a'` and `'b'` are shown with their values
+
+#### Scenario: Expand a list in a watch
+
+- **WHEN** the run is paused after `@{items}=    Create List    a    b    c`, the user adds `@{items}` as a watch and expands it
+- **THEN** the items `a`, `b` and `c` are shown with their indexes
 
 ### Requirement: Set Value for variables of the paused keyword or test
 
