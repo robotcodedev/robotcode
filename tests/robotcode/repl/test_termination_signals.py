@@ -1,0 +1,225 @@
+"""How the patched stop-signal monitor handles SIGINT and SIGTERM.
+
+Most tests call the monitor directly, the way the operating system would call it
+as a signal handler. The prompt_toolkit tests send a real SIGTERM, because the
+prompt has to end from wherever its event loop is when the signal arrives.
+"""
+
+import contextlib
+import signal
+import sys
+import threading
+from typing import Any, Iterator
+
+import pytest
+from prompt_toolkit.application import create_app_session
+from prompt_toolkit.input import PipeInput, create_pipe_input
+from prompt_toolkit.output import DummyOutput
+from robot.errors import ExecutionFailed
+from robot.running.signalhandler import _StopSignalMonitor
+
+from robotcode.repl import base_interpreter
+from robotcode.repl._debug.controller import DebugController
+from robotcode.repl.base_interpreter import ExecutionInterrupted
+from robotcode.repl.console_interpreter import ConsoleInterpreter
+from robotcode.repl.prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
+
+
+class _ExitError(Exception):
+    """Raised by the fake `os._exit`."""
+
+
+@pytest.fixture(autouse=True)
+def _signal_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(base_interpreter, "_sigterm_count", 0)
+    monkeypatch.setattr(base_interpreter, "_sigterm_ends_run", False)
+    monkeypatch.setattr(base_interpreter, "_signal_interpreter", None)
+
+    def fake_exit(code: int) -> None:
+        raise _ExitError(code)
+
+    monkeypatch.setattr("robotcode.repl.base_interpreter.os._exit", fake_exit)
+
+
+def _session(in_repl_run: bool = True) -> ConsoleInterpreter:
+    interpreter = ConsoleInterpreter(app=None)
+    interpreter._in_repl_run = in_repl_run
+    return interpreter
+
+
+def _monitor(running_keyword: bool) -> _StopSignalMonitor:
+    monitor = _StopSignalMonitor()
+    monitor._running_keyword = running_keyword
+    return monitor
+
+
+def test_sigint_interrupts_the_running_keyword() -> None:
+    interpreter = _session()
+
+    with pytest.raises(ExecutionInterrupted, match="Execution interrupted"):
+        _monitor(running_keyword=True)(signal.SIGINT, None)
+    assert not interpreter._termination_requested
+
+
+def test_sigint_without_a_running_keyword_changes_nothing() -> None:
+    interpreter = _session()
+
+    _monitor(running_keyword=False)(signal.SIGINT, None)
+
+    assert not interpreter._termination_requested
+    assert interpreter.exit_code is None
+
+
+def test_sigterm_interrupts_the_keyword_and_ends_the_session() -> None:
+    interpreter = _session()
+
+    with pytest.raises(ExecutionInterrupted, match="Execution terminated by signal"):
+        _monitor(running_keyword=True)(signal.SIGTERM, None)
+    assert interpreter._termination_requested
+    assert interpreter.exit_code == 253
+
+
+def test_sigterm_ends_an_idle_session() -> None:
+    interpreter = _session()
+    monitor = _monitor(running_keyword=False)
+
+    monitor(signal.SIGTERM, None)
+
+    assert interpreter._termination_requested
+    assert interpreter.exit_code == 253
+    # Nothing runs, so nothing is stopped: the session test isn't failed by the signal.
+    monitor.start_running_keyword(in_teardown=False)
+
+
+def test_sigterm_between_two_keywords_stops_the_statement_at_the_next_keyword() -> None:
+    interpreter = _session()
+    interpreter._running_statement = True
+    monitor = _monitor(running_keyword=False)
+
+    monitor(signal.SIGTERM, None)
+
+    assert interpreter._termination_requested
+    with pytest.raises(ExecutionInterrupted, match="Execution terminated by signal"):
+        monitor.start_running_keyword(in_teardown=False)
+
+
+def test_sigterm_outside_a_session_stops_the_run_like_robot_framework() -> None:
+    interpreter = _session(in_repl_run=False)
+
+    with pytest.raises(ExecutionFailed, match="Execution terminated by signal") as error:
+        _monitor(running_keyword=True)(signal.SIGTERM, None)
+    assert error.value.exit
+    assert interpreter._termination_requested
+    assert interpreter.exit_code is None
+
+
+@pytest.mark.parametrize("in_repl_run", [True, False], ids=["session", "run"])
+@pytest.mark.parametrize("running_keyword", [False, True], ids=["idle", "keyword-runs"])
+def test_sigterm_detaches_the_debugger(in_repl_run: bool, running_keyword: bool) -> None:
+    interpreter = _session(in_repl_run=in_repl_run)
+    controller = DebugController()
+    interpreter.set_controller(controller)
+
+    with contextlib.suppress(ExecutionFailed, ExecutionInterrupted):
+        _monitor(running_keyword=running_keyword)(signal.SIGTERM, None)
+
+    assert not controller.attached
+
+
+def test_second_sigterm_forces_the_end() -> None:
+    _session()
+    monitor = _monitor(running_keyword=False)
+    monitor(signal.SIGTERM, None)
+
+    with pytest.raises(_ExitError) as exited:
+        monitor(signal.SIGTERM, None)
+    assert exited.value.args == (253,)
+
+
+def test_sigterm_ends_a_read_once_it_has_arrived() -> None:
+    interpreter = _session()
+    _monitor(running_keyword=False)(signal.SIGTERM, None)
+
+    with pytest.raises(EOFError):
+        interpreter._read(">>> ")
+
+
+# ---------------------------------------------------------------------------
+# prompt_toolkit prompt, with a real SIGTERM
+# ---------------------------------------------------------------------------
+
+needs_sigterm = pytest.mark.skipif(sys.platform == "win32", reason="Windows doesn't deliver SIGTERM to a handler")
+
+
+@pytest.fixture
+def pipe_input() -> Iterator[PipeInput]:
+    with create_pipe_input() as inp:
+        with create_app_session(input=inp, output=DummyOutput()):
+            yield inp
+
+
+@pytest.fixture
+def sigterm_monitor() -> Iterator[None]:
+    previous = signal.signal(signal.SIGTERM, _StopSignalMonitor())
+    yield
+    signal.signal(signal.SIGTERM, previous)
+
+
+def _prompt_toolkit_session() -> PromptToolkitConsoleInterpreter:
+    interpreter = PromptToolkitConsoleInterpreter(app=None, no_history=True)
+    interpreter._in_repl_run = True
+    return interpreter
+
+
+def _once_drawn(interpreter: PromptToolkitConsoleInterpreter, action: Any) -> None:
+    """Run `action` after the prompt is first drawn; its event loop then waits for input."""
+    app = interpreter._session.app
+
+    def after_render(_: Any) -> None:
+        app.after_render -= after_render
+        action(app)
+
+    app.after_render += after_render
+
+
+def _read(interpreter: PromptToolkitConsoleInterpreter, pipe_input: PipeInput) -> str:
+    # Enter keys end the prompt if SIGTERM doesn't, so a failure can't hang the run.
+    done = threading.Event()
+
+    def press_enter() -> None:
+        while not done.wait(5):
+            pipe_input.send_text("\r")
+
+    threading.Thread(target=press_enter, daemon=True).start()
+    try:
+        return interpreter._read(">>> ")
+    finally:
+        done.set()
+
+
+@needs_sigterm
+def test_sigterm_ends_the_prompt_toolkit_prompt_waiting_for_input(pipe_input: PipeInput, sigterm_monitor: None) -> None:
+    interpreter = _prompt_toolkit_session()
+    main_thread = threading.main_thread().ident
+    assert main_thread is not None
+    _once_drawn(
+        interpreter,
+        lambda app: threading.Thread(target=signal.pthread_kill, args=(main_thread, signal.SIGTERM)).start(),
+    )
+
+    with pytest.raises(EOFError):
+        _read(interpreter, pipe_input)
+    assert interpreter.exit_code == 253
+
+
+@needs_sigterm
+def test_sigterm_in_a_callback_of_the_prompt_loop_ends_the_prompt_toolkit_prompt(
+    pipe_input: PipeInput, sigterm_monitor: None
+) -> None:
+    # The handler runs inside the callback, where an error raised by it would only be reported.
+    interpreter = _prompt_toolkit_session()
+    _once_drawn(interpreter, lambda app: app.loop.call_soon(signal.raise_signal, signal.SIGTERM))
+
+    with pytest.raises(EOFError):
+        _read(interpreter, pipe_input)
+    assert interpreter.exit_code == 253

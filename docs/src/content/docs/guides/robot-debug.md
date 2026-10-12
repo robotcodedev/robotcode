@@ -207,6 +207,8 @@ At a stop, `.exit` / `.quit` (which leave the *shell*) would be ambiguous, so th
 
 `Ctrl-C` or `Ctrl-D` at the `(rdb)` prompt **resumes the run** — the same as `.continue`, not a kill — so use `.abort` when you actually want to stop it. Pressing Enter on an empty line does nothing and just re-prompts, as it does at the shell's `>>>` prompt.
 
+SIGTERM, which `kill` and process managers send on Linux and macOS, ends the run as it ends a `robotcode robot` run: the test that runs fails with `Execution terminated by signal`, the remaining tests don't run, and the output files are written. At a stop, the run resumes first and doesn't pause again. A second SIGTERM stops the process at once with exit code `253`.
+
 ## A debug session, end to end
 
 ```

@@ -118,6 +118,8 @@ class Interpreter(BaseInterpreter):
         self._interrupted = False
         self._has_shutdown = False
         self._cell_errors: List[str] = []
+        # Set while the session waits for a cell: SIGTERM then ends the wait (`_end_waiting`).
+        self._waiting = False
 
     def shutdown(self) -> None:
         self._code = []
@@ -270,7 +272,14 @@ class Interpreter(BaseInterpreter):
             self._success = True
 
     def run_input(self) -> None:
-        self.has_input.wait()
+        self._waiting = True
+        try:
+            # Checked after marking the wait: a SIGTERM in between can't be missed.
+            if self._termination_requested:
+                raise EOFError
+            self.has_input.wait()
+        finally:
+            self._waiting = False
         if self._has_shutdown:
             self.executed.set()
             raise EOFError
@@ -280,3 +289,9 @@ class Interpreter(BaseInterpreter):
         finally:
             self.has_input.clear()
             self.executed.set()
+
+    def _end_waiting(self) -> None:
+        # Raised rather than `shutdown()`: setting the event takes a lock that the main
+        # thread, interrupted by the signal, may hold.
+        if self._waiting:
+            raise EOFError

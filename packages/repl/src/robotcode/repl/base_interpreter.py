@@ -1,6 +1,8 @@
 import abc
 import contextlib
+import os
 import signal
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
@@ -59,13 +61,65 @@ def _register_signal_handler(self: Any, exsignum: Any) -> None:
     pass
 
 
+# Robot Framework's own handling, kept for SIGTERM outside a REPL session (a robot-debug run).
+_robot_monitor_call = _StopSignalMonitor.__call__
+_robot_stop_execution_gracefully = _StopSignalMonitor._stop_execution_gracefully
+
+# The interpreter of this process; the patched monitor hands SIGTERM to it.
+_signal_interpreter: Optional["BaseInterpreter"] = None
+# SIGTERMs received so far. Counted here: Robot Framework resets its count after every
+# REPL statement.
+_sigterm_count = 0
+# Set by a SIGTERM outside a REPL session: stopping then ends the run as Robot Framework does.
+_sigterm_ends_run = False
+
+
 def _stop_signal_monitor_call(self: Any, signum: Any, frame: Any) -> None:
-    if self._running_keyword:
+    if signum == signal.SIGTERM:
+        _on_sigterm(self, signum, frame)
+    elif self._running_keyword:
+        # SIGINT interrupts the running keyword; the session goes on.
         self._stop_execution_gracefully()
 
 
+def _on_sigterm(monitor: Any, signum: Any, frame: Any) -> None:
+    global _sigterm_count, _sigterm_ends_run
+    _sigterm_count += 1
+    if _sigterm_count > 1:
+        try:
+            if sys.__stderr__ is not None:
+                sys.__stderr__.write("Execution forcefully stopped.\n")
+        finally:
+            os._exit(253)
+
+    interpreter = _signal_interpreter
+    if interpreter is not None and interpreter._in_repl_run:
+        if interpreter._running_statement:
+            # As in a Robot Framework run, the next keyword that starts stops the statement;
+            # Robot Framework resets the count when the statement ends.
+            monitor._signal_count += 1
+        interpreter._terminate_session(monitor._running_keyword)
+        return
+
+    # A run, such as robot-debug: Robot Framework ends it, at once while a keyword runs
+    # (this raises), otherwise at the next keyword; the interpreter only stops waiting.
+    _sigterm_ends_run = True
+    if interpreter is not None:
+        interpreter._termination_requested = True
+    try:
+        _robot_monitor_call(monitor, signum, frame)
+    finally:
+        if interpreter is not None:
+            interpreter._end_waiting()
+
+
 def _stop_signal_monitor_stop_execution_gracefully(self: Any) -> None:
-    raise ExecutionInterrupted("Execution interrupted")
+    if _sigterm_ends_run:
+        _robot_stop_execution_gracefully(self)
+    elif _sigterm_count:
+        raise ExecutionInterrupted("Execution terminated by signal")
+    else:
+        raise ExecutionInterrupted("Execution interrupted")
 
 
 _patched = False
@@ -333,6 +387,8 @@ def take_active_interpreter() -> Optional["BaseInterpreter"]:
 class BaseInterpreter(abc.ABC):
     def __init__(self) -> None:
         _patch()
+        global _signal_interpreter
+        _signal_interpreter = self
 
         self._logger = InterpreterLogger(self)
         LOGGER.register_logger(self._logger)
@@ -354,6 +410,10 @@ class BaseInterpreter(abc.ABC):
         self.failures: List[ExecutionFailed] = []
         # The code given to `.exit`/`.quit`, None without one.
         self.exit_code: Optional[int] = None
+        # Set by SIGTERM: the session or the run ends.
+        self._termination_requested = False
+        # Set while a statement of the input runs: SIGTERM then stops it at its next keyword.
+        self._running_statement = False
 
     @property
     def curdir(self) -> Path:
@@ -450,12 +510,24 @@ class BaseInterpreter(abc.ABC):
     def interrupt(self) -> None:
         signal.raise_signal(signal.SIGINT)
 
+    def _terminate_session(self, keyword_running: bool) -> None:
+        """End the REPL session on SIGTERM, from the signal handler: a running keyword is
+        interrupted, then the session ends as at the end of the input, with exit code 253."""
+        self._termination_requested = True
+        self.exit_code = 253
+        self._end_waiting()
+        if keyword_running:
+            raise ExecutionInterrupted("Execution terminated by signal")
+
+    def _end_waiting(self) -> None:
+        """Stop waiting for input, from the signal handler. Each interpreter knows how it waits."""
+
     def run(self) -> Any:
         self._logger.enabled = True
 
         has_input = True
         try:
-            while has_input:
+            while has_input and not self._termination_requested:
                 try:
                     self.run_input()
                 except EOFError:
@@ -483,9 +555,14 @@ class BaseInterpreter(abc.ABC):
     def run_input(self) -> None:
         for kw in self.get_input():
             with STOP_SIGNAL_MONITOR:
-                if kw is None:
-                    break
-                self.set_last_result(self.run_keyword(kw))
+                self._running_statement = True
+                try:
+                    # Checked after marking the statement: a SIGTERM in between can't be missed.
+                    if kw is None or self._termination_requested:
+                        break
+                    self.set_last_result(self.run_keyword(kw))
+                finally:
+                    self._running_statement = False
 
     def set_last_result(self, result: Any) -> None:
         self.last_result = result

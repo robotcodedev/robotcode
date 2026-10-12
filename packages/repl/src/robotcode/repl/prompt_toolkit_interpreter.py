@@ -122,6 +122,21 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
             return self._session.prompt(prompt, default=prefill, completer=completer)
         return self._session.prompt(prompt, default=prefill)
 
+    def _end_read(self) -> None:
+        loop = self._session.app.loop
+        if loop is None:
+            # No event loop runs the prompt (yet, or any more).
+            super()._end_read()
+            return
+        # The signal handler can run inside a callback of the prompt's event loop, which
+        # would only report an error raised there; so the prompt ends through the loop.
+        loop.call_soon_threadsafe(self._end_prompt)
+
+    def _end_prompt(self) -> None:
+        app = self._session.app
+        if app.future is not None and not app.future.done():
+            app.exit(exception=EOFError())
+
     def make_completer(
         self, command_names: List[str], context_provider: Callable[[], Tuple[Any, Any]]
     ) -> Optional[Any]:

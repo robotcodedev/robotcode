@@ -1,6 +1,7 @@
 import asyncio
 import threading
 import time
+from concurrent.futures import wait
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple
 
@@ -223,7 +224,7 @@ def repl_server(
     server = wait_for_server(server_task) if server_task is not None else None
 
     try:
-        run_repl(
+        result = run_repl(
             interpreter=interpreter,
             app=app,
             variable=variable,
@@ -238,8 +239,15 @@ def repl_server(
             files=files,
         )
     finally:
+        # Closing stops the server's stdio reader too. It runs on the server's loop, because
+        # called from here it waits until all clients of a TCP server have disconnected (from
+        # Python 3.12 on). The wait must not raise: an error of the session, such as an
+        # invalid robot.toml, has to reach Click unchanged.
         if server is not None:
-            server.loop.stop()
+            server.loop.call_soon_threadsafe(server.close)
 
         if server_task is not None:
-            server_task.result(5)
+            wait([server_task], timeout=1)
+
+    if result.exit_code is not None:
+        app.exit(result.exit_code)

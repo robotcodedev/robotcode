@@ -1,11 +1,11 @@
 import abc
 import asyncio
-import io
 import logging
+import os
 import sys
 import threading
 import weakref
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future
 from types import TracebackType
 from typing import (
     Any,
@@ -277,8 +277,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     @abc.abstractmethod
     def create_protocol(self) -> TProtocol: ...
 
-    stdio_executor: Optional[ThreadPoolExecutor] = None
-
     @_logger.call
     def start_stdio(self) -> None:
         self.mode = ServerMode.STDIO
@@ -293,18 +291,29 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
                 protocol.connection_made(transport)
 
+                done: "Future[None]" = Future()
+
                 def run() -> None:
-                    while not stop_event.is_set() and not rfile.closed:
-                        if cast(io.BufferedReader, rfile).peek(1):
-                            data = cast(io.BufferedReader, rfile).read1(10000)
+                    # Reads the file descriptor itself: a read that blocks in the buffered
+                    # reader holds its lock, which the interpreter needs when it shuts down.
+                    fd = rfile.fileno()
+                    try:
+                        while not stop_event.is_set() and not rfile.closed:
+                            data = os.read(fd, 10000)
+                            if data:
+                                self.loop.call_soon_threadsafe(protocol.data_received, data)
+                            else:
+                                # end of input, wait a bit if we are not closing
+                                stop_event.wait(0.01)
+                    except BaseException as e:
+                        done.set_exception(e)
+                    else:
+                        done.set_result(None)
 
-                            self.loop.call_soon_threadsafe(protocol.data_received, data)
-                        else:
-                            # no data available, wait a bit if we are not closing
-                            stop_event.wait(0.01)
-
-                with ThreadPoolExecutor(max_workers=1, thread_name_prefix="aio_readline") as stdio_executor:
-                    await asyncio.wrap_future(stdio_executor.submit(run))
+                # A daemon thread: a read that blocks on a pipe the client keeps open
+                # must not keep the process alive once everything else has ended.
+                threading.Thread(target=run, name="aio_readline", daemon=True).start()
+                await asyncio.wrap_future(done)
 
             self.loop.run_until_complete(aio_readline(transport.rfile, protocol))
 

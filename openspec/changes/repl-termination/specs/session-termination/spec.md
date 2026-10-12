@@ -8,7 +8,7 @@ Defines how `robotcode repl`, `robotcode repl-server` and `robotcode robot-debug
 
 ### Requirement: SIGTERM ends a REPL session
 
-`robotcode repl` and `robotcode repl-server` SHALL end their session when they receive SIGTERM, also while they wait for input or for a client. A keyword that runs SHALL be interrupted first. The session SHALL end as at the end of the input, without running input that isn't complete; its output files SHALL be written, and the process SHALL exit with code 253.
+`robotcode repl` and `robotcode repl-server` SHALL end their session when they receive SIGTERM, also while they wait for input or for a client. A statement that runs SHALL be stopped first, at the keyword that runs or at the next one that starts. The session SHALL end as at the end of the input, without running input that isn't complete; its output files SHALL be written, and the process SHALL exit with code 253.
 
 #### Scenario: Waiting for input
 - **WHEN** `robotcode repl -o output.xml` waits for input from a pipe that stays open and receives SIGTERM
@@ -20,6 +20,11 @@ Defines how `robotcode repl`, `robotcode repl-server` and `robotcode robot-debug
 - **THEN** the keyword is interrupted
 - **AND** the process exits with code 253
 
+#### Scenario: Loop that runs
+- **WHEN** `robotcode repl` receives SIGTERM while a `FOR` loop of keywords runs
+- **THEN** the loop stops
+- **AND** the process exits with code 253
+
 #### Scenario: Unfinished input
 - **WHEN** `robotcode repl` receives SIGTERM while a `FOR` loop has been entered without its `END`
 - **THEN** the loop doesn't run
@@ -27,6 +32,10 @@ Defines how `robotcode repl`, `robotcode repl-server` and `robotcode robot-debug
 
 #### Scenario: repl-server waiting for a client
 - **WHEN** `robotcode repl-server` waits for a client and receives SIGTERM
+- **THEN** the process exits with code 253
+
+#### Scenario: repl-server with a connected TCP client
+- **WHEN** `robotcode repl-server --tcp` receives SIGTERM while a client stays connected
 - **THEN** the process exits with code 253
 
 ### Requirement: SIGTERM ends a robot-debug run like Robot Framework

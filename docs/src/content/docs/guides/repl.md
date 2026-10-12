@@ -515,6 +515,8 @@ Whether a session counts as interactive depends on whether stdin is a terminal. 
 
 `.exit` without a code follows the rules above. `CODE` is passed to the operating system as it is; on Linux and macOS only its lowest 8 bits reach the caller, so `.exit 256` ends with `0`.
 
+`Ctrl-C` interrupts a keyword that runs: the statement fails, and the session goes on. SIGTERM, which `kill` and process managers send on Linux and macOS, ends the session, also while it waits for input. A statement that runs is stopped, input that isn't complete doesn't run, the output files are written, and the exit code is `253`, Robot Framework's code for a run stopped by the user. A second SIGTERM before the session has ended stops the process at once, also with `253`. `robotcode repl-server` ends the same way.
+
 Errors before the session starts keep Robot Framework's exit codes — for example `252` for an option in the configuration that the installed Robot Framework doesn't accept. Errors that RobotCode reports itself, such as an invalid `robot.toml`, an unknown option or a wrapper that can't be started, also exit with `252`, Robot Framework's code for invalid data or command line options.
 
 ## `--source`: run the session as if it lived in a file

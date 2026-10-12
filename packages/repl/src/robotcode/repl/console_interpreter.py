@@ -368,6 +368,8 @@ class ConsoleInterpreter(BaseInterpreter):
         # runs, then the session ends without reading again — on a terminal, a
         # read after Ctrl-D waits for more input instead of ending.
         self._input_ended = False
+        # Set while a prompt waits for input: SIGTERM then ends the wait (`_end_waiting`).
+        self._reading = False
 
         # Debug-frontend state. `_controller`/`_debug_completer` are wired by
         # `set_controller` when a debugger is attached; `_stop`/`_frame_no`/
@@ -481,6 +483,29 @@ class ConsoleInterpreter(BaseInterpreter):
         del multiline_continuation, prefill, completer  # no editor/prefill/completion in plain mode
         return input(prompt)
 
+    def _read(self, prompt: str, **kwargs: Any) -> str:
+        """`read_line` that SIGTERM can end: it raises `EOFError` once the session or run
+        is to end, also while it waits."""
+        self._reading = True
+        try:
+            # Checked after marking the read: a SIGTERM in between can't be missed.
+            if self._termination_requested:
+                raise EOFError
+            return self.read_line(prompt, **kwargs)
+        finally:
+            self._reading = False
+
+    def _end_waiting(self) -> None:
+        # Nothing pauses any more, so a robot-debug run goes on to its end.
+        if self._controller is not None:
+            self._controller.set_attached(False)
+        if self._reading:
+            self._end_read()
+
+    def _end_read(self) -> None:
+        """End the read that waits for input, from the signal handler."""
+        raise EOFError
+
     def make_completer(
         self, command_names: List[str], context_provider: Callable[[], Tuple[Any, Any]]
     ) -> Optional[Any]:
@@ -590,7 +615,7 @@ class ConsoleInterpreter(BaseInterpreter):
                 self._replay_commands(bp.commands)
             while self._pending_action is None:
                 try:
-                    line = self.read_line(self.DEBUG_PROMPT, completer=self._debug_completer)
+                    line = self._read(self.DEBUG_PROMPT, completer=self._debug_completer)
                 except (EOFError, KeyboardInterrupt):
                     self._echo("")
                     self._pending_action = ResumeAction.CONTINUE
@@ -860,7 +885,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
                 prefill = compute_indent(lines) if lines else ""
                 try:
-                    text = self.read_line(
+                    text = self._read(
                         prompt,
                         multiline_continuation=bool(lines),
                         prefill=prefill,
@@ -880,7 +905,7 @@ class ConsoleInterpreter(BaseInterpreter):
                         continue
                     raise
                 except EOFError:
-                    if not lines:
+                    if not lines or self._termination_requested:
                         raise
                     # Handle the unfinished block like after a final empty line, so
                     # Robot Framework reports it, and end the session afterwards.
@@ -1892,7 +1917,7 @@ class ConsoleInterpreter(BaseInterpreter):
         collected: List[str] = []
         while True:
             try:
-                line = self.read_line("(com) ")
+                line = self._read("(com) ")
             except (EOFError, KeyboardInterrupt):
                 break
             line = line.strip()
