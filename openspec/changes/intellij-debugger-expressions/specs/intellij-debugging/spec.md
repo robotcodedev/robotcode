@@ -51,7 +51,7 @@ A Robot Framework debug session SHALL have a "Robot Debug Console" tab. While th
 
 ### Requirement: Breakpoint conditions, log messages and hit counts
 
-Robot Framework line breakpoints SHALL offer a condition, a log message ("Evaluate and log") and a hit count, and the project SHALL keep them with its breakpoints. The condition SHALL be a Python expression in which Robot Framework variables are replaced, and the run SHALL stop only when it is true. A hit count N SHALL stop the run only the N-th time it reaches the line, counting only the times the condition was true.
+Robot Framework line breakpoints SHALL offer a condition, a log message ("Evaluate and log") and a hit count, and the project SHALL keep them with its breakpoints. The condition SHALL be a Python expression in which Robot Framework variables are replaced, and the run SHALL stop only when it is true. The hit count SHALL take the forms the RobotCode debugger accepts, such as `3` for the third hit, `>= 3` or `% 3`, counting only the times the condition was true.
 
 #### Scenario: Condition
 
@@ -60,8 +60,13 @@ Robot Framework line breakpoints SHALL offer a condition, a log message ("Evalua
 
 #### Scenario: Hit count
 
-- **WHEN** a breakpoint inside that loop has the hit count 2
+- **WHEN** a breakpoint inside that loop has the hit count `2`
 - **THEN** the run stops once, in the second iteration
+
+#### Scenario: Hit count with an operator
+
+- **WHEN** a breakpoint inside that loop has the hit count `% 3`
+- **THEN** the run stops twice, with `${i}` being 2 and 5
 
 #### Scenario: Settings survive a restart
 
@@ -95,12 +100,3 @@ When the run stops at a Robot Framework line breakpoint, the IDE SHALL apply tha
 
 - **WHEN** a breakpoint is set to stay disabled until another breakpoint is hit, and the run reaches it before and after that other breakpoint
 - **THEN** the run stops at it only after the other breakpoint was hit
-
-### Requirement: Exception breakpoint for failed tests
-
-The IDE SHALL offer a "Failed Tests" Robot Framework exception breakpoint, disabled by default. While it is enabled and breakpoints are not muted, the run SHALL stop when a test fails, apply the breakpoint's suspend policy and show the test's failure message.
-
-#### Scenario: Failed test
-
-- **WHEN** only "Failed Tests" is enabled and a test fails with the message `intentional failure`
-- **THEN** the run stops at the end of that test and shows the failure message
