@@ -4,14 +4,14 @@
 
 See proposal.md for the motivation. The current state that shapes the approach:
 
-- **One handler for Run and Debug:** `RobotCodeRunProfileState.startProcess()` builds `robotcode … debug [--no-debug] -bl …` for both runners and wraps it in a `KillableColoredProcessHandler`. The Run runner shows that handler in a run tab, the Debug runner wraps it in an XDebugSession.
-- **The port:** `NetUtils.findFreePort(6612)` binds 6612 and closes it again, and falls back to an OS-assigned port only when 6612 is busy. Only then does the state add `--tcp <port>`, after the `-bl` items. The debugger binds the port later, after Python has started.
+- **One handler for Run and Debug:** since `intellij-run-configuration-target`, `RobotCodeRunProfileState` is a `PythonCommandLineState`. `buildPythonExecution` builds `robotcode … debug [--no-debug] [--tcp <port>] -- <Robot Framework arguments>` for both runners, and the override of `createProcessHandler(Process, String, TargetEnvironment, TargetedCommandLine)` returns `RobotCodeProcessHandler`, a `KillableColoredProcessHandler` subclass that `intellij-test-result-events` added for its output fence. Both runners start the run through `startInBackground` on a pooled thread; the Run runner shows the handler in a run tab, the Debug runner wraps it in an XDebugSession.
+- **The port:** `buildPythonExecution` calls `NetUtils.findFreePort(6612)`, which binds 6612 and closes it again, and falls back to an OS-assigned port only when 6612 is busy. `debugArguments` adds `--tcp <port>` only for a port other than 6612, after `--no-debug` and before `--` and the Robot Framework arguments; `RobotCodeRunTargetTest` expects the default port to be left out. The debugger binds the port later, after Python has started.
 - **The DAP connection** is made in `startNotified`, which still blocks its thread for the whole handshake. The socket is a `lateinit` field that `processTerminated` reads unguarded.
 - **What Stop does in 2026.1** (javap, from the analysis): the Stop action and `XDebugSessionImpl.stop()` call `ProcessHandler.destroyProcess()`, or `detachProcess()` when the handler detaches by default. `destroyProcess()` fires `processWillTerminate` and then calls `destroyProcessImpl()`, which ends in `KillableProcessHandler.doDestroyProcess()`. That method tries `destroyProcessGracefully()` (SIGINT to the process tree on Unix, WinP Ctrl+C on Windows) when `canDestroyProcessGracefully()` allows it, and kills the process otherwise. While a process is terminating, Stop turns into Kill, which calls `killProcess()` and kills the process tree directly. `XDebugProcess.stop()` runs only after the process has terminated.
 - **Robot Framework's signal handling** (`robot/running/signalhandler.py`): the first signal prints "Second signal will force exit." and stops gracefully, with the running test failing as "Execution terminated by signal", teardowns run and outputs written. A second signal prints "Execution forcefully stopped." and exits. A paused run waits in `Debugger.wait_for_running()` for a client command, so a signal alone leaves it paused: in runtime check Q43 the process was still alive 35 s after Stop, and Kill ended it with exit code 137 and no outputs. In Run mode one Stop already ended a running test gracefully (Q62(b), Linux only).
 - **The debugger's `terminate`** (`packages/debugger/src/robotcode/debugger/server.py`): the first request raises SIGINT inside the debugger process and continues a paused run, which sends a `continued` event. A second request, or one with `restart=true`, raises SIGTERM. A DAP probe confirmed that a terminate while paused ends the run with `output.xml`, `log.html` and `report.html` written.
-- **The debug process:** `RobotCodeDebugProcess.stop()` sends `terminate` inside `runBlocking` and ignores errors. The protocol client ignores `continued` and `exited`; `terminated` closes the socket.
-- **Planned, not implemented:** with decision D1, `intellij-run-configuration-target` turns the state into a `PythonCommandLineState` subclass. PyCharm then creates the handler in `createProcessHandler(Process, String, TargetEnvironment, TargetedCommandLine)`; its default for local runs, `PythonProcessHandler`, is a `KillableProcessHandler` as well. `intellij-async-run-and-debug` moves the handshake off the EDT.
+- **The debug process:** `RobotCodeDebugProcess.stop()` sends `terminate` inside `runBlocking` and ignores errors. The protocol client has no handler for `continued`; `terminated` closes the socket.
+- **Planned, not implemented:** `intellij-async-run-and-debug` moves the handshake off the EDT.
 
 ## Goals / Non-Goals
 
@@ -30,7 +30,7 @@ See proposal.md for the motivation. The current state that shapes the approach:
 
 ### Stop goes through the debugger, in the handler's destroy path
 
-A `KillableColoredProcessHandler` subclass overrides `doDestroyProcess()`. While the DAP connection is up, it hands the stop to the stop policy below and returns without sending a signal. Without a connection, it calls the inherited `doDestroyProcess()`, which is today's behaviour. `doDestroyProcess()` is overridden rather than `destroyProcessGracefully()`, because the inherited method skips `destroyProcessGracefully()` whenever `canDestroyProcessGracefully()` is false, for example on Windows without WinP, and kills the process right away. `killProcess()` stays untouched, so the second Stop still kills.
+`RobotCodeProcessHandler` overrides `doDestroyProcess()`. While the DAP connection is up, it hands the stop to the stop policy below and returns without sending a signal. Without a connection, it calls the inherited `doDestroyProcess()`, which is today's behaviour. `doDestroyProcess()` is overridden rather than `destroyProcessGracefully()`, because the inherited method skips `destroyProcessGracefully()` whenever `canDestroyProcessGracefully()` is false, for example on Windows without WinP, and kills the process right away. `killProcess()` stays untouched, so the second Stop still kills.
 
 Alternatives:
 
@@ -55,11 +55,9 @@ Alternatives:
 - A timeout on the process exit, followed by the soft and the hard kill: it would force-kill long teardowns although Robot Framework is stopping as asked, and the second Stop already kills.
 - Waiting for the response without a limit: a debugger with a blocked event loop would leave Stop without effect until the user kills the process.
 
-### Where the handler is created, before and after the run configuration base changes
+### The handler gets the stop from the run state
 
-Today `RobotCodeRunProfileState.startProcess()` creates the handler from the command line and gives it a function that sends `terminate` over the state's connection when the connection is up. The function reads the connection through a nullable reference, not through the `lateinit` socket.
-
-After `intellij-run-configuration-target` has landed, the state's override of `createProcessHandler(Process, String, TargetEnvironment, TargetedCommandLine)` returns the same handler class, built with its `(Process, String, Charset)` constructor. Both constructors this change uses are public and not deprecated in 2026.1; only `(GeneralCommandLine, Boolean)` is. Whichever of the two changes lands second makes the move: if this change lands first, the override in `intellij-run-configuration-target` returns this handler; if it lands second, this change adds the override instead of editing `startProcess()`. For non-local targets PyCharm keeps creating its own handler; they are out of scope.
+The state's `createProcessHandler` override already creates `RobotCodeProcessHandler` with its `(Process, String, Charset)` constructor, which is public and not deprecated in 2026.1. It now also hands the handler a function that sends `terminate` over the state's connection while the connection is up. The function reads the connection through a nullable reference, not through the `lateinit` socket.
 
 ### The session follows `continued`
 
@@ -71,7 +69,7 @@ The protocol client turns `continued` into a signal, and the debug process calls
 
 ### An OS-assigned port for every run, always passed
 
-The state binds port 0, reads the assigned port, closes the socket and passes `--tcp <port>` after `debug` and `--no-debug`, before the Robot Framework arguments. That keeps it a debugger option even when the Robot Framework arguments follow a `--`, the order the planned `intellij-run-configuration-target` uses as well. VS Code's launcher allocates its port the same way (`find_free_port` with port 0, `launcher/server.py`). The probing code in `NetUtils` goes.
+`buildPythonExecution` binds port 0, reads the assigned port and closes the socket, and `debugArguments` passes `--tcp <port>` for every port, where it already puts it for other ports than 6612: after `--no-debug`, before `--` and the Robot Framework arguments, so that it stays a debugger option. VS Code's launcher allocates its port the same way (`find_free_port` with port 0, `launcher/server.py`). The probing code in `NetUtils` goes.
 
 Alternatives:
 

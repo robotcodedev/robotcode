@@ -31,8 +31,8 @@ _None._
 
 ## Impact
 
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunProfileState.kt`: creates the new process handler, allocates the port and always passes `--tcp` among the debugger options.
-- A new process handler class and a small stop policy in `execution/`.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunProfileState.kt`: gives the process handler the stop function, allocates the port and always passes `--tcp` among the debugger options.
+- `execution/RobotCodeProcessHandler.kt`: the stop in the destroy path; a small stop policy in `execution/`.
 - `debugging/RobotCodeDebugProcess.kt` and `debugging/RobotCodeDebugProtocolClient.kt`: the `continued` event, and `stop()` without a blocking request.
 - `utils/NetUtils.kt`: the port probing goes.
 - New unit tests under `intellij-client/src/test/kotlin/`.
