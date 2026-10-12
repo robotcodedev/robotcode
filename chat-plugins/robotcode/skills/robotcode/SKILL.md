@@ -220,7 +220,7 @@ Do not append paths or output options by default; `robot.toml` often already pro
 
 Runs can be long. Use the maximum timeout your tool supports or run in the background; wait for the process exit code. Do not watch `output.xml` for completion because it is written continuously during a run.
 
-Robot returns the number of failed tests, capped at 250. Non-zero means failures or execution errors; inspect with `robotcode results summary`.
+Robot returns the number of failed tests, capped at 250. Non-zero means failures or execution errors; inspect with `robotcode results summary`. Exit code `252` is the exception: the run didn't start (invalid data or options, such as an invalid `robot.toml`), so read the error output instead — `results summary` would show the previous run.
 
 ## Debugging a run — `robotcode robot-debug`
 

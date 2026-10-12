@@ -137,11 +137,10 @@ One trap: at the `(rdb)` prompt `Ctrl-C` / `Ctrl-D` **resume** the run (unlike t
 
 ### Close the REPL when done
 
-Shut the REPL down so spawned subprocesses (browser, DB connection, server, …) don't linger — `.exit` is the clean exit; a bare `Ctrl+D` may orphan them:
+Shut the REPL down so spawned subprocesses (browser, DB connection, server, …) don't linger — `.exit` is the clean exit:
 
 1. Type `.exit` (or `.quit`) at the `>>>` prompt and press Enter.
-2. If that doesn't return to the shell, send `Ctrl+C` (once for graceful stop, twice if stuck).
-3. As a last resort, kill the terminal/process running the REPL.
+2. If that doesn't return to the shell, for example because a statement still runs, send SIGTERM (`kill <pid>`): it stops the statement and ends the session the same way, with exit code `253`. A second SIGTERM forces the end.
 
 ## Explore the system under test
 
