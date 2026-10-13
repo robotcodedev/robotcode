@@ -207,6 +207,7 @@ select = [
   #"ANN",
   #"BLE",
   #"B",
+  "B012", # return, break or continue in a finally block (PEP 765 warns about it)
   #"A"
   #"COM"
   # "C4", # TODO enable this

@@ -2137,7 +2137,7 @@ class Debugger:
 
                 self._after_evaluate_keyword_event.set()
 
-            return result
+        return result
 
     def _create_set_variable_result(self, value: Any) -> SetVariableResult:
         if isinstance(value, Mapping):
