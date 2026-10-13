@@ -107,7 +107,7 @@ From the position of this modifier to the end of the file, all `keyword-not-foun
 
 ### Inside a Block (Indented)
 
-A modifier that is indented and therefore lies inside a block (for example a Test Case, Keyword, IF, FOR) only applies to the **current block**.
+A modifier that is indented and therefore lies inside a block (for example a Test Case, Keyword, IF, FOR) applies **from that line to the end of the current block**, also when it follows a nested block such as an IF or FOR.
 
 ```robot
 *** Keywords ***
@@ -117,7 +117,7 @@ Example Keyword
     Another Keyword
 ```
 
-Within the `Example Keyword` block, `variable-not-found` errors are treated as warnings.
+From the position of this modifier to the end of `Example Keyword`, `variable-not-found` errors are treated as warnings.
 
 
 ## Typical Use Cases

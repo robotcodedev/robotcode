@@ -326,6 +326,78 @@ first
     ]
 
 
+def test_diagnostics_modifier_on_block_level_should_work_after_a_nested_block() -> None:
+    file = """\
+*** Test Cases ***
+first
+    FOR    ${i}    IN RANGE    2
+        Log    ${i}
+    END
+    # robotcode: warn[variable-not-found]
+    Log    ${a}
+
+*** Keywords ***
+second
+    IF    True
+        Log    inside
+    END
+    # robotcode: ignore[keyword-not-found]
+    Log    ${b}
+"""
+    model = get_model(io.StringIO(file))
+    modifier = DiagnosticsModifier(model)
+
+    diagnostics = [
+        Diagnostic(
+            range=Range(start=Position(line=3, character=8), end=Position(line=3, character=11)),
+            message="VariableNotFound",
+            code="VariableNotFound",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=7)),
+            message="VariableNotFound",
+            code="VariableNotFound",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=11, character=8), end=Position(line=11, character=11)),
+            message="KeywordNotFound",
+            code="KeywordNotFound",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=14, character=4), end=Position(line=14, character=7)),
+            message="KeywordNotFound",
+            code="KeywordNotFound",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+    ]
+
+    result = modifier.modify_diagnostics(diagnostics)
+
+    assert result == [
+        Diagnostic(
+            range=Range(start=Position(line=3, character=8), end=Position(line=3, character=11)),
+            message="VariableNotFound",
+            code="VariableNotFound",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=7)),
+            message="VariableNotFound",
+            code="VariableNotFound",
+            severity=DiagnosticSeverity.WARNING,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=11, character=8), end=Position(line=11, character=11)),
+            message="KeywordNotFound",
+            code="KeywordNotFound",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+    ]
+
+
 def test_diagnostics_modifier_should_be_configurable() -> None:
     file = """\
 *** Test Cases ***

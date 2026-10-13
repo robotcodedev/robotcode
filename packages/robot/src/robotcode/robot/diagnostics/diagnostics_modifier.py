@@ -80,8 +80,11 @@ class ModifiersVisitor(Visitor):
         self.generic_visit(node)
 
     def visit_Block(self, node: Block) -> None:  # noqa: N802
+        # Restored afterwards, so that a modifier after a nested block (IF, FOR, ...) belongs to the outer block.
+        parent_block = self.current_block
         self.current_block = node
         self.generic_visit(node)
+        self.current_block = parent_block
 
     def visit_Statement(self, node: Statement) -> None:  # noqa: N802
         self._handle_statement_comments(node)
