@@ -1,0 +1,91 @@
+package dev.robotcode.robotcode4ij.execution
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
+
+class RobotCodeStopPolicyTest {
+
+    private var sent = 0
+    private var fallbacks = 0
+    private val scheduled = mutableListOf<Pair<Long, () -> Unit>>()
+
+    private fun policy(response: () -> CompletableFuture<*>?) = RobotCodeStopPolicy(
+        terminate = { sent++; response() },
+        fallback = { fallbacks++ },
+        schedule = { delayMillis, task -> scheduled.add(delayMillis to task) },
+    )
+
+    private fun runScheduled() = scheduled.forEach { it.second() }
+
+    @Test
+    fun theDebuggerIsAskedOnceAndNothingElseHappensWhileItAnswers() {
+        policy { CompletableFuture<Void>() }.stop()
+
+        assertEquals(1, sent)
+        assertEquals(0, fallbacks)
+        assertEquals(listOf(5000L), scheduled.map { it.first })
+    }
+
+    @Test
+    fun aConfirmedStopNeedsNoFallback() {
+        val response = CompletableFuture<Void>()
+        policy { response }.stop()
+
+        response.complete(null)
+        runScheduled()
+
+        assertEquals(0, fallbacks)
+    }
+
+    @Test
+    fun anUnconfirmedStopFallsBackOnceAfterTheTimeout() {
+        val response = CompletableFuture<Void>()
+        policy { response }.stop()
+
+        runScheduled()
+        // an answer after the timeout changes nothing
+        response.complete(null)
+
+        assertEquals(1, fallbacks)
+    }
+
+    @Test
+    fun aRequestThatFailsFallsBackOnce() {
+        val response = CompletableFuture<Void>()
+        policy { response }.stop()
+
+        response.completeExceptionally(IOException("connection closed"))
+        runScheduled()
+
+        assertEquals(1, fallbacks)
+    }
+
+    @Test
+    fun aRequestThatCannotBeSentFallsBackAtOnce() {
+        policy { throw IllegalStateException("not connected") }.stop()
+
+        assertEquals(1, fallbacks)
+        assertEquals(listOf<Long>(), scheduled.map { it.first })
+    }
+
+    @Test
+    fun withoutAConnectionTheProcessIsInterruptedAtOnce() {
+        policy { null }.stop()
+
+        assertEquals(1, fallbacks)
+        assertEquals(listOf<Long>(), scheduled.map { it.first })
+    }
+
+    @Test
+    fun aSecondStopSendsNoSecondTerminate() {
+        val stopPolicy = policy { CompletableFuture<Void>() }
+
+        stopPolicy.stop()
+        stopPolicy.stop()
+
+        assertEquals(1, sent)
+        assertEquals(0, fallbacks)
+    }
+}

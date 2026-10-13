@@ -3,10 +3,12 @@ package dev.robotcode.robotcode4ij.execution
 import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.util.Key
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.io.BaseDataReader
 import com.intellij.util.io.BaseOutputReader
 import java.io.Reader
 import java.nio.charset.Charset
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -69,12 +71,31 @@ internal class OutputFence(private val timeoutMillis: Long = 500, private val te
 
 /**
  * The process handler of Robot Framework runs. Its output readers count their read cycles for the [outputFence], so
- * that the text that the process wrote before a debugger event reaches the results before the event.
+ * that the text that the process wrote before a debugger event reaches the results before the event. Stop asks the
+ * debugger of the run to end it, through [terminate], which returns null without a connection to the debugger.
  */
-class RobotCodeProcessHandler(process: Process, commandLine: String, charset: Charset) :
-    KillableColoredProcessHandler(process, commandLine, charset) {
+class RobotCodeProcessHandler(
+    process: Process, commandLine: String, charset: Charset, terminate: () -> CompletableFuture<*>?
+) : KillableColoredProcessHandler(process, commandLine, charset) {
 
-    internal val outputFence = OutputFence { isProcessTerminating || isProcessTerminated }
+    // not already while the process is terminating: a stopped run still runs its teardowns, whose output keeps its order
+    internal val outputFence = OutputFence { isProcessTerminated }
+
+    private val stopPolicy = RobotCodeStopPolicy(
+        terminate,
+        fallback = { super.doDestroyProcess() },
+        schedule = { delayMillis, task ->
+            AppExecutorUtil.getAppScheduledExecutorService()
+                .schedule(Runnable { task() }, delayMillis, TimeUnit.MILLISECONDS)
+        },
+    )
+
+    // the debugger ends the run as on Ctrl+C in a terminal, so that Robot Framework still writes its outputs; the
+    // inherited destroy runs only when the debugger cannot be asked or does not answer. The second Stop kills the
+    // process as before.
+    override fun doDestroyProcess() {
+        AppExecutorUtil.getAppExecutorService().execute { stopPolicy.stop() }
+    }
 
     override fun createOutputDataReader(): BaseDataReader =
         CountingOutputReader(createProcessOutReader(), ProcessOutputTypes.STDOUT, "output stream of $myPresentableName")

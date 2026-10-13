@@ -102,11 +102,11 @@ class RobotCodeRunTargetTest {
             runArguments(listOf(), debug = false, port = 6613, robotArguments = selection)
         )
         assertEquals(
-            listOf("--no-pager", "-p", "dev", "-dp", ".", "debug", "--", "tests"),
+            listOf("--no-pager", "-p", "dev", "-dp", ".", "debug", "--tcp", "6612", "--", "tests"),
             runArguments(listOf("dev"), debug = true, port = 6612, robotArguments = listOf("tests"))
         )
         assertEquals(
-            listOf("--no-pager", "-p", "dev", "-p", "ci", "-dp", ".", "debug", "--no-debug"),
+            listOf("--no-pager", "-p", "dev", "-p", "ci", "-dp", ".", "debug", "--no-debug", "--tcp", "6612"),
             runArguments(listOf("dev", "ci"), debug = false, port = 6612, robotArguments = listOf())
         )
     }
@@ -118,7 +118,7 @@ class RobotCodeRunTargetTest {
             "-I", "tests/sample.robot", "-N", "Project", "-s", "Project.Tests.Sample",
             "-bl", "Project.Tests.Sample.First Test Passes"
         )
-        val head = listOf("--no-pager", "-dp", ".", "debug", "--no-debug")
+        val head = listOf("--no-pager", "-dp", ".", "debug", "--no-debug", "--tcp", "6612")
         val cases = listOf(
             Triple("paths without options", paths("tests"), listOf("--", "tests")),
             Triple("paths with options", paths("tests").apply { includeTags = mutableListOf("smoke") },

@@ -11,6 +11,7 @@ The same start-up code has a second defect. Every run first tries the debugger p
 - Stop asks the RobotCode debugger to end the run, as VS Code does. Robot Framework then stops as on Ctrl+C in a terminal: the running test fails with "Execution terminated by signal", the remaining tests are not run, teardowns run, and `output.xml`, `log.html` and `report.html` are written. This works for Run and for Debug, and whether the run is paused or running.
 - While the debugger handles the request, the IDE sends no signal of its own. If the debugger is not connected or does not confirm the request within five seconds, Stop interrupts the process as it does today.
 - A paused run shows as running again as soon as it continues towards its end, so the Debug tool window no longer shows stale frames.
+- While a stopped run ends, the run console keeps the output of its teardowns under the test or suite that wrote it.
 - Pressing Stop again while a run is ending still kills the process at once.
 - Rerunning a paused debug session ends the old run gracefully and starts the new one without a Kill.
 - Every run asks the operating system for a free port for its debugger connection and always passes it to robotcode, so runs started at the same time no longer share a port.
@@ -32,7 +33,7 @@ _None._
 ## Impact
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeRunProfileState.kt`: gives the process handler the stop function, allocates the port and always passes `--tcp` among the debugger options.
-- `execution/RobotCodeProcessHandler.kt`: the stop in the destroy path; a small stop policy in `execution/`.
+- `execution/RobotCodeProcessHandler.kt`: the stop in the destroy path, and an output fence that keeps waiting until the process has ended; a small stop policy in `execution/`.
 - `debugging/RobotCodeDebugProcess.kt` and `debugging/RobotCodeDebugProtocolClient.kt`: the `continued` event, and `stop()` without a blocking request.
 - `utils/NetUtils.kt`: the port probing goes.
 - New unit tests under `intellij-client/src/test/kotlin/`.

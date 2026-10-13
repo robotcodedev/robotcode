@@ -63,9 +63,13 @@ The state's `createProcessHandler` override already creates `RobotCodeProcessHan
 
 The protocol client turns `continued` into a signal, and the debug process calls `XDebugSession.sessionResumed()`, which is public and unannotated in 2026.1. The debugger sends `continued` when a `terminate` resumes a paused run. Without it, the Debug tool window keeps showing the paused frames while Robot Framework runs its teardowns.
 
+### The output fence waits until the process has ended
+
+Since `intellij-test-result-events`, the handler's output fence holds back each debugger event until the output readers have delivered the text that the process wrote before it, and it skips that wait once the process is terminating or has ended. With the graceful stop, a stopped run is terminating while Robot Framework still runs its teardowns, so their events overtook their output: in the harness, the output of a test teardown and of a suite teardown landed under the wrong result node in three of three stopped runs. The fence now skips its wait only once the process has ended; with that, the output stayed under the right node in three of three stopped runs, which ended as quickly as before. A killed process does not hold up the events, because the fence does not wait for readers that have stopped, and every wait ends after 500 ms.
+
 ### `XDebugProcess.stop()` stays a fallback that never waits
 
-`stop()` sends `terminate` only while the connection is still up, from a pooled thread and without waiting for the answer. The platform calls it only after the process has ended, so it rarely has anything to do; today it can block on a request that never gets an answer.
+`stop()` sends `terminate` only while the connection is still up, from a pooled thread and without waiting for the answer. Like the stop in the handler, it sends at most one `terminate` per run, because the debugger answers a second one with SIGTERM. The platform calls it only after the process has ended, so it rarely has anything to do; today it can block on a request that never gets an answer.
 
 ### An OS-assigned port for every run, always passed
 
@@ -82,7 +86,8 @@ Alternatives:
 - [Stop takes as long as the teardowns] → That is Robot Framework's graceful stop; the second Stop kills at once, and the release notes say so.
 - [Windows and macOS are not covered by the harness] → The stop policy is unit-tested with fakes. The debugger raises SIGINT inside its own process, so the stop no longer depends on how the IDE delivers signals on these systems; this is not verified at runtime.
 - [The handler overrides a protected method of a platform class] → `doDestroyProcess()` is unannotated in 2026.1, and `verifyPlugin` checks every configured IDE version.
-- [Another process takes the port between allocation and the debugger's bind] → The OS hands out ephemeral ports in sequence, so this is unlikely; the run then fails to connect, as it would today.
+- [Another process takes the port between allocation and the debugger's bind] → The window is short and the port is one of thousands in the ephemeral range, so this is unlikely; the run then fails to connect, as it would today.
+- [Two runs started at the same time get the same port, because the OS can hand out a port again as soon as it is free: on Linux, two allocations in a row returned the same port in 3 of 50,000 tries] → Rare; the two runs then share the port, as they did before this change whenever both picked 6612.
 - [Stop cannot be pressed while the handshake blocks the EDT] → Unchanged in this change; it ends when the handshake moves off the EDT.
 
 ## Migration Plan

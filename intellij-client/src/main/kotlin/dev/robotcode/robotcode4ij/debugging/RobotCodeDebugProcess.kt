@@ -6,6 +6,7 @@ import com.intellij.execution.ui.ExecutionConsole
 import com.intellij.execution.ui.RunnerLayoutUi
 import com.intellij.execution.ui.layout.PlaceInGrid
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
@@ -51,7 +52,6 @@ import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StepInArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
-import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import java.util.concurrent.CompletableFuture
@@ -102,6 +102,9 @@ class RobotCodeDebugProcess(
 
         state.configuration = this::sendConfiguration
         debugClient.onStopped.adviseSuspend(Lifetime.Eternal, Dispatchers.IO, this::handleOnStopped)
+        // a paused run that goes on, also when a stop request lets it run to its end, shows as running again; handled
+        // as the event arrives, so that it cannot come after the next stop
+        debugClient.onContinued.advise(Lifetime.Eternal) { session.sessionResumed() }
     }
 
     private suspend fun createRobotCodeSuspendContext(threadId: Int): RobotCodeSuspendContext {
@@ -314,15 +317,10 @@ class RobotCodeDebugProcess(
         lineBreakpoints.clearTarget()?.let { if (configured) sendLineBreakpoints(it) }
     }
 
+    // the platform calls this after the process has ended; while the connection is still up, it asks the debugger to
+    // end the run, without waiting for the answer
     override fun stop() {
-        runBlocking {
-            try {
-                debugServer.terminate(TerminateArguments().apply {
-                    restart = false
-                }).await()
-            } catch (_: Exception) { // Ignore may be the server is already terminated
-            }
-        }
+        ApplicationManager.getApplication().executeOnPooledThread { state.requestTerminate() }
     }
 
     override fun resume(context: XSuspendContext?) {

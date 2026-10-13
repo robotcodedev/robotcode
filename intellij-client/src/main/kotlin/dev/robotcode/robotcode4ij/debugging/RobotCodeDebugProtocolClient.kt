@@ -3,6 +3,7 @@ package dev.robotcode.robotcode4ij.debugging
 import com.intellij.openapi.diagnostic.thisLogger
 import com.jetbrains.rd.util.reactive.Signal
 import kotlinx.coroutines.future.await
+import org.eclipse.lsp4j.debug.ContinuedEventArguments
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
@@ -150,6 +151,7 @@ data class RobotLogMessageEventArguments(
     var server: IRobotCodeDebugProtocolServer? = null
     
     var onStopped = Signal<StoppedEventArguments>()
+    val onContinued = Signal<ContinuedEventArguments>()
     val onTerminated = Signal<TerminatedEventArguments?>()
     val onExited = Signal<ExitedEventArguments?>()
     
@@ -184,6 +186,11 @@ data class RobotLogMessageEventArguments(
     override fun stopped(args: StoppedEventArguments) {
         super.stopped(args)
         onStopped.fire(args)
+    }
+
+    override fun continued(args: ContinuedEventArguments) {
+        super.continued(args)
+        onContinued.fire(args)
     }
     
     @JsonNotification("robotEnqueued")  fun robotEnqueued(args: RobotEnqueuedArguments) {

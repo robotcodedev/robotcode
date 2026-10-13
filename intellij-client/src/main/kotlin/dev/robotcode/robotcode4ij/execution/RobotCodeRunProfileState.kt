@@ -34,7 +34,6 @@ import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
 import dev.robotcode.robotcode4ij.robotCodeArguments
 import dev.robotcode.robotcode4ij.testing.testManger
-import dev.robotcode.robotcode4ij.utils.NetUtils.findFreePort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -45,27 +44,28 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
+import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketTimeoutException
+import java.util.concurrent.CompletableFuture
 import java.util.function.Function
 import kotlin.io.path.pathString
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * The arguments after `debug`: the options of `robotcode debug`, then a `--` separator and the arguments for Robot
- * Framework, only when there are any.
+ * The arguments after `debug`: the options of `robotcode debug`, with the port of the debugger connection, then a `--`
+ * separator and the arguments for Robot Framework, only when there are any.
  */
 internal fun debugArguments(debug: Boolean, port: Int, robotArguments: List<String>): List<String> {
     return buildList {
         if (!debug) {
             add("--no-debug")
         }
-        if (port != RobotCodeRunProfileState.DEBUGGER_DEFAULT_PORT) {
-            addAll(listOf("--tcp", port.toString()))
-        }
+        addAll(listOf("--tcp", port.toString()))
         if (robotArguments.isNotEmpty()) {
             add("--")
             addAll(robotArguments)
@@ -85,6 +85,9 @@ internal fun runArguments(
         args = listOf("-dp", ".", "debug") + debugArguments(debug, port, robotArguments)
     )
 }
+
+/** A port that the operating system has free now, for the debugger connection of a run. */
+internal fun freeDebugPort(): Int = ServerSocket(0).use { it.localPort }
 
 /** The reason why a run cannot use [interpreter], or null when it can. */
 internal fun interpreterRefusal(interpreter: PythonInterpreter): String? {
@@ -138,7 +141,6 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     PythonCommandLineState(config, environment), ProcessListener {
     
     companion object {
-        const val DEBUGGER_DEFAULT_PORT = 6612
         val DEBUG_PORT: Key<Int> = Key.create("ROBOTCODE_DEBUG_PORT")
         const val TESTFRAMEWORK_NAME = "RobotCode"
     }
@@ -153,15 +155,22 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     var processHandler: RobotCodeProcessHandler? = null
         private set
     
+    // the debugger while the connection to it is up
+    @Volatile
+    private var connectedServer: IRobotCodeDebugProtocolServer? = null
+
+    private var terminateResponse: CompletableFuture<Void>? = null
+
     init {
         debugClient.onTerminated.adviseEternal {
+            connectedServer = null
             if (socket.isConnected) socket.close()
         }
     }
     
     private lateinit var socket: Socket
     
-    private var debugPort = DEBUGGER_DEFAULT_PORT
+    private var debugPort = 0
     
     private var consoleProperties: SMTRunnerConsoleProperties? = null
     
@@ -178,7 +187,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             expandPath = { configurator.expandPathAndMacros(it, config.module, project) ?: it },
             parseArguments = { ProgramParametersConfigurator.expandMacrosAndParseParameters(it) }
         )
-        debugPort = findFreePort(DEBUGGER_DEFAULT_PORT)
+        // a port of its own for every run, so that runs started at the same time don't share one
+        debugPort = freeDebugPort()
         
         return PythonScriptExecution().apply {
             pythonScriptPath = Function { RobotCodeHelpers.robotCodePath.pathString }
@@ -193,7 +203,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         process: Process, commandLine: String, targetEnvironment: TargetEnvironment,
         targetedCommandLine: TargetedCommandLine
     ): ProcessHandler {
-        val handler = RobotCodeProcessHandler(process, commandLine, targetedCommandLine.charset)
+        val handler = RobotCodeProcessHandler(process, commandLine, targetedCommandLine.charset, ::requestTerminate)
         processHandler = handler
         handler.putUserData(DEBUG_PORT, debugPort)
         handler.addProcessListener(this)
@@ -270,12 +280,25 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             
             debugServer = launcher.remoteProxy
             debugClient.server = debugServer
+            connectedServer = debugServer
             
             handshake(debugServer, debugClient, configuration)
         }
     }
     
+    /**
+     * Asks the debugger to end the run, at most once per run, because the debugger answers a second request with
+     * SIGTERM; returns its response, or null without a connection to the debugger.
+     */
+    @Synchronized
+    fun requestTerminate(): CompletableFuture<*>? {
+        terminateResponse?.let { return it }
+        val server = connectedServer ?: return null
+        return server.terminate(TerminateArguments().apply { restart = false }).also { terminateResponse = it }
+    }
+
     override fun processTerminated(event: ProcessEvent) {
+        connectedServer = null
         if (socket.isConnected) socket.close()
     }
 }

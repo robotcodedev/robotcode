@@ -3,6 +3,7 @@ package dev.robotcode.robotcode4ij.execution
 import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import dev.robotcode.robotcode4ij.testing.decodeDiscoverResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RobotCodeSelectionArgumentsTest {
@@ -140,11 +141,20 @@ class RobotCodeSelectionArgumentsTest {
         )
         // a Debug of the whole project
         assertEquals(listOf("--tcp", "6613"), debugArguments(debug = true, port = 6613, robotArguments = listOf()))
-        // the default port is not passed
+        // the former default port is passed like any other
         assertEquals(
-            listOf("--no-debug", "--") + selection,
+            listOf("--no-debug", "--tcp", "6612", "--") + selection,
             debugArguments(debug = false, port = 6612, robotArguments = selection)
         )
+    }
+
+    @Test
+    fun everyRunAsksTheOperatingSystemForAPort() {
+        // the operating system can hand out the same port twice in a row, but not five times
+        val ports = List(5) { freeDebugPort() }
+
+        assertTrue(ports.all { it > 0 })
+        assertTrue(ports.distinct().size > 1)
     }
 
     @Test
