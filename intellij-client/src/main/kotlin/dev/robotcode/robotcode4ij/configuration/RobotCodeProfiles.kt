@@ -93,10 +93,7 @@ internal fun profileListResult(output: ProcessOutput): ProfileListResult {
 internal fun Project.readProfileList(selection: List<String>): ProfileListResult? {
     return try {
         robotCodeEnvironment.ensureUsableForRun()
-        val commandLine = buildRobotCodeCommandLine(
-            (defaultPathArguments(robotSettings.robotPaths) + listOf("profiles", "list")).toTypedArray(),
-            profiles = selection.toTypedArray(), format = "json"
-        )
+        val commandLine = profileListCommandLine(selection)
         runWithModalProgressBlocking(this, RobotCodeBundle.message("profiles.progress")) {
             profileListResult(runCancellable(commandLine))
         }
@@ -109,6 +106,31 @@ internal fun Project.readProfileList(selection: List<String>): ProfileListResult
     } catch (_: CancellationException) {
         null
     }
+}
+
+/**
+ * Reads the profile list for [selection] without a progress, once the running environment check has finished. Returns
+ * null when the project's interpreter is not usable or `robotcode` cannot be started.
+ */
+internal suspend fun Project.readProfileListInBackground(selection: List<String>): ProfileListResult? {
+    val environment = robotCodeEnvironment
+    environment.awaitRunningCheck()
+    if (!environment.projectState.isUsable) {
+        return null
+    }
+    return try {
+        profileListResult(runCancellable(profileListCommandLine(selection)))
+    } catch (_: ExecutionException) {
+        null
+    }
+}
+
+// `profiles list` with the default paths of the "Robot" page
+private fun Project.profileListCommandLine(selection: List<String>): GeneralCommandLine {
+    return buildRobotCodeCommandLine(
+        (defaultPathArguments(robotSettings.robotPaths) + listOf("profiles", "list")).toTypedArray(),
+        profiles = selection.toTypedArray(), format = "json"
+    )
 }
 
 private const val POLL_MILLIS = 100L

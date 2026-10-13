@@ -5,6 +5,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.psi.PsiElement
 import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl
+import dev.robotcode.robotcode4ij.actions.withProfileActions
 import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import dev.robotcode.robotcode4ij.testing.testManger
@@ -35,14 +36,16 @@ class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor(), DumbAware 
 
         val icon = getTestStateIcon(uri.toString(), element.project, kind == RunMarkerKind.SUITE)
         val info = withExecutorActions(icon)
-        
+        // running once with a profile comes after the executor actions, before "Modify Run Configuration..."
+        val actions = withProfileActions(info.actions)
+
         // the marker on line 1 also shows the problems that discovery reported for the file
         val problems =
             if (element is RobotSuiteFile) element.project.testManger.problems(testElement.uri ?: "") else listOf()
         if (problems.isEmpty()) {
-            return info
+            return Info(info.icon, actions, info.tooltipProvider)
         }
-        return Info(info.icon, info.actions) { e ->
+        return Info(info.icon, actions) { e ->
             (listOfNotNull(info.tooltipProvider?.apply(e)) + problems).joinToString("\n")
         }
     }

@@ -181,6 +181,26 @@ class RobotCodeRunTargetTest {
     }
 
     @Test
+    fun theProfilesOfARunFollowTheConfigurationsKind() {
+        val selection = listOf("dev")
+        val cases = listOf(
+            Triple(RobotRunProfilesKind.PROJECT, listOf("ci"), listOf("dev")),
+            Triple(RobotRunProfilesKind.DEFAULTS, listOf("ci"), listOf()),
+            Triple(RobotRunProfilesKind.CUSTOM, listOf("ci", " ", " staging "), listOf("ci", "staging")),
+            Triple(RobotRunProfilesKind.CUSTOM, listOf(), listOf())
+        )
+        for ((kind, names, expected) in cases) {
+            assertEquals("$kind $names", expected, resolveRunProfiles(kind, names, selection))
+        }
+
+        val profiles = resolveRunProfiles(RobotRunProfilesKind.CUSTOM, listOf("ci"), selection)
+        assertEquals(
+            listOf("--no-pager", "-p", "ci", "-dp", ".", "debug", "--no-debug", "--tcp", "6612"),
+            runArguments(profiles, paths = listOf(), debug = false, port = 6612, robotArguments = listOf())
+        )
+    }
+
+    @Test
     fun contextRunsMatchTheirConfigurationAfterALineShift() {
         val test = model.find("Project.Tests.Sample.First Test Passes")
         val shifted = test.copy(id = test.id + ";shifted", lineno = (test.lineno ?: 0) + 3, range = null)

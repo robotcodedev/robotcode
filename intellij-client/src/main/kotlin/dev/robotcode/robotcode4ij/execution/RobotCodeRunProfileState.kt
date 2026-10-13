@@ -90,6 +90,21 @@ internal fun runArguments(
     )
 }
 
+/**
+ * The profiles that a run selects with `-p`: the [projectSelection] for [RobotRunProfilesKind.PROJECT], none for
+ * [RobotRunProfilesKind.DEFAULTS], so that the `default-profiles` of `robot.toml` apply, and the configuration's
+ * [names] for [RobotRunProfilesKind.CUSTOM].
+ */
+internal fun resolveRunProfiles(
+    kind: RobotRunProfilesKind, names: List<String>, projectSelection: List<String>
+): List<String> {
+    return when (kind) {
+        RobotRunProfilesKind.PROJECT -> projectSelection
+        RobotRunProfilesKind.DEFAULTS -> listOf()
+        RobotRunProfilesKind.CUSTOM -> names.map { it.trim() }.filter { it.isNotEmpty() }
+    }
+}
+
 /** The environment variables of the "Robot" settings page, without pairs that have no name. */
 internal fun robotEnvironment(settings: RobotCodeProjectConfiguration.ProjectState): Map<String, String> {
     return settings.robotEnv.mapKeys { it.key.trim() }.filterKeys { it.isNotEmpty() }
@@ -204,7 +219,11 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             pythonScriptPath = Function { RobotCodeHelpers.robotCodePath.pathString }
             additionalInterpreterParameters.addAll(listOf("-u", "-X", "utf8"))
             charset = Charsets.UTF_8
-            val profiles = RobotCodePersonalConfiguration.getInstance(project).profiles.toList()
+            // the project selection as it is now, so that a change of it reaches existing configurations
+            val profiles = resolveRunProfiles(
+                config.options.profilesKind, config.options.profiles,
+                RobotCodePersonalConfiguration.getInstance(project).profiles.toList()
+            )
             addParameters(runArguments(profiles, settings.robotPaths, debug, debugPort, robotArguments))
             // PyCharm adds the configuration's environment variables and .env files afterwards, so they win
             robotEnvironment(settings).forEach { (name, value) -> addEnvironmentVariable(name, value) }

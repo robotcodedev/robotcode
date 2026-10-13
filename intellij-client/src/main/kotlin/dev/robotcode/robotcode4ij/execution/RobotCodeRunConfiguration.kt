@@ -4,6 +4,7 @@ import com.intellij.execution.Executor
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.RefactoringListenerProvider
 import com.intellij.execution.configurations.RunProfileState
+import com.intellij.execution.configurations.RuntimeConfigurationWarning
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.testframework.sm.runner.SMRunnerConsolePropertiesProvider
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
@@ -15,6 +16,9 @@ import com.intellij.psi.PsiFileSystemItem
 import com.intellij.refactoring.listeners.RefactoringElementListener
 import com.jetbrains.python.run.AbstractPythonRunConfiguration
 import com.jetbrains.python.run.DebugAwareConfiguration
+import dev.robotcode.robotcode4ij.RobotCodeBundle
+import dev.robotcode.robotcode4ij.configuration.ProfileList
+import dev.robotcode.robotcode4ij.configuration.profileListCache
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.robotPythonModule
 import org.jdom.Element
@@ -54,6 +58,22 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
         project.robotCodeEnvironment.ensureUsableForRun()
         return RobotCodeRunProfileState(this, environment)
+    }
+
+    // a warning lets the configuration run; only the cached profile list is read, without starting a process
+    override fun checkConfiguration() {
+        super<AbstractPythonRunConfiguration>.checkConfiguration()
+        if (project.isDefault) {
+            return
+        }
+        val unknown = unknownProfiles(options, project.profileListCache.cached)
+        if (unknown.isNotEmpty()) {
+            throw RuntimeConfigurationWarning(
+                RobotCodeBundle.message(
+                    "run.options.profiles.unknown", unknown.joinToString(", ") { "\"$it\"" }, unknown.size
+                )
+            )
+        }
     }
 
     override fun createConfigurationEditor(): SettingsEditor<RobotCodeRunConfiguration> {
@@ -123,6 +143,21 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
             applyRobotCodeDefaults()
         }
     }
+}
+
+/**
+ * The custom profiles of [options] that the profile [list] of `robot.toml` does not contain. Without a list, or with a
+ * list that holds neither profiles nor messages and so could not be read, none are reported.
+ */
+internal fun unknownProfiles(options: RobotCodeRunConfigurationOptions, list: ProfileList?): List<String> {
+    if (options.profilesKind != RobotRunProfilesKind.CUSTOM || list == null) {
+        return listOf()
+    }
+    if (list.profiles.isEmpty() && list.messages.isEmpty()) {
+        return listOf()
+    }
+    val known = list.profiles.map { it.name }.toSet()
+    return options.profiles.map { it.trim() }.filter { it.isNotEmpty() && it !in known }
 }
 
 private fun com.intellij.openapi.vfs.VirtualFile.fileSystemPath(): Path? = try {

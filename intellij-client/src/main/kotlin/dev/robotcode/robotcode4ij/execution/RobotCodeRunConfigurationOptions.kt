@@ -33,6 +33,18 @@ enum class RobotRunMode {
     NORPA
 }
 
+/** Which profiles of `robot.toml` a run selects. */
+enum class RobotRunProfilesKind {
+    /** The profiles selected for the project when the run starts. */
+    PROJECT,
+
+    /** No `-p`, so that the `default-profiles` of `robot.toml` apply. */
+    DEFAULTS,
+
+    /** The configuration's own profiles; without any, the `default-profiles` of `robot.toml` apply. */
+    CUSTOM
+}
+
 /**
  * One item of a "Tests and suites" target, with the full names and paths that discovery reports. An item that the user
  * entered in the editor has only a full name.
@@ -96,4 +108,10 @@ class RobotCodeRunConfigurationOptions : ModuleBasedConfigurationOptions() {
     var mode by enum(RobotRunMode.INHERIT)
 
     var dryRun by property(false)
+
+    // the profiles of robot.toml that runs select; the names are those of CUSTOM
+    var profilesKind by enum(RobotRunProfilesKind.PROJECT)
+
+    @get:XCollection(propertyElementName = "profiles", elementName = "profile", valueAttributeName = "value")
+    var profiles by list<String>()
 }

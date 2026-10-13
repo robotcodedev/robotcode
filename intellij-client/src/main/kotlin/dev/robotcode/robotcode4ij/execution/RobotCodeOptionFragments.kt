@@ -18,11 +18,15 @@ import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.Row
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
+import com.intellij.ui.layout.selectedValueIs
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ElementProducer
 import com.intellij.util.ui.ListTableModel
 import dev.robotcode.robotcode4ij.RobotCodeBundle
+import dev.robotcode.robotcode4ij.configuration.chooseProfiles
+import dev.robotcode.robotcode4ij.configuration.profileListCache
+import java.awt.event.ItemEvent
 import java.nio.file.Path
 import java.util.function.Predicate
 import javax.swing.JComponent
@@ -51,6 +55,12 @@ private fun modeText(mode: RobotRunMode): String = when (mode) {
     RobotRunMode.INHERIT -> RobotCodeBundle.message("run.options.mode.inherit")
     RobotRunMode.RPA -> RobotCodeBundle.message("run.options.mode.rpa")
     RobotRunMode.NORPA -> RobotCodeBundle.message("run.options.mode.norpa")
+}
+
+private fun profilesKindText(kind: RobotRunProfilesKind): String = when (kind) {
+    RobotRunProfilesKind.PROJECT -> RobotCodeBundle.message("run.options.profiles.project")
+    RobotRunProfilesKind.DEFAULTS -> RobotCodeBundle.message("run.options.profiles.defaults")
+    RobotRunProfilesKind.CUSTOM -> RobotCodeBundle.message("run.options.profiles.custom")
 }
 
 /**
@@ -195,6 +205,56 @@ internal fun robotOptionFragments(
         { configuration, value -> configuration.options.dryRun = value }
     )
 
+    // the warning about profiles that robot.toml no longer defines checks against the cached list
+    fun readProfileList() {
+        if (!project.isDefault) {
+            project.profileListCache.readInBackground()
+        }
+    }
+
+    val profilesBox = ComboBox(RobotRunProfilesKind.entries.toTypedArray())
+    profilesBox.renderer = textListCellRenderer<RobotRunProfilesKind?> { it?.let(::profilesKindText) }
+    profilesBox.addItemListener { event ->
+        if (event.stateChange == ItemEvent.SELECTED && event.item == RobotRunProfilesKind.CUSTOM) {
+            readProfileList()
+        }
+    }
+    // the names of "Custom" as the other lists; "Select..." opens the profile list of the General page with them
+    val profilesField = RawCommandLineEditor()
+    val profiles = optionFragment(
+        "robotcode.profiles", RobotCodeBundle.message("run.options.profiles.name"),
+        RobotCodeBundle.message("run.options.profiles.label"), RobotCodeBundle.message("run.options.profiles.comment"),
+        { it.profilesKind != RobotRunProfilesKind.PROJECT },
+        { options ->
+            profilesBox.selectedItem = options.profilesKind
+            profilesField.text = joinTargetEntries(options.profiles)
+            if (options.profilesKind == RobotRunProfilesKind.CUSTOM) {
+                readProfileList()
+            }
+        },
+        { options ->
+            val kind = profilesBox.selectedItem as? RobotRunProfilesKind ?: RobotRunProfilesKind.PROJECT
+            options.profilesKind = kind
+            options.profiles = if (kind == RobotRunProfilesKind.CUSTOM) {
+                parseTargetEntries(profilesField.text).toMutableList()
+            } else {
+                mutableListOf()
+            }
+        }
+    ) {
+        val custom = profilesBox.selectedValueIs(RobotRunProfilesKind.CUSTOM)
+        cell(profilesBox)
+        cell(profilesField).align(AlignX.FILL).resizableColumn().visibleIf(custom)
+        // settings for new projects have no robot.toml to read profiles from
+        if (!project.isDefault) {
+            button(RobotCodeBundle.message("run.options.profiles.select")) {
+                project.chooseProfiles(parseTargetEntries(profilesField.text)) { cleaned ->
+                    profilesField.text = joinTargetEntries(cleaned)
+                }?.let { profilesField.text = joinTargetEntries(it) }
+            }.visibleIf(custom)
+        }
+    }
+
     return listOf(
         robotArguments,
         variables,
@@ -233,5 +293,6 @@ internal fun robotOptionFragments(
         outputDir,
         mode,
         dryRun,
+        profiles,
     )
 }

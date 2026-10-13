@@ -89,12 +89,47 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
         val text = JDOMUtil.write(element)
         val names = listOf(
             "robotArguments", "variables", "variableFiles", "pythonPath", "languages", "includeTags", "excludeTags",
-            "outputDir", "mode", "dryRun"
+            "outputDir", "mode", "dryRun", "profilesKind", "profiles"
         )
         for (name in names) {
             assertFalse("$name in $text", text.contains("\"$name\"") || text.contains("<$name"))
         }
         assertEquals(RobotRunMode.INHERIT, newConfiguration().options.mode)
+        assertEquals(RobotRunProfilesKind.PROJECT, newConfiguration().options.profilesKind)
+    }
+
+    fun testEachProfilesKindSurvivesWritingAndCloning() {
+        val choices = listOf(
+            RobotRunProfilesKind.PROJECT to listOf(),
+            RobotRunProfilesKind.DEFAULTS to listOf(),
+            RobotRunProfilesKind.CUSTOM to listOf("ci", "my profile"),
+            RobotRunProfilesKind.CUSTOM to listOf()
+        )
+        for ((kind, names) in choices) {
+            val configuration = newConfiguration().apply {
+                options.profilesKind = kind
+                options.profiles = names.toMutableList()
+            }
+
+            for (copy in listOf(roundTrip(configuration), configuration.clone() as RobotCodeRunConfiguration)) {
+                assertEquals("$kind $names", kind, copy.options.profilesKind)
+                assertEquals("$kind $names", names, copy.options.profiles)
+            }
+        }
+    }
+
+    // a configuration stored as a project file says which profiles it selects
+    fun testCustomProfilesAreWrittenWithTheirKind() {
+        val element = Element("configuration")
+        newConfiguration().apply {
+            options.profilesKind = RobotRunProfilesKind.CUSTOM
+            options.profiles = mutableListOf("ci")
+        }.writeExternal(element)
+
+        val text = JDOMUtil.write(element)
+
+        assertTrue(text, text.contains("name=\"profilesKind\" value=\"CUSTOM\""))
+        assertTrue(text, text.contains("<profile value=\"ci\" />"))
     }
 
     fun testPyCharmFieldsSurviveNextToTheTarget() {
@@ -144,6 +179,7 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
 
         // PyCharm's editor cannot show a configuration without interpreter options
         assertEquals("", configuration.interpreterOptions)
+        assertEquals(RobotRunProfilesKind.PROJECT, configuration.options.profilesKind)
         assertEquals(RobotRunTargetKind.PATHS, configuration.options.targetKind)
         assertEquals(listOf<String>(), configuration.options.targetPaths)
         assertTrue(configuration.isUseModuleSdk)

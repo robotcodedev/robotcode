@@ -41,7 +41,7 @@ When the custom profiles of a configuration include a name that the last read pr
 #### Scenario: Renamed profile
 
 - **WHEN** a configuration's choice is "Custom" with `dev`, and `robot.toml` renames `dev` to `development`
-- **THEN** the run configuration dialog shows a warning that `robot.toml` no longer defines `dev`, and the configuration can still be run
+- **THEN** the run widget marks the configuration's icon, the run configuration dialog opened afterwards shows a warning that `robot.toml` no longer defines `dev`, and the configuration can still be run
 
 ### Requirement: Run or debug once with a chosen profile
 
@@ -73,7 +73,7 @@ The tab of a run started with "Run with Profile..." or "Debug with Profile..." S
 
 ### Requirement: The profile list stays current
 
-The profiles that "Run with Profile..." and "Debug with Profile..." offer, and the list that the warning for profiles that no longer exist checks against, SHALL be read in the background without blocking the IDE, and SHALL be read again after the language server has restarted, for example after a change to `robot.toml`.
+The profiles that "Run with Profile..." and "Debug with Profile..." offer, and the list that the warning for profiles that no longer exist checks against, SHALL be read in the background without blocking the IDE, and SHALL be read again as soon as the language server has started, for example after a change to `robot.toml`.
 
 #### Scenario: New profile in robot.toml
 

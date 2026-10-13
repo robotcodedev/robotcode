@@ -204,6 +204,19 @@
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"/>
 		</group>
 
+		<!-- after the Run and Debug actions of the editor and Project view context menus; the gutter adds them itself -->
+		<action id="dev.robotcode.robotcode4ij.actions.RobotCodeRunWithProfileAction"
+				class="dev.robotcode.robotcode4ij.actions.RobotCodeRunWithProfileAction"
+				icon="AllIcons.Actions.Execute">
+			<add-to-group group-id="RunContextGroupInner" anchor="after" relative-to-action="RunContextExecutorsGroup"/>
+		</action>
+		<action id="dev.robotcode.robotcode4ij.actions.RobotCodeDebugWithProfileAction"
+				class="dev.robotcode.robotcode4ij.actions.RobotCodeDebugWithProfileAction"
+				icon="AllIcons.Actions.StartDebugger">
+			<add-to-group group-id="RunContextGroupInner" anchor="after"
+						  relative-to-action="dev.robotcode.robotcode4ij.actions.RobotCodeRunWithProfileAction"/>
+		</action>
+
 		<!-- the client command of RobotCode's code actions, which LSP4IJ runs as the action with the command's id -->
 		<action id="_robotcode.codeActionShowDocumentSelectAndRename"
 				class="dev.robotcode.robotcode4ij.lsp.RobotCodeShowDocumentSelectAndRenameAction"/>

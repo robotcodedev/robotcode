@@ -44,9 +44,12 @@ Alternative: copying the project selection into a configuration when it is creat
 
 ### The profile list, cached
 
-A project service caches the decoded result of `profiles list` called without `-p`. `readProfileList` runs only under a modal progress, so its command line and its process run are split off, and the service reads the list in its coroutine scope on a background dispatcher; the editor field starts that read when it is shown. The two actions read with `readProfileList(emptyList())` and its cancellable modal progress when they find the cache empty. `RobotCodeLanguageClient.handleServerStatusChanged` clears the cache when the server reports `started`, which also covers the restart after a `robot.toml` change.
+A project service caches the decoded result of `profiles list` called without `-p`. `readProfileList` runs only under a modal progress, so its command line and its process run are split off, and the service reads the list in its coroutine scope on a background dispatcher. `RobotCodeLanguageClient.handleServerStatusChanged` clears the cache when the server reports `started` and reads it again at once, which also covers the restart after a `robot.toml` change; the editor field starts that read as well when it finds the cache empty. The two actions read with `readProfileList(emptyList())` and its cancellable modal progress when they find the cache empty.
 
-Alternative: reading the list every time. The actions would wait for a `robotcode` process on every use; VS Code caches for the same reason.
+Alternatives:
+
+- Reading the list every time: the actions would wait for a `robotcode` process on every use; VS Code caches for the same reason.
+- Only clearing the cache when the server starts, and reading it when the editor field or an action needs it, as planned at first: the run configuration dialog does not check a configuration again when the list arrives, so a dialog opened right after a change to `robot.toml` showed the warning only at its next check (harness, 2026-10-13), and the run widget marked a stale profile only after the list had been read.
 
 ### The "Configuration profiles" field
 
@@ -62,10 +65,10 @@ Alternative: a warning through the field's validation only. It would not reach t
 
 ### Run or debug once: two actions over the context configuration
 
-"Run with Profile..." and "Debug with Profile..." are two actions, registered in `RunContextGroupInner` after the executor actions, and appended to the actions of both kinds of gutter info in `RobotCodeRunLineMarkerContributor.getInfo`, with and without the discovery problems, with `RunLineMarkerContributor.Info(icon, actions, tooltipProvider)`, keeping its icon and tooltip.
+"Run with Profile..." and "Debug with Profile..." are two actions, registered in `RunContextGroupInner` after the executor actions, and inserted into the actions of both kinds of gutter info in `RobotCodeRunLineMarkerContributor.getInfo`, with and without the discovery problems, with `RunLineMarkerContributor.Info(icon, actions, tooltipProvider)`, keeping its icon and tooltip. In both menus they come after the executor actions and before "Modify Run Configuration…": in the gutter they go right after the last `ExecutorAction`, before the extra actions that the platform adds after the executor actions from its group `RunLineMarkerExtraActions`.
 
 - `update()` (on a background thread) shows the action only when `ConfigurationContext.getFromContext(dataContext, place)` yields a configuration from the RobotCode producer.
-- `actionPerformed()` gets the list from the cache or reads it, shows the non-hidden profiles with their descriptions in a popup chooser, clones the configuration the context yields (an existing matching configuration or a new one from the template), sets `CUSTOM` with the chosen profile, names it "<name> (<profile>)", creates settings for it with `RunManager.createConfiguration` and runs them with `ProgramRunnerUtil.executeConfiguration` and the Run or Debug executor. The settings are not added to the run manager, so the run widget's list, saved configurations and the producer's reuse of configurations stay as they were. The run tab's rerun action runs the clone again.
+- `actionPerformed()` gets the list from the cache or reads it, shows the non-hidden profiles with their descriptions in a popup chooser, where the platform's `JBPopupFactory.guessBestPopupLocation(action, event)` puts it (below the gutter menu that offered it, at the point of a context menu, or at the caret when chosen with the keyboard), clones the configuration the context yields (an existing matching configuration or a new one from the template), sets `CUSTOM` with the chosen profile, names it "<name> (<profile>)", creates settings for it with `RunManager.createConfiguration` and runs them with `ProgramRunnerUtil.executeConfiguration` and the Run or Debug executor. The settings are not added to the run manager, so the run widget's list, saved configurations and the producer's reuse of configurations stay as they were. The run tab's rerun action runs the clone again.
 
 Alternatives:
 - One submenu per executor with an item per profile: the menu needs the list while it is being built, which may require a process run on the UI path.
@@ -75,8 +78,10 @@ Alternatives:
 
 - [Running settings that the run manager does not know] → `ProgramRunnerUtil.executeConfiguration` takes any settings; the harness check confirms Run, Debug and the tab's rerun. Fallback without spec change: register a temporary configuration and let the producer skip configurations whose profile choice is not `PROJECT` when it looks for one to reuse.
 - [The cache is stale when `robot.toml` changes while no language server runs] → `profiles list` needs the same working interpreter as the server; the next server start clears the cache.
-- [The gutter info has two shapes, with and without the discovery problems in its tooltip] → The profile actions are appended to the executor actions in both.
-- [A warning only after the list has been read once] → The field reads the list when it is shown, so the dialog shows the warning; until then, the run widget does not mark a stale profile.
+- [The gutter info has two shapes, with and without the discovery problems in its tooltip] → The profile actions are inserted in both.
+- [A gutter list without executor actions] → The actions go last.
+- [One more `robotcode` process at every start of the language server] → It runs in the background after the server has started, and the editor field and the actions would start it later anyway.
+- [A dialog opened before that read has finished] → It shows the warning at its next check, for example after the next change in the dialog.
 
 ## Migration Plan
 
