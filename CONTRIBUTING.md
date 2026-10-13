@@ -340,15 +340,15 @@ Run `hatch env show` to list every environment, including the `test.*` and `deve
 
 **Supported Python and Robot Framework versions:**
 
-Each Robot Framework version is supported and tested only with the Python versions (3.10 and newer) that it officially supports itself: the `Programming Language :: Python :: 3.x` classifiers of its newest patch release on PyPI (`https://pypi.org/project/robotframework/<version>/`). The `devel` matrix in `hatch.toml` has one `[[envs.devel.matrix]]` table per range of Python versions, and the `test` job of the CI workflow (`.github/workflows/build-test-package-publish.yml`) runs every Python version with every Robot Framework version except the combinations in its `exclude` list. The README and the Getting Started page (`docs/src/content/docs/getting-started/index.mdx`) show the same combinations as a table.
+Each Robot Framework version is supported and tested only with the Python versions (3.10 and newer) that it officially supports itself: the `Programming Language :: Python :: 3.x` classifiers of its newest patch release on PyPI (`https://pypi.org/project/robotframework/<version>/`). The `devel` matrix in `hatch.toml` has one `[[envs.devel.matrix]]` table per range of Python versions, and the `test` job of the CI workflow (`.github/workflows/build-test-package-publish.yml`) runs every Python version with every Robot Framework version except the combinations in its `exclude` list. The README shows the same combinations as a table.
 
 **Adding a new Python version:**
 
-Add its classifier to `pyproject.toml` and to the `pyproject.toml` of every package under `packages/`. Add it to `python-version` in the CI workflow, with an `exclude` entry for every Robot Framework version that does not support it, and to the `devel` tables of the Robot Framework versions that support it. Then update the tables in the README and on the Getting Started page, and the Python environments listed in `AGENTS.md`.
+Add its classifier to `pyproject.toml` and to the `pyproject.toml` of every package under `packages/`. Add it to `python-version` in the CI workflow, with an `exclude` entry for every Robot Framework version that does not support it, and to the `devel` tables of the Robot Framework versions that support it. Then update the table in the README and the Python environments listed in `AGENTS.md`.
 
 **Adding a new Robot Framework version to the matrix:**
 
-Take the Python versions it supports from its classifiers on PyPI. Add the new `rf<version>` entry to the `test` matrix and the `matrix.rf.dependencies` overrides in `hatch.toml`, to the `devel` table of its Python range (or a new table), and to `robot-version` in the CI workflow, with an `exclude` entry for every Python version it does not support. Add it to the tables in the README and on the Getting Started page as well.
+Take the Python versions it supports from its classifiers on PyPI. Add the new `rf<version>` entry to the `test` matrix and the `matrix.rf.dependencies` overrides in `hatch.toml`, to the `devel` table of its Python range (or a new table), and to `robot-version` in the CI workflow, with an `exclude` entry for every Python version it does not support. Add it to the table in the README as well.
 
 The language server regression tests compare against recorded outputs that are kept per Robot Framework version under `tests/robotcode/language_server/robotframework/parts/_regtest_outputs/rf<version>/`. After adding the new version to the matrices, create its baselines from the previous version instead of recording them blindly, so that every behavioural difference gets looked at:
 
