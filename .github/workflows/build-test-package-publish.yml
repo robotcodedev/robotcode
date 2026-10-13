@@ -32,9 +32,32 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
         robot-version:
           ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73", "rf74", "rf75"]
+        # each Robot Framework version only with the Python versions it officially supports, see CONTRIBUTING.md
+        exclude:
+          - { python-version: "3.11", robot-version: "rf50" }
+          - { python-version: "3.12", robot-version: "rf50" }
+          - { python-version: "3.12", robot-version: "rf60" }
+          - { python-version: "3.13", robot-version: "rf50" }
+          - { python-version: "3.13", robot-version: "rf60" }
+          - { python-version: "3.13", robot-version: "rf61" }
+          - { python-version: "3.13", robot-version: "rf70" }
+          - { python-version: "3.14", robot-version: "rf50" }
+          - { python-version: "3.14", robot-version: "rf60" }
+          - { python-version: "3.14", robot-version: "rf61" }
+          - { python-version: "3.14", robot-version: "rf70" }
+          - { python-version: "3.14", robot-version: "rf71" }
+          - { python-version: "3.14", robot-version: "rf72" }
+          - { python-version: "3.15", robot-version: "rf50" }
+          - { python-version: "3.15", robot-version: "rf60" }
+          - { python-version: "3.15", robot-version: "rf61" }
+          - { python-version: "3.15", robot-version: "rf70" }
+          - { python-version: "3.15", robot-version: "rf71" }
+          - { python-version: "3.15", robot-version: "rf72" }
+          - { python-version: "3.15", robot-version: "rf73" }
+          - { python-version: "3.15", robot-version: "rf74" }
 
     steps:
       - uses: actions/checkout@v6

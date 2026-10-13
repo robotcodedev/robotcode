@@ -64,9 +64,30 @@ post-install-commands = ["pip install -U -e {root:uri}/../robotframework"]
 [envs.devel]
 python = "3.10"
 
+# each Robot Framework version only with the Python versions it officially supports, see CONTRIBUTING.md
+[[envs.devel.matrix]]
+python = ["3.10"]
+rf = ["rf50"]
+
+[[envs.devel.matrix]]
+python = ["3.10", "3.11"]
+rf = ["rf60"]
+
+[[envs.devel.matrix]]
+python = ["3.10", "3.11", "3.12"]
+rf = ["rf61", "rf70"]
+
+[[envs.devel.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
+rf = ["rf71", "rf72"]
+
 [[envs.devel.matrix]]
 python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
-rf = ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73", "rf74", "rf75"]
+rf = ["rf73", "rf74"]
+
+[[envs.devel.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+rf = ["rf75"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [

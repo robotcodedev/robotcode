@@ -77,12 +77,12 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 
 ## Tech Stack
 
-- **Language Server:** Python 3.10–3.14 with asyncio
+- **Language Server:** Python 3.10–3.15 with asyncio
 - **Protocol:** LSP + DAP
 - **Parser:** Robot Framework native parser
 - **Build:** Hatch (Python), esbuild (VS Code), Gradle (IntelliJ)
 - **Linting:** ruff (format + lint) + mypy (type checking)
-- **Testing:** pytest + regtest2 snapshots, matrix across Python 3.10–3.14 × Robot Framework 5.0–7.5
+- **Testing:** pytest + regtest2 snapshots, matrix across Python 3.10–3.15 × Robot Framework 5.0–7.5, only the combinations Robot Framework supports
 - **VS Code extension:** TypeScript, manager-based lifecycle
 - **IntelliJ plugin:** Kotlin via LSP4IJ
 
@@ -216,7 +216,7 @@ Breaking changes: add `BREAKING CHANGE: <description>` in footer.
 
 ### Testing
 - pytest with regtest2 for snapshot testing
-- Matrix: Python 3.10–3.14 × Robot Framework 5.0–7.5
+- Matrix: Python 3.10–3.15 × Robot Framework 5.0–7.5, only the combinations Robot Framework supports
 - Tests in `tests/robotcode/` mirror package structure
 - `asyncio_mode = "auto"` — async tests run automatically
 - Each test must be independently runnable

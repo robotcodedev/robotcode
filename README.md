@@ -63,6 +63,19 @@ For the complete feature reference, see the [official documentation](https://rob
 - Python 3.10 or newer
 - Robot Framework 5.0 or newer
 
+**Supported combinations:** each Robot Framework version is supported with the Python versions that it officially supports itself:
+
+| Robot Framework | Python |
+|---|---|
+| 5.0 | 3.10 |
+| 6.0 | 3.10 – 3.11 |
+| 6.1, 7.0 | 3.10 – 3.12 |
+| 7.1, 7.2 | 3.10 – 3.13 |
+| 7.3, 7.4 | 3.10 – 3.14 |
+| 7.5 | 3.10 – 3.15 |
+
+RobotCode's CI tests only these combinations, to keep the effort low. Other combinations may work, but using them is your own responsibility. For example, Robot Framework versions before 7.5 may not work with Python 3.15.
+
 **Editor / IDE — any LSP-capable editor works.** For the dedicated extensions you need one of:
 - Visual Studio Code 1.127.0 or newer
 - PyCharm / IntelliJ IDEA 2026.1 or newer

@@ -307,6 +307,8 @@ hatch run test:test
 
 This runs the full test suite across all supported Robot Framework versions using the default Python interpreter. Run it before committing or pushing a change, even if you already ran the newly added or modified tests locally: it gives good coverage without spinning up the full Python × RF matrix.
 
+`test:test` runs every Robot Framework version with your default Python, also the versions that do not officially support it (see "Supported Python and Robot Framework versions" below). Robot Framework itself may fail in such a combination: for example, Robot Framework 7.2 and older cannot load their XML library on Python 3.15. The CI, which runs only the supported combinations, is authoritative.
+
 > [!NOTE]
 > **Documentation-only or other non-code changes** (typo fixes, prose, Markdown docs) need neither the test matrix nor linting: `hatch run lint:all` only checks source code (ruff/mypy for Python, eslint for JS/TS), there is no Markdown linter, and the pre-commit hooks skip automatically when no code files are staged. Run the tests and linting whenever you touch source code, even slightly.
 
@@ -323,7 +325,7 @@ For running individual tests or test files interactively, use VS Code's built-in
 **Full Python × RF matrix (CI-style, slow):**
 
 ```bash
-hatch run devel:test                       # all combinations in the matrix
+hatch run devel:test                       # all supported combinations, as in the CI
 hatch run devel.<py-env>-<rf-env>:test     # e.g. hatch run devel.py3.12-rf75:test
 ```
 
@@ -336,9 +338,19 @@ Run `hatch env show` to list every environment, including the `test.*` and `deve
 > [!NOTE]
 > `hatch run test` (without an env prefix) runs only in the `default` environment against the Robot Framework version pinned there — it does **not** cover the RF matrix. Use `hatch run test:test` for the full RF matrix, or `hatch run devel:test` for the full Python × RF matrix (slow).
 
+**Supported Python and Robot Framework versions:**
+
+Each Robot Framework version is supported and tested only with the Python versions (3.10 and newer) that it officially supports itself: the `Programming Language :: Python :: 3.x` classifiers of its newest patch release on PyPI (`https://pypi.org/project/robotframework/<version>/`). The `devel` matrix in `hatch.toml` has one `[[envs.devel.matrix]]` table per range of Python versions, and the `test` job of the CI workflow (`.github/workflows/build-test-package-publish.yml`) runs every Python version with every Robot Framework version except the combinations in its `exclude` list. The README and the Getting Started page (`docs/src/content/docs/getting-started/index.mdx`) show the same combinations as a table.
+
+**Adding a new Python version:**
+
+Add its classifier to `pyproject.toml` and to the `pyproject.toml` of every package under `packages/`. Add it to `python-version` in the CI workflow, with an `exclude` entry for every Robot Framework version that does not support it, and to the `devel` tables of the Robot Framework versions that support it. Then update the tables in the README and on the Getting Started page, and the Python environments listed in `AGENTS.md`.
+
 **Adding a new Robot Framework version to the matrix:**
 
-The language server regression tests compare against recorded outputs that are kept per Robot Framework version under `tests/robotcode/language_server/robotframework/parts/_regtest_outputs/rf<version>/`. After adding the new `rf<version>` entry to the `test` and `devel` matrices in `hatch.toml` and to the CI workflow, create its baselines from the previous version instead of recording them blindly, so that every behavioural difference gets looked at:
+Take the Python versions it supports from its classifiers on PyPI. Add the new `rf<version>` entry to the `test` matrix and the `matrix.rf.dependencies` overrides in `hatch.toml`, to the `devel` table of its Python range (or a new table), and to `robot-version` in the CI workflow, with an `exclude` entry for every Python version it does not support. Add it to the tables in the README and on the Getting Started page as well.
+
+The language server regression tests compare against recorded outputs that are kept per Robot Framework version under `tests/robotcode/language_server/robotframework/parts/_regtest_outputs/rf<version>/`. After adding the new version to the matrices, create its baselines from the previous version instead of recording them blindly, so that every behavioural difference gets looked at:
 
 ```bash
 cd tests/robotcode/language_server/robotframework/parts/_regtest_outputs

@@ -16,6 +16,21 @@ RobotCode is a set of tools, extensions and plugins for working with [Robot Fram
 - Robot Framework 5.0 or above
 - For the editor extensions: VS Code 1.127 or above, or PyCharm / IntelliJ IDEA 2026.1 or above
 
+### Supported Python and Robot Framework Versions
+
+Each Robot Framework version is supported with the Python versions that it officially supports itself:
+
+| Robot Framework | Python |
+|---|---|
+| 5.0 | 3.10 |
+| 6.0 | 3.10 – 3.11 |
+| 6.1, 7.0 | 3.10 – 3.12 |
+| 7.1, 7.2 | 3.10 – 3.13 |
+| 7.3, 7.4 | 3.10 – 3.14 |
+| 7.5 | 3.10 – 3.15 |
+
+RobotCode's CI tests only these combinations, to keep the effort low. Other combinations may work, but using them is your own responsibility. For example, Robot Framework versions before 7.5 may not work with Python 3.15.
+
 ### Optional Python Packages
 
 Robot Framework needs additional Python packages for some documentation formats. They are optional in Robot Framework, so RobotCode neither depends on them nor ships them. If you need one of them, install it into the Python environment of your project, the same way you install Robot Framework itself, for example by adding it to the dependencies of your project.
