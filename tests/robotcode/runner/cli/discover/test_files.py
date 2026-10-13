@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Any, List, cast
 
+import pytest
+
 from .conftest import CliRunner
 
 if sys.version_info >= (3, 11):
@@ -78,6 +80,44 @@ def test_files_text_format_lists_paths(robotcode_cli: CliRunner, files_tree: Pat
     assert "sub1.robot" in result.stdout
     # Italic-label convention for the count footer.
     assert "_Total:_" in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("cwd", "path", "expected"),
+    [
+        ("files_tree", "nested", ["files_tree/nested/deep.robot"]),
+        (
+            "files_tree/nested",
+            "..",
+            ["files_tree/nested/deep.robot", "files_tree/sub1.robot", "files_tree/sub2.resource"],
+        ),
+        ("files_tree/nested", "{root}/files_tree/nested", ["files_tree/nested/deep.robot"]),
+    ],
+)
+def test_files_resolves_paths_against_the_working_directory(
+    robotcode_cli: CliRunner,
+    files_tree: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    cwd: str,
+    path: str,
+    expected: List[str],
+) -> None:
+    """A path given in a subfolder of the root counts from that subfolder, like with `discover tests`."""
+    root = files_tree.parent
+    monkeypatch.chdir(root / cwd)
+    result = robotcode_cli(["--root", str(root), "--format", "json", "discover", "files", path.format(root=root)])
+    assert sorted(json.loads(result.stdout)) == expected
+
+
+def test_files_takes_default_paths_from_the_root(
+    robotcode_cli: CliRunner, files_tree: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Default paths are configuration: they count from the root, also when started in a subfolder."""
+    monkeypatch.chdir(files_tree)
+    result = robotcode_cli(
+        ["--root", str(files_tree.parent), "-dp", "files_tree/nested", "--format", "json", "discover", "files"]
+    )
+    assert json.loads(result.stdout) == ["files_tree/nested/deep.robot"]
 
 
 def test_files_toml_format_lists_paths_under_data(robotcode_cli: CliRunner, files_tree: Path) -> None:

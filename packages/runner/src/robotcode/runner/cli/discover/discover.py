@@ -1301,8 +1301,9 @@ def files(
     # Match the other discover subcommands: chdir into root_folder so
     # `get_rel_source` produces paths relative to the project root rather
     # than to whatever the caller's process cwd happens to be.
-    with app.chdir(root_folder):
-        # Without duplicates, in the given order: the files come out in the order of the paths.
+    with app.chdir(root_folder) as orig_folder:
+        # Without duplicates, in the given order: the files come out in the order of the paths. Paths from the
+        # command line count from the folder the command was started in, the configured ones from the root.
         search_paths = dict.fromkeys(
             (
                 (
@@ -1313,7 +1314,7 @@ def files(
                     else [profile.paths]
                 )
                 if not paths
-                else [str(p) for p in paths]
+                else [str(p if orig_folder is None else Path(orig_folder, p)) for p in paths]
             )
         )
         if not search_paths:
