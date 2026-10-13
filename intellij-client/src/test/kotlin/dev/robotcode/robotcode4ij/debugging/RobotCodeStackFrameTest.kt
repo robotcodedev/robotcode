@@ -43,12 +43,15 @@ class RobotCodeStackFrameTest {
     private fun testFrame(line: Int, depth: Int) = RobotCodeStackFrame(
         stackFrame("Project.Tests.Sample.My Test", "/project/tests/sample.robot", line, StackFramePresentationHint.NORMAL),
         FakeDebugServer(),
+        immediateScope,
         depth,
         innermost = false
     )
 
     private fun presentationOf(frame: StackFrame): Recorder {
-        return Recorder().also { RobotCodeStackFrame(frame, FakeDebugServer(), 0, false).customizePresentation(it) }
+        return Recorder().also {
+            RobotCodeStackFrame(frame, FakeDebugServer(), immediateScope, 0, false).customizePresentation(it)
+        }
     }
 
     @Test

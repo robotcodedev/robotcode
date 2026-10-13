@@ -16,10 +16,12 @@ import dev.robotcode.robotcode4ij.lsp.EvaluatableExpressionParams
 import dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerManager
 import dev.robotcode.robotcode4ij.lsp.RobotCodeServerApi
 import dev.robotcode.robotcode4ij.lsp.langServerManager
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.debug.EvaluateArguments
+import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.jetbrains.concurrency.AsyncPromise
@@ -30,18 +32,54 @@ import java.util.concurrent.TimeUnit
 
 private const val HOVER_TIMEOUT_SECONDS = 2L
 
-class RobotCodeDebuggerEvaluator(val debugServer: IDebugProtocolServer, val frame: RobotCodeStackFrame) :
-    XDebuggerEvaluator() {
+// the platform tells where an evaluation comes from only through this internal interface
+internal const val EVALUATION_ORIGIN_INTERFACE =
+    "com.intellij.xdebugger.impl.ui.tree.nodes.XEvaluationCallbackWithOrigin"
+
+/**
+ * The debugger's context for an evaluation by where it comes from: a watch is an expression, and so is a hover in the
+ * editor, while the Evaluate dialog, the inline field and everything else are REPL input, which runs keywords. The
+ * origin is read by reflection, so that the plugin uses no internal API; whatever goes wrong there means REPL input.
+ */
+internal fun evaluationContextOf(callback: XDebuggerEvaluator.XEvaluationCallback): String {
+    val origin = try {
+        val withOrigin = Class.forName(EVALUATION_ORIGIN_INTERFACE, false, callback.javaClass.classLoader)
+        if (withOrigin.isInstance(callback)) {
+            (withOrigin.getMethod("getOrigin").invoke(callback) as? Enum<*>)?.name
+        } else {
+            null
+        }
+    } catch (_: Exception) {
+        null
+    }
+    return when (origin) {
+        "WATCH", "INLINE_WATCH", "UNSPECIFIED_WATCH" -> EvaluateArgumentsContext.WATCH
+        "EDITOR" -> EvaluateArgumentsContext.HOVER
+        else -> EvaluateArgumentsContext.REPL
+    }
+}
+
+class RobotCodeDebuggerEvaluator(
+    val debugServer: IDebugProtocolServer, val frame: RobotCodeStackFrame, private val scope: CoroutineScope
+) : XDebuggerEvaluator() {
     override fun evaluate(
         expression: String,
         callback: XEvaluationCallback,
         expressionPosition: XSourcePosition?
     ) {
-        runBlocking {
-            val result = debugServer.evaluate(EvaluateArguments().apply {
-                this.expression = expression
-                frameId = frame.frame.id
-            }).await()
+        scope.launch {
+            val result = try {
+                debugServer.evaluate(EvaluateArguments().apply {
+                    this.expression = expression
+                    frameId = frame.frame.id
+                    context = evaluationContextOf(callback)
+                }).awaitRequest()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                callback.errorOccurred(requestErrorText(e))
+                return@launch
+            }
             val variable: Variable = Variable().apply {
                 value = result.result
                 evaluateName = expression
@@ -55,7 +93,8 @@ class RobotCodeDebuggerEvaluator(val debugServer: IDebugProtocolServer, val fram
                 RobotCodeNamedValue(
                     variable,
                     null,
-                    debugServer
+                    debugServer,
+                    scope
                 )
             )
         }

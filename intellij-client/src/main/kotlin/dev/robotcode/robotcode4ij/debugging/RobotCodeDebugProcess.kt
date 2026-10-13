@@ -23,7 +23,6 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
 import com.intellij.xdebugger.ui.XDebugTabLayouter
-import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.threading.coroutines.adviseSuspend
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointHandler
@@ -34,8 +33,6 @@ import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointP
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunProfileState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.eclipse.lsp4j.debug.CompletionItem
@@ -75,9 +72,10 @@ class RobotCodeDebugProcess(
             return state.debugClient
         }
 
+    // used only once the connection stands: at a stop, and for breakpoints after the configuration phase
     private val debugServer: IDebugProtocolServer
         get() {
-            return state.debugServer
+            return checkNotNull(state.debugServer) { "The RobotCode debugger is not connected" }
         }
 
     // the breakpoints that the debugger holds, changed and sent under one lock; until the configuration phase of the
@@ -101,17 +99,18 @@ class RobotCodeDebugProcess(
         session.setPauseActionSupported(true)
 
         state.configuration = this::sendConfiguration
-        debugClient.onStopped.adviseSuspend(Lifetime.Eternal, Dispatchers.IO, this::handleOnStopped)
+        debugClient.onStopped.adviseSuspend(state.runScope.lifetime, Dispatchers.IO, this::handleOnStopped)
         // a paused run that goes on, also when a stop request lets it run to its end, shows as running again; handled
         // as the event arrives, so that it cannot come after the next stop
-        debugClient.onContinued.advise(Lifetime.Eternal) { session.sessionResumed() }
+        debugClient.onContinued.advise(state.runScope.lifetime) { session.sessionResumed() }
     }
 
     private suspend fun createRobotCodeSuspendContext(threadId: Int): RobotCodeSuspendContext {
         return RobotCodeSuspendContext(
-            debugServer.stackTrace(StackTraceArguments().apply { this.threadId = threadId }).await(),
+            debugServer.stackTrace(StackTraceArguments().apply { this.threadId = threadId }).awaitRequest(),
             threadId,
-            debugServer
+            debugServer,
+            state.runScope.scope
         )
     }
 
@@ -138,7 +137,7 @@ class RobotCodeDebugProcess(
         } else {
             debugServer.continue_(ContinueArguments().apply {
                 threadId = args.threadId
-            }).await()
+            }).awaitRequest()
         }
     }
 
@@ -153,7 +152,7 @@ class RobotCodeDebugProcess(
                 this.expression = expression
                 this.frameId = frameId
                 this.context = EvaluateArgumentsContext.WATCH
-            }).await().result
+            }).awaitRequest().result
         } catch (e: ResponseErrorException) {
             messageOf(e.responseError)
         }
@@ -184,7 +183,7 @@ class RobotCodeDebugProcess(
     override fun createTabLayouter(): XDebugTabLayouter {
         return object : XDebugTabLayouter() {
             override fun registerAdditionalContent(ui: RunnerLayoutUi) {
-                val console = RobotCodeDebugConsole(session, debugServer)
+                val console = RobotCodeDebugConsole(session)
                 val content = ui.createContent(
                     "RobotCodeDebugConsole", console.console.component, RobotCodeBundle.message("debugger.console.title"),
                     AllIcons.Debugger.Console, console.console.preferredFocusableComponent
@@ -204,8 +203,9 @@ class RobotCodeDebugProcess(
         return breakpointHandlers
     }
 
+    // the platform calls the breakpoint handlers in a write action, so the changes are queued in the order they come
     fun registerExceptionBreakpoint(breakpoint: ExceptionBreakpoint) {
-        runBlocking {
+        state.runScope.queue {
             breakpointsMutex.withLock {
                 exceptionBreakpoints.register(breakpoint)
                 if (configured) sendExceptionBreakpoints()
@@ -214,7 +214,7 @@ class RobotCodeDebugProcess(
     }
 
     fun unregisterExceptionBreakpoint(breakpoint: ExceptionBreakpoint) {
-        runBlocking {
+        state.runScope.queue {
             breakpointsMutex.withLock {
                 exceptionBreakpoints.unregister(breakpoint)
                 if (configured) sendExceptionBreakpoints()
@@ -223,7 +223,7 @@ class RobotCodeDebugProcess(
     }
 
     fun registerBreakpoint(breakpoint: LineBreakpoint) {
-        runBlocking {
+        state.runScope.queue {
             breakpointsMutex.withLock {
                 val files = lineBreakpoints.register(breakpoint)
                 if (configured) files.forEach { sendLineBreakpoints(it) }
@@ -232,7 +232,7 @@ class RobotCodeDebugProcess(
     }
 
     fun unregisterBreakpoint(breakpoint: LineBreakpoint) {
-        runBlocking {
+        state.runScope.queue {
             breakpointsMutex.withLock {
                 val files = lineBreakpoints.unregister(breakpoint)
                 if (configured) files.forEach { sendLineBreakpoints(it) }
@@ -242,7 +242,7 @@ class RobotCodeDebugProcess(
 
     /** Sends the list of a registered breakpoint's file again after a change of its properties, such as the hit count. */
     fun breakpointPropertiesChanged(breakpoint: LineBreakpoint) {
-        runBlocking {
+        state.runScope.queue {
             breakpointsMutex.withLock {
                 val file = lineBreakpoints.registeredFile(breakpoint)
                 if (configured && file != null) sendLineBreakpoints(file)
@@ -294,7 +294,7 @@ class RobotCodeDebugProcess(
             }.toTypedArray()
         }
 
-        val response = debugServer.setBreakpoints(arguments).await()
+        val response = debugServer.setBreakpoints(arguments).awaitRequest()
         lineBreakpoints.idsReceived(file, entries, response.breakpoints.orEmpty().map { it.id })
 
         // the debugger answers in the order of the request
@@ -309,7 +309,7 @@ class RobotCodeDebugProcess(
     }
 
     private suspend fun sendExceptionBreakpoints() {
-        debugServer.setExceptionBreakpoints(exceptionBreakpoints.arguments()).await()
+        debugServer.setExceptionBreakpoints(exceptionBreakpoints.arguments()).awaitRequest()
     }
 
     // called with the lock held
@@ -323,48 +323,46 @@ class RobotCodeDebugProcess(
         ApplicationManager.getApplication().executeOnPooledThread { state.requestTerminate() }
     }
 
+    // the platform calls the stepping actions on the user interface thread, so their requests are queued in the order
+    // of the user's actions
     override fun resume(context: XSuspendContext?) {
-        runBlocking {
-            if (context is RobotCodeSuspendContext) {
-                debugServer.continue_(ContinueArguments().apply {
-                    threadId = context.threadId
-                }).await()
-            }
+        if (context !is RobotCodeSuspendContext) return
+        state.runScope.queue {
+            debugServer.continue_(ContinueArguments().apply {
+                threadId = context.threadId
+            }).awaitRequest()
         }
     }
 
     override fun startStepOver(context: XSuspendContext?) {
-        runBlocking {
-            if (context is RobotCodeSuspendContext) {
-                debugServer.next(NextArguments().apply { threadId = context.threadId }).await()
-            }
+        if (context !is RobotCodeSuspendContext) return
+        state.runScope.queue {
+            debugServer.next(NextArguments().apply { threadId = context.threadId }).awaitRequest()
         }
     }
 
     override fun startStepInto(context: XSuspendContext?) {
-        runBlocking {
-            if (context is RobotCodeSuspendContext) {
-                debugServer.stepIn(StepInArguments().apply {
-                    threadId = context.threadId
-                }).await()
-            }
+        if (context !is RobotCodeSuspendContext) return
+        state.runScope.queue {
+            debugServer.stepIn(StepInArguments().apply {
+                threadId = context.threadId
+            }).awaitRequest()
         }
     }
 
     override fun startStepOut(context: XSuspendContext?) {
-        runBlocking {
-            if (context is RobotCodeSuspendContext) {
-                debugServer.stepOut(StepOutArguments().apply {
-                    threadId = context.threadId
-                }).await()
-            }
+        if (context !is RobotCodeSuspendContext) return
+        state.runScope.queue {
+            debugServer.stepOut(StepOutArguments().apply {
+                threadId = context.threadId
+            }).awaitRequest()
         }
     }
 
     // always continues; a breakpoint on the target line stops the run there anyway, otherwise a temporary entry does,
     // which the next stop that the session shows removes again
     override fun runToPosition(position: XSourcePosition, context: XSuspendContext?) {
-        runBlocking {
+        state.runScope.queue {
             breakpointsMutex.withLock {
                 clearRunToCursorTarget()
                 if (lineBreakpoints.setTarget(position.file, position.line) && configured) {
@@ -376,8 +374,10 @@ class RobotCodeDebugProcess(
     }
 
     override fun startPausing() {
-        runBlocking {
-            debugServer.pause(PauseArguments().apply { threadId = 0 }).await()
+        state.runScope.queue {
+            // without a connection to the debugger there is nothing to pause yet
+            val server = state.debugServer ?: return@queue
+            server.pause(PauseArguments().apply { threadId = 0 }).awaitRequest()
         }
     }
 }

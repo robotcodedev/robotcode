@@ -55,7 +55,8 @@ class RobotCodeSetValueTest {
     private fun values(children: XValueChildrenList): List<XValue> = (0 until children.size()).map { children.getValue(it) }
 
     private fun localsOf(innermost: Boolean): XValueChildrenList {
-        return childrenOf { RobotCodeStackFrame(frame, debugServer, depth = 2, innermost = innermost).computeChildren(it) }
+        val stackFrame = RobotCodeStackFrame(frame, debugServer, immediateScope, depth = 2, innermost = innermost)
+        return childrenOf { stackFrame.computeChildren(it) }
     }
 
     @Test
@@ -98,7 +99,7 @@ class RobotCodeSetValueTest {
 
     @Test
     fun setValueSendsTheScopeReferenceTheNameAndTheText() {
-        val modifier = RobotCodeNamedValue(variable("\${x}", "'abc'"), 1, debugServer).modifier!!
+        val modifier = RobotCodeNamedValue(variable("\${x}", "'abc'"), 1, debugServer, immediateScope).modifier!!
         val callback = Callback()
 
         modifier.setValue(XExpressionImpl.fromText("'changed'"), callback)
@@ -113,7 +114,8 @@ class RobotCodeSetValueTest {
 
     @Test
     fun anUnchangedStartTextIsNotSent() {
-        val modifier = RobotCodeNamedValue(variable("@{many}", "[0, 1, 2, ...]"), 1, debugServer).modifier!!
+        val modifier =
+            RobotCodeNamedValue(variable("@{many}", "[0, 1, 2, ...]"), 1, debugServer, immediateScope).modifier!!
         val callback = Callback()
 
         modifier.setValue(XExpressionImpl.fromText(modifier.initialValueEditorText), callback)
@@ -133,8 +135,9 @@ class RobotCodeSetValueTest {
         ) as DebugResponseMessage
         val callback = Callback()
 
-        RobotCodeNamedValue(variable("\${x}", "'abc'"), 1, FakeDebugServer(setVariableError = response.error)).modifier!!
-            .setValue(XExpressionImpl.fromText("changed"), callback)
+        RobotCodeNamedValue(
+            variable("\${x}", "'abc'"), 1, FakeDebugServer(setVariableError = response.error), immediateScope
+        ).modifier!!.setValue(XExpressionImpl.fromText("changed"), callback)
 
         assertEquals("DataError: Evaluating expression 'changed' failed", callback.error)
         assertFalse(callback.modified)

@@ -8,21 +8,22 @@ import com.intellij.xdebugger.frame.XValueChildrenList
 import com.intellij.xdebugger.frame.XValueModifier
 import com.intellij.xdebugger.frame.XValueNode
 import com.intellij.xdebugger.frame.XValuePlace
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.eclipse.lsp4j.debug.SetVariableArguments
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
-import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 
 /**
- * A variable or a child of one. [localScopeReference] is set only for a variable directly in the Local scope of the
- * innermost frame: the debugger assigns a new value in the innermost variable scope of the run, so only such a
- * variable can be changed where the Variables view shows it.
+ * A variable or a child of one, whose requests run in [scope]. [localScopeReference] is set only for a variable
+ * directly in the Local scope of the innermost frame: the debugger assigns a new value in the innermost variable scope
+ * of the run, so only such a variable can be changed where the Variables view shows it.
  */
 class RobotCodeNamedValue(
-    val variable: Variable, private val localScopeReference: Int?, val debugServer: IDebugProtocolServer
+    val variable: Variable, private val localScopeReference: Int?, val debugServer: IDebugProtocolServer,
+    private val scope: CoroutineScope,
 ) : XNamedValue(variable.name ?: "") {
 
     override fun computePresentation(node: XValueNode, place: XValuePlace) {
@@ -40,12 +41,15 @@ class RobotCodeNamedValue(
     // the children from [start] on; the items that remain are offered as the next page
     private fun addChildren(node: XCompositeNode, start: Int) {
         val plan = planChildren(variable.indexedVariables, start)
-        val children = runBlocking { debugServer.children(variable.variablesReference, plan) }
-        node.addChildren(XValueChildrenList().apply {
-            children.forEach { add(it.name, RobotCodeNamedValue(it, null, debugServer)) }
-        }, true)
-        if (plan.remaining > 0) {
-            node.tooManyChildren(plan.remaining) { addChildren(node, plan.next) }
+        scope.addChildrenLater(node, then = {
+            if (plan.remaining > 0) {
+                node.tooManyChildren(plan.remaining) { addChildren(node, plan.next) }
+            }
+        }) {
+            val children = debugServer.children(variable.variablesReference, plan)
+            XValueChildrenList().apply {
+                children.forEach { add(it.name, RobotCodeNamedValue(it, null, debugServer, scope)) }
+            }
         }
     }
 
@@ -61,19 +65,21 @@ class RobotCodeNamedValue(
                     callback.valueModified()
                     return
                 }
-                val error = try {
-                    runBlocking {
+                scope.launch {
+                    val error = try {
                         debugServer.setVariable(SetVariableArguments().apply {
                             variablesReference = scopeReference
                             name = variable.name
                             value = expression.expression
-                        }).await()
+                        }).awaitRequest()
+                        null
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        requestErrorText(e)
                     }
-                    null
-                } catch (e: ResponseErrorException) {
-                    messageOf(e.responseError)
+                    if (error == null) callback.valueModified() else callback.errorOccurred(error)
                 }
-                if (error == null) callback.valueModified() else callback.errorOccurred(error)
             }
         }
     }

@@ -11,10 +11,10 @@ Evaluation has two more defects. Every evaluation runs as if typed into a debug 
 - Run and Debug start without blocking the IDE: the plugin connects to the debugger in the background, as it already starts the process there.
 - Stepping, resuming, pausing, Run to Cursor, evaluating, expanding variables, loading the next items of a long list, Set Value and changing breakpoints no longer block the IDE. A keyword evaluated from the debugger may run as long as the debugger waits for it, 60 seconds, while the IDE stays usable; every wait has a limit.
 - If the debugger does not accept the connection within 15 seconds while its process is running, the run's console says so and the run ends. If the process ends before it connected, the run ends with the process's exit code. Neither case shows an "IDE error" balloon.
-- The Evaluate dialog and the inline evaluation field keep their current meaning: a single variable shows its value, anything else runs as a keyword call. Watches are evaluated as expressions instead: they never run keywords, and an unknown variable shows as `<undefined>`.
+- The Evaluate dialog and the inline evaluation field keep their current meaning: a single variable shows its value, anything else runs as a keyword call. Watches are evaluated as expressions instead, as in VS Code: a watch runs a keyword only when it starts with `! `, such as `! Get Length    ${items}`, and an unknown variable shows as `<undefined>`.
 - When the debugger reports an error for an evaluation, the IDE shows the debugger's message, for example "No keyword with name '1 + 2' found.", and logs no IDE error.
 
-Behaviour that users notice, for the release notes (not breaking): watches no longer run keywords; a watch like `Log    something` now shows an error message instead of logging at every stop. Write keyword calls in the Evaluate dialog instead.
+Behaviour that users notice, for the release notes (not breaking): watches work as in VS Code and run a keyword only with `! ` in front, such as `! Get Length    ${items}`; a watch like `Log    something` now shows an error message instead of logging at every stop.
 
 Not part of this change: settings for the connection and debugger timeouts; how Robot Framework events become test results; the Robot Debug Console, which already evaluates without blocking.
 

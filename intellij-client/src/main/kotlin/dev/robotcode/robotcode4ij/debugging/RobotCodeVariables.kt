@@ -1,6 +1,5 @@
 package dev.robotcode.robotcode4ij.debugging
 
-import kotlinx.coroutines.future.await
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
@@ -43,7 +42,7 @@ internal suspend fun IDebugProtocolServer.children(reference: Int, plan: Childre
             filter = request.filter
             start = request.start
             count = request.count
-        }).await().variables.orEmpty().asList()
+        }).awaitRequest().variables.orEmpty().asList()
     }
 }
 

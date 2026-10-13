@@ -4,6 +4,8 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.xdebugger.frame.XCompositeNode
 import com.intellij.xdebugger.frame.XDebuggerTreeNodeHyperlink
 import com.intellij.xdebugger.frame.XValueChildrenList
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateResponse
 import org.eclipse.lsp4j.debug.Scope
@@ -22,17 +24,19 @@ import java.util.concurrent.CompletableFuture
 import javax.swing.Icon
 
 /**
- * A debugger with fixed scopes, variables and evaluation results that records the `setVariable` requests. As the
- * RobotCode debugger does, it returns the items of a list only for the `indexed` filter, and the other children for
- * the `named` filter or without a filter.
+ * A debugger with fixed scopes, variables, evaluation results and errors that records the `setVariable` and
+ * `evaluate` requests. As the RobotCode debugger does, it returns the items of a list only for the `indexed` filter,
+ * and the other children for the `named` filter or without a filter.
  */
 internal class FakeDebugServer(
     private val scopes: List<Scope> = emptyList(),
     private val variables: Map<Int, List<Variable>> = emptyMap(),
     private val setVariableError: ResponseError? = null,
     private val evaluations: Map<String, EvaluateResponse> = emptyMap(),
+    private val evaluationErrors: Map<String, ResponseError> = emptyMap(),
 ) : IDebugProtocolServer {
     val setVariableRequests = mutableListOf<SetVariableArguments>()
+    val evaluateRequests = mutableListOf<EvaluateArguments>()
 
     override fun scopes(args: ScopesArguments): CompletableFuture<ScopesResponse> {
         return CompletableFuture.completedFuture(ScopesResponse().apply { scopes = this@FakeDebugServer.scopes.toTypedArray() })
@@ -49,6 +53,8 @@ internal class FakeDebugServer(
     }
 
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
+        evaluateRequests.add(args)
+        evaluationErrors[args.expression]?.let { return CompletableFuture.failedFuture(ResponseErrorException(it)) }
         return CompletableFuture.completedFuture(evaluations.getValue(args.expression))
     }
 
@@ -61,6 +67,12 @@ internal class FakeDebugServer(
         }
     }
 }
+
+/**
+ * A scope whose coroutines run on the calling thread until they wait, so that a request to a [FakeDebugServer], which
+ * answers at once, is complete when the call that sent it returns.
+ */
+internal val immediateScope = CoroutineScope(Dispatchers.Unconfined)
 
 /** A node of the Variables view that records the children added to it. */
 internal class RecordingNode : XCompositeNode {

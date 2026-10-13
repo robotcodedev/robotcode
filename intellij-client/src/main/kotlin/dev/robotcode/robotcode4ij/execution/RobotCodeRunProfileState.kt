@@ -1,6 +1,5 @@
 package dev.robotcode.robotcode4ij.execution
 
-import com.intellij.execution.CantRunException
 import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionResult
@@ -8,6 +7,7 @@ import com.intellij.execution.Executor
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
+import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.target.TargetEnvironment
 import com.intellij.execution.target.TargetedCommandLine
@@ -16,13 +16,13 @@ import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.ui.BaseTestsOutputConsoleView
 import com.intellij.execution.util.ProgramParametersConfigurator
 import com.intellij.execution.ui.ConsoleView
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.jetbrains.python.run.PythonCommandLineState
 import com.jetbrains.python.run.PythonExecution
 import com.jetbrains.python.run.PythonScriptExecution
 import com.jetbrains.python.run.target.HelpersAwareTargetEnvironmentRequest
-import com.jetbrains.rd.util.reactive.adviseEternal
 import dev.robotcode.robotcode4ij.InterpreterKind
 import dev.robotcode.robotcode4ij.PythonInterpreter
 import dev.robotcode.robotcode4ij.RobotCodeBundle
@@ -32,27 +32,28 @@ import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.debugging.awaitRequest
 import dev.robotcode.robotcode4ij.defaultPathArguments
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
 import dev.robotcode.robotcode4ij.robotCodeArguments
 import dev.robotcode.robotcode4ij.robotSettings
 import dev.robotcode.robotcode4ij.testing.testManger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
+import java.io.IOException
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.SocketTimeoutException
 import java.util.concurrent.CompletableFuture
 import java.util.function.Function
 import kotlin.io.path.pathString
@@ -147,14 +148,51 @@ internal suspend fun handshake(
     configure: (suspend () -> Unit)?,
     initializedTimeoutMillis: Long = 5000,
 ) {
-    val capabilities = server.initialize(initializeArguments()).await()
+    val capabilities = server.initialize(initializeArguments()).awaitRequest()
     // the debugger accepts configuration requests at any time after `initialize`, so a missing event only delays them
     withTimeoutOrNull(initializedTimeoutMillis) { client.initializedEvent.await() }
     configure?.invoke()
-    server.attach(emptyMap<String, Any>()).await()
+    server.attach(emptyMap<String, Any>()).awaitRequest()
     if (capabilities.supportsConfigurationDoneRequest == true) {
-        server.configurationDone(ConfigurationDoneArguments()).await()
+        server.configurationDone(ConfigurationDoneArguments()).awaitRequest()
     }
+}
+
+/** As long as the RobotCode debugger waits for its client by default (`--wait-for-client-timeout`). */
+internal const val DEBUGGER_CONNECT_TIMEOUT_MILLIS = 15_000L
+
+private const val CONNECT_RETRY_MILLIS = 100L
+
+private const val MILLIS_PER_SECOND = 1000L
+
+/**
+ * Connects to the debugger of [handler]'s process at [port], trying for at most [timeoutMillis]. When that fails while
+ * the process still runs, says so in the run's console and ends the process. Returns the connection, or null.
+ */
+internal suspend fun connectDebugger(
+    handler: ProcessHandler, port: Int, timeoutMillis: Long = DEBUGGER_CONNECT_TIMEOUT_MILLIS,
+    retryMillis: Long = CONNECT_RETRY_MILLIS
+): Socket? {
+    val socket = withTimeoutOrNull(timeoutMillis) {
+        var connected: Socket? = null
+        while (connected == null) {
+            connected = try {
+                withContext(Dispatchers.IO) { Socket("127.0.0.1", port) }
+            } catch (_: IOException) {
+                delay(retryMillis)
+                null
+            }
+        }
+        connected
+    }
+    if (socket == null && !handler.isProcessTerminated && !handler.isProcessTerminating) {
+        handler.notifyTextAvailable(
+            RobotCodeBundle.message("debugger.notConnected", timeoutMillis / MILLIS_PER_SECOND) + "\n",
+            ProcessOutputTypes.SYSTEM
+        )
+        handler.destroyProcess()
+    }
+    return socket
 }
 
 /**
@@ -170,7 +208,14 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     }
     
     val debugClient = RobotCodeDebugProtocolClient()
-    lateinit var debugServer: IRobotCodeDebugProtocolServer
+
+    // the coroutines of the run, which end with its process
+    val runScope = RobotCodeRunScope()
+
+    // the debugger, once the connection to it stands
+    @Volatile
+    var debugServer: IRobotCodeDebugProtocolServer? = null
+        private set
 
     // the configuration phase of the handshake, provided by the debug process; a run without one configures nothing
     var configuration: (suspend () -> Unit)? = null
@@ -178,22 +223,23 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     // the handler of the started process, whose output fence orders the process output before the debugger events
     var processHandler: RobotCodeProcessHandler? = null
         private set
-    
+
     // the debugger while the connection to it is up
     @Volatile
     private var connectedServer: IRobotCodeDebugProtocolServer? = null
 
     private var terminateResponse: CompletableFuture<Void>? = null
 
+    @Volatile
+    private var socket: Socket? = null
+
     init {
-        debugClient.onTerminated.adviseEternal {
+        debugClient.onTerminated.advise(runScope.lifetime) {
             connectedServer = null
-            if (socket.isConnected) socket.close()
+            socket?.close()
         }
     }
-    
-    private lateinit var socket: Socket
-    
+
     private var debugPort = 0
     
     private var consoleProperties: SMTRunnerConsoleProperties? = null
@@ -237,6 +283,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val handler = RobotCodeProcessHandler(process, commandLine, targetedCommandLine.charset, ::requestTerminate)
         processHandler = handler
         handler.putUserData(DEBUG_PORT, debugPort)
+        // the run scope first, so that the end of the process cancels it before processTerminated below looks for a
+        // connection to close
+        handler.addProcessListener(runScope)
         handler.addProcessListener(this)
         return handler
     }
@@ -267,53 +316,39 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         return result
     }
     
-    private suspend fun tryConnectToServerWithTimeout(
-        host: String, port: Int, timeoutMillis: Long, retryIntervalMillis: Long
-    ): Socket? {
-        return try {
-            withTimeout(timeoutMillis) {
-                var socket: Socket? = null
-                while (socket == null || !socket.isConnected) {
-                    socket = null
-                    try {
-                        socket = withContext(Dispatchers.IO) {
-                            Socket(host, port)
-                        }
-                    } catch (_: SocketTimeoutException) {
-                    } catch (_: Exception) {
-                    }
-                    delay(retryIntervalMillis)
-                    
-                }
-                socket
-            }
-        } catch (e: TimeoutCancellationException) {
-            null
-        }
-    }
-    
+    // the platform calls this on the user interface thread, so the connection is made in the background; a process that
+    // ends first cancels it
     override fun startNotified(event: ProcessEvent) {
-        runBlocking(Dispatchers.IO) {
-            
-            val port = event.processHandler.getUserData(DEBUG_PORT) ?: throw CantRunException("No debug port found.")
-            
-            socket = tryConnectToServerWithTimeout("127.0.0.1", port, 10000, retryIntervalMillis = 100)
-                ?: throw CantRunException("Unable to establish connection to debug server.")
-            
+        val handler = event.processHandler
+        val port = handler.getUserData(DEBUG_PORT) ?: return
+        runScope.scope.launch {
+            val connection = connectDebugger(handler, port) ?: return@launch
             val launcher = DebugLauncher.createLauncher(
                 debugClient,
                 IRobotCodeDebugProtocolServer::class.java,
-                socket.getInputStream(),
-                socket.getOutputStream()
-            );
-            
+                connection.getInputStream(),
+                connection.getOutputStream()
+            )
+            val server = launcher.remoteProxy
+            // a process that ended while the connection was made found no connection to close in `processTerminated`
+            synchronized(this@RobotCodeRunProfileState) {
+                if (!isActive) {
+                    connection.close()
+                    return@launch
+                }
+                socket = connection
+                connectedServer = server
+            }
+            debugServer = server
+            debugClient.server = server
             launcher.startListening()
-            
-            debugServer = launcher.remoteProxy
-            debugClient.server = debugServer
-            connectedServer = debugServer
-            
-            handshake(debugServer, debugClient, configuration)
+            try {
+                handshake(server, debugClient, configuration)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger<RobotCodeRunProfileState>().warn("The handshake with the RobotCode debugger failed", e)
+            }
         }
     }
     
@@ -328,8 +363,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         return server.terminate(TerminateArguments().apply { restart = false }).also { terminateResponse = it }
     }
 
+    @Synchronized
     override fun processTerminated(event: ProcessEvent) {
         connectedServer = null
-        if (socket.isConnected) socket.close()
+        socket?.close()
     }
 }

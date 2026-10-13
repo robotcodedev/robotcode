@@ -46,17 +46,22 @@ If the RobotCode debugger of a run does not accept the connection within 15 seco
 
 ### Requirement: Evaluation contexts and errors
 
-Evaluations from the Evaluate dialog and from the inline evaluation field SHALL use the debugger's REPL semantics: a single variable shows its value, anything else runs as a keyword call. Watches SHALL be evaluated as expressions: they SHALL NOT run keywords, and a watch on an unknown variable SHALL show `<undefined>`. When the debugger answers an evaluation with an error, the IDE SHALL show the debugger's error message for that evaluation and SHALL NOT report an IDE error.
+Evaluations from the Evaluate dialog and the inline evaluation field SHALL use the debugger's REPL semantics: a single variable shows its value, anything else runs as a keyword call. Watches SHALL be evaluated as expressions, as in VS Code: a watch SHALL run a keyword only when it starts with `! `, and an unknown variable SHALL show `<undefined>`. When the debugger answers an evaluation with an error, the IDE SHALL show the debugger's message and SHALL NOT report an IDE error.
 
 #### Scenario: Watches are expressions
 
 - **WHEN** the watches `1 + 2`, `${UNKNOWN}` and `Log    watch-side-effect` exist and the run stops twice
 - **THEN** the first watch shows `3`, the second shows `<undefined>`, the third shows the debugger's error message, and `watch-side-effect` is never logged
 
+#### Scenario: Keyword call in a watch
+
+- **WHEN** the run is paused and the watch `! Get Length    ${items}` exists, where `@{items}` has three items
+- **THEN** the watch shows `3`
+
 #### Scenario: Keyword call in the Evaluate dialog
 
 - **WHEN** the run is paused and the user evaluates `Catenate    a    b` in the Evaluate dialog
-- **THEN** the dialog shows `a b`
+- **THEN** the dialog shows `'a b'`
 
 #### Scenario: Error message
 

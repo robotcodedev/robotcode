@@ -11,8 +11,7 @@ import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
 import com.intellij.xdebugger.frame.XCompositeNode
 import com.intellij.xdebugger.frame.XStackFrame
 import com.intellij.xdebugger.frame.XValueChildrenList
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.debug.StackFramePresentationHint
@@ -20,12 +19,13 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import kotlin.io.path.Path
 
 /**
- * A frame of the stack at a stop. [depth] is its distance from the bottom of the stack, and [innermost] is set for the
- * top frame, whose Local variables can be changed.
+ * A frame of the stack at a stop, whose requests run in [scope]. [depth] is its distance from the bottom of the stack,
+ * and [innermost] is set for the top frame, whose Local variables can be changed.
  */
 class RobotCodeStackFrame(
     val frame: StackFrame,
     val debugServer: IDebugProtocolServer,
+    private val scope: CoroutineScope,
     private val depth: Int,
     private val innermost: Boolean,
 ) : XStackFrame() {
@@ -36,7 +36,7 @@ class RobotCodeStackFrame(
     }
 
     override fun getEvaluator(): XDebuggerEvaluator {
-        return RobotCodeDebuggerEvaluator(debugServer, this)
+        return RobotCodeDebuggerEvaluator(debugServer, this, scope)
     }
 
     // without the line, so that the Variables view keeps what the user expanded after a step in the same keyword, test
@@ -59,20 +59,21 @@ class RobotCodeStackFrame(
 
     // the Local variables inline, the other scopes as groups; a frame that is gone because the run went on has no scopes
     override fun computeChildren(node: XCompositeNode) {
-        val list = XValueChildrenList()
-        runBlocking {
-            val scopes = debugServer.scopes(ScopesArguments().apply { frameId = frame.id }).await().scopes.orEmpty()
-            val localScope = scopes.firstOrNull { scope -> scope.name.lowercase() == "local" }
+        scope.addChildrenLater(node) {
+            val list = XValueChildrenList()
+            val scopes =
+                debugServer.scopes(ScopesArguments().apply { frameId = frame.id }).awaitRequest().scopes.orEmpty()
+            val localScope = scopes.firstOrNull { it.name.lowercase() == "local" }
             if (localScope != null) {
                 val localScopeReference = localScope.variablesReference.takeIf { innermost }
                 debugServer.children(localScope.variablesReference, planChildren()).forEach {
-                    list.add(it.name, RobotCodeNamedValue(it, localScopeReference, debugServer))
+                    list.add(it.name, RobotCodeNamedValue(it, localScopeReference, debugServer, scope))
                 }
             }
             scopes.filter { it !== localScope }.forEach {
-                list.addBottomGroup(RobotCodeValueGroup(it.name, it.variablesReference, debugServer))
+                list.addBottomGroup(RobotCodeValueGroup(it.name, it.variablesReference, debugServer, scope))
             }
+            list
         }
-        node.addChildren(list, true)
     }
 }

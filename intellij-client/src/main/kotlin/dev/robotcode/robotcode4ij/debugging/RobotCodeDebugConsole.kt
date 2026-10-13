@@ -15,7 +15,6 @@ import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotFrameworkLanguage
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
-import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import java.util.concurrent.CompletionException
 
@@ -25,11 +24,10 @@ class RobotCodeDebugConsoleRootType :
 
 /**
  * The Robot Debug Console of a debug session. A line entered while the run is paused is evaluated in the selected frame
- * as the debugger's REPL does: a single variable shows its value, anything else runs as a keyword call.
+ * as the debugger's REPL does: a single variable shows its value, anything else runs as a keyword call. The console
+ * exists before the connection to the debugger, so it sends through the debugger of the selected frame.
  */
-internal class RobotCodeDebugConsole(
-    private val session: XDebugSession, private val debugServer: IDebugProtocolServer
-) : Disposable {
+internal class RobotCodeDebugConsole(private val session: XDebugSession) : Disposable {
     val console = LanguageConsoleImpl(session.project, RobotCodeBundle.message("debugger.console.title"), RobotFrameworkLanguage)
 
     init {
@@ -54,7 +52,7 @@ internal class RobotCodeDebugConsole(
             console.print(RobotCodeBundle.message("debugger.console.notPaused") + "\n", ConsoleViewContentType.SYSTEM_OUTPUT)
             return
         }
-        debugServer.evaluate(EvaluateArguments().apply {
+        frame.debugServer.evaluate(EvaluateArguments().apply {
             expression = text
             frameId = frame.frame.id
             context = EvaluateArgumentsContext.REPL
