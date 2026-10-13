@@ -77,7 +77,12 @@ _sigterm_ends_run = False
 def _stop_signal_monitor_call(self: Any, signum: Any, frame: Any) -> None:
     if signum == signal.SIGTERM:
         _on_sigterm(self, signum, frame)
-    elif self._running_keyword:
+        return
+
+    if _signal_interpreter is not None:
+        # SIGINT at a prompt ends the wait for input, as Ctrl-C does with prompt_toolkit.
+        _signal_interpreter._interrupt_waiting()
+    if self._running_keyword:
         # SIGINT interrupts the running keyword; the session goes on.
         self._stop_execution_gracefully()
 
@@ -521,6 +526,9 @@ class BaseInterpreter(abc.ABC):
 
     def _end_waiting(self) -> None:
         """Stop waiting for input, from the signal handler. Each interpreter knows how it waits."""
+
+    def _interrupt_waiting(self) -> None:
+        """Interrupt a wait for input after SIGINT, from the signal handler. Each interpreter knows how it waits."""
 
     def run(self) -> Any:
         self._logger.enabled = True

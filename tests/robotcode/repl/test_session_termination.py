@@ -1,7 +1,8 @@
-"""SIGTERM ends a `robotcode repl` session and a `robotcode robot-debug` run.
+"""SIGTERM ends a `robotcode repl` session and a `robotcode robot-debug` run; SIGINT (Ctrl-C) at a
+debugger stop resumes the run.
 
 The tests start the command in a real subprocess, with its input on a pipe that
-stays open, and send it SIGTERM: how the process ends is the subject. Windows
+stays open, and send it a signal: how the process goes on is the subject. Windows
 doesn't deliver SIGTERM to a handler, so they don't run there.
 """
 
@@ -33,6 +34,12 @@ def sleep_through_signals():
             time.sleep(30)
         except BaseException:
             logger.console("interrupted")
+"""
+
+_ONE_TEST = """\
+*** Test Cases ***
+First
+    Log To Console    first test runs
 """
 
 _TWO_TESTS = """\
@@ -92,11 +99,15 @@ class _Command:
     def terminate(self) -> None:
         os.kill(self._process.pid, signal.SIGTERM)
 
+    def interrupt(self) -> None:
+        """Send SIGINT, as Ctrl-C does in a terminal."""
+        os.kill(self._process.pid, signal.SIGINT)
+
     def wait(self, timeout: float = 30) -> int:
         try:
             returncode = self._process.wait(timeout)
         except subprocess.TimeoutExpired:
-            pytest.fail(f"the process still runs {timeout} seconds after SIGTERM:\n{self.errors}")
+            pytest.fail(f"the process still runs {timeout} seconds after the signal:\n{self.errors}")
         for reader in self._readers:
             reader.join(5)
         return returncode
@@ -233,3 +244,22 @@ def test_sigterm_during_a_keyword_ends_the_run(tmp_path: Path, start: Callable[.
         ("Second", "FAIL", "Test execution stopped due to a fatal error."),
     ]
     assert not any("second test runs" in line for line in run.stdout)
+
+
+def test_sigint_at_a_debugger_stop_resumes_the_run_with_the_plain_backend(
+    tmp_path: Path, start: Callable[..., _Command]
+) -> None:
+    (tmp_path / "suite.robot").write_text(_ONE_TEST, encoding="utf-8")
+    run = start(
+        "robot-debug", "--backend", "plain", "--stop-on-entry", "-o", str(tmp_path / "output.xml"), "suite.robot"
+    )
+    run.wait_for_output("* entry")
+    # The prompt waits for input right after the stop line.
+    time.sleep(0.5)
+
+    run.interrupt()
+
+    # As `.continue`: the run goes on to its end.
+    assert run.wait(timeout=15) == 0, run.errors
+    assert _run_results(tmp_path / "output.xml") == [("First", "PASS", "")]
+    assert any("first test runs" in line for line in run.stdout)

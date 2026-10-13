@@ -506,6 +506,12 @@ class ConsoleInterpreter(BaseInterpreter):
         """End the read that waits for input, from the signal handler."""
         raise EOFError
 
+    def _interrupt_waiting(self) -> None:
+        # The plain backend reads with `input()`, which sees Ctrl-C only as this signal; the prompts expect
+        # KeyboardInterrupt from Ctrl-C.
+        if self._reading:
+            raise KeyboardInterrupt
+
     def make_completer(
         self, command_names: List[str], context_provider: Callable[[], Tuple[Any, Any]]
     ) -> Optional[Any]:
