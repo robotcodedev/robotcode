@@ -4,7 +4,7 @@
 
 ### Requirement: Run and Debug do not block the user interface
 
-Starting a Robot Framework Run or Debug session, and every debugger action, SHALL NOT block the IDE's user interface while the plugin waits for the process or the RobotCode debugger. Debugger actions are stepping, resuming, pausing, Run to Cursor, evaluating, computing frames and variables, and adding, changing or removing breakpoints.
+Starting a Robot Framework Run or Debug session, and every debugger action, SHALL NOT block the IDE's user interface while the plugin waits for the process or the RobotCode debugger. Debugger actions are stepping, resuming, pausing, Run to Cursor, evaluating, computing frames and variables, loading the next items of a long list, changing a variable's value with Set Value, and adding, changing or removing breakpoints.
 
 #### Scenario: Start a run
 
@@ -15,6 +15,11 @@ Starting a Robot Framework Run or Debug session, and every debugger action, SHAL
 
 - **WHEN** the run is paused and the user disables or enables a breakpoint
 - **THEN** the IDE's user interface is not blocked while the change is sent to the debugger
+
+#### Scenario: Set Value while paused
+
+- **WHEN** the run is paused and the user changes the value of a local variable with Set Value
+- **THEN** the IDE's user interface is not blocked while the debugger sets and evaluates the new value
 
 ### Requirement: Waits for the debugger are bounded
 
