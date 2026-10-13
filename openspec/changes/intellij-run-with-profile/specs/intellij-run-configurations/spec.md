@@ -1,23 +1,19 @@
 # Spec Delta
 
-## Purpose
-
-Defines what a Robot Framework run configuration of the IntelliJ plugin runs, how it is stored, edited, shared and reused, and which arguments its runs pass to `robotcode` and Robot Framework.
-
 ## ADDED Requirements
 
 ### Requirement: The configuration profiles option
 
-The editor of a Robot Framework run configuration SHALL offer "Configuration profiles" under "Modify options", in its Robot Framework section, with the choices "Project selection", "Default profiles of robot.toml" and "Custom". For "Custom", the editor SHALL show the chosen profile names and a button that opens a list of the profiles `robot.toml` defines, without hidden profiles, with their descriptions and with the configuration's names checked.
+The editor of a Robot Framework run configuration SHALL offer "Configuration profiles" under "Modify options", in its Robot Framework section, with the choices "Project selection", "Default profiles of robot.toml" and "Custom". For "Custom", the editor SHALL show the chosen profile names and a "Select..." button that opens the profile list of the General page with the configuration's names as the selection; confirming the list SHALL put the checked names into the editor.
 
 #### Scenario: Custom profiles survive a restart
 
 - **WHEN** the user shows "Configuration profiles" through "Modify options", chooses "Custom", checks `ci` in the list, applies and restarts the IDE
 - **THEN** the editor shows "Custom" with `ci`, and a run of the configuration contains `-p ci`
 
-### Requirement: The configuration profiles option is stored with the configuration
+### Requirement: Configuration profiles of earlier and shared configurations
 
-The choice of "Configuration profiles" and the profile names SHALL be stored with the configuration, in saved and temporary configurations, in the template and in configurations stored as project files, and a copy of a configuration SHALL have the same choice. A configuration stored before this option existed SHALL open with "Project selection".
+A configuration stored before "Configuration profiles" existed SHALL open with "Project selection". A configuration stored as a project file SHALL hold a choice other than "Project selection" together with its profile names.
 
 #### Scenario: Stored as a project file
 

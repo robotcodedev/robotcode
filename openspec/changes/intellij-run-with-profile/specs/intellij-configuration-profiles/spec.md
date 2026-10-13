@@ -1,9 +1,5 @@
 # Spec Delta
 
-## Purpose
-
-Defines how users of the IntelliJ plugin select `robot.toml` configuration profiles, and how the selected profiles reach the language server, test discovery and runs.
-
 ## ADDED Requirements
 
 ### Requirement: Profiles per run configuration
@@ -40,7 +36,7 @@ At the start of every run, the plugin SHALL resolve the profile choice of the ru
 
 ### Requirement: Warning for profiles that no longer exist
 
-When the custom profiles of a configuration include a name that the last read profile list of `robot.toml` does not contain, the run configuration dialog and the run widget SHALL show a warning that names it. The check SHALL NOT start a process, and the warning SHALL NOT prevent the run.
+When the custom profiles of a configuration include a name that the last read profile list of `robot.toml` does not contain, the run configuration dialog SHALL show a warning that names it, and the run widget SHALL mark the configuration's icon as it does for other problems. The check SHALL NOT start a process, and the warning SHALL NOT prevent the run.
 
 #### Scenario: Renamed profile
 
@@ -77,9 +73,39 @@ The tab of a run started with "Run with Profile..." or "Debug with Profile..." S
 
 ### Requirement: The profile list stays current
 
-The profile list offered for run configurations and for running once SHALL be read in the background without blocking the IDE, and SHALL be read again after the language server has restarted, for example after a change to `robot.toml`.
+The profiles that "Run with Profile..." and "Debug with Profile..." offer, and the list that the warning for profiles that no longer exist checks against, SHALL be read in the background without blocking the IDE, and SHALL be read again after the language server has restarted, for example after a change to `robot.toml`.
 
 #### Scenario: New profile in robot.toml
 
 - **WHEN** the user adds the profile `staging` to `robot.toml` and the language server restarts because of the change
 - **THEN** Run with Profile... offers `staging`, without an IDE restart
+
+## MODIFIED Requirements
+
+### Requirement: Profiles that no longer exist
+
+When the profile list opens, every selected profile that `robotcode profiles list` does not report SHALL leave the selection at once, also when the user then cancels the list, and the list SHALL name them. Opened from the General page or from the editor of a run configuration, they SHALL leave the choice shown there, which Apply stores. Nothing SHALL be removed when `robotcode` reported neither profiles nor messages, so that a selection is not lost when the list cannot be read.
+
+#### Scenario: Renamed profile
+
+- **WHEN** `dev` is selected, `robot.toml` renames it to `development`, and the user opens the list from the Tools menu and cancels it
+- **THEN** the list said that `dev` was removed because `robot.toml` no longer defines it, the selection no longer contains `dev`, and the language server restarts without `-p dev`
+
+#### Scenario: Renamed profile of a run configuration
+
+- **WHEN** a configuration's choice is "Custom" with `dev`, `robot.toml` renames `dev` to `development`, and the user opens the list with "Select..." in the configuration's editor and cancels it
+- **THEN** the list said that `dev` was removed, the editor no longer shows `dev`, and applying the configuration stores its names without `dev`
+
+### Requirement: Selected profiles reach every robotcode process
+
+The language server, both kinds of test discovery, the profile list of the General page and of the Tools menu, and runs whose configuration uses "Project selection" SHALL get `-p <name>` for each selected profile, after the plugin's own global options of the `robotcode` command line. Without a selection, they SHALL get no `-p`, so that `robot.toml`'s `default-profiles` apply.
+
+#### Scenario: Selected profile in a run
+
+- **WHEN** `dev` is selected and the user runs a test from its gutter icon, and the test logs a variable that only profile `dev` sets
+- **THEN** the run's command line contains `-p dev`, and the log shows the value from profile `dev`
+
+#### Scenario: No selection uses default-profiles
+
+- **WHEN** nothing is selected and `robot.toml` sets `default-profiles = ["dev"]`
+- **THEN** the command lines of the language server, test discovery and runs contain no `-p`, and the run uses the values of profile `dev`
