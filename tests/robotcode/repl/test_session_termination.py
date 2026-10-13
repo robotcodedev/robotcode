@@ -159,7 +159,9 @@ def test_sigterm_interrupts_a_running_keyword_and_ends_the_session(
 
 def test_sigterm_stops_a_running_loop_and_ends_the_session(tmp_path: Path, start: Callable[..., _Command]) -> None:
     repl = _start_session(start, tmp_path)
-    repl.send("Log To Console    looping", "FOR    ${i}    IN RANGE    100000000", "    No Operation", "END")
+    # Robot Framework builds the list of all rounds before the first one, in a single call that
+    # signals can't interrupt: a much larger range only delays the SIGTERM and fills the memory.
+    repl.send("Log To Console    looping", "FOR    ${i}    IN RANGE    1000000", "    No Operation", "END")
     repl.wait_for_output("looping")
     # The loop starts right after the marker; most of its time is spent between keywords.
     time.sleep(0.5)
