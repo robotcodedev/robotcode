@@ -1,10 +1,16 @@
 """Acceptance tests for `robotcode discover files`."""
 
 import json
+import sys
 from pathlib import Path
 from typing import Any, List, cast
 
 from .conftest import CliRunner
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 def _files_json(robotcode_cli: CliRunner, *args: str, suite_path: Path) -> List[str]:
@@ -72,6 +78,14 @@ def test_files_text_format_lists_paths(robotcode_cli: CliRunner, files_tree: Pat
     assert "sub1.robot" in result.stdout
     # Italic-label convention for the count footer.
     assert "_Total:_" in result.stdout
+
+
+def test_files_toml_format_lists_paths_under_data(robotcode_cli: CliRunner, files_tree: Path) -> None:
+    """TOML needs a table at the top, so the list of paths is under `data`."""
+    result = robotcode_cli(["--root", str(files_tree.parent), "--format", "toml", "discover", "files", str(files_tree)])
+    names = {Path(p).name for p in tomllib.loads(result.stdout)["data"]}
+    assert "sub1.robot" in names
+    assert "deep.robot" in names
 
 
 def test_files_keeps_the_order_of_the_given_paths(robotcode_cli: CliRunner, flat_suite: Path) -> None:

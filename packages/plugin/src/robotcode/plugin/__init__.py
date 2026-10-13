@@ -361,7 +361,7 @@ class Application:
                 if dataclasses.is_dataclass(data)
                 else data
                 if isinstance(data, dict)
-                else {data: data}
+                else {"data": data}
             )
 
         if text is None:
