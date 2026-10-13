@@ -684,7 +684,17 @@ class Debugger:
         if self.state == State.Stopped:
             return
 
-        if self.requested_state == RequestedState.Pause:
+        if self.terminated:
+            # after a terminate request the run goes on to its end, so pending pause and step requests are dropped
+            if self.requested_state in (
+                RequestedState.Pause,
+                RequestedState.Next,
+                RequestedState.StepIn,
+                RequestedState.StepOut,
+            ):
+                self.requested_state = RequestedState.Nothing
+
+        elif self.requested_state == RequestedState.Pause:
             self.requested_state = RequestedState.Nothing
             self.state = State.Paused
 
@@ -749,6 +759,9 @@ class Debugger:
             source_path = self.map_path_to_client(str(Path(source).absolute()))
             if source_path in self.breakpoints:
                 breakpoints = [v for v in self.breakpoints[source_path].breakpoints if v.line == line_no]
+                if self.terminated:
+                    # after a terminate request only breakpoints that write a log message, and never pause, are left
+                    breakpoints = [v for v in breakpoints if v.log_message]
                 if len(breakpoints) > 0:
                     for point in breakpoints:
                         if point.condition is not None:
@@ -887,8 +900,16 @@ class Debugger:
                         lambda: (
                             self.state in [State.Running, State.Stopped, State.CallKeyword]
                             or self.requested_state != RequestedState.Nothing
+                            or self.terminated
                         )
                     )
+                    # a pause that began while a terminate request arrived ends at once, the run goes on to its end
+                    if (
+                        self.terminated
+                        and self.state == State.Paused
+                        and self.requested_state == RequestedState.Nothing
+                    ):
+                        self.requested_state = RequestedState.Running
 
                 if self.state == State.CallKeyword:
                     self._evaluated_keyword_result = None
@@ -1065,7 +1086,7 @@ class Debugger:
         entry = self.add_stackframe_entry(name, type, source, line_no, longname=longname)
 
         if self.debug:
-            if self.stop_on_entry:
+            if self.stop_on_entry and not self.terminated:
                 self.stop_on_entry = False
 
                 self.requested_state = RequestedState.Nothing

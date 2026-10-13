@@ -13,7 +13,7 @@ See proposal.md for the motivation. The current state in `packages/debugger/src/
 
 **Goals:**
 
-- One flag decides: after `terminate`, no code path pauses the run.
+- One flag decides: after `terminate`, no code path pauses the run, and a pause that was already beginning when the request arrived ends at once.
 
 **Non-Goals:**
 
@@ -37,6 +37,15 @@ After `terminate`, a breakpoint without a log message is not evaluated at all: i
 
 Alternative: evaluate every breakpoint as before and only skip the pause at the end. It writes condition errors for breakpoints that no longer pause.
 
+### A pause that slipped through ends at once
+
+A place that pauses checks `terminated` first and then sets the state, whose setter waits 10 ms (`STATE_CHANGE_DELAY`) before it assigns it. A `terminate` request that arrives in between finds the run still running, so `continue_all_if_paused` does not continue it, and the run would then stay paused although it was asked to end. `wait_for_running` therefore no longer waits once `terminated` is set: it continues a paused run that no request is pending for, through its existing path for a continue, which sends `continued`. The client then sees `stopped` followed at once by `continued`. A run that already waits when the request arrives is continued, as before, by the request's own `continue_all_if_paused` after the signal; `terminate()` does not wake it, so that the run goes on only after the signal, and with one `continued`.
+
+Alternatives:
+
+- Let `terminate()` also notify the waiting run: it then goes on before the signal is raised, and `continue_all_if_paused` continues it a second time, with a second `continued` (seen with the probe).
+- Check `terminated` and set the state under the condition at every place that pauses: it changes every such place and would hold the lock through the state setter's wait.
+
 ### Verification in-process, plus the probe at runtime
 
 The new tests follow `test_breakpoint_conditions.py`: they call `Debugger.terminate()` from the event collector at the first `stopped` event, so the run goes on without a signal, and assert that no further `stopped` event comes, for a breakpoint in the teardown, for a step or pause request and for a failing keyword with the exception breakpoint for failed keywords enabled; a breakpoint with a log message in the teardown still writes its message. They reset `terminated` afterwards, because the singleton keeps it for the following tests. The probe then checks the real request over DAP, with and without the teardown breakpoint.
@@ -44,4 +53,5 @@ The new tests follow `test_breakpoint_conditions.py`: they call `Debugger.termin
 ## Risks / Trade-offs
 
 - [Someone wants to debug a teardown after pressing Stop] → After `terminate`, the run ends without pausing, as it already does at exception breakpoints; to debug a teardown, the user resumes instead of stopping.
-- [A test leaves `terminated` set on the singleton and later tests stop pausing] → The new tests reset it in a `finally` block.
+- [A test leaves `terminated` set on the singleton and later tests stop pausing] → The new tests reset it in a `finally` block, and the test with an exception breakpoint restores the exception breakpoints it found.
+- [A client briefly shows a run as paused when `terminate` meets a beginning pause] → The `continued` that follows at once ends that state; the IntelliJ plugin follows `continued` since `intellij-run-stop`.

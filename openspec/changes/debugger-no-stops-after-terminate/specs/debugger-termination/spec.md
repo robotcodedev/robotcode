@@ -8,7 +8,7 @@ Defines how the RobotCode debugger behaves once a debug client, such as VS Code 
 
 ### Requirement: No pause after a terminate request
 
-Once the debugger has received a `terminate` request, it SHALL NOT pause the run again: not at line breakpoints, exception breakpoints or on entry, and not for a step or a pause request from the client. The run SHALL continue to its end, with its teardowns and its output files. A breakpoint with a log message SHALL keep writing its message when the run reaches it.
+Once the debugger has received a `terminate` request, it SHALL NOT pause the run again: not at line breakpoints, exception breakpoints or on entry, and not for a step or a pause request from the client. A pause that is just beginning when the request arrives SHALL end at once. The run SHALL continue to its end, with its teardowns and its output files. A breakpoint with a log message SHALL keep writing its message when the run reaches it.
 
 #### Scenario: Line breakpoint in a teardown
 
@@ -20,6 +20,11 @@ Once the debugger has received a `terminate` request, it SHALL NOT pause the run
 
 - **WHEN** the breakpoint in that teardown has a log message instead of pausing, and the client sends `terminate` while the run is paused in the test
 - **THEN** the debugger writes the message when the teardown reaches the breakpoint, and the run ends without pausing
+
+#### Scenario: Terminate while a pause begins
+
+- **WHEN** the `terminate` request arrives while the run is just pausing at a breakpoint, before it is shown as paused
+- **THEN** the run goes on at once and ends without a further request from the client
 
 #### Scenario: Step or pause request after terminate
 
