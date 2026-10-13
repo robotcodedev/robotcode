@@ -62,3 +62,24 @@ The settings of the "Robot" page SHALL be stored in the project's shared setting
 
 - **WHEN** the user adds `libs` to "Python path", applies and restarts the IDE
 - **THEN** the page shows `libs`, and `.idea/robotcodeSettings.xml` holds it
+
+## MODIFIED Requirements
+
+### Requirement: Settings for new projects
+
+The Robot Framework settings pages that hold shared settings SHALL be available under File | New Projects Setup | Settings for New Projects, and the values set there SHALL be used for projects created afterwards. Pages with settings stored for the current user only, such as the extra arguments and the profile selection, SHALL NOT be offered there. Applying settings there SHALL NOT start, stop or restart a language server, and SHALL NOT run test discovery.
+
+#### Scenario: Preset for a new project
+
+- **WHEN** the user sets "Header style" to `*** {name}` on the Editing page under Settings for New Projects, applies, and then creates a new project
+- **THEN** the Editing page of the new project shows `*** {name}`
+
+#### Scenario: Personal settings are not offered
+
+- **WHEN** the user opens the "Robot Framework" node under Settings for New Projects
+- **THEN** it lists the Analysis, Editing, Robocop and Robot pages, and not the General and Language Server pages
+
+#### Scenario: Apply starts nothing
+
+- **WHEN** the user changes a value under Settings for New Projects and applies
+- **THEN** no `robotcode` process starts

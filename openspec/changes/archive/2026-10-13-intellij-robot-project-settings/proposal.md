@@ -29,7 +29,7 @@ _None._
 
 ### Modified Capabilities
 
-- `intellij-settings`: the "Robot" page, what the language server receives from it, and where its values are stored.
+- `intellij-settings`: the "Robot" page, what the language server receives from it, where its values are stored, and the pages listed under Settings for New Projects.
 - `intellij-test-discovery`: the paths and the run-related settings of the "Robot" page on the discovery command lines.
 - `intellij-run-configurations`: combining the settings of the "Robot" page with every run, the mode "Inherit", and the paths of the "Robot" page on every run.
 
