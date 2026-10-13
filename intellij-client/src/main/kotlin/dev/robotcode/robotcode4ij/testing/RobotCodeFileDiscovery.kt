@@ -3,25 +3,40 @@ package dev.robotcode.robotcode4ij.testing
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.project.Project
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
+import dev.robotcode.robotcode4ij.defaultPathArguments
+import dev.robotcode.robotcode4ij.discoveryRobotArguments
+import dev.robotcode.robotcode4ij.robotSettings
 import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
 
 /**
  * The command line of the full discovery of the project.
  */
 internal fun Project.fullDiscoveryCommandLine(): GeneralCommandLine {
-    // TODO: Add support for configurable paths
-    return buildRobotCodeCommandLine(arrayOf("-dp", ".", "discover", "--read-from-stdin", "all"), format = "json")
+    return buildRobotCodeCommandLine(fullDiscoveryArguments(robotSettings).toTypedArray(), format = "json")
         .withCharset(Charsets.UTF_8).withWorkDirectory(basePath)
+}
+
+/**
+ * The arguments of the full discovery: the default paths of the settings of the "Robot" page before `discover`, and
+ * their other discovery arguments after it.
+ */
+internal fun fullDiscoveryArguments(settings: RobotCodeProjectConfiguration.ProjectState): List<String> {
+    return defaultPathArguments(settings.robotPaths) + listOf("discover", "--read-from-stdin", "all") +
+        discoveryRobotArguments(settings)
 }
 
 /**
  * The arguments of the discovery of a single suite file. `discover all` returns tests and tasks alike, so the same call
  * works for test suites, task suites and projects with `rpa = true`; `-I` is passed only with parse-include support.
+ * The settings of the "Robot" page come as in the full discovery, before the selection of the file, as in VS Code.
  */
-internal fun fileDiscoveryArguments(longname: String, relSource: String?, supportsParseInclude: Boolean): Array<String> {
+internal fun fileDiscoveryArguments(
+    longname: String, relSource: String?, supportsParseInclude: Boolean,
+    settings: RobotCodeProjectConfiguration.ProjectState
+): Array<String> {
     return buildList {
-        // TODO: Add support for configurable paths
-        addAll(listOf("-dp", ".", "discover", "--read-from-stdin", "all"))
+        addAll(fullDiscoveryArguments(settings))
         if (supportsParseInclude && relSource != null) {
             addAll(listOf("-I", escapeRobotGlob(relSource)))
         }

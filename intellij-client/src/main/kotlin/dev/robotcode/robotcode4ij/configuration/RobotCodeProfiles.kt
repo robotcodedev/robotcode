@@ -10,7 +10,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.defaultPathArguments
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
+import dev.robotcode.robotcode4ij.robotSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -92,7 +94,8 @@ internal fun Project.readProfileList(selection: List<String>): ProfileListResult
     return try {
         robotCodeEnvironment.ensureUsableForRun()
         val commandLine = buildRobotCodeCommandLine(
-            arrayOf("-dp", ".", "profiles", "list"), profiles = selection.toTypedArray(), format = "json"
+            (defaultPathArguments(robotSettings.robotPaths) + listOf("profiles", "list")).toTypedArray(),
+            profiles = selection.toTypedArray(), format = "json"
         )
         runWithModalProgressBlocking(this, RobotCodeBundle.message("profiles.progress")) {
             profileListResult(runCancellable(commandLine))

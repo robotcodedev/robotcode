@@ -28,11 +28,14 @@ import dev.robotcode.robotcode4ij.PythonInterpreter
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotCodeHelpers
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
+import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.defaultPathArguments
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
 import dev.robotcode.robotcode4ij.robotCodeArguments
+import dev.robotcode.robotcode4ij.robotSettings
 import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -75,15 +78,21 @@ internal fun debugArguments(debug: Boolean, port: Int, robotArguments: List<Stri
 
 /**
  * The arguments of a run after the bundled `robotcode`: the global options as for the other `robotcode` commands, with
- * the selected [profiles] but without the robotcode extra args, as in VS Code, then `-dp . debug` and [debugArguments].
+ * the selected [profiles] but without the robotcode extra args, as in VS Code, then the default [paths] of the "Robot"
+ * settings page, which discovery passes too, `debug` and [debugArguments].
  */
 internal fun runArguments(
-    profiles: List<String>, debug: Boolean, port: Int, robotArguments: List<String>
+    profiles: List<String>, paths: List<String>, debug: Boolean, port: Int, robotArguments: List<String>
 ): List<String> {
     return robotCodeArguments(
         extraArgs = listOf(), format = "", noColor = false, noPager = true, profiles = profiles,
-        args = listOf("-dp", ".", "debug") + debugArguments(debug, port, robotArguments)
+        args = defaultPathArguments(paths) + listOf("debug") + debugArguments(debug, port, robotArguments)
     )
+}
+
+/** The environment variables of the "Robot" settings page, without pairs that have no name. */
+internal fun robotEnvironment(settings: RobotCodeProjectConfiguration.ProjectState): Map<String, String> {
+    return settings.robotEnv.mapKeys { it.key.trim() }.filterKeys { it.isNotEmpty() }
 }
 
 /** A port that the operating system has free now, for the debugger connection of a run. */
@@ -182,8 +191,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val testManager = project.testManger
         // the macros of the stored values, expanded with the data context of the run
         val configurator = ProgramParametersConfigurator()
+        val settings = project.robotSettings
         val robotArguments = robotFrameworkArguments(
-            config.options, testManager.testItems, testManager.supportsParseInclude,
+            mergeRobotOptions(settings, config.options), testManager.testItems, testManager.supportsParseInclude,
             expandPath = { configurator.expandPathAndMacros(it, config.module, project) ?: it },
             parseArguments = { ProgramParametersConfigurator.expandMacrosAndParseParameters(it) }
         )
@@ -195,7 +205,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             additionalInterpreterParameters.addAll(listOf("-u", "-X", "utf8"))
             charset = Charsets.UTF_8
             val profiles = RobotCodePersonalConfiguration.getInstance(project).profiles.toList()
-            addParameters(runArguments(profiles, debug, debugPort, robotArguments))
+            addParameters(runArguments(profiles, settings.robotPaths, debug, debugPort, robotArguments))
+            // PyCharm adds the configuration's environment variables and .env files afterwards, so they win
+            robotEnvironment(settings).forEach { (name, value) -> addEnvironmentVariable(name, value) }
         }
     }
     

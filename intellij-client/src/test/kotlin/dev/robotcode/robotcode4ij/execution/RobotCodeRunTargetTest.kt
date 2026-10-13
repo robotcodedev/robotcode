@@ -1,5 +1,6 @@
 package dev.robotcode.robotcode4ij.execution
 
+import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import dev.robotcode.robotcode4ij.testing.decodeDiscoverResult
 import org.junit.Assert.assertEquals
@@ -99,15 +100,15 @@ class RobotCodeRunTargetTest {
 
         assertEquals(
             listOf("--no-pager", "-dp", ".", "debug", "--no-debug", "--tcp", "6613", "--") + selection,
-            runArguments(listOf(), debug = false, port = 6613, robotArguments = selection)
+            runArguments(listOf(), paths = listOf(), debug = false, port = 6613, robotArguments = selection)
         )
         assertEquals(
             listOf("--no-pager", "-p", "dev", "-dp", ".", "debug", "--tcp", "6612", "--", "tests"),
-            runArguments(listOf("dev"), debug = true, port = 6612, robotArguments = listOf("tests"))
+            runArguments(listOf("dev"), paths = listOf(), debug = true, port = 6612, robotArguments = listOf("tests"))
         )
         assertEquals(
             listOf("--no-pager", "-p", "dev", "-p", "ci", "-dp", ".", "debug", "--no-debug", "--tcp", "6612"),
-            runArguments(listOf("dev", "ci"), debug = false, port = 6612, robotArguments = listOf())
+            runArguments(listOf("dev", "ci"), paths = listOf(), debug = false, port = 6612, robotArguments = listOf())
         )
     }
 
@@ -134,8 +135,49 @@ class RobotCodeRunTargetTest {
         )
         for ((name, options, expected) in cases) {
             val arguments = robotFrameworkArguments(options, model, supportsParseInclude = true)
-            assertEquals(name, head + expected, runArguments(listOf(), debug = false, port = 6612, arguments))
+            assertEquals(
+                name, head + expected,
+                runArguments(listOf(), paths = listOf(), debug = false, port = 6612, robotArguments = arguments)
+            )
         }
+    }
+
+    // every kind of target gets the default paths of the Robot page, the paths that discovery used for the names
+    @Test
+    fun runsCombineTheRobotPageWithTheConfiguration() {
+        val page = RobotCodeProjectConfiguration.ProjectState().apply {
+            robotPaths = mutableListOf("tests")
+            robotVariables = linkedMapOf("NAME" to "1")
+        }
+        val selectionArguments = listOf(
+            "-I", "tests/sample.robot", "-N", "Project", "-s", "Project.Tests.Sample",
+            "-bl", "Project.Tests.Sample.First Test Passes"
+        )
+        val head = listOf("--no-pager", "-dp", "tests", "debug", "--no-debug", "--tcp", "6612", "--")
+        val cases = listOf(
+            Triple("a selection", contextTarget(model.find("Project.Tests.Sample.First Test Passes")),
+                listOf("-v", "NAME:1") + selectionArguments),
+            Triple("files and folders", paths("examples"), listOf("-v", "NAME:1", "examples")),
+            Triple("a configuration with its own variable",
+                paths("examples").apply { variables = linkedMapOf("NAME" to "2") }, listOf("-v", "NAME:2", "examples"))
+        )
+        for ((name, options, expected) in cases) {
+            val merged = mergeRobotOptions(page, options)
+            val arguments = robotFrameworkArguments(merged, model, supportsParseInclude = true)
+            assertEquals(
+                name, head + expected,
+                runArguments(listOf(), page.robotPaths, debug = false, port = 6612, robotArguments = arguments)
+            )
+        }
+    }
+
+    @Test
+    fun theEnvironmentOfTheRobotPageWithoutPairsWithoutAName() {
+        val page = RobotCodeProjectConfiguration.ProjectState().apply {
+            robotEnv = linkedMapOf("" to "x", " STAGE " to "dev", "MODE" to "test")
+        }
+
+        assertEquals(listOf("STAGE" to "dev", "MODE" to "test"), robotEnvironment(page).toList())
     }
 
     @Test

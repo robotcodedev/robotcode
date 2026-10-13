@@ -36,10 +36,10 @@ internal fun addMacros(field: ExtendableTextField, filter: Predicate<in Macro>, 
 }
 
 /** A row of the variables table. */
-private class RobotVariable(var name: String, var value: String)
+internal class RobotVariable(var name: String, var value: String)
 
 /** An editable column of the variables table. */
-private class VariableColumn(
+internal class VariableColumn(
     name: String, private val get: (RobotVariable) -> String, private val set: (RobotVariable, String) -> Unit
 ) : ColumnInfo<RobotVariable, String>(name) {
     override fun valueOf(item: RobotVariable): String = get(item)

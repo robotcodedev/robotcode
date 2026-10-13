@@ -23,7 +23,7 @@ The Robot Framework settings node SHALL have a "Robot" sub-page, for VS Code's "
 
 ### Requirement: How the Robot settings are used
 
-The language server SHALL receive the settings of the "Robot" page in `robotcode.robot` as `args`, `paths`, `pythonPath`, `env`, `languages`, `variables`, `variableFiles`, `outputDir` and `mode`, with maps from strings to strings and lists without blank entries. Test discovery and runs SHALL use them as described for discovery and for combining the Robot settings with runs. Applying a change SHALL restart the language server and run test discovery again.
+The language server SHALL receive the settings of the "Robot" page in `robotcode.robot`, under VS Code's keys, with maps from strings to strings and lists without blank entries; test discovery and runs SHALL use them as described for them. Applying a change SHALL restart the language server, and SHALL run test discovery again when the change alters the arguments that discovery passes.
 
 #### Scenario: Language server payload
 

@@ -87,6 +87,11 @@
 							 key="settings.editing.displayName"
 							 nonDefaultProject="false"/>
 		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
+							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeRobotConfigurable"
+							 id="dev.robotcode.robotcode4ij.projectsettings.robot"
+							 key="settings.robot.displayName"
+							 nonDefaultProject="false"/>
+		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
 							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeAnalysisConfigurable"
 							 id="dev.robotcode.robotcode4ij.projectsettings.analysis"
 							 key="settings.analysis.displayName"

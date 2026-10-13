@@ -216,6 +216,85 @@ class RobotCodeServerSettingsTest {
         assertFalse(robotcode["robocop"].asJsonObject.has("configFile"))
     }
 
+    // every value of the Robot page differs from its default; the maps are not in alphabetical order
+    private fun stateWithAllRobotValues(): RobotCodeProjectConfiguration.ProjectState {
+        return RobotCodeProjectConfiguration.ProjectState().apply {
+            robotArgs = "--loglevel DEBUG --name \"My Suite\""
+            robotPaths = mutableListOf("tests")
+            robotPythonPath = mutableListOf("libs")
+            robotEnv = linkedMapOf("ZED" to "1", "ALPHA" to "2")
+            robotLanguages = mutableListOf("de")
+            robotVariables = linkedMapOf("SERVER" to "localhost", "ACCOUNT" to "admin")
+            robotVariableFiles = mutableListOf("vars.py")
+            robotOutputDir = "results/ide"
+            robotMode = RobotCodeServerSettings.RobotMode.RPA.value
+        }
+    }
+
+    @Test
+    fun robotValuesSurviveASaveAndReloadInTheirOrder() {
+        val state = stateWithAllRobotValues()
+
+        val reloaded = saveAndReload(state)
+
+        assertEquals(state, reloaded)
+        assertEquals(listOf("ZED", "ALPHA"), reloaded.robotEnv.keys.toList())
+        assertEquals(listOf("SERVER", "ACCOUNT"), reloaded.robotVariables.keys.toList())
+    }
+
+    @Test
+    fun storedRobotValuesArrive() {
+        val tree = RobotCodeServerSettingsMapper.toJsonTree(stateWithAllRobotValues())
+
+        assertEquals(
+            JsonParser.parseString(
+                """
+                {
+                  "args": ["--loglevel", "DEBUG", "--name", "My Suite"],
+                  "paths": ["tests"],
+                  "pythonPath": ["libs"],
+                  "env": {"ZED": "1", "ALPHA": "2"},
+                  "languages": ["de"],
+                  "variables": {"SERVER": "localhost", "ACCOUNT": "admin"},
+                  "variableFiles": ["vars.py"],
+                  "outputDir": "results/ide",
+                  "mode": "rpa"
+                }
+                """
+            ),
+            tree["robotcode"].asJsonObject["robot"]
+        )
+        assertValueTypes(tree)
+    }
+
+    @Test
+    fun blankRobotEntriesAndPairsWithoutANameAreLeftOut() {
+        val state = RobotCodeProjectConfiguration.ProjectState().apply {
+            robotArgs = "  "
+            robotPaths = mutableListOf("", " tests ", " ")
+            robotEnv = linkedMapOf("" to "x", " STAGE " to "dev")
+            robotVariables = linkedMapOf(" " to "y")
+            robotOutputDir = " "
+        }
+
+        val robot = robotcodeOf(state)["robot"].asJsonObject
+
+        assertEquals(JsonParser.parseString("[]"), robot["args"])
+        assertEquals(JsonParser.parseString("""["tests"]"""), robot["paths"])
+        assertEquals(JsonParser.parseString("""{"STAGE": "dev"}"""), robot["env"])
+        assertEquals(JsonParser.parseString("{}"), robot["variables"])
+        assertEquals("", robot["outputDir"].asString)
+    }
+
+    @Test
+    fun anUnknownModeIsTheDefault() {
+        assertEquals(listOf("default", "rpa", "norpa"), RobotCodeServerSettings.RobotMode.entries.map { it.value })
+
+        val state = RobotCodeProjectConfiguration.ProjectState().apply { robotMode = "RPA" }
+
+        assertEquals("default", robotcodeOf(state)["robot"].asJsonObject["mode"].asString)
+    }
+
     private val robocopConfigFile = File("robocop.toml").absolutePath
 
     // every value of the Analysis, Diagnostics and Robocop pages differs from its default

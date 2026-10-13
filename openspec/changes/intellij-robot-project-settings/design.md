@@ -32,7 +32,7 @@ See proposal.md for the motivation. Decision D3 of the maintainer: the `robotcod
 
 ### A "Robot" page for VS Code's "Robot" category
 
-The node gets a "Robot" sub-page after "Editing" and before "Analysis", in the order of VS Code's categories. It shows the nine settings with VS Code's titles: Args, Paths, Python path, Env, Languages, Variables, Variable files, Output dir and Mode. It has no groups, because VS Code shows no key part between the category and these titles. The values extend `RobotCodeProjectConfiguration`, as VS Code users commit `robotcode.robot.*` in `.vscode/settings.json`:
+The node gets a "Robot" sub-page. The settings tree lists the sub-pages of a node by name unless they set a `groupWeight`, so it comes after "Robocop", in the alphabetical order that the other sub-pages already have. It shows the nine settings with VS Code's titles: Args, Paths, Python path, Env, Languages, Variables, Variable files, Output dir and Mode. It has no groups, because VS Code shows no key part between the category and these titles. The values extend `RobotCodeProjectConfiguration`, as VS Code users commit `robotcode.robot.*` in `.vscode/settings.json`:
 
 - Paths, Python path, variable files and languages as lists; editors for paths have a browse button, and blank entries are dropped;
 - Env and Variables as ordered maps from strings to strings, edited in name/value tables; rows without a name are dropped;
@@ -46,6 +46,7 @@ Alternatives:
 
 - Two groups on the parent page, "Robot Framework environment" and "Run options", as planned at first: the parent page holds no settings, and the labels would not be VS Code's.
 - Several pages by topic: the settings of one VS Code category stay on one page.
+- A `groupWeight` on all six sub-pages for the order of VS Code's categories (General, Editing, Robot, Analysis, Robocop, Language Server): the sub-pages keep IntelliJ's alphabetical order (decision of 2026-10-13).
 
 ### The settings tree carries the values
 
@@ -74,7 +75,7 @@ The pure function `mergeRobotOptions(project, configuration)` returns the option
 
 The run state calls it in `buildPythonExecution`, before the arguments are built and macros are expanded. Project values are never written into a configuration, so a configuration created from the template carries none of them, and nothing is appended twice.
 
-The project's environment variables are added to the execution in `buildPythonExecution` as well. PyCharm adds the configuration's own variables and `.env` files afterwards, so they win for the same name, and the inherited environment stays below both.
+The project's environment variables are added to the execution in `buildPythonExecution` as well, with `PythonExecution.addEnvironmentVariable`. PyCharm adds the configuration's own variables and `.env` files afterwards, so they win for the same name, and the inherited environment stays below both. `robotcode` has no option to set environment variables on its command line, so the execution is the only place for them; `PythonExecution` is experimental API, on which the run state already builds, and this method is the change's only new use of experimental API.
 
 Alternatives:
 
@@ -92,7 +93,9 @@ Alternatives:
 
 ### Apply restarts and rediscovers
 
-Applying the page restarts the language server and runs discovery once through the debounced `restartAll()`, because the server reads these values when it starts and discovery uses the paths, the mode, the Python path, the languages and the args.
+Applying the page announces the change with `publishRobotCodeSettingsChanged()`, as the other pages do, and the restart manager compares what the server and the last discovery got with what they would get now (requirement "One restart per Apply"). A changed value changes the settings tree, so the server restarts, because it reads these values when it starts; discovery runs again when its command line changed, that is for the paths, the mode, the Python path, the languages and the args, but not for the variables, the variable files, the environment or the output directory, which discovery does not get.
+
+Alternative: calling `restartAll()` directly, as planned at first: it would also run discovery again when its command line stays the same.
 
 ### Texts
 
@@ -104,6 +107,7 @@ The texts below the fields say how the values combine with `robot.toml` (lists a
 - [`robot.toml`'s environment wins in runs, while the IDE's wins in the editor] → This is how the server and `robotcode` work today; the text of "Env" says so.
 - [A run's command line holds values that its editor does not show] → The run console starts with the command line, and the texts name the "Robot" page.
 - [A configuration should run other folders than the paths of the "Robot" page] → It names them as its target; positional paths win over `-dp`.
+- [Changing "Paths" changes the full names that discovery reports, so a saved configuration whose "Tests and suites" target holds the names of an earlier discovery finds no tests, as after a change of `paths` in `robot.toml`] → The configuration is created again from the gutter, or its target is chosen again.
 - [Several entries in "Paths" make runs of selected tests fail on Robot Framework 6.1 and newer (#656), as several `paths` in `robot.toml` do, and as in VS Code] → A Robot Framework bug that RobotCode does not work around (decision of 2026-10-09); `run-empty-suite = true` in `robot.toml` avoids it.
 - [PyCharm could change the order in which it applies environment variables] → A unit test pins what `buildPythonExecution` adds, and the harness check covers the precedence; if the order changes, the project's variables are added only for names the configuration does not set.
 - [A configuration's languages replace the project's instead of adding to them] → VS Code's semantics; the text says so.

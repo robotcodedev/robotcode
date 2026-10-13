@@ -20,7 +20,10 @@ enum class RobotRunTargetKind {
 
 /** How a run sets Robot Framework's mode. */
 enum class RobotRunMode {
-    /** Nothing is passed, so `robot.toml` and the suites decide. */
+    /**
+     * The mode of the "Robot" settings page; while that is the default, nothing is passed, so `robot.toml` and the
+     * suites decide.
+     */
     INHERIT,
 
     /** `--rpa` */

@@ -15,7 +15,7 @@ VS Code users set Robot Framework options for a whole workspace in the `robotcod
   - mode, output directory and languages: the configuration's value when it sets one, otherwise the settings'; a configuration's mode "Inherit" now takes the mode of the "Robot" page.
   The settings are never copied into configurations, so a change reaches existing and temporary configurations at their next run. The console of a run shows the resulting command line.
 - Every run passes the same `-dp` arguments as discovery: `-dp` for each path of the "Robot" page, or `-dp .`. A configuration that runs other files or folders names them as its target, which Robot Framework runs instead of the default paths.
-- Applying the settings restarts the language server and runs test discovery again.
+- Applying the settings restarts the language server, and runs test discovery again when the arguments that discovery passes change.
 
 Behaviour that users notice, for the release notes (not breaking): VS Code's "Robot" settings can be set in the IDE, and a configuration's mode "Inherit" follows them; with the defaults, command lines stay as they are.
 
@@ -36,7 +36,7 @@ _None._
 ## Impact
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/configuration/`: the stored values in `RobotCodeProjectConfiguration`, a configurable for the "Robot" page, the `robot` section of the settings tree in `RobotCodeServerSettings.kt`, and the profile list in `RobotCodeProfiles.kt`.
-- `intellij-client/src/main/resources/META-INF/plugin.xml`: the "Robot" page after "Editing" and before "Analysis".
+- `intellij-client/src/main/resources/META-INF/plugin.xml`: the "Robot" page below the "Robot Framework" node, listed by name like the other sub-pages.
 - `execution/`: a pure merge function used by `RobotCodeRunProfileState`, and the default-path arguments in `runArguments`.
 - `testing/RobotCodeFileDiscovery.kt`: the discovery arguments.
 - Texts in `messages/RobotCode.properties`, including the comments of the run configuration's options; new unit tests under `intellij-client/src/test/kotlin/`.

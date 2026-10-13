@@ -1,11 +1,14 @@
 package dev.robotcode.robotcode4ij.testing
 
+import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
 
 class RobotCodeFileDiscoveryTest {
+
+    private val defaults = RobotCodeProjectConfiguration.ProjectState()
 
     // the output of `discover --read-from-stdin all -I <file> --suite <longname>` with Robot Framework 7.5
     private fun recorded(name: String): RobotCodeDiscoverResult {
@@ -18,7 +21,7 @@ class RobotCodeFileDiscoveryTest {
     fun argumentsWithParseInclude() {
         assertEquals(
             listOf("-dp", ".", "discover", "--read-from-stdin", "all", "-I", "tasks/rpa.robot", "--suite", "Project.Rpa"),
-            fileDiscoveryArguments("Project.Rpa", "tasks/rpa.robot", true).toList()
+            fileDiscoveryArguments("Project.Rpa", "tasks/rpa.robot", true, defaults).toList()
         )
     }
 
@@ -26,15 +29,35 @@ class RobotCodeFileDiscoveryTest {
     fun argumentsWithoutParseIncludeOrSource() {
         val expected = listOf("-dp", ".", "discover", "--read-from-stdin", "all", "--suite", "Project.Rpa")
 
-        assertEquals(expected, fileDiscoveryArguments("Project.Rpa", "tasks/rpa.robot", false).toList())
-        assertEquals(expected, fileDiscoveryArguments("Project.Rpa", null, true).toList())
+        assertEquals(expected, fileDiscoveryArguments("Project.Rpa", "tasks/rpa.robot", false, defaults).toList())
+        assertEquals(expected, fileDiscoveryArguments("Project.Rpa", null, true, defaults).toList())
+    }
+
+    // as in VS Code: the default paths before `discover`, the other settings of the Robot page before the selection
+    @Test
+    fun argumentsWithTheSettingsOfTheRobotPage() {
+        val settings = RobotCodeProjectConfiguration.ProjectState().apply {
+            robotPaths = mutableListOf("tests")
+            robotMode = "rpa"
+            robotPythonPath = mutableListOf("libs")
+            robotLanguages = mutableListOf("de")
+            robotArgs = "--exclude wip"
+        }
+        val discover = listOf("-dp", "tests", "discover", "--read-from-stdin", "all") +
+            listOf("--rpa", "-P", "libs", "--language", "de", "--exclude", "wip")
+
+        assertEquals(discover, fullDiscoveryArguments(settings))
+        assertEquals(
+            discover + listOf("-I", "tests/rpa.robot", "--suite", "Tests.Rpa"),
+            fileDiscoveryArguments("Tests.Rpa", "tests/rpa.robot", true, settings).toList()
+        )
     }
 
     @Test
     fun argumentsAreGlobEscaped() {
         assertEquals(
             listOf("-I", "a[*]b.robot", "--suite", "Project.A[*]b [[]x[]]"),
-            fileDiscoveryArguments("Project.A*b [x]", "a*b.robot", true).drop(5)
+            fileDiscoveryArguments("Project.A*b [x]", "a*b.robot", true, defaults).drop(5)
         )
     }
 

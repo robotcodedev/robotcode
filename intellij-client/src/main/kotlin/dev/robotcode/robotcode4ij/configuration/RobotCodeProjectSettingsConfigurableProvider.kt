@@ -9,6 +9,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableProvider
 import com.intellij.openapi.project.Project
+import com.intellij.util.xmlb.annotations.XMap
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.delegate
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.stringDelegate
@@ -89,6 +90,28 @@ class RobotCodeProjectConfiguration(private val project: Project) :
         var robocopConfigFile by string()
         var robocopIgnoreGitDir by property(defaultValue = false)
         var robocopIgnoreFileConfig by property(defaultValue = false)
+
+        // the "Robot" page; the arguments as the command line the user typed, the mode as the string the server reads
+        var robotArgs by string()
+        var robotPaths by list<String>()
+        var robotPythonPath by list<String>()
+
+        // ordered maps keep their order only with XMap
+        @get:XMap(
+            propertyElementName = "robotEnv", entryTagName = "variable", keyAttributeName = "name",
+            valueAttributeName = "value"
+        )
+        var robotEnv: MutableMap<String, String> by linkedMap()
+        var robotLanguages by list<String>()
+
+        @get:XMap(
+            propertyElementName = "robotVariables", entryTagName = "variable", keyAttributeName = "name",
+            valueAttributeName = "value"
+        )
+        var robotVariables: MutableMap<String, String> by linkedMap()
+        var robotVariableFiles by list<String>()
+        var robotOutputDir by string()
+        var robotMode by string(RobotCodeServerSettings.RobotMode.DEFAULT.value)
     }
 
     var completionFilterDefaultLanguage by delegate(ProjectState::completionFilterDefaultLanguage)
@@ -118,4 +141,13 @@ class RobotCodeProjectConfiguration(private val project: Project) :
     var robocopConfigFile by stringDelegate(ProjectState::robocopConfigFile)
     var robocopIgnoreGitDir by delegate(ProjectState::robocopIgnoreGitDir)
     var robocopIgnoreFileConfig by delegate(ProjectState::robocopIgnoreFileConfig)
+    var robotArgs by stringDelegate(ProjectState::robotArgs)
+    var robotPaths by delegate(ProjectState::robotPaths)
+    var robotPythonPath by delegate(ProjectState::robotPythonPath)
+    var robotEnv by delegate(ProjectState::robotEnv)
+    var robotLanguages by delegate(ProjectState::robotLanguages)
+    var robotVariables by delegate(ProjectState::robotVariables)
+    var robotVariableFiles by delegate(ProjectState::robotVariableFiles)
+    var robotOutputDir by stringDelegate(ProjectState::robotOutputDir)
+    var robotMode by stringDelegate(ProjectState::robotMode)
 }

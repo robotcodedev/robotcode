@@ -31,6 +31,22 @@ class RobotCodeInitializationOptionsTest : BasePlatformTestCase() {
         assertEquals(answer.single(), options["settings"])
     }
 
+    fun testStoredPythonPathAndEnvironmentArrive() {
+        val configuration = RobotCodeProjectConfiguration.getInstance(project)
+        configuration.robotPythonPath = mutableListOf("libs")
+        configuration.robotEnv = linkedMapOf("STAGE" to "dev")
+        try {
+            val options = RobotCodeServerSettingsMapper.toInitializationOptions(project)
+
+            assertEquals(JsonArray().apply { add("libs") }, options["pythonPath"])
+            assertEquals(JsonObject().apply { addProperty("STAGE", "dev") }, options["env"])
+        } finally {
+            // the light test project is shared by the tests of this class
+            configuration.robotPythonPath = mutableListOf()
+            configuration.robotEnv = linkedMapOf()
+        }
+    }
+
     fun testDefaultSettingsGiveAnEmptyPythonPathAndEnvironment() {
         val options = RobotCodeServerSettingsMapper.toInitializationOptions(project)
 

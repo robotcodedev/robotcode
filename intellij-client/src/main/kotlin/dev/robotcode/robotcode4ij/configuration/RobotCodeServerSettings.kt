@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.getProjectDataPath
+import com.intellij.util.execution.ParametersListUtil
 
 /**
  * The settings below the `robotcode` key that the language server reads with `workspace/configuration`.
@@ -139,6 +140,12 @@ data class RobotCodeServerSettings(
         WORKSPACE_STORAGE("workspaceStorage"),
         WORKSPACE_FOLDER("workspaceFolder")
     }
+
+    enum class RobotMode(override val value: String) : Choice {
+        DEFAULT("default"),
+        RPA("rpa"),
+        NORPA("norpa")
+    }
 }
 
 /**
@@ -165,6 +172,17 @@ object RobotCodeServerSettingsMapper {
     fun toJsonTree(state: RobotCodeProjectConfiguration.ProjectState): JsonObject {
         return toJsonTree(
             RobotCodeServerSettings(
+                robot = RobotCodeServerSettings.Robot(
+                    args = entries(ParametersListUtil.parse(state.robotArgs.orEmpty())),
+                    paths = entries(state.robotPaths),
+                    pythonPath = entries(state.robotPythonPath),
+                    env = namedEntries(state.robotEnv),
+                    languages = entries(state.robotLanguages),
+                    variables = namedEntries(state.robotVariables),
+                    variableFiles = entries(state.robotVariableFiles),
+                    outputDir = state.robotOutputDir?.trim().orEmpty(),
+                    mode = choiceOf<RobotCodeServerSettings.RobotMode>(state.robotMode).value
+                ),
                 completion = RobotCodeServerSettings.Completion(
                     filterDefaultLanguage = state.completionFilterDefaultLanguage,
                     // the server would use a header style of only spaces as it is
@@ -243,5 +261,10 @@ object RobotCodeServerSettingsMapper {
     // reach the server as it is.
     private fun entries(list: List<String>): List<String> {
         return list.map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    // the same for the names of name and value pairs, whose rows without a name the settings pages drop
+    private fun namedEntries(map: Map<String, String>): Map<String, String> {
+        return map.mapKeys { it.key.trim() }.filterKeys { it.isNotEmpty() }
     }
 }
