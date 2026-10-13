@@ -50,12 +50,34 @@ const pictures = isHome
     )
   : [];
 const first = pictures[0];
+// The newest news post, for the badge above the title; missing where the page is rendered outside a request.
+const latestPost = isHome ? Astro.locals.starlightBlog?.posts[0] : undefined;
+const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 ---
 
 {
   isHome ? (
     <div class="rc-hero">
       <div class="rc-hero-copy">
+        {latestPost && (
+          <a class="rc-news-badge" href={latestPost.href}>
+            <time class="rc-news-badge-label" datetime={latestPost.createdAt.toISOString()}>
+              {newsDate.format(latestPost.createdAt)}
+            </time>
+            <span class="rc-news-badge-title">{latestPost.entry.data.title}</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        )}
+        {latestPost && (
+          <script is:inline>
+            // A post younger than 30 days pulses; decided in the browser, the page is only built at a release.
+            (() => {
+              const badge = document.currentScript.previousElementSibling;
+              const published = Date.parse(badge.querySelector("time").dateTime);
+              if (Date.now() - published < 30 * 24 * 60 * 60 * 1000) badge.dataset.fresh = "";
+            })();
+          </script>
+        )}
         <h1 id="_top" data-page-title>
           {title}
         </h1>
@@ -460,6 +482,61 @@ const first = pictures[0];
     gap: 1rem 1.5rem;
     justify-content: center;
     margin-top: 0.5rem;
+  }
+
+  .rc-news-badge {
+    display: inline-flex;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 0.25rem 0.85rem 0.25rem 0.3rem;
+    border: 1px solid var(--sl-color-hairline-light);
+    border-radius: 999px;
+    background: var(--sl-color-bg-nav);
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-sm);
+    line-height: 1.4;
+    text-decoration: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .rc-news-badge:hover {
+    border-color: var(--sl-color-accent);
+  }
+
+  .rc-news-badge[data-fresh] {
+    animation: rc-news-pulse 2.4s ease-out infinite;
+  }
+
+  @keyframes rc-news-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--sl-color-text-accent) 55%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 0.6rem color-mix(in srgb, var(--sl-color-text-accent) 0%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rc-news-badge[data-fresh] {
+      animation: none;
+    }
+  }
+
+  .rc-news-badge-label {
+    padding: 0.1rem 0.6rem;
+    border-radius: 999px;
+    /* The colours of the primary button (Get Started). */
+    background: var(--sl-color-text-accent);
+    color: var(--sl-color-black);
+    font-size: var(--sl-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .rc-news-badge-title {
+    font-weight: 600;
   }
 
   .rc-hero-note {
