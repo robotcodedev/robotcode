@@ -25,6 +25,8 @@ from robotcode.robot.diagnostics.diagnostics_modifier import (
         ("hint", {ModifierAction.HINT: ["*"]}),
         ("garbage", {}),
         ("ignore[message]", {ModifierAction.IGNORE: ["message"]}),
+        ("warning[message]", {ModifierAction.WARNING: ["message"]}),
+        ("information[message]", {ModifierAction.INFORMATION: ["message"]}),
         ("ignore[message1, message2]", {ModifierAction.IGNORE: ["message1", "message2"]}),
         (
             "ignore[message1, message2] hint[message3, message4]",

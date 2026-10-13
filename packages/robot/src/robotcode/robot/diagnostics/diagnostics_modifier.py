@@ -13,7 +13,8 @@ from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity
 
 from ..utils.visitor import Visitor
 
-ACTIONS = ["ignore", "error", "warn", "warning", "info", "information", "hint", "reset"]
+# The long names come before their short forms, the pattern takes the first alternative that matches.
+ACTIONS = ["ignore", "error", "warning", "warn", "information", "info", "hint", "reset"]
 
 ROBOTCODE_ACTION_AND_CODES_PATTERN = re.compile(rf"(?P<action>{'|'.join(ACTIONS)})(\[(?P<codes>[^\]]*?)\])?")
 
