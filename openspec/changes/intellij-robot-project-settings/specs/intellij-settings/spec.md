@@ -1,88 +1,64 @@
 # Spec Delta
 
-## Purpose
-
-Defines the Robot Framework settings pages of the IntelliJ plugin and the settings the RobotCode language server receives from the plugin, so that the server behaves as with VS Code's defaults unless the user changes a setting.
-
 ## ADDED Requirements
 
-### Requirement: Robot Framework environment settings
+### Requirement: Robot page
 
-The "Robot Framework" settings page SHALL have a group "Robot Framework environment" with these settings, all empty by default:
+The Robot Framework settings node SHALL have a "Robot" sub-page, for VS Code's "Robot" category, with the settings Args (a command line), Paths, Python path, Languages and Variable files (lists), Env and Variables (name and value pairs), Output dir (a folder) and Mode ("Default", which passes nothing, "RPA" for `--rpa` or "Test automation" for `--norpa`). All are empty by default, and the mode is "Default".
 
-- Python path: a list of folders or glob patterns;
-- environment variables: name and value pairs;
-- variables: name and value pairs;
-- variable files: a list of files;
-- languages: a list of language names or codes.
+#### Scenario: Labels as in VS Code
 
-Applying a change SHALL restart the language server and run test discovery again.
+- **WHEN** the user opens the "Robot" sub-page
+- **THEN** the settings appear as "Args", "Paths", "Python path", "Env", "Languages", "Variables", "Variable files", "Output dir" and "Mode", without groups
 
 #### Scenario: Library on an extra Python path
 
-- **WHEN** a suite imports the Python library `mylib`, which lives only in the folder `libs`, and the user adds `libs` to the Python path and applies
+- **WHEN** a suite imports the Python library `mylib`, which lives only in the folder `libs`, and the user adds `libs` to "Python path" and applies
 - **THEN** the editor no longer reports the import as unresolved, and the library's keywords are completed
 
 #### Scenario: Variable for analysis
 
-- **WHEN** a suite uses `${SERVER}`, no file defines it, and the user adds the variable `SERVER` with the value `localhost` and applies
+- **WHEN** a suite uses `${SERVER}`, no file defines it, and the user adds the variable `SERVER` with the value `localhost` under "Variables" and applies
 - **THEN** the editor no longer reports `${SERVER}` as not found
 
-### Requirement: How the environment settings reach the server and runs
+### Requirement: How the Robot settings are used
 
-The language server SHALL receive the settings of the group "Robot Framework environment" in `robotcode.robot` as `pythonPath`, `env`, `variables`, `variableFiles` and `languages`, with maps from strings to strings and lists without blank entries, and runs SHALL get them as described for combining project settings with runs.
+The language server SHALL receive the settings of the "Robot" page in `robotcode.robot` as `args`, `paths`, `pythonPath`, `env`, `languages`, `variables`, `variableFiles`, `outputDir` and `mode`, with maps from strings to strings and lists without blank entries. Test discovery and runs SHALL use them as described for discovery and for combining the Robot settings with runs. Applying a change SHALL restart the language server and run test discovery again.
 
 #### Scenario: Language server payload
 
-- **WHEN** the environment variable `MODE=test` and the variable `SERVER=localhost` are set
+- **WHEN** `MODE=test` is set under "Env" and `SERVER=localhost` under "Variables"
 - **THEN** the server receives `robotcode.robot.env` as `{"MODE": "test"}` and `robotcode.robot.variables` as `{"SERVER": "localhost"}`
-
-### Requirement: Text of the environment settings group
-
-The text of the group "Robot Framework environment" SHALL say that lists add to those of `robot.toml`, that variables set here win over `robot.toml`, and that environment variables set here win in the editor while `robot.toml`'s environment wins in runs.
-
-#### Scenario: Text on variables
-
-- **WHEN** the user opens the "Robot Framework" settings page
-- **THEN** the group "Robot Framework environment" says that variables set there win over `robot.toml`
-
-### Requirement: Robot Framework run options settings
-
-The "Robot Framework" settings page SHALL have a group "Run options" with these settings:
-
-- robot arguments, entered as a command line, empty by default;
-- mode: "Default", which passes nothing and is the default, "RPA" (`--rpa`) or "Test automation" (`--norpa`);
-- default paths: a list of files and folders, empty by default;
-- output directory, empty by default.
 
 #### Scenario: Output directory
 
-- **WHEN** the output directory is `results/ide` and the user runs a test from the gutter, with no output directory in the run configuration
+- **WHEN** "Output dir" is `results/ide` and the user runs a test from the gutter, with no output directory in the run configuration
 - **THEN** `output.xml`, `log.html` and `report.html` are written to `results/ide`
-
-### Requirement: How the run options are used
-
-Test discovery and runs SHALL use the settings of the group "Run options" as described for discovery and for combining project settings with runs; the language server receives them in `robotcode.robot` as well. Applying a change SHALL restart the language server and run test discovery again.
 
 #### Scenario: Mode passed to discovery
 
-- **WHEN** the user sets the mode to "RPA" and applies
+- **WHEN** the user sets "Mode" to "RPA" and applies
 - **THEN** test discovery runs again with `--rpa`
 
-### Requirement: Text of the run options group
+### Requirement: Texts of the Robot page
 
-The text of the group "Run options" SHALL say that default paths are used only when `robot.toml` sets no paths and a run names no files or folders, and that run configurations can set their own values.
+The texts of the "Robot" page SHALL say that lists add to those of `robot.toml`, that variables set there win over `robot.toml`, that environment variables set there win in the editor while `robot.toml`'s environment wins in runs, that paths are used only when `robot.toml` sets no paths and a run names no files or folders, and that run configurations can set their own values.
 
-#### Scenario: Text on default paths
+#### Scenario: Text on variables
 
-- **WHEN** the user opens the "Robot Framework" settings page
-- **THEN** the group "Run options" says that default paths are used only when `robot.toml` sets no paths and a run names no files or folders
+- **WHEN** the user opens the "Robot" sub-page
+- **THEN** the text of "Variables" says that variables set there win over `robot.toml`
+
+#### Scenario: Text on paths
+
+- **WHEN** the user opens the "Robot" sub-page
+- **THEN** the text of "Paths" says that the paths are used only when `robot.toml` sets no paths and a run names no files or folders
 
 ### Requirement: Robot settings are stored with the project
 
-The Robot Framework environment and run options SHALL be stored in the project's shared settings file `.idea/robotcodeSettings.xml`, and only when they differ from their defaults. A settings file without them SHALL yield the defaults.
+The settings of the "Robot" page SHALL be stored in the project's shared settings file `.idea/robotcodeSettings.xml`, and only when they differ from their defaults. A settings file without them SHALL yield the defaults.
 
 #### Scenario: Values survive a restart
 
-- **WHEN** the user adds `libs` to the Python path, applies and restarts the IDE
+- **WHEN** the user adds `libs` to "Python path", applies and restarts the IDE
 - **THEN** the page shows `libs`, and `.idea/robotcodeSettings.xml` holds it
