@@ -100,6 +100,8 @@ The 12 `pyproject.toml` files (the root package and the 11 packages) gain the cl
   - only these combinations are tested in the CI, to keep the effort low;
   - other combinations may work, but using them is the user's responsibility;
   - for example, Robot Framework versions before 7.5 may not work with Python 3.15.
+
+  Changed after the implementation (maintainer decision, aea2d308): the Get Started page no longer shows the table, which read as if each Robot Framework version ran only with the Python versions the CI tests. Its Python line says instead that the Python version has to be one the Robot Framework version supports, with Python 3.15 from Robot Framework 7.5 on as the example. The README keeps the table and the paragraph.
 - `CONTRIBUTING.md`:
   - the section "Adding a new Robot Framework version to the matrix" says to take the Python range from the release's classifiers (D1) and where to add it (D2, D3, the documentation table);
   - a short paragraph next to it covers a new Python version: the classifier in all 12 `pyproject.toml`, `python-version` and the `exclude` entries in the CI, a `devel` table, the documentation table;

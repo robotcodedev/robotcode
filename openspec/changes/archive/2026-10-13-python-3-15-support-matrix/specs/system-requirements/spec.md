@@ -67,10 +67,18 @@ RobotCode SHALL NOT check whether a combination of Python and Robot Framework is
 - **WHEN** a project uses Python 3.15 with Robot Framework 7.2
 - **THEN** RobotCode starts and analyzes the project as with a supported combination, and errors that Robot Framework itself raises, such as the XML library failing to initialize, are reported like any other error of a library import
 
-### Requirement: Documented requirements
+### Requirement: Requirements in the README
 
-The README and the Get Started page of the documentation SHALL show the supported combinations as a table. They SHALL say that only these combinations are tested in the CI, to keep the effort low, that other combinations may work but using them is the user's responsibility, and, as an example, that Robot Framework versions before 7.5 may not work with Python 3.15.
+The README SHALL show the supported combinations as a table and SHALL say that only these combinations are tested in the CI, to keep the effort low, that other combinations may work but using them is the user's responsibility, and, as an example, that Robot Framework versions before 7.5 may not work with Python 3.15.
 
-#### Scenario: Reading the requirements
-- **WHEN** a user reads the requirements in the README or on the Get Started page
-- **THEN** both show the table of supported combinations, and both say that other combinations are not tested and are the user's responsibility, with Robot Framework before 7.5 on Python 3.15 as the example
+#### Scenario: Reading the README
+- **WHEN** a user reads the requirements in the README
+- **THEN** it shows the table of supported combinations and says that other combinations are not tested and are the user's responsibility, with Robot Framework before 7.5 on Python 3.15 as the example
+
+### Requirement: Requirements on the Get Started page
+
+The Get Started page of the documentation SHALL name Python 3.10 or above in a version that the Robot Framework version supports, with Python 3.15 from Robot Framework 7.5 on as the example, and SHALL NOT show the table of supported combinations.
+
+#### Scenario: Reading the Get Started page
+- **WHEN** a user reads the requirements on the Get Started page
+- **THEN** it names Python 3.10 or above in a version that the Robot Framework version supports, with Python 3.15 from Robot Framework 7.5 on as the example, and shows no table of combinations

@@ -21,7 +21,7 @@
 
 ## 4. CI
 
-- [ ] 4.1 After the maintainer has pushed the commit of task 2.3, check its CI run: the `test` job runs 99 jobs, the check step of every job prints the Python version of its combination and passes, among them Python 3.15 with RF 7.5 on Linux, macOS and Windows, and all jobs pass. Fix a failure that this change causes before archiving, and report other failures to the maintainer (design, Risks).
+- [x] 4.1 After the maintainer has pushed the commit of task 2.3, check its CI run: the `test` job runs 99 jobs, the check step of every job prints the Python version of its combination and passes, among them Python 3.15 with RF 7.5 on Linux, macOS and Windows, and all jobs pass. Fix a failure that this change causes before archiving, and report other failures to the maintainer (design, Risks).
 
 ## Workflow follow-up
 
