@@ -41,7 +41,7 @@ RobotCode SHALL support each Robot Framework version from 5.0 to 7.5 on those Py
 
 ### Requirement: Tested combinations
 
-The CI SHALL run the test suite for every supported combination of Python and Robot Framework on Linux, macOS and Windows, and SHALL NOT run it for any other combination. The hatch `devel` matrix SHALL contain exactly the supported combinations.
+The CI SHALL run the test suite for every supported combination of Python and Robot Framework on Linux, macOS and Windows, and SHALL NOT run it for any other combination. Each job SHALL run the tests with the Python version of its combination and SHALL fail when its test environment uses another one. The hatch `devel` matrix SHALL contain exactly the supported combinations.
 
 #### Scenario: Python 3.15 in the CI
 - **WHEN** the CI tests a commit
@@ -50,6 +50,10 @@ The CI SHALL run the test suite for every supported combination of Python and Ro
 #### Scenario: Unsupported combination in the CI
 - **WHEN** the CI tests a commit
 - **THEN** it runs no job with Robot Framework 5.0 and Python 3.11
+
+#### Scenario: Python of a CI job
+- **WHEN** a CI job tests the combination of Python 3.15 and Robot Framework 7.5
+- **THEN** its tests run with Python 3.15, and the job fails before the tests if its test environment uses another Python version
 
 #### Scenario: Development environments
 - **WHEN** a contributor lists the hatch environments

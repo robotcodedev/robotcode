@@ -71,7 +71,15 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
 
+      - name: Check Python of the test environment
+        env:
+          # without it, Hatch creates the environment with the Python it runs on itself
+          HATCH_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+        run: hatch run test.${{ matrix.robot-version }}:python -c "import sys; print(sys.version); sys.exit(sys.version_info[:2] != tuple(map(int, '${{ matrix.python-version }}'.split('.'))))"
+
       - name: Test Python Packages
+        env:
+          HATCH_PYTHON: ${{ steps.setup-python.outputs.python-path }}
         run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml"
 
       - name: Upload Test Results

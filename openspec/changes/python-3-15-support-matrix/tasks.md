@@ -11,6 +11,7 @@
   - `hatch run devel.py3.10-rf50:python -c "import robot, sys; print(robot.__version__, sys.version_info[:2])"` prints RF 5.0.1 and `(3, 10)`;
   - `hatch run devel.py3.15-rf75:test` passes with a Python 3.15 that hatch finds on the `PATH`. For the run, put the interpreter and `HATCH_DATA_DIR` into the scratchpad, as for the run of 2026-10-13 (design Context).
 - [x] 2.2 In the `test` job of `.github/workflows/build-test-package-publish.yml`, add `"3.15"` to `python-version` and the 21 `exclude` entries of design D2, without `os`. Verify with a short script (PyYAML) that expands the matrix: 99 jobs, 33 per operating system, and the 33 pairs of Python and RF version are the same as those of the `devel` environments from task 2.1.
+- [x] 2.3 In the `test` job, set `HATCH_PYTHON: ${{ steps.setup-python.outputs.python-path }}` for the steps that run Hatch, and add the check step of design D8 before the tests. Verify locally with the command of the check step, the matrix values filled in, a scratchpad Python 3.15 as `HATCH_PYTHON` and `HATCH_DATA_DIR` in the scratchpad: it prints Python 3.15 and exits with 0 for the expected version 3.15, and exits with 1 for 3.14. The script of task 2.2 still passes.
 
 ## 3. Documentation
 
@@ -20,7 +21,7 @@
 
 ## 4. CI
 
-- [ ] 4.1 After the maintainer has pushed the commit, check its CI run: the `test` job runs 99 jobs, among them Python 3.15 with RF 7.5 on Linux, macOS and Windows, and all of them pass. Fix a failure on macOS or Windows before archiving (design, Risks).
+- [ ] 4.1 After the maintainer has pushed the commit of task 2.3, check its CI run: the `test` job runs 99 jobs, the check step of every job prints the Python version of its combination and passes, among them Python 3.15 with RF 7.5 on Linux, macOS and Windows, and all jobs pass. Fix a failure that this change causes before archiving, and report other failures to the maintainer (design, Risks).
 
 ## Workflow follow-up
 

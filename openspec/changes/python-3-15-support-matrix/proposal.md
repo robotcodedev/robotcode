@@ -21,6 +21,7 @@ The CI tests every RF version on every Python version, 135 jobs on three operati
   | 7.5 | 3.10 – 3.15 |
 
 - The CI tests exactly these 33 combinations on Linux, macOS and Windows: 99 jobs instead of 135. The hatch `devel` matrix contains the same combinations.
+- Each CI job tests with the Python of its combination. Until now Hatch created the test environments with the Python 3.12 it runs on itself, whatever Python the job had installed, as the first CI run of this change showed. A check step makes a job fail when its test environment runs another Python.
 - Every RobotCode package lists Python 3.15 in its classifiers. `requires-python` stays `>=3.10` without an upper bound, and the Robot Framework dependency stays `>=5.0.0`.
 - RobotCode does not check the combination at runtime. The VS Code extension, the IntelliJ plugin and the command line keep starting with any Python 3.10 or newer and Robot Framework 5.0 or newer.
 - The README and the Get Started page show the table. They say that only these combinations are tested in CI, to keep the effort low, that other combinations may work but are the user's responsibility, and, as an example, that Robot Framework versions before 7.5 may not work with Python 3.15.

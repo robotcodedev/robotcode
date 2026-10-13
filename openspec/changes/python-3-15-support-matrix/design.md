@@ -23,7 +23,8 @@ See proposal.md for the motivation. The current state:
   - RF 5.0 to 7.2 fail the same two tests, which use the XML library as sample data: `test_library_name_in_an_import_links_to_the_documentation_viewer` and `TestLinksWithinThePage::test_code_and_names_in_builtin_and_xml`. Up to 7.2, RF imports `xml.etree.cElementTree` and reads its `VERSION`, which Python 3.15 no longer provides there. A suite with `Library    XML` fails the same way with `robot` and RF 7.2.
   - Every dependency installs from wheels for 3.15, including those with compiled parts (debugpy, coverage, PyYAML, html-to-markdown).
   - No API that Python 3.15 removes is used by RobotCode.
-- The `test` job of `.github/workflows/build-test-package-publish.yml` has the dimensions `os` (3), `python-version` (3.10 to 3.14) and `robot-version` (`rf50` to `rf75`), 135 jobs in total. Each job installs its Python with `actions/setup-python` and runs `hatch run test.<rf>:test`. The hatch `test` environment pins no Python, so it uses the interpreter of the job. Locally it uses hatch's default Python.
+- The `test` job of `.github/workflows/build-test-package-publish.yml` has the dimensions `os` (3), `python-version` (3.10 to 3.14) and `robot-version` (`rf50` to `rf75`), 135 jobs in total. Each job installs its Python with `actions/setup-python`, installs Hatch with `pypa/hatch@install` and runs `hatch run test.<rf>:test`. The hatch `test` environment pins no Python. For such an environment Hatch prefers the Python version it runs on itself and only then falls back to any compatible interpreter; `HATCH_PYTHON` overrides both (`hatch/env/virtual.py`, Hatch 1.18.1). Locally, `hatch run test:test` therefore uses the Python that Hatch runs on.
+- The first CI run of this change (run 38390955334, attempt 1) showed that the jobs did not test the Python of their matrix entry. The job for macOS, Python 3.14 and RF 7.5 ran its tests with `/Library/Frameworks/Python.framework/Versions/3.12`, although `actions/setup-python` had installed 3.14. None of the three jobs for Python 3.15 showed the `DeprecationWarning` for `ElementTree.VERSION` that RF 7.5 raises only on Python 3.15, while the local run on 3.15 shows it. `actions/setup-python` v6 provides the path of the Python it installs as the output `python-path`.
 - The hatch `devel` matrix in `hatch.toml` is one `[[envs.devel.matrix]]` table, Python 3.10 to 3.14 × all nine RF versions (45 environments). Hatch allows several matrix tables per environment; each table adds the product of its own variables (hatch documentation, "Advanced environment configuration > Matrix"). The `matrix.rf.dependencies` overrides apply to every table.
 - In a GitHub Actions matrix, an `exclude` entry removes every combination that matches all of its keys. An entry without `os` therefore applies to all three operating systems.
 - The existing specs `vscode-extension-compatibility` and `intellij-python-environment` check only the minimum: Python 3.10 or newer with Robot Framework 5.0 or newer.
@@ -110,11 +111,22 @@ The 12 `pyproject.toml` files (the root package and the 11 packages) gain the cl
 
 The commit is `feat` without a BREAKING marker (maintainer decision). git-cliff lists `feat` commits under "Features" (`cliff.toml`), while it skips `chore` and `ci` commits, so the change appears in the changelog.
 
+### D8: The Python of the CI jobs
+
+The steps of the `test` job that run Hatch get `HATCH_PYTHON: ${{ steps.setup-python.outputs.python-path }}` (maintainer decision). Hatch then creates `test.<rf>` with exactly the Python the job installed, whatever Python Hatch itself runs on.
+
+A step before the tests runs `hatch run test.<rf>:python -c …`. It prints the Python version of the test environment and fails when its major and minor version differ from the job's `python-version` (maintainer decision), so that a job can no longer test another Python unnoticed. It also creates the environment, and the test step reuses it.
+
+Alternatives:
+- Installing Hatch with pip into the Python of the job, so that Hatch prefers that version: it relies on Hatch's preference staying as it is, and it replaces `pypa/hatch@install`.
+- Running the `devel` environments in the CI, whose Python is fixed: the bigger restructuring that D2 and D4 avoid.
+
 ## Risks / Trade-offs
 
 - [Combinations that the CI tested until now, such as RF 6.1 on Python 3.13, lose their coverage, and a regression there goes unnoticed] → They are documented as untested and the user's responsibility. Every RF version stays tested on all the Python versions it declares.
 - [A later RF patch release declares a newer Python, for example a 7.4.3 with Python 3.15] → The procedure in `CONTRIBUTING.md` (D6) reads the classifiers of the newest patch release whenever an RF or Python version is added. Such a release can be added the same way.
-- [Python 3.15 has not run on macOS or Windows yet. On Windows, UTF-8 mode is the default from 3.15 on (PEP 686), so `open()` without an encoding reads UTF-8 there] → The first CI run of this change runs the suite with Python 3.15 and RF 7.5 on both. A failure there is fixed before the change is archived.
+- [Python 3.15 has not run on macOS or Windows yet. On Windows, UTF-8 mode is the default from 3.15 on (PEP 686), so `open()` without an encoding reads UTF-8 there] → The first CI run with D8 runs the suite with Python 3.15 and RF 7.5 on both. A failure there is fixed before the change is archived.
+- [With D8, jobs that ran Python 3.12 until now run the Python of their matrix entry, so failures may appear that the CI did not see before] → Task 4.1 looks at every failure of that run. Failures that this change causes are fixed before it is archived, others are reported to the maintainer.
 - [`hatch run test:test` fails locally once the default Python is 3.15] → Documented (D4). `hatch run test.rf75:test` or the `devel` environments cover 3.15.
 
 ## Migration Plan
