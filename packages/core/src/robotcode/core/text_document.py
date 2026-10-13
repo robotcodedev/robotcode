@@ -159,6 +159,11 @@ class TextDocument:
     def save(self, version: Optional[int], text: Optional[str]) -> None:
         self.apply_full_change(version, text, save=True)
 
+    def mark_saved(self) -> None:
+        """Remember the current text as the saved one, which `revert` returns to, without invalidating the caches."""
+        with self._lock:
+            self._orig_text = self._text
+
     def revert(self, version: Optional[int]) -> bool:
         if self._orig_text != self._text or self._orig_version != self._version:
             self.apply_full_change(version or self._orig_version, self._orig_text)

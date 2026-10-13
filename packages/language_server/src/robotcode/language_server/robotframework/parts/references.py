@@ -68,7 +68,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
-        parent.documents.on_document_cache_invalidated(self.document_did_change)
+        parent.documents.on_document_cache_invalidated.add(self.document_did_change)
         parent.diagnostics.on_workspace_diagnostics_break.add(self.on_workspace_diagnostics_break)
 
     @event
@@ -80,7 +80,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
             f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
             WatchKind.CREATE | WatchKind.DELETE,
         )
-        self.parent.documents_cache.namespace_invalidated(self.namespace_invalidated)
+        self.parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
         self.clear_cache()

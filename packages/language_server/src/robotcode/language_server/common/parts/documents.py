@@ -168,17 +168,16 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
         )
 
         if document is not None:
-            if text is not None:
-                normalized_text = self._normalize_line_endings(text)
-
-                text_changed = document.text() != normalized_text
-                if text_changed:
-                    document.save(None, text)
-                    self.did_change(
-                        self,
-                        document,
-                        callback_filter=language_id_filter(document),
-                    )
+            if text is not None and document.text() != self._normalize_line_endings(text):
+                document.save(None, text)
+                self.did_change(
+                    self,
+                    document,
+                    callback_filter=language_id_filter(document),
+                )
+            else:
+                # closing the document reverts it to the saved text
+                document.mark_saved()
 
             self.did_save(self, document, callback_filter=language_id_filter(document))
 
