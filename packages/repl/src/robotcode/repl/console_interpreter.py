@@ -512,6 +512,40 @@ class ConsoleInterpreter(BaseInterpreter):
         if self._reading:
             raise KeyboardInterrupt
 
+    def _pause_on_interrupt(self) -> bool:
+        controller = self._controller
+        if (
+            controller is None
+            or not controller.attached
+            or controller.pause_requested  # a second Ctrl-C interrupts the keyword that runs
+            or self._stop is not None  # at a stop, Ctrl-C interrupts a keyword typed there
+            # The debugger sees the keywords of a robot-debug run, and in a REPL session those of a statement.
+            or not self._logger.enabled
+            or (self._in_repl_run and not self._running_statement)
+        ):
+            return False
+        controller.request_pause()
+        if self.app is not None:
+            try:
+                # To the console, past Robot Framework's capture of what a running keyword prints, and on a line of
+                # its own, as the console output of the run can be in the middle of one.
+                self.app.echo(
+                    "\nPausing at the next keyword (Ctrl-C again interrupts the keyword that runs).",
+                    file=sys.__stdout__,
+                )
+            except Exception:
+                # The signal can interrupt a write to the same stream, which then refuses this one; the pause stays
+                # requested.
+                pass
+        return True
+
+    def _report_interrupt(self, prompt: str) -> None:
+        """Report Ctrl-C at a prompt as Python's REPL does. `input()` leaves the cursor after the prompt, so the
+        line of a shown prompt is ended first."""
+        if prompt:
+            self._echo("")
+        self._echo("KeyboardInterrupt")
+
     def make_completer(
         self, command_names: List[str], context_provider: Callable[[], Tuple[Any, Any]]
     ) -> Optional[Any]:
@@ -575,6 +609,10 @@ class ConsoleInterpreter(BaseInterpreter):
             # A failure, `Skip` or an interrupt: the input didn't run through.
             self._failed_session_lines.update(range(recorded, len(self._session_lines)))
             raise
+        finally:
+            # A pause that Ctrl-C asked for and the input didn't reach must not stop the next input.
+            if self._controller is not None:
+                self._controller.cancel_pause()
 
     # ------------------------------------------------------------------
     # Debug frontend — the interpreter *is* the debug core's `Frontend`.
@@ -600,7 +638,8 @@ class ConsoleInterpreter(BaseInterpreter):
         Dot-commands route through the shared dispatcher; the debugger
         commands (`.continue`/`.step`/…) set `_pending_action`, which ends
         the loop. Anything else is evaluated as a keyword in the paused
-        context. EOF / Ctrl-C at the prompt continues the run.
+        context. EOF (Ctrl-D) at the prompt continues the run; Ctrl-C drops
+        the typed input and prompts again, as in pdb.
         """
         self._stop = stop
         self._frame_no = 0  # innermost frame selected
@@ -622,7 +661,11 @@ class ConsoleInterpreter(BaseInterpreter):
             while self._pending_action is None:
                 try:
                     line = self._read(self.DEBUG_PROMPT, completer=self._debug_completer)
-                except (EOFError, KeyboardInterrupt):
+                except KeyboardInterrupt:
+                    # Ctrl-C drops what was typed, as in pdb; the run stays paused.
+                    self._report_interrupt(self.DEBUG_PROMPT)
+                    continue
+                except EOFError:
                     self._echo("")
                     self._pending_action = ResumeAction.CONTINUE
                     break
@@ -905,11 +948,11 @@ class ConsoleInterpreter(BaseInterpreter):
                         if self._dispatch_dot_command(text):
                             return
                 except KeyboardInterrupt:
-                    if len(lines) > 0:
-                        lines = []
-                        last_one = False
-                        continue
-                    raise
+                    # Ctrl-C drops what was typed, as in Python's REPL; the session goes on.
+                    self._report_interrupt(prompt)
+                    lines = []
+                    last_one = False
+                    continue
                 except EOFError:
                     if not lines or self._termination_requested:
                         raise
@@ -1924,7 +1967,12 @@ class ConsoleInterpreter(BaseInterpreter):
         while True:
             try:
                 line = self._read("(com) ")
-            except (EOFError, KeyboardInterrupt):
+            except KeyboardInterrupt:
+                # Ctrl-C aborts the entry, as in pdb; the breakpoint keeps its commands.
+                self._report_interrupt("(com) ")
+                self._echo(f"breakpoint {bp.id}: commands unchanged")
+                return
+            except EOFError:
                 break
             line = line.strip()
             if line == "end":

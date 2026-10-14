@@ -6,10 +6,11 @@ prompt has to end from wherever its event loop is when the signal arrives.
 """
 
 import contextlib
+import io
 import signal
 import sys
 import threading
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator, Tuple
 
 import pytest
 from prompt_toolkit.application import create_app_session
@@ -18,11 +19,14 @@ from prompt_toolkit.output import DummyOutput
 from robot.errors import ExecutionFailed
 from robot.running.signalhandler import _StopSignalMonitor
 
+from robotcode.plugin import Application
 from robotcode.repl import base_interpreter
 from robotcode.repl._debug.controller import DebugController
+from robotcode.repl._debug.types import StackFrame, StopEvent, StopReason
 from robotcode.repl.base_interpreter import ExecutionInterrupted
 from robotcode.repl.console_interpreter import ConsoleInterpreter
 from robotcode.repl.prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
+from robotcode.repl_server.interpreter import Interpreter as ReplServerInterpreter
 
 
 class _ExitError(Exception):
@@ -68,6 +72,107 @@ def test_sigint_without_a_running_keyword_changes_nothing() -> None:
 
     assert not interpreter._termination_requested
     assert interpreter.exit_code is None
+
+
+def _debugged(
+    *, in_repl_run: bool = False, running_statement: bool = False
+) -> Tuple[ConsoleInterpreter, DebugController]:
+    """An interpreter whose attached debugger sees the keywords that run: those of a robot-debug run by default."""
+    interpreter = ConsoleInterpreter(app=Application())
+    interpreter._in_repl_run = in_repl_run
+    interpreter._running_statement = running_statement
+    interpreter._logger.enabled = True
+    controller = DebugController()
+    interpreter.set_controller(controller)
+    return interpreter, controller
+
+
+@pytest.mark.parametrize(
+    ("in_repl_run", "running_statement"),
+    [pytest.param(False, False, id="robot-debug-run"), pytest.param(True, True, id="repl-statement")],
+)
+def test_sigint_with_the_debugger_attached_pauses_at_the_next_keyword(
+    in_repl_run: bool, running_statement: bool, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _interpreter, controller = _debugged(in_repl_run=in_repl_run, running_statement=running_statement)
+    # Robot Framework captures what a running keyword prints; the message must get past it.
+    monkeypatch.setattr(sys, "stdout", io.StringIO())
+
+    # Returns instead of raising: the keyword that runs goes on.
+    _monitor(running_keyword=True)(signal.SIGINT, None)
+
+    assert controller.pause_requested
+    assert "Pausing at the next keyword (Ctrl-C again interrupts the keyword that runs)." in capfd.readouterr().out
+
+
+def test_sigint_pauses_even_when_its_message_cannot_be_written(monkeypatch: pytest.MonkeyPatch) -> None:
+    interpreter, controller = _debugged()
+
+    def refuse(*args: Any, **kwargs: Any) -> None:
+        # What a write raises when the signal interrupted another write to the same stream.
+        raise RuntimeError("reentrant call inside <_io.BufferedWriter name='<stdout>'>")
+
+    monkeypatch.setattr(interpreter.app, "echo", refuse)
+
+    _monitor(running_keyword=True)(signal.SIGINT, None)
+
+    assert controller.pause_requested
+
+
+def test_second_sigint_interrupts_the_running_keyword() -> None:
+    _interpreter, controller = _debugged()
+    monitor = _monitor(running_keyword=True)
+    monitor(signal.SIGINT, None)
+
+    with pytest.raises(ExecutionInterrupted, match="Execution interrupted"):
+        monitor(signal.SIGINT, None)
+    assert controller.pause_requested
+
+
+def _detached(interpreter: ConsoleInterpreter, controller: DebugController) -> None:
+    controller.set_attached(False)
+
+
+def _at_a_stop(interpreter: ConsoleInterpreter, controller: DebugController) -> None:
+    frame = StackFrame(name="Sleep", type="KEYWORD", source=None, line=None, depth=0)
+    interpreter._stop = StopEvent(reason=StopReason.ENTRY, frame=frame, stack=[frame])
+
+
+def _between_statements(interpreter: ConsoleInterpreter, controller: DebugController) -> None:
+    interpreter._in_repl_run = True
+
+
+def _before_the_session(interpreter: ConsoleInterpreter, controller: DebugController) -> None:
+    interpreter._logger.enabled = False
+
+
+@pytest.mark.parametrize(
+    "situation",
+    [
+        pytest.param(_detached, id="detached"),
+        pytest.param(_at_a_stop, id="at-a-stop"),
+        pytest.param(_between_statements, id="repl-between-statements"),
+        pytest.param(_before_the_session, id="events-not-forwarded"),
+    ],
+)
+def test_sigint_interrupts_the_running_keyword_where_nothing_pauses(
+    situation: Callable[[ConsoleInterpreter, DebugController], None],
+) -> None:
+    interpreter, controller = _debugged()
+    situation(interpreter, controller)
+
+    with pytest.raises(ExecutionInterrupted, match="Execution interrupted"):
+        _monitor(running_keyword=True)(signal.SIGINT, None)
+    assert not controller.pause_requested
+
+
+def test_sigint_in_repl_server_interrupts_the_running_keyword() -> None:
+    # The notebook kernel interrupts a cell this way; `repl-server` has no debugger to pause.
+    interpreter = ReplServerInterpreter()
+    interpreter._logger.enabled = True
+
+    with pytest.raises(ExecutionInterrupted, match="Execution interrupted"):
+        _monitor(running_keyword=True)(signal.SIGINT, None)
 
 
 def test_sigterm_interrupts_the_keyword_and_ends_the_session() -> None:

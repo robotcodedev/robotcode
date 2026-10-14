@@ -82,6 +82,9 @@ def _stop_signal_monitor_call(self: Any, signum: Any, frame: Any) -> None:
     if _signal_interpreter is not None:
         # SIGINT at a prompt ends the wait for input, as Ctrl-C does with prompt_toolkit.
         _signal_interpreter._interrupt_waiting()
+        # With the debugger attached, SIGINT first pauses at the next keyword, as pdb does.
+        if _signal_interpreter._pause_on_interrupt():
+            return
     if self._running_keyword:
         # SIGINT interrupts the running keyword; the session goes on.
         self._stop_execution_gracefully()
@@ -529,6 +532,11 @@ class BaseInterpreter(abc.ABC):
 
     def _interrupt_waiting(self) -> None:
         """Interrupt a wait for input after SIGINT, from the signal handler. Each interpreter knows how it waits."""
+
+    def _pause_on_interrupt(self) -> bool:
+        """Pause at the next keyword after SIGINT instead of interrupting the keyword that runs, from the signal
+        handler. Returns whether it does; only an interpreter with a debugger can pause."""
+        return False
 
     def run(self) -> Any:
         self._logger.enabled = True

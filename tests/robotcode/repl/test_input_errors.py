@@ -3,7 +3,8 @@
 Invalid statements run like in a `robot` test body: Robot Framework fails them
 when execution reaches them. Only an unfinished block waits for more lines,
 input that ends inside one is still reported, and a line starting with `...`
-never runs as a statement of its own.
+never runs as a statement of its own. Ctrl-C at the prompt drops the input
+typed so far.
 """
 
 import re
@@ -34,6 +35,9 @@ _RETURN_MESSAGE = (
 
 _ORPHAN_MESSAGE = "The line starting with '...' does not continue a statement, it starts a new input."
 
+# A scripted line that stands for Ctrl-C at the prompt.
+_CTRL_C = "\x03"
+
 
 class _Reader:
     """Scripted `read_line` — pops queued lines, then signals EOF. Records whether
@@ -46,7 +50,10 @@ class _Reader:
 
     def __call__(self, prompt: str, **kwargs: Any) -> str:
         if self._lines:
-            return self._lines.pop(0)
+            line = self._lines.pop(0)
+            if line == _CTRL_C:
+                raise KeyboardInterrupt
+            return line
         if self.ended:
             self.read_after_end = True
         self.ended = True
@@ -395,6 +402,49 @@ def test_input_ending_inside_a_block_ends_the_prompt_line(
     assert app.echoed == echoed
 
 
+@pytest.mark.parametrize(
+    ("tty", "echoed"),
+    [
+        pytest.param(True, ["", "KeyboardInterrupt"], id="terminal"),
+        pytest.param(False, ["KeyboardInterrupt"], id="pipe"),
+    ],
+)
+def test_ctrl_c_drops_an_unfinished_block(tty: bool, echoed: List[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    # `input()` leaves the cursor after the prompt; piped input shows no prompt.
+    monkeypatch.setattr(sys, "stdin", _Stdin(tty=tty))
+    app = _EchoApp()
+    interp = ConsoleInterpreter(app=app)
+    interp.read_line = _Reader(  # type: ignore[method-assign]
+        ["FOR    ${i}    IN    a    b", "    Log    ${i}", _CTRL_C, "Log    AFTER"]
+    )
+
+    items = list(interp.get_input())
+
+    assert [(item.name, tuple(item.args)) for item in items if item is not None] == [("Log", ("AFTER",))]
+    assert app.echoed == echoed
+
+
+def test_ctrl_c_at_an_empty_prompt_keeps_the_session(project: Path) -> None:
+    session = _Session(lines=[_CTRL_C, "Log    AFTER"])
+    app = _EchoApp()
+    session.app = app
+
+    _run(project, session)
+
+    assert session.messages("INFO") == ["AFTER"]
+    assert app.echoed == ["KeyboardInterrupt"]
+
+
+def test_input_ending_after_ctrl_c_ends_the_session() -> None:
+    interp = ConsoleInterpreter(app=None)
+    reader = _Reader(["FOR    ${i}    IN    a", _CTRL_C])
+    interp.read_line = reader  # type: ignore[method-assign]
+
+    with pytest.raises(EOFError):
+        list(interp.get_input())
+    assert not reader.read_after_end
+
+
 def test_orphaned_continuation_line_fails_instead_of_running(project: Path) -> None:
     session = _Session(lines=["IF    True    Log    A    ELSE", "...    Log    B", "Log    AFTER"])
     session.record_failures = True
@@ -534,3 +584,31 @@ def test_prompt_toolkit_runs_a_submitted_invalid_block_at_once(
     assert [item.name for item in interp.get_input() if item is not None] == ["Log"]
     # Both inputs start at the primary prompt, without a continuation prefill.
     assert prompts == [(">>> ", "", False), (">>> ", "", False)]
+
+
+def test_prompt_toolkit_ctrl_c_drops_an_unfinished_block(
+    pipe_input: PipeInput, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", _Stdin(tty=True))
+    app = _EchoApp()
+    interp = PromptToolkitConsoleInterpreter(app=app, no_history=True)
+    prompts: List[str] = []
+    read_line = interp.read_line
+
+    def typing_read_line(
+        prompt: str, *, multiline_continuation: bool = False, prefill: str = "", completer: Any = None
+    ) -> str:
+        prompts.append(prompt)
+        if len(prompts) == 2:
+            # Typed at the prompt that follows Ctrl-C.
+            pipe_input.send_text("Log    next\r")
+        return read_line(prompt, multiline_continuation=multiline_continuation, prefill=prefill, completer=completer)
+
+    interp.read_line = typing_read_line  # type: ignore[method-assign]
+
+    # Alt-Enter (`\x1b\r`) inserts a newline, so the block stays open; `\x03` is Ctrl-C.
+    pipe_input.send_text("FOR    ${i}    IN    a\x1b\rLog    ${i}\x03")
+
+    assert [item.name for item in interp.get_input() if item is not None] == ["Log"]
+    assert prompts == [">>> ", ">>> "]
+    assert app.echoed == ["KeyboardInterrupt"]

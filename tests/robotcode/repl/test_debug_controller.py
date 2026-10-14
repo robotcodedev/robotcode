@@ -789,6 +789,75 @@ def test_request_pause_stops_at_next_executed_keyword() -> None:
     assert reason == StopReason.PAUSE
 
 
+class _PauseRequester:
+    """Requests a pause once the keyword `name` has started, as Ctrl-C does while it runs."""
+
+    def __init__(self, controller: DebugController, name: str) -> None:
+        self.controller = controller
+        self.name = name
+
+    def start_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
+        # Registered after the controller, so the controller has already seen this start.
+        if getattr(data, "name", None) == self.name:
+            self.controller.request_pause()
+
+    def end_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
+        pass
+
+    def start_test(self, data: Any, result: Any) -> None:
+        pass
+
+    def end_test(self, data: Any, result: Any) -> None:
+        pass
+
+    def start_suite(self, data: Any, result: Any) -> None:
+        pass
+
+    def end_suite(self, data: Any, result: Any) -> None:
+        pass
+
+
+CAUGHT_FAILURE_SUITE = """\
+*** Test Cases ***
+T
+    Run Keyword And Ignore Error    Fail    boom
+    Log    next
+"""
+
+
+def test_stop_before_a_requested_pause_takes_its_place() -> None:
+    # The pause is requested while `Fail` runs; its exception stop comes first.
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.set_exception_breakpoints(["failed_keyword"])
+    _run_with_observers(CAUGHT_FAILURE_SUITE, controller, _PauseRequester(controller, "Fail"))
+
+    assert [(reason, name) for reason, name, _line in frontend.stops] == [(StopReason.EXCEPTION, "Fail")]
+    assert not controller.pause_requested
+
+
+def test_requested_pause_stops_at_the_next_keyword_after_a_caught_failure() -> None:
+    # No exception breakpoint applies to the caught failure, so the pause comes at the next keyword.
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.set_exception_breakpoints(["uncaught_failed_keyword"])
+    _run_with_observers(CAUGHT_FAILURE_SUITE, controller, _PauseRequester(controller, "Fail"))
+
+    assert [(reason, name) for reason, name, _line in frontend.stops] == [(StopReason.PAUSE, "Log")]
+
+
+def test_cancelled_pause_request_does_not_stop() -> None:
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.request_pause()
+
+    controller.cancel_pause()
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert not controller.pause_requested
+    assert frontend.stops == []
+
+
 def test_stepping_descends_through_for_and_if() -> None:
     # Stop at the FOR, then keep stepping in — execution descends
     # FOR -> ITERATION -> IF -> the `No Operation` in the taken branch.

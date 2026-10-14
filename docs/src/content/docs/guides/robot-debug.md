@@ -59,6 +59,7 @@ There are several ways to make a run pause; they combine freely.
 | **Keyword breakpoint** | `--break "Open Browser"` — pause whenever a keyword with that name is about to run. Repeatable. |
 | **Embedded `Breakpoint` keyword** | Add `Breakpoint` as a step in your `.robot` / `.resource` (after `Library    robotcode.repl.Repl`). It's a no-op when run normally and a hard breakpoint under the debugger — no flag needed. |
 | **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first keyword. |
+| **`Ctrl-C`** | Press `Ctrl-C` while the run runs to pause at the next keyword (reason `pause`), as `pdb` pauses a running program. The keyword that runs isn't interrupted; the debugger says right away that it will pause. A second `Ctrl-C` before then interrupts that keyword: it fails with `Execution interrupted`, and the run stops at the failure if an exception breakpoint applies, otherwise at the next keyword. This works while the debugger is attached; detached, `Ctrl-C` interrupts the keyword that runs. |
 | **Uncaught exception** | Pause at an uncaught failing keyword (not caught by `TRY`/`EXCEPT` or `Run Keyword And …`), *before* the failure unwinds. **Armed by default**, but it only fires while the debugger is attached — so it triggers out of the box under `robot-debug`, while the interactive `repl` (detached by default) just prints the error until you attach with `.debug on` / `--debugger-attached`. Disarm the filter with `--no-break-on-exception`. |
 | **Every exception** | `--break-on-all-exceptions` — pause at *every* failing keyword, even ones caught by `TRY`/`EXCEPT` or `Run Keyword And …`. |
 | **Failing test / suite** | `--break-on-failed-test` / `--break-on-failed-suite` — pause at the end of a failing test / suite. At a suite end only the debug commands work; keywords can't run there, because the suite is already closed in `output.xml`. |
@@ -164,7 +165,7 @@ You can also just type a keyword at the `(rdb)` prompt to run it in the paused c
 | `.ignore <n> <count>` | Skip breakpoint `<n>`'s next `<count>` hits. |
 | `.delete <n>` | Remove breakpoint `<n>`; bare `.delete` removes all. |
 | `.disable <n>` / `.enable <n>` | Turn breakpoint `<n>` off / on; bare form applies to all. |
-| `.commands <n>` | Attach debugger commands to breakpoint `<n>`, replayed at each hit (enter one per line, end with `end`; a leading `silent` suppresses the banner; a resuming command lets the run continue automatically). |
+| `.commands <n>` | Attach debugger commands to breakpoint `<n>`, replayed at each hit (enter one per line, end with `end`; a leading `silent` suppresses the banner; a resuming command lets the run continue automatically). `Ctrl-C` at the `(com)` prompt aborts the entry, and the breakpoint keeps the commands it had before. |
 
 Breakpoints are referenced by the stable number shown in `.breakpoints`. A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway, even past `.ignore` or with `silent` commands, and appends the error to the stop line (`— condition error: Variable '${item_id}' not found.`). A keyword breakpoint stops at the call, before the keyword's arguments are bound, so its condition sees the caller's variables; to test an argument, put a line breakpoint on the keyword's first body line instead. `.ignore` skips the next *N* triggering hits.
 
@@ -205,7 +206,7 @@ The CLI flags set the *initial* filters — `--break-on-exception` ↔ `.catch u
 
 At a stop, `.exit` / `.quit` (which leave the *shell*) would be ambiguous, so they point you at `.continue` / `.detach` / `.abort` instead of quitting.
 
-`Ctrl-C` or `Ctrl-D` at the `(rdb)` prompt **resumes the run** — the same as `.continue`, not a kill — so use `.abort` when you actually want to stop it. Pressing Enter on an empty line does nothing and just re-prompts, as it does at the shell's `>>>` prompt.
+`Ctrl-D` at the `(rdb)` prompt **resumes the run** — the same as `.continue`, not a kill — so use `.abort` when you actually want to stop it. `Ctrl-C` drops what you have typed, prints `KeyboardInterrupt` and shows `(rdb)` again; the run stays paused, as in `pdb`. Pressing Enter on an empty line does nothing and just re-prompts, as it does at the shell's `>>>` prompt.
 
 SIGTERM, which `kill` and process managers send on Linux and macOS, ends the run as it ends a `robotcode robot` run: the test that runs fails with `Execution terminated by signal`, the remaining tests don't run, and the output files are written. At a stop, the run resumes first and doesn't pause again. A second SIGTERM stops the process at once with exit code `253`.
 

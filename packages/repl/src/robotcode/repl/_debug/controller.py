@@ -254,6 +254,15 @@ class DebugController:
         """Pause at the next executed keyword (on-demand pause)."""
         self._pause_requested = True
 
+    def cancel_pause(self) -> None:
+        """Drop a pause request that hasn't stopped yet."""
+        self._pause_requested = False
+
+    @property
+    def pause_requested(self) -> bool:
+        """Whether a pause request waits for the next executed keyword."""
+        return self._pause_requested
+
     @property
     def stack(self) -> List[StackFrame]:
         """Current call stack, outermost frame first."""
@@ -696,6 +705,8 @@ class DebugController:
             self._frontend.on_output(text)
 
     def _pause(self, reason: StopReason, frame: StackFrame, description: str = "") -> None:
+        # Any stop answers a pending pause request; it must not stop the run once more.
+        self._pause_requested = False
         if self._frontend is None:
             # No UI attached: keep running (don't block).
             self._stepping = None

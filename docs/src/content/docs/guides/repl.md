@@ -87,7 +87,7 @@ Input that is complete runs right away — even when it's invalid. Robot Framewo
 
 A line that starts with the `...` continuation marker continues the line before it only inside an unfinished block. As the first line of a new input it has nothing to continue: the REPL reports a failure and doesn't run it.
 
-To **exit**, press `Ctrl-D` at the `>>> ` prompt or type `.exit` (or `.quit`). An empty line at `>>> ` does nothing but show the prompt again.
+To **exit**, press `Ctrl-D` at the `>>> ` prompt or type `.exit` (or `.quit`). An empty line at `>>> ` does nothing but show the prompt again. `Ctrl-C` drops the line or the unfinished block you have typed so far, prints `KeyboardInterrupt` and shows the `>>> ` prompt again, as Python's REPL does; the session goes on.
 
 When stdin is **not a terminal** (piped input, heredoc), prompts are suppressed and the REPL reads input until EOF. If the input ends inside an unfinished block, Robot Framework reports that block, and the session ends. That makes it scriptable — the exit code tells a script whether a statement failed (see [Exit code and session status](#exit-code-and-session-status)):
 
@@ -515,7 +515,7 @@ Whether a session counts as interactive depends on whether stdin is a terminal. 
 
 `.exit` without a code follows the rules above. `CODE` is passed to the operating system as it is; on Linux and macOS only its lowest 8 bits reach the caller, so `.exit 256` ends with `0`.
 
-`Ctrl-C` interrupts a keyword that runs: the statement fails, and the session goes on. SIGTERM, which `kill` and process managers send on Linux and macOS, ends the session, also while it waits for input. A statement that runs is stopped, input that isn't complete doesn't run, the output files are written, and the exit code is `253`, Robot Framework's code for a run stopped by the user. A second SIGTERM before the session has ended stops the process at once, also with `253`. `robotcode repl-server` ends the same way.
+`Ctrl-C` interrupts a keyword that runs: the statement fails, and the session goes on. With the debugger attached, `Ctrl-C` pauses at the next keyword instead, and a second `Ctrl-C` interrupts the keyword that runs (see [Debugging at the prompt](#debugging-at-the-prompt)). SIGTERM, which `kill` and process managers send on Linux and macOS, ends the session, also while it waits for input. A statement that runs is stopped, input that isn't complete doesn't run, the output files are written, and the exit code is `253`, Robot Framework's code for a run stopped by the user. A second SIGTERM before the session has ended stops the process at once, also with `253`. `robotcode repl-server` ends the same way.
 
 Errors before the session starts keep Robot Framework's exit codes — for example `252` for an option in the configuration that the installed Robot Framework doesn't accept. Errors that RobotCode reports itself, such as an invalid `robot.toml`, an unknown option or a wrapper that can't be started, also exit with `252`, Robot Framework's code for invalid data or command line options.
 
@@ -564,6 +564,8 @@ The same debugger that powers [`robotcode robot-debug`](/guides/robot-debug/) is
 - Passing a pause trigger (`--break`, a `--break-on-*` flag) attaches automatically, so `robotcode repl --break "Submit Login"` just works.
 
 Detaching is non-destructive: your breakpoints and `.catch` exception filters (see [Exception breakpoints](/guides/robot-debug/#debug-commands) in the debug commands) stay configured, so `.debug on` resumes with the same setup.
+
+While the debugger is attached, `Ctrl-C` during a statement doesn't interrupt the keyword that runs; it pauses at the next keyword of the statement, as in `robot-debug`. If the statement ends first, nothing pauses. A second `Ctrl-C` before the pause interrupts the keyword that runs.
 
 Attaching also arms the default uncaught-failure break, so an attached session pauses on *any* uncaught failure (a typo, a `Fail`), not just your breakpoint — add `--no-break-on-exception` to keep only the explicit breakpoint.
 

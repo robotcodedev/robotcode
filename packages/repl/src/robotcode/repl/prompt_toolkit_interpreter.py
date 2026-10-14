@@ -137,6 +137,11 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
         if app.future is not None and not app.future.done():
             app.exit(exception=EOFError())
 
+    def _report_interrupt(self, prompt: str) -> None:
+        # An aborted prompt has already ended its line.
+        del prompt
+        self._echo("KeyboardInterrupt")
+
     def make_completer(
         self, command_names: List[str], context_provider: Callable[[], Tuple[Any, Any]]
     ) -> Optional[Any]:

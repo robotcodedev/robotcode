@@ -20,7 +20,9 @@ from robot.output import LOGGER
 from robotcode.plugin import Application
 from robotcode.repl._debug.controller import DebugController
 from robotcode.repl._debug.types import ResumeAction, StackFrame, StopEvent, StopReason
+from robotcode.repl.cli import _attach_debugger
 from robotcode.repl.console_interpreter import ConsoleInterpreter
+from robotcode.repl.run import run_repl
 from robotcode.robot.utils import RF_VERSION
 
 # A writable temp path (not a hardcoded "/tmp/…", which is not writable on Windows).
@@ -86,6 +88,10 @@ class _CaptureApp(Application):
         self.messages.append(message() if callable(message) else str(message))
 
 
+# A scripted line that stands for Ctrl-C at the prompt.
+_CTRL_C = "\x03"
+
+
 class _Reader:
     """Scripted line reader — pops queued lines, then signals EOF.
 
@@ -99,7 +105,10 @@ class _Reader:
     def __call__(self, prompt: str, **kwargs: Any) -> str:
         if not self._lines:
             raise EOFError
-        return self._lines.pop(0)
+        line = self._lines.pop(0)
+        if line == _CTRL_C:
+            raise KeyboardInterrupt
+        return line
 
 
 def _run_debug(
@@ -257,6 +266,58 @@ def test_eof_at_prompt_continues() -> None:
     # An empty script → reader raises EOFError immediately → treated as continue.
     messages = _run_debug(STEP_SUITE, [], stop_on_entry=True)
     assert len(_stop_lines(messages)) == 1  # stopped once, then ran to the end
+
+
+def test_ctrl_c_at_prompt_keeps_the_run_paused() -> None:
+    # The prompt reads again at the same stop, so the `.print` after Ctrl-C runs there.
+    messages = _run_debug(STEP_SUITE, [_CTRL_C, ".print ${TEST_NAME}", ".continue"], stop_on_entry=True)
+
+    assert len(_stop_lines(messages)) == 1
+    assert messages.count("KeyboardInterrupt") == 1
+    assert "${TEST_NAME} = 'T'" in messages
+
+
+class _CtrlCWhile:
+    """Presses Ctrl-C, through the interpreter's signal hook, once the keyword with `args` has started."""
+
+    def __init__(self, interpreter: ConsoleInterpreter, args: Tuple[str, ...]) -> None:
+        self.interpreter = interpreter
+        self.args = args
+
+    def start_keyword(self, data: Any, result: Any) -> None:
+        if tuple(getattr(data, "args", ())) == self.args:
+            self.interpreter._pause_on_interrupt()
+
+    def end_keyword(self, data: Any, result: Any) -> None:
+        pass
+
+    def start_test(self, data: Any, result: Any) -> None:
+        pass
+
+    def end_test(self, data: Any, result: Any) -> None:
+        pass
+
+    def start_suite(self, data: Any, result: Any) -> None:
+        pass
+
+    def end_suite(self, data: Any, result: Any) -> None:
+        pass
+
+
+def test_pause_asked_for_in_the_last_keyword_of_an_input_does_not_stop_the_next(project: Path) -> None:
+    app = _CaptureApp()
+    interpreter = ConsoleInterpreter(app=app)
+    interpreter.read_line = _Reader(["Log    first", "Log    second"])  # type: ignore[method-assign]
+    controller = _attach_debugger(interpreter, break_at=())
+    interpreter.register_observer(_CtrlCWhile(interpreter, ("first",)))
+    run_app = Application()
+    run_app.config.root = project
+
+    run_repl(interpreter=interpreter, app=run_app, outputdir=str(project / "results"))
+
+    assert any("Pausing at the next keyword" in m for m in app.messages)
+    assert _stop_lines(app.messages) == []
+    assert not controller.pause_requested
 
 
 # ---------------------------------------------------------------------------
@@ -1150,6 +1211,35 @@ def test_commands_eof_during_collection_commits_partial() -> None:
     # Reader EOFs before `end`: whatever was collected so far is committed.
     messages = _run_debug(STEP_SUITE, [".break Outer", ".commands 1", "silent"], stop_on_entry=True)
     assert any("breakpoint 1: 1 command(s)" in m for m in messages)
+
+
+def test_commands_ctrl_c_keeps_the_previous_commands() -> None:
+    # The second entry, of `.continue`, is aborted with Ctrl-C; the entry stop's prompt reads next.
+    captured: List[ConsoleInterpreter] = []
+    messages = _run_debug(
+        STEP_SUITE,
+        [
+            ".break Outer",
+            ".commands 1",
+            ".print ${TEST_NAME}",
+            "end",
+            ".commands 1",
+            ".continue",
+            _CTRL_C,
+            ".continue",  # resume the entry stop
+            ".continue",  # resume the Outer hit after the replayed `.print`
+        ],
+        stop_on_entry=True,
+        prepare=captured.append,
+    )
+
+    controller = captured[0]._controller
+    assert controller is not None
+    assert controller.breakpoints[0].commands == [".print ${TEST_NAME}"]
+    assert "KeyboardInterrupt" in messages
+    assert "breakpoint 1: commands unchanged" in messages
+    assert "${TEST_NAME} = 'T'" in messages
+    assert any(s.startswith("* breakpoint") and "Outer" in s for s in _stop_lines(messages))
 
 
 # Cluster 1 follow-up — prefix-abbreviation collisions among the new commands
