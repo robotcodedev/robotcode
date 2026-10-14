@@ -128,6 +128,18 @@ class TextDocument:
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
         self.opened_in_editor = False
 
+        # The weak reference of a cache entry calls this when the entry's function dies. It refers to the document
+        # only weakly: a bound method of the document would make every document with a cache entry a reference cycle
+        # that only the garbage collector frees.
+        self_ref = weakref.ref(self)
+
+        def remove_dead_cache_entry(ref: Any) -> None:
+            document = self_ref()
+            if document is not None:
+                document.__remove_cache_entry(ref)
+
+        self.__remove_dead_cache_entry = remove_dead_cache_entry
+
     @property
     def version(self) -> Optional[int]:
         return self._version
@@ -349,9 +361,9 @@ class TextDocument:
 
     def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> "weakref.ref[Any]":
         if inspect.ismethod(entry):
-            return weakref.WeakMethod(entry, self.__remove_cache_entry if add_remove else None)
+            return weakref.WeakMethod(entry, self.__remove_dead_cache_entry if add_remove else None)
 
-        return weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
+        return weakref.ref(entry, self.__remove_dead_cache_entry if add_remove else None)
 
     def get_cache_value(self, entry: Callable[[Self], _T]) -> Optional[_T]:
         reference = self.__get_cache_reference(entry)

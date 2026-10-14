@@ -31,16 +31,29 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
 
         self._listeners: MutableSet[weakref.ref[Any]] = set()
 
+        # The weak reference of a listener calls this when the listener dies. It refers to the event only weakly: a
+        # bound method of the event would make every event with a listener a reference cycle that only the garbage
+        # collector frees.
+        self_ref = weakref.ref(self)
+
+        def remove_dead_listener(ref: Any) -> None:
+            event = self_ref()
+            if event is not None:
+                event.__remove_listener(ref)
+
+        self.__remove_dead_listener = remove_dead_listener
+
     def __remove_listener(self, ref: Any) -> None:
         with self._lock:
-            self._listeners.remove(ref)
+            # a listener that `remove` took out may die only afterwards, while another thread still iterates over it
+            self._listeners.discard(ref)
 
     def add(self, callback: Callable[_TParams, _TResult]) -> None:
         with self._lock:
             if inspect.ismethod(callback):
-                self._listeners.add(weakref.WeakMethod(callback, self.__remove_listener))
+                self._listeners.add(weakref.WeakMethod(callback, self.__remove_dead_listener))
             else:
-                self._listeners.add(weakref.ref(callback, self.__remove_listener))
+                self._listeners.add(weakref.ref(callback, self.__remove_dead_listener))
 
     def remove(self, callback: Callable[_TParams, _TResult]) -> None:
         with self._lock:
