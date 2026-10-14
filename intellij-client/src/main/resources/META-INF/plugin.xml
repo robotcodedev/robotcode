@@ -92,6 +92,16 @@
 							 key="settings.robot.displayName"
 							 nonDefaultProject="false"/>
 		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
+							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeRunConfigurable"
+							 id="dev.robotcode.robotcode4ij.projectsettings.run"
+							 key="settings.run.displayName"
+							 nonDefaultProject="false"/>
+		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
+							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeDebugConfigurable"
+							 id="dev.robotcode.robotcode4ij.projectsettings.debug"
+							 key="settings.debug.displayName"
+							 nonDefaultProject="false"/>
+		<projectConfigurable parentId="dev.robotcode.robotcode4ij.projectsettings"
 							 instance="dev.robotcode.robotcode4ij.configuration.RobotCodeAnalysisConfigurable"
 							 id="dev.robotcode.robotcode4ij.projectsettings.analysis"
 							 key="settings.analysis.displayName"

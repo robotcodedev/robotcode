@@ -6,6 +6,7 @@ import com.intellij.execution.ui.ExecutionConsole
 import com.intellij.execution.ui.RunnerLayoutUi
 import com.intellij.execution.ui.layout.PlaceInGrid
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.progress.ProcessCanceledException
@@ -197,6 +198,12 @@ class RobotCodeDebugProcess(
 
     override fun doGetProcessHandler(): ProcessHandler? {
         return executionResult.processHandler
+    }
+
+    override fun registerAdditionalActions(
+        leftToolbar: DefaultActionGroup, topToolbar: DefaultActionGroup, settings: DefaultActionGroup
+    ) {
+        leftToolbar.addAll(*state.openOutputActions())
     }
 
     override fun getBreakpointHandlers(): Array<out XBreakpointHandler<*>?> {

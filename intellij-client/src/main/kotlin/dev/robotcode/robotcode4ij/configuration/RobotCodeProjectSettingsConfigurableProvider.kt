@@ -13,6 +13,8 @@ import com.intellij.util.xmlb.annotations.XMap
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.delegate
 import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.stringDelegate
+import dev.robotcode.robotcode4ij.execution.RobotOpenOutput
+import dev.robotcode.robotcode4ij.execution.RobotOpenOutputTarget
 import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 import javax.swing.JComponent
 
@@ -112,6 +114,17 @@ class RobotCodeProjectConfiguration(private val project: Project) :
         var robotVariableFiles by list<String>()
         var robotOutputDir by string()
         var robotMode by string(RobotCodeServerSettings.RobotMode.DEFAULT.value)
+
+        // the "Debug" page, with the defaults of VS Code; the launch wrapper as the command line the user typed
+        var debugLaunchWrapper by string()
+        var debugOutputMessages by property(defaultValue = false)
+        var debugOutputLog by property(defaultValue = true)
+        var debugOutputTimestamps by property(defaultValue = false)
+
+        // the "Run" page, with the browser's id for RobotOpenOutputTarget.BROWSER
+        var runOpenOutputAfterRun by enum(RobotOpenOutput.NONE)
+        var runOpenOutputTarget by enum(RobotOpenOutputTarget.BUILT_IN_PREVIEW)
+        var runOpenOutputBrowser by string()
     }
 
     var completionFilterDefaultLanguage by delegate(ProjectState::completionFilterDefaultLanguage)
@@ -150,4 +163,11 @@ class RobotCodeProjectConfiguration(private val project: Project) :
     var robotVariableFiles by delegate(ProjectState::robotVariableFiles)
     var robotOutputDir by stringDelegate(ProjectState::robotOutputDir)
     var robotMode by stringDelegate(ProjectState::robotMode)
+    var debugLaunchWrapper by stringDelegate(ProjectState::debugLaunchWrapper)
+    var debugOutputMessages by delegate(ProjectState::debugOutputMessages)
+    var debugOutputLog by delegate(ProjectState::debugOutputLog)
+    var debugOutputTimestamps by delegate(ProjectState::debugOutputTimestamps)
+    var runOpenOutputAfterRun by delegate(ProjectState::runOpenOutputAfterRun)
+    var runOpenOutputTarget by delegate(ProjectState::runOpenOutputTarget)
+    var runOpenOutputBrowser by stringDelegate(ProjectState::runOpenOutputBrowser)
 }

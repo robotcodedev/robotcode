@@ -1,0 +1,119 @@
+package dev.robotcode.robotcode4ij.execution
+
+import com.intellij.icons.AllIcons
+import com.intellij.ide.browsers.BrowserLauncher
+import com.intellij.ide.browsers.WebBrowserManager
+import com.intellij.ide.browsers.actions.WebPreviewVirtualFile
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.runReadActionBlocking
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.ui.jcef.JBCefApp
+import com.intellij.util.Urls
+import dev.robotcode.robotcode4ij.RobotCodeBundle
+import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
+import dev.robotcode.robotcode4ij.debugging.RobotExitedEventArguments
+import org.jetbrains.builtInWebServer.getBuiltInServerUrls
+import java.nio.file.Files
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
+
+/**
+ * The report or the log ([kind]) that Robot Framework reported when the run ended ([exited]), when [exists] confirms
+ * it; null for [RobotOpenOutput.NONE], before the run reported its files, and for a file that it did not write.
+ */
+internal fun reportedOutputFile(
+    kind: RobotOpenOutput, exited: RobotExitedEventArguments?, exists: (Path) -> Boolean
+): Path? {
+    val file = when (kind) {
+        RobotOpenOutput.NONE -> null
+        RobotOpenOutput.REPORT -> exited?.reportFile
+        RobotOpenOutput.LOG -> exited?.logFile
+    }
+    if (file.isNullOrBlank()) return null
+    val path = try {
+        Path.of(file)
+    } catch (_: InvalidPathException) {
+        return null
+    }
+    return path.takeIf(exists)
+}
+
+/**
+ * Where report and log open for the [target] of the "Run" page: the default browser instead of the built-in preview
+ * when the IDE has no JCEF ([previewSupported]), and instead of a browser that is no longer active ([browserActive]).
+ */
+internal fun effectiveOutputTarget(
+    target: RobotOpenOutputTarget, previewSupported: Boolean, browserActive: Boolean
+): RobotOpenOutputTarget {
+    return when {
+        target == RobotOpenOutputTarget.BUILT_IN_PREVIEW && !previewSupported -> RobotOpenOutputTarget.DEFAULT_BROWSER
+        target == RobotOpenOutputTarget.BROWSER && !browserActive -> RobotOpenOutputTarget.DEFAULT_BROWSER
+        else -> target
+    }
+}
+
+/** Opens the reported file of [kind] in the target of the "Run" page, when it exists. */
+internal fun openReportedOutputFile(project: Project, kind: RobotOpenOutput, exited: RobotExitedEventArguments?) {
+    val file = reportedOutputFile(kind, exited) { Files.isRegularFile(it) } ?: return
+    // finding the file refreshes the file system, which may take a while
+    ApplicationManager.getApplication().executeOnPooledThread { openOutputFile(project, file) }
+}
+
+/**
+ * Opens [path] like the "Open In | Browser" menu of HTML files, with its URL on the IDE's built-in web server, which
+ * serves the files of the project, or with its own URL for any other file: in the built-in preview, or with the browser
+ * launcher, which takes the default browser when it gets none.
+ */
+private fun openOutputFile(project: Project, path: Path) {
+    val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path) ?: return
+    val settings = RobotCodeProjectConfiguration.getInstance(project)
+    val browsers = WebBrowserManager.getInstance()
+    val browser = browsers.activeBrowsers.firstOrNull { it.id.toString() == settings.runOpenOutputBrowser }
+    val target = effectiveOutputTarget(settings.runOpenOutputTarget, JBCefApp.isSupported(), browser != null)
+    // the preview reloads as the platform's own preview does, a browser as the web server's settings say
+    val reloadMode = if (target == RobotOpenOutputTarget.BUILT_IN_PREVIEW) browsers.webPreviewReloadMode else null
+    val url = runReadActionBlocking { getBuiltInServerUrls(file, project, null, true, reloadMode).firstOrNull() }
+        ?: Urls.newFromVirtualFile(file)
+    ApplicationManager.getApplication().invokeLater({
+        if (target == RobotOpenOutputTarget.BUILT_IN_PREVIEW) {
+            // a preview equals the open one of the same file, so the next run shows that tab again
+            OpenFileDescriptor(project, WebPreviewVirtualFile(file, url)).navigate(true)
+        } else {
+            val chosen = browser.takeIf { target == RobotOpenOutputTarget.BROWSER }
+            BrowserLauncher.instance.browse(url.toExternalForm(), chosen, project)
+        }
+    }, ModalityState.nonModal(), project.disposed)
+}
+
+/**
+ * Opens the report or the log of a run in the target of the "Run" page; enabled once the run has reported that it wrote
+ * it.
+ */
+internal class RobotCodeOpenOutputAction(
+    private val kind: RobotOpenOutput, private val state: RobotCodeRunProfileState
+) : DumbAwareAction() {
+
+    init {
+        val key = if (kind == RobotOpenOutput.REPORT) "run.openReport" else "run.openLog"
+        templatePresentation.text = RobotCodeBundle.message(key)
+        templatePresentation.description = RobotCodeBundle.message("$key.description")
+        templatePresentation.icon =
+            if (kind == RobotOpenOutput.REPORT) AllIcons.Actions.Report else AllIcons.FileTypes.Html
+    }
+
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+    override fun update(e: AnActionEvent) {
+        e.presentation.isEnabled = reportedOutputFile(kind, state.robotExited) { Files.isRegularFile(it) } != null
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        openReportedOutputFile(state.environment.project, kind, state.robotExited)
+    }
+}

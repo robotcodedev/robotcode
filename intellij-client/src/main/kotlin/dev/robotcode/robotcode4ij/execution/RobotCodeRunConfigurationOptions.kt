@@ -33,6 +33,57 @@ enum class RobotRunMode {
     NORPA
 }
 
+/** What a run opens when it ends. */
+enum class RobotOpenOutput {
+    NONE,
+    REPORT,
+    LOG
+}
+
+/** Where report and log open: the entries of the "Open In | Browser" menu of HTML files. */
+enum class RobotOpenOutputTarget {
+    /** The IDE's built-in preview. */
+    BUILT_IN_PREVIEW,
+
+    /** The default browser of Settings | Tools | Web Browsers and Preview. */
+    DEFAULT_BROWSER,
+
+    /** A browser of Settings | Tools | Web Browsers and Preview, stored by its id. */
+    BROWSER
+}
+
+/** Which wrapper a run is launched through. */
+enum class RobotRunWrapper {
+    /**
+     * The "Launch wrapper" of the "Debug" settings page; while it is empty, the wrapper of the `robot.toml` profile.
+     */
+    INHERIT,
+
+    /** The wrapper of the selected `robot.toml` profile. */
+    PROFILE,
+
+    /** The configuration's own command. */
+    CUSTOM,
+
+    /** No wrapper at all, also when the `robot.toml` profile has one. */
+    NONE
+}
+
+/** A switch of the debugger output, on, off, or as on the "Debug" settings page. */
+enum class RobotRunSwitch {
+    INHERIT,
+    ON,
+    OFF
+}
+
+/** What a run opens when it ends: as on the "Run" settings page, or the configuration's own choice. */
+enum class RobotRunOpenOutput {
+    INHERIT,
+    NONE,
+    REPORT,
+    LOG
+}
+
 /** Which profiles of `robot.toml` a run selects. */
 enum class RobotRunProfilesKind {
     /** The profiles selected for the project when the run starts. */
@@ -114,4 +165,16 @@ class RobotCodeRunConfigurationOptions : ModuleBasedConfigurationOptions() {
 
     @get:XCollection(propertyElementName = "profiles", elementName = "profile", valueAttributeName = "value")
     var profiles by list<String>()
+
+    // the "Run & Debug" options; the command lines as the user typed them, a connection timeout of 0 is not set
+    var wrapper by enum(RobotRunWrapper.INHERIT)
+    var wrapperCommand by string()
+    var robotCodeArguments by string()
+    var outputMessages by enum(RobotRunSwitch.INHERIT)
+    var outputLog by enum(RobotRunSwitch.INHERIT)
+    var outputTimestamps by enum(RobotRunSwitch.INHERIT)
+    var openOutputAfterRun by enum(RobotRunOpenOutput.INHERIT)
+    var stopOnEntry by property(false)
+    var connectionTimeout by property(0)
+    var debuggerArguments by string()
 }

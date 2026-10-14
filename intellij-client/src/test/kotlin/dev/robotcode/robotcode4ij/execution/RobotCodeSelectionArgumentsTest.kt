@@ -137,14 +137,19 @@ class RobotCodeSelectionArgumentsTest {
                 "debug", "--no-debug", "--tcp", "6613", "--",
                 "-I", "tests/sample.robot", "-N", "Project", "-s", "Project.Tests.Sample", "-bl", test.longname
             ),
-            listOf("debug") + debugArguments(debug = false, port = 6613, robotArguments = selection)
+            listOf("debug") + debugArguments(
+                debug = false, port = 6613, options = defaultRunDebugOptions, robotArguments = selection
+            )
         )
         // a Debug of the whole project
-        assertEquals(listOf("--tcp", "6613"), debugArguments(debug = true, port = 6613, robotArguments = listOf()))
+        assertEquals(
+            listOf("--tcp", "6613"),
+            debugArguments(debug = true, port = 6613, options = defaultRunDebugOptions, robotArguments = listOf())
+        )
         // the former default port is passed like any other
         assertEquals(
             listOf("--no-debug", "--tcp", "6612", "--") + selection,
-            debugArguments(debug = false, port = 6612, robotArguments = selection)
+            debugArguments(debug = false, port = 6612, options = defaultRunDebugOptions, robotArguments = selection)
         )
     }
 

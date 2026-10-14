@@ -16,9 +16,11 @@ import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.ui.BaseTestsOutputConsoleView
 import com.intellij.execution.util.ProgramParametersConfigurator
 import com.intellij.execution.ui.ConsoleView
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.util.execution.ParametersListUtil
 import com.jetbrains.python.run.PythonCommandLineState
 import com.jetbrains.python.run.PythonExecution
 import com.jetbrains.python.run.PythonScriptExecution
@@ -32,6 +34,7 @@ import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.debugging.RobotExitedEventArguments
 import dev.robotcode.robotcode4ij.debugging.awaitRequest
 import dev.robotcode.robotcode4ij.defaultPathArguments
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
@@ -61,15 +64,34 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * The arguments after `debug`: the options of `robotcode debug`, with the port of the debugger connection, then a `--`
- * separator and the arguments for Robot Framework, only when there are any.
+ * The arguments after `debug`: the options of `robotcode debug`, with the port of the debugger connection and the
+ * debugger [options] in the order of VS Code's launcher, each only when it differs from the debugger's default, then a
+ * `--` separator and the arguments for Robot Framework, only when there are any. Stop on entry applies only to Debug.
  */
-internal fun debugArguments(debug: Boolean, port: Int, robotArguments: List<String>): List<String> {
+internal fun debugArguments(
+    debug: Boolean, port: Int, options: RunDebugOptions, robotArguments: List<String>
+): List<String> {
     return buildList {
         if (!debug) {
             add("--no-debug")
         }
         addAll(listOf("--tcp", port.toString()))
+        if (options.connectionTimeoutSeconds != DEBUGGER_CONNECT_TIMEOUT_SECONDS) {
+            addAll(listOf("--wait-for-client-timeout", options.connectionTimeoutSeconds.toString()))
+        }
+        if (options.outputMessages) {
+            add("--output-messages")
+        }
+        if (!options.outputLog) {
+            add("--no-output-log")
+        }
+        if (options.outputTimestamps) {
+            add("--output-timestamps")
+        }
+        if (options.stopOnEntry && debug) {
+            add("--stop-on-entry")
+        }
+        addAll(ParametersListUtil.parse(options.debuggerArguments))
         if (robotArguments.isNotEmpty()) {
             add("--")
             addAll(robotArguments)
@@ -77,17 +99,47 @@ internal fun debugArguments(debug: Boolean, port: Int, robotArguments: List<Stri
     }
 }
 
+private val SHELL_SAFE_WORD = Regex("[\\w@%+=:,./-]+")
+
+/** [words] as one command line in POSIX quoting, as Python's `shlex.join` writes it, for `shlex.split` to restore. */
+internal fun posixCommandLine(words: List<String>): String {
+    return words.joinToString(" ") { word ->
+        when {
+            word.isEmpty() -> "''"
+            SHELL_SAFE_WORD.matches(word) -> word
+            else -> "'" + word.replace("'", "'\"'\"'") + "'"
+        }
+    }
+}
+
+/**
+ * The wrapper option of a run: `--wrapper` with the typed command, which `robotcode` splits with `shlex`, so that it
+ * gets the same words on every operating system, or `--no-wrapper`; nothing when the wrapper of the profile applies.
+ */
+internal fun wrapperArguments(options: RunDebugOptions): List<String> {
+    return when (options.wrapper) {
+        RobotRunWrapper.CUSTOM ->
+            listOf("--wrapper", posixCommandLine(ParametersListUtil.parse(options.wrapperCommand)))
+        RobotRunWrapper.NONE -> listOf("--no-wrapper")
+        RobotRunWrapper.INHERIT, RobotRunWrapper.PROFILE -> listOf()
+    }
+}
+
 /**
  * The arguments of a run after the bundled `robotcode`: the global options as for the other `robotcode` commands, with
  * the selected [profiles] but without the robotcode extra args, as in VS Code, then the default [paths] of the "Robot"
- * settings page, which discovery passes too, `debug` and [debugArguments].
+ * settings page, which discovery passes too, the wrapper and the `robotcode` arguments of the [options], `debug` and
+ * [debugArguments].
  */
 internal fun runArguments(
-    profiles: List<String>, paths: List<String>, debug: Boolean, port: Int, robotArguments: List<String>
+    profiles: List<String>, paths: List<String>, debug: Boolean, port: Int, options: RunDebugOptions,
+    robotArguments: List<String>
 ): List<String> {
     return robotCodeArguments(
         extraArgs = listOf(), format = "", noColor = false, noPager = true, profiles = profiles,
-        args = defaultPathArguments(paths) + listOf("debug") + debugArguments(debug, port, robotArguments)
+        args = defaultPathArguments(paths) + wrapperArguments(options) +
+            ParametersListUtil.parse(options.robotCodeArguments) + listOf("debug") +
+            debugArguments(debug, port, options, robotArguments)
     )
 }
 
@@ -158,8 +210,8 @@ internal suspend fun handshake(
     }
 }
 
-/** As long as the RobotCode debugger waits for its client by default (`--wait-for-client-timeout`). */
-internal const val DEBUGGER_CONNECT_TIMEOUT_MILLIS = 15_000L
+/** As long as the RobotCode debugger waits for its client by default (`--wait-for-client-timeout`), in seconds. */
+internal const val DEBUGGER_CONNECT_TIMEOUT_SECONDS = 15
 
 private const val CONNECT_RETRY_MILLIS = 100L
 
@@ -170,7 +222,7 @@ private const val MILLIS_PER_SECOND = 1000L
  * the process still runs, says so in the run's console and ends the process. Returns the connection, or null.
  */
 internal suspend fun connectDebugger(
-    handler: ProcessHandler, port: Int, timeoutMillis: Long = DEBUGGER_CONNECT_TIMEOUT_MILLIS,
+    handler: ProcessHandler, port: Int, timeoutMillis: Long = DEBUGGER_CONNECT_TIMEOUT_SECONDS * MILLIS_PER_SECOND,
     retryMillis: Long = CONNECT_RETRY_MILLIS
 ): Socket? {
     val socket = withTimeoutOrNull(timeoutMillis) {
@@ -233,14 +285,27 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     @Volatile
     private var socket: Socket? = null
 
+    // the output files that Robot Framework reported when it ended
+    @Volatile
+    var robotExited: RobotExitedEventArguments? = null
+        private set
+
     init {
         debugClient.onTerminated.advise(runScope.lifetime) {
             connectedServer = null
             socket?.close()
         }
+        // the files are written when Robot Framework reports them, a moment before the process ends
+        debugClient.onRobotExited.advise(runScope.lifetime) { exited ->
+            robotExited = exited
+            runDebugOptions?.let { openReportedOutputFile(environment.project, it.openOutputAfterRun, exited) }
+        }
     }
 
     private var debugPort = 0
+
+    // the "Run & Debug" values of the run, with the project defaults as they are when it starts
+    private var runDebugOptions: RunDebugOptions? = null
     
     private var consoleProperties: SMTRunnerConsoleProperties? = null
     
@@ -270,7 +335,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
                 config.options.profilesKind, config.options.profiles,
                 RobotCodePersonalConfiguration.getInstance(project).profiles.toList()
             )
-            addParameters(runArguments(profiles, settings.robotPaths, debug, debugPort, robotArguments))
+            val options = resolveRunDebugOptions(settings, config.options).also { runDebugOptions = it }
+            addParameters(runArguments(profiles, settings.robotPaths, debug, debugPort, options, robotArguments))
             // PyCharm adds the configuration's environment variables and .env files afterwards, so they win
             robotEnvironment(settings).forEach { (name, value) -> addEnvironmentVariable(name, value) }
         }
@@ -313,7 +379,18 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         if (result is DefaultExecutionResult && console is BaseTestsOutputConsoleView && properties != null) {
             result.setRestartActions(properties.createRerunFailedTestsAction(console))
         }
+        if (result is DefaultExecutionResult) {
+            result.setActions(*result.actions, *openOutputActions())
+        }
         return result
+    }
+
+    /** "Open Report" and "Open Log" for the tab of the run. */
+    fun openOutputActions(): Array<AnAction> {
+        return arrayOf(
+            RobotCodeOpenOutputAction(RobotOpenOutput.REPORT, this),
+            RobotCodeOpenOutputAction(RobotOpenOutput.LOG, this)
+        )
     }
     
     // the platform calls this on the user interface thread, so the connection is made in the background; a process that
@@ -321,8 +398,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     override fun startNotified(event: ProcessEvent) {
         val handler = event.processHandler
         val port = handler.getUserData(DEBUG_PORT) ?: return
+        val timeoutSeconds = runDebugOptions?.connectionTimeoutSeconds ?: DEBUGGER_CONNECT_TIMEOUT_SECONDS
         runScope.scope.launch {
-            val connection = connectDebugger(handler, port) ?: return@launch
+            val connection = connectDebugger(handler, port, timeoutSeconds * MILLIS_PER_SECOND) ?: return@launch
             val launcher = DebugLauncher.createLauncher(
                 debugClient,
                 IRobotCodeDebugProtocolServer::class.java,

@@ -5,6 +5,8 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import com.intellij.openapi.util.JDOMUtil
 import com.intellij.util.xmlb.XmlSerializer
+import dev.robotcode.robotcode4ij.execution.RobotOpenOutput
+import dev.robotcode.robotcode4ij.execution.RobotOpenOutputTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -240,6 +242,45 @@ class RobotCodeServerSettingsTest {
         assertEquals(state, reloaded)
         assertEquals(listOf("ZED", "ALPHA"), reloaded.robotEnv.keys.toList())
         assertEquals(listOf("SERVER", "ACCOUNT"), reloaded.robotVariables.keys.toList())
+    }
+
+    // every value of the Run and Debug pages differs from its default
+    private fun stateWithAllRunAndDebugValues() = RobotCodeProjectConfiguration.ProjectState().apply {
+        debugLaunchWrapper = "xvfb-run -a"
+        debugOutputMessages = true
+        debugOutputLog = false
+        debugOutputTimestamps = true
+        runOpenOutputAfterRun = RobotOpenOutput.REPORT
+        runOpenOutputTarget = RobotOpenOutputTarget.BROWSER
+        runOpenOutputBrowser = "98ca6bdf-8d26-46d9-a5c7-41b1b6c44eb5"
+    }
+
+    @Test
+    fun runAndDebugDefaultsAreThoseOfVSCode() {
+        val state = RobotCodeProjectConfiguration.ProjectState()
+
+        assertTrue(state.debugLaunchWrapper.isNullOrEmpty())
+        assertFalse(state.debugOutputMessages)
+        assertTrue(state.debugOutputLog)
+        assertFalse(state.debugOutputTimestamps)
+        assertEquals(RobotOpenOutput.NONE, state.runOpenOutputAfterRun)
+        assertEquals(RobotOpenOutputTarget.BUILT_IN_PREVIEW, state.runOpenOutputTarget)
+        assertTrue(state.runOpenOutputBrowser.isNullOrEmpty())
+    }
+
+    @Test
+    fun runAndDebugValuesSurviveASaveAndReload() {
+        val state = stateWithAllRunAndDebugValues()
+
+        assertEquals(state, saveAndReload(state))
+    }
+
+    @Test
+    fun runAndDebugValuesAreNotSentToTheLanguageServer() {
+        assertEquals(
+            RobotCodeServerSettingsMapper.toJsonTree(RobotCodeProjectConfiguration.ProjectState()),
+            RobotCodeServerSettingsMapper.toJsonTree(stateWithAllRunAndDebugValues())
+        )
     }
 
     @Test

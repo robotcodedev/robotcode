@@ -183,7 +183,7 @@ class RobotCodeRunConfigurationEditor(configuration: RobotCodeRunConfiguration) 
         target.setValidation { configuration -> targetPanel.validate(configuration.options) }
         addToFragmentsBeforeEditors(fragments, target)
         // in this order after the target; inserting each before PyCharm's editors would reverse them
-        val options = robotOptionFragments(runConfiguration.project, hasModule, workingDirectory)
+        val options = robotOptionFragments(runConfiguration.project, hasModule, workingDirectory) + runDebugFragments()
         fragments.addAll(fragments.indexOf(target) + 1, options)
     }
 }

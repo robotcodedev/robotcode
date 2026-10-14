@@ -57,6 +57,42 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
         }
     }
 
+    private fun RobotCodeRunConfigurationOptions.runDebugOptions() = listOf(
+        wrapper, wrapperCommand, robotCodeArguments, outputMessages, outputLog, outputTimestamps, openOutputAfterRun,
+        stopOnEntry, connectionTimeout, debuggerArguments
+    )
+
+    fun testNewConfigurationsLeaveTheRunAndDebugOptionsToTheProject() {
+        val options = newConfiguration().options
+
+        assertEquals(
+            listOf(
+                RobotRunWrapper.INHERIT, null, null, RobotRunSwitch.INHERIT, RobotRunSwitch.INHERIT,
+                RobotRunSwitch.INHERIT, RobotRunOpenOutput.INHERIT, false, 0, null
+            ),
+            options.runDebugOptions()
+        )
+    }
+
+    fun testRunAndDebugOptionsSurviveWritingAndCloning() {
+        val configuration = newConfiguration().apply {
+            options.wrapper = RobotRunWrapper.CUSTOM
+            options.wrapperCommand = "xvfb-run -a \"C:\\Program Files\\wrap.cmd\""
+            options.robotCodeArguments = "--verbose"
+            options.outputMessages = RobotRunSwitch.ON
+            options.outputLog = RobotRunSwitch.OFF
+            options.outputTimestamps = RobotRunSwitch.ON
+            options.openOutputAfterRun = RobotRunOpenOutput.LOG
+            options.stopOnEntry = true
+            options.connectionTimeout = 30
+            options.debuggerArguments = "--group-output"
+        }
+
+        for (copy in listOf(roundTrip(configuration), configuration.clone() as RobotCodeRunConfiguration)) {
+            assertEquals(configuration.options.runDebugOptions(), copy.options.runDebugOptions())
+        }
+    }
+
     private fun RobotCodeRunConfigurationOptions.robotOptions() = listOf(
         robotArguments, variables, variableFiles, pythonPath, languages, includeTags, excludeTags, outputDir, mode,
         dryRun

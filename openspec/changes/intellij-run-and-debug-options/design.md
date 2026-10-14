@@ -19,7 +19,9 @@ See proposal.md for the motivation.
 - `robotcode debug` (`debugger/cli.py`): `--stop-on-entry` (pauses at the start of the top-level suite with reason `entry`, only in debug mode, `debugger.py`), `--wait-for-client-timeout` (default 15), `--output-messages` (default off; category `messages`), `--output-log` (default on), `--output-timestamps` (default off).
 - `robotcode` (`cli/__init__.py`): `--wrapper` takes one string that `robotcode` splits with `shlex.split` (POSIX rules) and that overrides the profile's wrapper; `--no-wrapper` disables any wrapper.
 - VS Code: the settings `robotcode.debug.launchWrapper` (`[]`), `outputMessages` (`false`), `outputLog` (`true`) and `outputTimestamps` (`false`) of its "Debug" category and `robotcode.run.openOutputAfterRun` (`none`) of its "Run" category are fallbacks for the launch attributes. The launcher (`debugger/launcher/server.py`) puts `-p`, `-dp`, `--wrapper` (an `shlex.join` of the array) and `robotCodeArgs` before `debug`, and `--no-debug`, `--tcp`, `--wait-for-client-timeout`, `--output-messages`, `--no-output-log`, `--output-timestamps`, `--stop-on-entry` and `debuggerArgs` after it. It turns a missing `outputLog` into `--no-output-log`. The launch attributes `launcherTimeout` and `debuggerTimeout` default to 10 seconds.
-- `BrowserUtil.browse(Path)` is unannotated in 2026.1; `browse(File)` is `@ApiStatus.Obsolete`.
+- `BrowserUtil.browse(Path)` turns the file into a `file://` URL. With the IDE's default browser setting "System default", the platform hands it to the desktop (on Linux the JetBrains Runtime calls `gtk_show_uri`), which picks the program for the file; on a Wayland desktop without a full desktop environment (niri) that was the file manager (user report of 2026-10-14). With a configured browser path, the platform starts that browser.
+- The "Open In | Browser" menu of HTML files: "Built-in Preview" opens a `WebPreviewVirtualFile(file, url)`, in the right split when it is not open yet and in its tab otherwise (two of them are equal when their original file is); "Default" calls `BrowserLauncher.browse(url, browser, project)` with the browser of the default browser policy, none for the system default; each active browser of `WebBrowserManager` calls it with that browser. The URLs come from `WebBrowserService.getUrlsToOpen`, which returns those of the first URL provider that handles the file; the built-in web server's provider is registered last, after those of webDeployment (files published to a deployment server, remotely edited files) and Django. With several URLs the menu lets the user pick one with `chooseUrl`, which is internal Kotlin API. `getBuiltInServerUrls(file, project, …)` maps any file of the project to `http://localhost:<port>/<project>/<path>` with the access token `_ijt`, also a `log.html` above the code-insight size limit; the server answers a request without the token with 404, unless it carries the cookie that the server sets on a request with the token. None of these is annotated as internal; the internal `WebPreviewFileEditor` is not used directly.
+- VS Code: `robotcode.run.openOutputTarget` (`simpleBrowser`, the default; `externalHttp`; `externalFile`) is a setting, not a launch attribute. `simpleBrowser` and `externalHttp` use the language server's documentation server (`robot/documentationServer/convertUri`).
 
 ## Goals / Non-Goals
 
@@ -27,10 +29,10 @@ See proposal.md for the motivation.
 
 - VS Code's run and debug settings as project defaults, with an override in every run configuration, resolved at the start of each run. Options that VS Code has only per launch configuration stay per run configuration.
 - The same `robotcode` options as VS Code's launcher, except for the trap that turns a missing value into `--no-output-log`.
+- Report and log open where the user picks, with the choices of the IDE's "Open In | Browser" menu, and in a browser rather than whatever program the desktop picks for HTML files.
 
 **Non-Goals:**
 
-- A view of the report inside the IDE.
 - `groupOutput`, console kinds, terminal emulation, and debugging Python code in the same run.
 - Personal storage of these defaults.
 - A separate tab for Robot Framework's log messages.
@@ -39,9 +41,9 @@ See proposal.md for the motivation.
 
 ### Project defaults on a Run and a Debug page
 
-The pages hold only what VS Code offers as settings, split and labelled like VS Code's settings categories, as the intellij-settings requirement "Labels of the settings pages follow VS Code" asks: the "Debug" page holds "Launch wrapper", "Output messages", "Output log" and "Output timestamps", the "Run" page holds "Open output after run". `robotcode` arguments for runs, stop on entry and the connection timeout are launch attributes in VS Code (`robotCodeArgs`, `stopOnEntry`, `debuggerTimeout`) and get no project default here either: stop on entry as a project default would pause every Debug start, and the others belong to a particular configuration.
+The pages hold only what VS Code offers as settings, split and labelled like VS Code's settings categories, as the intellij-settings requirement "Labels of the settings pages follow VS Code" asks: the "Debug" page holds "Launch wrapper", "Output messages", "Output log" and "Output timestamps", the "Run" page holds "Open output after run" and "Open output target". `robotcode` arguments for runs, stop on entry and the connection timeout are launch attributes in VS Code (`robotCodeArgs`, `stopOnEntry`, `debuggerTimeout`) and get no project default here either: stop on entry as a project default would pause every Debug start, and the others belong to a particular configuration.
 
-Two child pages with the ids `dev.robotcode.robotcode4ij.projectsettings.run` and `dev.robotcode.robotcode4ij.projectsettings.debug`, built with the Kotlin UI DSL like the Editing page and with the Editing page's `nonDefaultProject` value, hold the defaults. The settings tree sorts the sub-pages by name, so their position follows from their names. Their values extend `RobotCodeProjectConfiguration`. Applying them restarts nothing, because the values are read at the start of each run, and the settings tree for the language server leaves them out like the other debugger and run settings.
+Two child pages with the ids `dev.robotcode.robotcode4ij.projectsettings.run` and `dev.robotcode.robotcode4ij.projectsettings.debug`, built with the Kotlin UI DSL like the Editing page and with the Editing page's `nonDefaultProject` value, hold the defaults; like the other pages with shared settings, they are offered under Settings for New Projects. The settings tree sorts the sub-pages by name, so their position follows from their names. Their values extend `RobotCodeProjectConfiguration`. Applying them restarts nothing, because the values are read at the start of each run, and the settings tree for the language server leaves them out like the other debugger and run settings.
 
 Alternatives:
 - One "Run & Debug" page: VS Code has no category of that name, and users who know VS Code look for its "Run" and "Debug" settings (user decision of 2026-10-14).
@@ -73,11 +75,20 @@ The configuration's connection timeout, or 15 seconds when it is empty, is the t
 
 Alternative: two values like VS Code's `launcherTimeout` and `debuggerTimeout`. `launcherTimeout` belongs to VS Code's launcher process, which the plugin does not use.
 
-### Report and log open in the external browser
+### Report and log open in the built-in preview or a browser
 
-The run state subscribes to `onRobotExited` and keeps the reported paths. When the run ends and the effective value is "Report" or "Log", and the file exists, the plugin opens it with `BrowserUtil.browse(Path)`, VS Code's `externalFile` behaviour. "Open Report" and "Open Log" are added to the actions of the run tab and, through the debug process's additional actions, to the debug tab. They are enabled once the reported file exists.
+The run state subscribes to `onRobotExited` and keeps the reported paths. When the run ends and the effective value is "Report" or "Log", and the file exists, the plugin opens it in the target of "Open output target". "Open Report" and "Open Log" are added to the actions of the run tab and, through the debug process's additional actions, to the debug tab. They are enabled once the reported file exists and open it in the same target.
 
-Alternative: `HTMLEditorProvider.openEditor` for a view inside the IDE. It is public but lives in an implementation package and needs JCEF; VS Code's in-editor view relies on the language server's documentation server instead. It stays out of this change.
+"Open output target" on the Run page offers the entries of the "Open In | Browser" menu (user decision of 2026-10-14): "Built-in preview", the default, like VS Code's `simpleBrowser`; "Default browser"; and each active browser of Settings | Tools | Web Browsers and Preview, stored by its id. It is a project setting only, since VS Code's is no launch attribute either.
+
+The plugin opens the file the way that menu does, with the file's URL from the built-in web server (`getBuiltInServerUrls`): the built-in preview as a `WebPreviewVirtualFile` opened through an `OpenFileDescriptor`, which shows its tab again when it is open (the menu's right split comes from `OpenInRightSplitAction`, which is internal API, and `FileEditorManager.openFile` is deprecated in 2026.3), and a browser with `BrowserLauncher.browse(url, browser, project)`, without a browser for "Default browser". An http URL reaches a browser on every desktop. The plugin asks the built-in web server directly (`getBuiltInServerUrls`) instead of `WebBrowserService.getUrlsToOpen`: Robot Framework writes report and log locally, and only the built-in web server serves them, while the menu takes the URLs of the first provider that handles the file, such as webDeployment's for a file published to a deployment server.
+
+Without JCEF, and when the stored browser is no longer active, the default browser takes over. A file outside the project, which the built-in web server does not serve, opens with its own `file://` URL.
+
+Alternatives:
+- VS Code's fixed values `simpleBrowser`, `externalHttp` and `externalFile`: they offer no choice of a browser (user decision of 2026-10-14).
+- The language server's documentation server, which VS Code uses: it needs a running language server and a request to it, while the IDE's web server and preview are always there.
+- `BrowserUtil.browse(Path)`, the first implementation in this change: on a desktop that opens HTML files in the file manager, the report never reaches a browser.
 
 ### The Robot Log tab
 
@@ -86,7 +97,8 @@ The "Robot Log" tab for Robot Framework's log messages is planned separately. If
 ## Risks / Trade-offs
 
 - [Two kinds of extra `robotcode` arguments: those of a run configuration, and those for the language server and helper processes on the settings pages] → The configuration field's comment says that its arguments reach only that configuration's runs.
-- [Browser calls cannot be seen in the harness] → The harness points the IDE's browser setting to a script that records its arguments.
+- [Browser calls cannot be seen in the headless harness] → The harness replaces the `BrowserLauncher` service with one that records what it is asked to open, and reads the open editors for the built-in preview.
+- [A relative link from the report to the log loses the access token of the report's URL] → The harness checks that such a link loads the log in the preview.
 
 ## Migration Plan
 

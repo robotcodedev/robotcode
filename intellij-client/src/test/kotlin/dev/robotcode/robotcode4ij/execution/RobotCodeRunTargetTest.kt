@@ -100,15 +100,24 @@ class RobotCodeRunTargetTest {
 
         assertEquals(
             listOf("--no-pager", "-dp", ".", "debug", "--no-debug", "--tcp", "6613", "--") + selection,
-            runArguments(listOf(), paths = listOf(), debug = false, port = 6613, robotArguments = selection)
+            runArguments(
+                listOf(), paths = listOf(), debug = false, port = 6613, options = defaultRunDebugOptions,
+                robotArguments = selection
+            )
         )
         assertEquals(
             listOf("--no-pager", "-p", "dev", "-dp", ".", "debug", "--tcp", "6612", "--", "tests"),
-            runArguments(listOf("dev"), paths = listOf(), debug = true, port = 6612, robotArguments = listOf("tests"))
+            runArguments(
+                listOf("dev"), paths = listOf(), debug = true, port = 6612, options = defaultRunDebugOptions,
+                robotArguments = listOf("tests")
+            )
         )
         assertEquals(
             listOf("--no-pager", "-p", "dev", "-p", "ci", "-dp", ".", "debug", "--no-debug", "--tcp", "6612"),
-            runArguments(listOf("dev", "ci"), paths = listOf(), debug = false, port = 6612, robotArguments = listOf())
+            runArguments(
+                listOf("dev", "ci"), paths = listOf(), debug = false, port = 6612, options = defaultRunDebugOptions,
+                robotArguments = listOf()
+            )
         )
     }
 
@@ -137,7 +146,10 @@ class RobotCodeRunTargetTest {
             val arguments = robotFrameworkArguments(options, model, supportsParseInclude = true)
             assertEquals(
                 name, head + expected,
-                runArguments(listOf(), paths = listOf(), debug = false, port = 6612, robotArguments = arguments)
+                runArguments(
+                    listOf(), paths = listOf(), debug = false, port = 6612, options = defaultRunDebugOptions,
+                    robotArguments = arguments
+                )
             )
         }
     }
@@ -166,7 +178,10 @@ class RobotCodeRunTargetTest {
             val arguments = robotFrameworkArguments(merged, model, supportsParseInclude = true)
             assertEquals(
                 name, head + expected,
-                runArguments(listOf(), page.robotPaths, debug = false, port = 6612, robotArguments = arguments)
+                runArguments(
+                    listOf(), page.robotPaths, debug = false, port = 6612, options = defaultRunDebugOptions,
+                    robotArguments = arguments
+                )
             )
         }
     }
@@ -196,7 +211,10 @@ class RobotCodeRunTargetTest {
         val profiles = resolveRunProfiles(RobotRunProfilesKind.CUSTOM, listOf("ci"), selection)
         assertEquals(
             listOf("--no-pager", "-p", "ci", "-dp", ".", "debug", "--no-debug", "--tcp", "6612"),
-            runArguments(profiles, paths = listOf(), debug = false, port = 6612, robotArguments = listOf())
+            runArguments(
+                profiles, paths = listOf(), debug = false, port = 6612, options = defaultRunDebugOptions,
+                robotArguments = listOf()
+            )
         )
     }
 
