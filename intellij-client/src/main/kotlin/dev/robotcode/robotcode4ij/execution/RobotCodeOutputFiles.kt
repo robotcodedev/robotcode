@@ -2,14 +2,15 @@ package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.icons.AllIcons
 import com.intellij.ide.browsers.BrowserLauncher
+import com.intellij.ide.browsers.WebBrowser
 import com.intellij.ide.browsers.WebBrowserManager
-import com.intellij.ide.browsers.actions.WebPreviewVirtualFile
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.runReadActionBlocking
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -61,34 +62,57 @@ internal fun effectiveOutputTarget(
 /** Opens the reported file of [kind] in the target of the "Run" page, when it exists. */
 internal fun openReportedOutputFile(project: Project, kind: RobotOpenOutput, exited: RobotExitedEventArguments?) {
     val file = reportedOutputFile(kind, exited) { Files.isRegularFile(it) } ?: return
-    // finding the file refreshes the file system, which may take a while
+    // finding the file for a browser refreshes the file system, which may take a while
     ApplicationManager.getApplication().executeOnPooledThread { openOutputFile(project, file) }
 }
 
-/**
- * Opens [path] like the "Open In | Browser" menu of HTML files, with its URL on the IDE's built-in web server, which
- * serves the files of the project, or with its own URL for any other file: in the built-in preview, or with the browser
- * launcher, which takes the default browser when it gets none.
- */
+/** Opens [path] in the target of the "Run" page: in its preview tab, or in a browser. */
 private fun openOutputFile(project: Project, path: Path) {
-    val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path) ?: return
     val settings = RobotCodeProjectConfiguration.getInstance(project)
-    val browsers = WebBrowserManager.getInstance()
-    val browser = browsers.activeBrowsers.firstOrNull { it.id.toString() == settings.runOpenOutputBrowser }
+    val browser = WebBrowserManager.getInstance().activeBrowsers.firstOrNull {
+        it.id.toString() == settings.runOpenOutputBrowser
+    }
     val target = effectiveOutputTarget(settings.runOpenOutputTarget, JBCefApp.isSupported(), browser != null)
-    // the preview reloads as the platform's own preview does, a browser as the web server's settings say
-    val reloadMode = if (target == RobotOpenOutputTarget.BUILT_IN_PREVIEW) browsers.webPreviewReloadMode else null
-    val url = runReadActionBlocking { getBuiltInServerUrls(file, project, null, true, reloadMode).firstOrNull() }
+    if (target == RobotOpenOutputTarget.BUILT_IN_PREVIEW) {
+        ApplicationManager.getApplication().invokeLater(
+            { showPreview(project, path) }, ModalityState.nonModal(), project.disposed
+        )
+        return
+    }
+    openInBrowser(project, path, browser.takeIf { target == RobotOpenOutputTarget.BROWSER })
+}
+
+/**
+ * Opens [path] with the browser launcher, in [browser] or, without one, in the default browser; called off the user
+ * interface thread, since finding the file refreshes the file system. The browser gets the file's URL on the IDE's
+ * built-in web server, which serves the files of the project, like the "Open In | Browser" menu of HTML files, or its
+ * own URL for any other file.
+ */
+internal fun openInBrowser(project: Project, path: Path, browser: WebBrowser?) {
+    val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path) ?: return
+    val url = runReadActionBlocking { getBuiltInServerUrls(file, project, null).firstOrNull() }
         ?: Urls.newFromVirtualFile(file)
-    ApplicationManager.getApplication().invokeLater({
-        if (target == RobotOpenOutputTarget.BUILT_IN_PREVIEW) {
-            // a preview equals the open one of the same file, so the next run shows that tab again
-            OpenFileDescriptor(project, WebPreviewVirtualFile(file, url)).navigate(true)
-        } else {
-            val chosen = browser.takeIf { target == RobotOpenOutputTarget.BROWSER }
-            BrowserLauncher.instance.browse(url.toExternalForm(), chosen, project)
-        }
-    }, ModalityState.nonModal(), project.disposed)
+    ApplicationManager.getApplication().invokeLater(
+        { BrowserLauncher.instance.browse(url.toExternalForm(), browser, project) }, ModalityState.nonModal(),
+        project.disposed
+    )
+}
+
+/**
+ * Shows [path] in its preview tab: an open tab loads the file again and comes to the front in the editor split where it
+ * is; otherwise the tab opens.
+ */
+private fun showPreview(project: Project, path: Path) {
+    val preview = RobotCodeOutputPreviewFile(path)
+    val editors = FileEditorManagerEx.getInstanceEx(project)
+    val open = editors.getEditorList(preview).filterIsInstance<RobotCodeOutputPreviewEditor>()
+    if (open.isEmpty()) {
+        OpenFileDescriptor(project, preview).navigate(true)
+        return
+    }
+    open.forEach { it.reload() }
+    // navigating would make the tab's split the one in which files open, and take the focus
+    editors.windows.filter { it.isFileOpen(preview) }.forEach { it.setSelectedComposite(preview, false) }
 }
 
 /**

@@ -27,6 +27,8 @@
 				  fieldName="INSTANCE"
 				  language="robotframework" extensions="resource"/>
 
+		<fileEditorProvider implementation="dev.robotcode.robotcode4ij.execution.RobotCodeOutputPreviewEditorProvider"/>
+
 		<lang.parserDefinition language="robotframework"
 							   implementationClass="dev.robotcode.robotcode4ij.psi.RobotCodeParserDefinition"/>
 
