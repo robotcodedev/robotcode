@@ -342,6 +342,8 @@ def summary(
     robotcode --format json results summary
     ```
     """
+    # before the result file is read, so an invalid pattern fails at once
+    matcher = make_search_matcher(search_substring, search_regex)
     profile, root_folder = _resolve_profile(app)
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
@@ -362,7 +364,6 @@ def summary(
             or search_substring
             or search_regex
         )
-        matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,
             include_tags,
@@ -522,13 +523,14 @@ def show(
     robotcode results show --search "AssertionError"
     ```
     """
+    # before the result file is read, so an invalid pattern fails at once
+    matcher = make_search_matcher(search_substring, search_regex)
     profile, root_folder = _resolve_profile(app)
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
         status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
-        matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,
             include_tags,
@@ -755,6 +757,8 @@ def log(
     robotcode results log --execution-messages
     ```
     """
+    # before the result file is read, so an invalid pattern fails at once
+    matcher = make_search_matcher(search_substring, search_regex)
     profile, root_folder = _resolve_profile(app)
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
@@ -763,7 +767,6 @@ def log(
         execution_messages = _execution_messages(execution) if show_execution_messages else []
 
         status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
-        matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,
             include_tags,
@@ -923,13 +926,14 @@ def stats(
     robotcode --format json results stats --by tag
     ```
     """
+    # before the result file is read, so an invalid pattern fails at once
+    matcher = make_search_matcher(search_substring, search_regex)
     profile, root_folder = _resolve_profile(app)
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
         status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
-        matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,
             include_tags,
@@ -1109,6 +1113,8 @@ def diff(
     robotcode --format json results diff baseline.xml
     ```
     """
+    # before the result file is read, so an invalid pattern fails at once
+    matcher = make_search_matcher(search_substring, search_regex)
     profile, root_folder = _resolve_profile(app)
     with app.chdir(root_folder):
         baseline_path = baseline.resolve()
@@ -1120,7 +1126,6 @@ def diff(
         baseline_exec = _load_execution_result(baseline_path)
         current_exec = _load_execution_result(current_path)
 
-        matcher = make_search_matcher(search_substring, search_regex)
         for suite in (baseline_exec.suite, current_exec.suite):
             _apply_tree_filters(
                 suite,

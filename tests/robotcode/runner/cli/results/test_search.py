@@ -166,6 +166,19 @@ def test_search_invalid_regex_usage_error(subcommand: str, robotcode_cli: CliRun
 
 
 @pytest.mark.parametrize("subcommand", ["summary", "show", "log", "stats"])
+def test_search_invalid_regex_fails_before_the_result_file_is_read(
+    subcommand: str, robotcode_cli: CliRunner, tmp_path: Path
+) -> None:
+    result = robotcode_cli(
+        ["results", subcommand, "--search-regex", "[unclosed", "--output", str(tmp_path / "missing.xml")],
+        expect_ok=False,
+    )
+    assert result.returncode == 2
+    assert "invalid pattern" in result.stderr
+    assert "not found" not in result.stderr
+
+
+@pytest.mark.parametrize("subcommand", ["summary", "show", "log", "stats"])
 def test_search_and_search_regex_are_mutually_exclusive(
     subcommand: str, robotcode_cli: CliRunner, basic_output: Path
 ) -> None:
