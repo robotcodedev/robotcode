@@ -1,59 +1,99 @@
 # Spec Delta
 
-## Purpose
-
-Defines how the IntelliJ plugin turns the events of a Robot Framework run into the results shown in the run window: the results tree, test statuses and failure details, the output of each test, and the Robot Framework log messages of the run.
-
 ## ADDED Requirements
 
-### Requirement: Robot Framework's log messages appear in a "Robot Log" tab
+### Requirement: The results tree shows the debugger's log messages per test
 
-The run window of every Robot Framework run SHALL have a "Robot Log" tab next to its console. The tab SHALL list the log messages that the RobotCode debugger sends for the run, in the order they were logged. Each message SHALL show its level unless the level is `INFO`, and SHALL be colored by its level. A message for which the debugger reports the file and line it was logged from SHALL end with a link that opens the file at that line.
+Selecting a test in the results tree SHALL show the log messages that the RobotCode debugger sent while the test ran, in their order, each with its level unless the level is `INFO`, colored by level, and ending with a link to the file and line it was logged from where the debugger reports one; the test's failure details SHALL follow. Selecting a suite or the run SHALL show the messages of everything below it. The results tree SHALL NOT show the output of the Robot Framework process.
 
-#### Scenario: A message of `Log`
+#### Scenario: A message of `Log` under its test
 
-- **WHEN** a test that calls `Log    should not in console` is run
-- **THEN** the "Robot Log" tab shows `should not in console`
+- **WHEN** a test that calls `Log    should not in console` and `Log To Console    show in console` is run, and the user selects the test
+- **THEN** the console shows `should not in console` with a link to the line of the `Log` call, and does not show `show in console`
 
-#### Scenario: A warning
+#### Scenario: Robot Framework's console switched off
 
-- **WHEN** a test logs `a warning` with level `WARN`
-- **THEN** the "Robot Log" tab shows `[ WARN ] a warning` in the color of warnings
+- **WHEN** `robot.toml` sets `console = "none"`, a test that calls `Log    hello` is run, and the user selects the test
+- **THEN** the console shows `hello`
+
+#### Scenario: Warnings and errors under their test
+
+- **WHEN** the test `First` logs `a warning` with level `WARN` and `an error` with level `ERROR`, the test `Second` logs nothing, and the user selects `First` after the run
+- **THEN** the console shows `[ WARN ] a warning` in the color of warnings and `[ ERROR ] an error` in the color of errors, and selecting `Second` shows neither
+
+#### Scenario: Trace level
+
+- **WHEN** `robot.toml` sets `log-level = "TRACE"`, a test is run, and the user selects the test
+- **THEN** the arguments and return values that Robot Framework logs at `TRACE` level appear under the test, and not in the "Terminal" tab
+
+#### Scenario: Output log switched off
+
+- **WHEN** a run configuration switches "Output log" off, a test that calls `Log    hello` is run, and the user selects the test
+- **THEN** the console does not show `hello`
 
 #### Scenario: Opening the location of a message
 
-- **WHEN** the user clicks the link at the end of `should not in console` in the "Robot Log" tab
+- **WHEN** the user clicks the link at the end of `should not in console`
 - **THEN** the editor opens the test's file at the line of that `Log` call
 
-#### Scenario: Order across tests
+### Requirement: Process output in a "Terminal" tab
 
-- **WHEN** the tests `First` and `Second` each log a message and are run in that order
-- **THEN** the "Robot Log" tab lists the message of `First` before the message of `Second`
-
-### Requirement: The console shows what a terminal run shows
-
-The run console SHALL show the output of the Robot Framework process as a terminal run of the same suite shows it. It SHALL NOT show the log messages that the "Robot Log" tab lists, neither for the whole run nor in the output of a test.
+The run window of every Robot Framework run SHALL have a "Terminal" tab next to its results. The tab SHALL show the output of the Robot Framework process in the order the process wrote it, as a terminal run of the same suite shows it, whatever is selected in the results tree. It SHALL NOT show the log messages that the results tree shows.
 
 #### Scenario: `Log` and `Log To Console`
 
-- **WHEN** a test calls `Log    should not in console` and `Log To Console    show in console` and is run
-- **THEN** the console shows `show in console` and does not show `should not in console`, also when the test is selected in the results tree
+- **WHEN** a test that calls `Log    should not in console` and `Log To Console    show in console` is run
+- **THEN** the "Terminal" tab shows `show in console` and does not show `should not in console`
+
+#### Scenario: Order of the whole run
+
+- **WHEN** a suite file with the tests `First` and `Second`, where each test calls `Log To Console` with `first console` and `second console`, is run
+- **THEN** the "Terminal" tab shows `first console` before the line of the test `Second` and before `second console`, in the order a terminal run of the same suite shows
 
 #### Scenario: Warnings in both places
 
 - **WHEN** a test logs `a warning` with level `WARN` and is run
-- **THEN** the console shows the line `[ WARN ] a warning` that Robot Framework writes to its console, and the "Robot Log" tab lists the message as well
+- **THEN** the "Terminal" tab shows the line `[ WARN ] a warning` that Robot Framework writes to its console, and selecting the test in the results tree shows the message as well
 
-#### Scenario: Trace level
+#### Scenario: Repeated runs
 
-- **WHEN** `robot.toml` sets `log-level = "TRACE"` and a test is run
-- **THEN** the arguments and return values that Robot Framework logs at `TRACE` level appear in the "Robot Log" tab and not in the console
+- **WHEN** the same suite is run ten times in a row
+- **THEN** every run shows the same order in the "Terminal" tab and the same messages under each test
 
-### Requirement: Debug sessions show the "Robot Log" tab
+### Requirement: Debug sessions show the "Terminal" tab
 
-A Debug session of a Robot Framework run configuration SHALL show the same "Robot Log" tab next to its Console and Debugger tabs, with the log messages of the debugged run. Its Console tab SHALL follow the same rule as the console of a run.
+A Debug session of a Robot Framework run configuration SHALL show the same "Terminal" tab next to its Console and Debugger tabs, and its Console tab SHALL show the results tree with the log messages per test, as a run does.
 
 #### Scenario: Log message while debugging
 
-- **WHEN** a test that calls `Log    should not in console` is debugged and stops at a breakpoint on a later line of the test
-- **THEN** the "Robot Log" tab of the debug session shows `should not in console`, and its Console tab does not
+- **WHEN** a test that calls `Log    should not in console` and `Log To Console    show in console` is debugged and stops at a breakpoint on a later line of the test
+- **THEN** selecting the test in the Console tab shows `should not in console`, and the "Terminal" tab shows `show in console`
+
+## MODIFIED Requirements
+
+### Requirement: Robot Framework's output files are links in the console
+
+In the "Terminal" tab, each line in which Robot Framework names an output file, `Output:`, `Log:`, `Report:`, `XUnit:` or `Debug:` followed by the file's path, SHALL be a link. An HTML file SHALL open in the target of "Open output target", as with Open Report and Open Log, any other file in the editor. A line that names no file, such as `Output:  NONE`, SHALL stay plain text.
+
+#### Scenario: Opening the report
+
+- **WHEN** a run has ended, "Open output target" is "Built-in preview", and the user clicks the path in the `Report:` line of the "Terminal" tab
+- **THEN** `report.html` opens in the built-in preview
+
+#### Scenario: Opening the output file
+
+- **WHEN** the user clicks the path in the `Output:` line of the "Terminal" tab
+- **THEN** `output.xml` opens in the editor
+
+#### Scenario: No output file
+
+- **WHEN** `robot.toml` sets `output = "NONE"` and a run has ended
+- **THEN** the `Output:  NONE` line of the "Terminal" tab is not a link
+
+## REMOVED Requirements
+
+### Requirement: Console output in the order it was written, per test
+
+**Reason**: The process output moves to the "Terminal" tab, and the results tree shows the debugger's log messages per test instead, so that what a test shows no longer depends on Robot Framework's console options.
+
+**Migration**: The "Terminal" tab keeps the order of the process output (requirement "Process output in a "Terminal" tab"); selecting a test shows its log messages (requirement "The results tree shows the debugger's log messages per test").
