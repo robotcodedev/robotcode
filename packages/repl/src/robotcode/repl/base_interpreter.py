@@ -61,17 +61,17 @@ def _register_signal_handler(self: Any, exsignum: Any) -> None:
     pass
 
 
-# Robot Framework's own handling, kept for SIGTERM outside a REPL session (a robot-debug run).
+# Robot Framework's own handling, kept for the signals that end a run outside a REPL session (a robot-debug run).
 _robot_monitor_call = _StopSignalMonitor.__call__
 _robot_stop_execution_gracefully = _StopSignalMonitor._stop_execution_gracefully
 
-# The interpreter of this process; the patched monitor hands SIGTERM to it.
+# The interpreter of this process; the patched monitor hands the signals to it.
 _signal_interpreter: Optional["BaseInterpreter"] = None
-# SIGTERMs received so far. Counted here: Robot Framework resets its count after every
-# REPL statement.
-_sigterm_count = 0
-# Set by a SIGTERM outside a REPL session: stopping then ends the run as Robot Framework does.
-_sigterm_ends_run = False
+# Signals received so far that end the session or the run: SIGTERM, and SIGINT in a run without the
+# debugger. Counted here: Robot Framework resets its count after every REPL statement.
+_ending_signal_count = 0
+# Set by such a signal outside a REPL session: stopping then ends the run as Robot Framework does.
+_signal_ends_run = False
 
 
 def _stop_signal_monitor_call(self: Any, signum: Any, frame: Any) -> None:
@@ -85,20 +85,30 @@ def _stop_signal_monitor_call(self: Any, signum: Any, frame: Any) -> None:
         # With the debugger attached, SIGINT first pauses at the next keyword, as pdb does.
         if _signal_interpreter._pause_on_interrupt():
             return
+        # Without the debugger, SIGINT ends a robot-debug run as it ends a Robot Framework run.
+        if _signal_interpreter._interrupt_ends_run():
+            _count_ending_signal()
+            _end_run(self, signum, frame)
+            return
     if self._running_keyword:
         # SIGINT interrupts the running keyword; the session goes on.
         self._stop_execution_gracefully()
 
 
-def _on_sigterm(monitor: Any, signum: Any, frame: Any) -> None:
-    global _sigterm_count, _sigterm_ends_run
-    _sigterm_count += 1
-    if _sigterm_count > 1:
+def _count_ending_signal() -> None:
+    """Count a signal that ends the session or the run; the second one ends the process at once."""
+    global _ending_signal_count
+    _ending_signal_count += 1
+    if _ending_signal_count > 1:
         try:
             if sys.__stderr__ is not None:
                 sys.__stderr__.write("Execution forcefully stopped.\n")
         finally:
             os._exit(253)
+
+
+def _on_sigterm(monitor: Any, signum: Any, frame: Any) -> None:
+    _count_ending_signal()
 
     interpreter = _signal_interpreter
     if interpreter is not None and interpreter._in_repl_run:
@@ -109,9 +119,15 @@ def _on_sigterm(monitor: Any, signum: Any, frame: Any) -> None:
         interpreter._terminate_session(monitor._running_keyword)
         return
 
+    _end_run(monitor, signum, frame)
+
+
+def _end_run(monitor: Any, signum: Any, frame: Any) -> None:
     # A run, such as robot-debug: Robot Framework ends it, at once while a keyword runs
     # (this raises), otherwise at the next keyword; the interpreter only stops waiting.
-    _sigterm_ends_run = True
+    global _signal_ends_run
+    _signal_ends_run = True
+    interpreter = _signal_interpreter
     if interpreter is not None:
         interpreter._termination_requested = True
     try:
@@ -122,9 +138,9 @@ def _on_sigterm(monitor: Any, signum: Any, frame: Any) -> None:
 
 
 def _stop_signal_monitor_stop_execution_gracefully(self: Any) -> None:
-    if _sigterm_ends_run:
+    if _signal_ends_run:
         _robot_stop_execution_gracefully(self)
-    elif _sigterm_count:
+    elif _ending_signal_count:
         raise ExecutionInterrupted("Execution terminated by signal")
     else:
         raise ExecutionInterrupted("Execution interrupted")
@@ -418,7 +434,7 @@ class BaseInterpreter(abc.ABC):
         self.failures: List[ExecutionFailed] = []
         # The code given to `.exit`/`.quit`, None without one.
         self.exit_code: Optional[int] = None
-        # Set by SIGTERM: the session or the run ends.
+        # Set by a signal that ends the session or the run.
         self._termination_requested = False
         # Set while a statement of the input runs: SIGTERM then stops it at its next keyword.
         self._running_statement = False
@@ -536,6 +552,11 @@ class BaseInterpreter(abc.ABC):
     def _pause_on_interrupt(self) -> bool:
         """Pause at the next keyword after SIGINT instead of interrupting the keyword that runs, from the signal
         handler. Returns whether it does; only an interpreter with a debugger can pause."""
+        return False
+
+    def _interrupt_ends_run(self) -> bool:
+        """Whether SIGINT ends the run as Robot Framework ends one, from the signal handler. Only an interpreter that
+        runs a suite, not a session, can end a run this way."""
         return False
 
     def run(self) -> Any:

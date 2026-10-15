@@ -539,6 +539,15 @@ class ConsoleInterpreter(BaseInterpreter):
                 pass
         return True
 
+    def _interrupt_ends_run(self) -> bool:
+        # A robot-debug run (events forwarded outside a REPL session) without the debugger ends as a robot run
+        # does; REPL sessions, also while they start, keep their handling.
+        return (
+            self._logger.enabled
+            and not self._in_repl_run
+            and (self._controller is None or not self._controller.attached)
+        )
+
     def _report_interrupt(self, prompt: str) -> None:
         """Report Ctrl-C at a prompt as Python's REPL does. `input()` leaves the cursor after the prompt, so the
         line of a shown prompt is ended first."""

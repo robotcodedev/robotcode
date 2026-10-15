@@ -157,7 +157,7 @@ The message goes to the original standard output, `sys.__stdout__`. While a libr
 
 ### D10: Without the debugger, SIGINT ends a robot-debug run as SIGTERM does
 
-After the pause hook (D6), the patched monitor asks a second hook whether SIGINT ends the run. `BaseInterpreter` says no, so `repl-server` is unchanged. `ConsoleInterpreter` says yes when no REPL session runs (`not _in_repl_run`) and the debugger is detached or missing. After `.detach` the debugger is detached, so this applies there too.
+After the pause hook (D6), the patched monitor asks a second hook whether SIGINT ends the run. `BaseInterpreter` says no, so `repl-server` is unchanged. `ConsoleInterpreter` says yes in a robot-debug run, that is, inside `forward_events` and outside a REPL session (`not _in_repl_run`), when the debugger is detached or missing. After `.detach` the debugger is detached, so this applies there too. A REPL session keeps its handling also while it starts, before `run()` forwards the events.
 
 The monitor then takes the run branch of the SIGTERM handling (`_on_sigterm`):
 

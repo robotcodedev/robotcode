@@ -35,8 +35,8 @@ class _ExitError(Exception):
 
 @pytest.fixture(autouse=True)
 def _signal_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(base_interpreter, "_sigterm_count", 0)
-    monkeypatch.setattr(base_interpreter, "_sigterm_ends_run", False)
+    monkeypatch.setattr(base_interpreter, "_ending_signal_count", 0)
+    monkeypatch.setattr(base_interpreter, "_signal_ends_run", False)
     monkeypatch.setattr(base_interpreter, "_signal_interpreter", None)
 
     def fake_exit(code: int) -> None:
@@ -129,7 +129,9 @@ def test_second_sigint_interrupts_the_running_keyword() -> None:
     assert controller.pause_requested
 
 
-def _detached(interpreter: ConsoleInterpreter, controller: DebugController) -> None:
+def _detached_in_a_repl_statement(interpreter: ConsoleInterpreter, controller: DebugController) -> None:
+    interpreter._in_repl_run = True
+    interpreter._running_statement = True
     controller.set_attached(False)
 
 
@@ -149,7 +151,7 @@ def _before_the_session(interpreter: ConsoleInterpreter, controller: DebugContro
 @pytest.mark.parametrize(
     "situation",
     [
-        pytest.param(_detached, id="detached"),
+        pytest.param(_detached_in_a_repl_statement, id="repl-statement-detached"),
         pytest.param(_at_a_stop, id="at-a-stop"),
         pytest.param(_between_statements, id="repl-between-statements"),
         pytest.param(_before_the_session, id="events-not-forwarded"),
@@ -164,6 +166,39 @@ def test_sigint_interrupts_the_running_keyword_where_nothing_pauses(
     with pytest.raises(ExecutionInterrupted, match="Execution interrupted"):
         _monitor(running_keyword=True)(signal.SIGINT, None)
     assert not controller.pause_requested
+
+
+def test_sigint_without_the_debugger_ends_a_robot_debug_run() -> None:
+    _interpreter, controller = _debugged()
+    controller.set_attached(False)
+
+    with pytest.raises(ExecutionFailed, match="Execution terminated by signal") as error:
+        _monitor(running_keyword=True)(signal.SIGINT, None)
+    # Robot Framework's own failure, which ends the run.
+    assert error.value.exit
+
+
+def test_sigint_without_the_debugger_ends_the_run_at_the_next_keyword() -> None:
+    _interpreter, controller = _debugged()
+    controller.set_attached(False)
+    monitor = _monitor(running_keyword=False)
+
+    monitor(signal.SIGINT, None)
+
+    with pytest.raises(ExecutionFailed, match="Execution terminated by signal"):
+        monitor.start_running_keyword(in_teardown=False)
+
+
+@pytest.mark.parametrize("first", [signal.SIGINT, signal.SIGTERM], ids=["after-sigint", "after-sigterm"])
+def test_second_signal_ends_a_run_without_the_debugger_at_once(first: signal.Signals) -> None:
+    _interpreter, controller = _debugged()
+    controller.set_attached(False)
+    monitor = _monitor(running_keyword=False)
+    monitor(first, None)
+
+    with pytest.raises(_ExitError) as exited:
+        monitor(signal.SIGINT, None)
+    assert exited.value.args == (253,)
 
 
 def test_sigint_in_repl_server_interrupts_the_running_keyword() -> None:

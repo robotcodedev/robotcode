@@ -60,8 +60,8 @@ import time
 from robot.api import logger
 
 
-def nap(seconds):
-    logger.console("napping")
+def nap(seconds, label="napping"):
+    logger.console(label)
     time.sleep(float(seconds))
 """
 
@@ -82,6 +82,19 @@ Library    Napping.py
 *** Test Cases ***
 First
     Nap    30
+
+Second
+    Log To Console    second test runs
+"""
+
+_LONG_NAP_WITH_LONG_TEARDOWN = """\
+*** Settings ***
+Library    Napping.py
+
+*** Test Cases ***
+First
+    Nap    30
+    [Teardown]    Nap    30    tearing down
 
 Second
     Log To Console    second test runs
@@ -387,3 +400,56 @@ def test_sigint_during_a_repl_statement_with_the_debugger_attached_pauses(
     repl.wait_for_output("round b")
     repl.send(".exit")
     assert repl.wait() == 0, repl.errors
+
+
+def _start_robot_debug_run(tmp_path: Path, start: Callable[..., _Command], suite: str, *args: str) -> _Command:
+    (tmp_path / "Napping.py").write_text(_NAPPING_LIBRARY, encoding="utf-8")
+    (tmp_path / "suite.robot").write_text(suite, encoding="utf-8")
+    return start("robot-debug", "--backend", "plain", *args, "-o", str(tmp_path / "output.xml"), "suite.robot")
+
+
+_ENDED_LIKE_ROBOT = [
+    ("First", "FAIL", "Execution terminated by signal"),
+    ("Second", "FAIL", "Test execution stopped due to a fatal error."),
+]
+
+
+def test_sigint_ends_a_robot_debug_run_without_the_debugger(tmp_path: Path, start: Callable[..., _Command]) -> None:
+    run = _start_robot_debug_run(tmp_path, start, _LONG_NAP_THEN_SECOND_TEST, "--no-debugger-attached")
+    run.wait_for_output("napping")
+
+    run.interrupt()
+
+    # As in a `robot` run, the exit code counts the failed tests.
+    assert run.wait(timeout=15) == 2, run.errors
+    assert _run_results(tmp_path / "output.xml") == _ENDED_LIKE_ROBOT
+    assert "Second signal will force exit." in run.errors
+    assert not any("second test runs" in line for line in run.stdout)
+
+
+def test_sigint_after_detach_ends_the_run(tmp_path: Path, start: Callable[..., _Command]) -> None:
+    run = _start_robot_debug_run(tmp_path, start, _LONG_NAP_THEN_SECOND_TEST, "--stop-on-entry")
+    run.wait_for_output("* entry")
+    run.send(".detach")
+    run.wait_for_output("napping")
+
+    run.interrupt()
+
+    assert run.wait(timeout=15) == 2, run.errors
+    assert _run_results(tmp_path / "output.xml") == _ENDED_LIKE_ROBOT
+
+
+def test_second_sigint_ends_a_robot_debug_run_without_the_debugger_at_once(
+    tmp_path: Path, start: Callable[..., _Command]
+) -> None:
+    run = _start_robot_debug_run(tmp_path, start, _LONG_NAP_WITH_LONG_TEARDOWN, "--no-debugger-attached")
+    run.wait_for_output("napping")
+    run.interrupt()
+    # As in a `robot` run, the teardown still runs after the first signal.
+    run.wait_for_output("tearing down")
+
+    run.interrupt()
+
+    # Far less than the 30 seconds the teardown would sleep.
+    assert run.wait(timeout=15) == 253, run.errors
+    assert "Execution forcefully stopped." in run.errors
