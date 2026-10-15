@@ -94,27 +94,6 @@ export interface EvaluatableExpression {
   expression?: string;
 }
 
-export interface InlineValueText {
-  type: "text";
-  readonly range: Range;
-  readonly text: string;
-}
-
-export interface InlineValueVariableLookup {
-  type: "variable";
-  readonly range: Range;
-  readonly variableName?: string;
-  readonly caseSensitiveLookup: boolean;
-}
-
-export interface InlineValueEvaluatableExpression {
-  type: "expression";
-  readonly range: Range;
-  readonly expression?: string;
-}
-
-export type InlineValue = InlineValueText | InlineValueVariableLookup | InlineValueEvaluatableExpression;
-
 export enum ClientState {
   Stopped,
   Starting,
@@ -997,32 +976,6 @@ export class LanguageClientsManager {
         },
         token ?? new vscode.CancellationTokenSource().token,
       )) ?? undefined
-    );
-  }
-
-  public async getInlineValues(
-    document: vscode.TextDocument,
-    viewPort: vscode.Range,
-    context: vscode.InlineValueContext,
-    token?: vscode.CancellationToken | undefined,
-  ): Promise<InlineValue[]> {
-    const client = await this.getLanguageClientForResource(document.uri);
-
-    if (!client) return [];
-
-    return (
-      (await client.sendRequest<InlineValue[]>(
-        "robot/debugging/getInlineValues",
-        {
-          textDocument: { uri: document.uri.toString() },
-          viewPort: { start: viewPort.start, end: viewPort.end },
-          context: {
-            frameId: context.frameId,
-            stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
-          },
-        },
-        token ?? new vscode.CancellationTokenSource().token,
-      )) ?? []
     );
   }
 
