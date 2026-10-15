@@ -1724,6 +1724,9 @@ class ImportsManager:
             return value
         except (SystemExit, KeyboardInterrupt):
             raise
+        except (LoadTimeoutError, LoadExitError):
+            # the caller reports a timeout or an import that ended early as a diagnostic, so no traceback
+            raise
         except BaseException as e:
             self._logger.exception(e)
             raise

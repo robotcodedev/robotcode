@@ -7,6 +7,7 @@ gets the default timeout, a hanging one a short timeout and a sleep well
 beyond it, and the assertions only check "well below the sleep".
 """
 
+import logging
 import os
 import time
 from pathlib import Path
@@ -643,3 +644,39 @@ class TestImportThatEndsEarly:
             "for example through sys.exit() or a crash in the imported code."
         )
         assert "process" not in doc.errors[0].message
+
+
+class TestExpectedLoadErrorsAreNotLogged:
+    """A timeout and an import that ends early become diagnostics; logging them as well printed RobotCode's own
+    traceback on stderr, where no logging is set up."""
+
+    def test_timeout(self, imports_manager: ImportsManager, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+        library = tmp_path / "HangingLib.py"
+        _write_hanging_module(library, tmp_path / "marker.txt")
+        imports_manager.load_library_timeout = 1
+        caplog.set_level(logging.DEBUG)
+
+        with pytest.raises(LoadTimeoutError):
+            imports_manager._run_in_subprocess(
+                get_library_doc,
+                (str(library), (), str(tmp_path), str(tmp_path), None, None),
+                "Loading library 'HangingLib'",
+            )
+
+        assert not [record for record in caplog.records if record.exc_info]
+
+    def test_import_that_ends_early(
+        self, imports_manager: ImportsManager, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        library = tmp_path / "ExitingLib.py"
+        library.write_text("import sys\nsys.exit(3)\n", encoding="utf-8")
+        caplog.set_level(logging.DEBUG)
+
+        with pytest.raises(LoadExitError):
+            imports_manager._run_in_subprocess(
+                get_library_doc,
+                (str(library), (), str(tmp_path), str(tmp_path), None, None),
+                "Loading library 'ExitingLib'",
+            )
+
+        assert not [record for record in caplog.records if record.exc_info]
