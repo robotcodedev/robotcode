@@ -79,7 +79,7 @@ This wraps tests you run or debug from the Test Explorer and takes precedence ov
 The wrapper contract is the same everywhere, but RobotCode hands the run to the wrapper differently depending on the operating system, and the resulting process tree differs:
 
 - **Linux / macOS** — RobotCode **replaces itself** with the wrapper command (a POSIX `exec`). No extra process is left behind: the wrapper inherits RobotCode's process ID, stdio and signals directly. A shell wrapper can end with `exec "$@"` to replace itself with the run in turn, so signals and the exit code flow through on their own.
-- **Windows** — Windows has no way to replace a running process the way POSIX `exec` does. So RobotCode **starts the wrapper as a child process, waits for it, and forwards its exit code**. One extra RobotCode process stays in the tree just to wait. There is no `exec` here — a PowerShell wrapper simply runs the command as a child (`& $Command[0] …`) and waits, exactly as the example below does.
+- **Windows** — Windows has no way to replace a running process the way POSIX `exec` does. So RobotCode **starts the wrapper as a child process, waits for it, and forwards its exit code**. One extra RobotCode process stays in the tree just to wait. There is no `exec` here — a PowerShell wrapper simply runs the command as a child (`& $args[0] …`) and waits, exactly as the example below does.
 
 Either way the rules you write the script against don't change: run the command in the **foreground**, pass **stdio** through, and **propagate the exit code**.
 
@@ -97,7 +97,7 @@ So inside the script, that appended command line is simply **`"$@"`** — the sc
 
 :::caution[The wrapper contract]
 1. Run `"$@"` in the **foreground** and **propagate its exit code** — pass/fail, CI and the debugger depend on it.
-2. Pass **stdin / stdout / stderr** through. Send your own diagnostics to **stderr** (`>&2`), never stdout — otherwise you corrupt the JSON-RPC protocol of `repl-server --stdio` and the debug launcher.
+2. Pass **stdin / stdout / stderr** through. Send your own diagnostics to **stderr** (`>&2`), never stdout — otherwise you corrupt the JSON-RPC protocol of `repl-server --stdio`.
 3. Do **not** detach or daemonize — it would break the debugpy `--tcp` attach and the interactive REPL.
 4. **Tear down** whatever you start (use a `trap`, so it happens even on failure or Ctrl-C).
 :::
@@ -139,11 +139,9 @@ set -e
 exit "$status"                       # the trap tears the environment down
 ```
 
-The same in PowerShell — configure it as `wrapper = ["pwsh", "-File", "./with-test-services.ps1"]`. The appended command arrives through a `ValueFromRemainingArguments` parameter, and `try`/`finally` replaces the `trap`:
+The same in PowerShell — configure it as `wrapper = ["pwsh", "-File", "./with-test-services.ps1"]`. The appended command arrives in `$args` — the script has no `param` block, so PowerShell doesn't bind options such as `-p` or `-v` to the script itself — and `try`/`finally` replaces the `trap`:
 
 ```powershell
-param([Parameter(ValueFromRemainingArguments = $true)] [string[]] $Command)
-
 $service = $null
 try {
     [Console]::Error.WriteLine('starting the test environment')   # diagnostics to stderr
@@ -156,7 +154,7 @@ try {
         Start-Sleep -Milliseconds 100
     }
 
-    & $Command[0] @($Command | Select-Object -Skip 1)             # run the appended robotcode command
+    & $args[0] @($args | Select-Object -Skip 1)                   # run the appended robotcode command
     $code = $LASTEXITCODE
 }
 finally {

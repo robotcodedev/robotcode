@@ -32,7 +32,7 @@ Typical things you can do with it:
 - list just the tests (or just the tasks) one per line, with source paths and tags
 - list every distinct tag in the project with the tests it tags
 - list the metadata names and values in use — of tests and tasks (Robot Framework 7.5+) and of suites — with the items that carry them
-- list the source files Robot Framework would even consider parsing
+- list the `.robot` and `.resource` files of the project, honouring `.gitignore` / `.robotignore`
 - check the Robot Framework version, Python version and environment the tooling is running under
 
 The eight subcommands share the same configuration, search, and output-format pipeline — once you've learned one the others follow:
@@ -45,7 +45,7 @@ The eight subcommands share the same configuration, search, and output-format pi
 | [`suites`](#suites--flat-list-of-suites) | … list suites only — no per-test rows |
 | [`tags`](#tags--tag--tests-dictionary) | … build a `tag → [tests]` index for triage or dashboards |
 | [`metadata`](#metadata--metadata-index) | … see which metadata names and values are in use, and where (Robot Framework 7.5+) |
-| [`files`](#files--source-files-robot-would-parse) | … list every `.robot` / `.resource` file Robot would even consider |
+| [`files`](#files--flat-list-of-source-files) | … list every `.robot` / `.resource` file not excluded by `.gitignore` / `.robotignore` |
 | [`info`](#info--environment-and-version) | … check the active Robot / Python / RobotCode versions and environment |
 
 This guide is split in two:
@@ -132,23 +132,26 @@ Sample output:
 ```markdown
 # All
 
-- **MyProject**
-  - **MyProject.Login** (`tests/login/test_login.robot`)
-    - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
-      - _Tags:_ `regression`, `smoke`
-      - _Metadata:_ Author: Hans Müller, Issue: 4409
-    - **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
-      - _Tags:_ `smoke`
-      - _Metadata:_ Issue: 4410
-  - **MyProject.Checkout** (`tests/checkout/test_checkout.robot`)
-    - **MyProject.Checkout.Empty Cart** (`tests/checkout/test_checkout.robot:8`)
+- **MyProject** (`.`)
+  - **MyProject.Tests** (`tests`)
+    - **MyProject.Tests.Checkout** (`tests/checkout`)
+      - **MyProject.Tests.Checkout.Test Checkout** (`tests/checkout/test_checkout.robot`)
+        - **MyProject.Tests.Checkout.Test Checkout.Empty Cart** (`tests/checkout/test_checkout.robot:8`)
+    - **MyProject.Tests.Login** (`tests/login`)
+      - **MyProject.Tests.Login.Test Login** (`tests/login/test_login.robot`)
+        - **MyProject.Tests.Login.Test Login.Bad Password** (`tests/login/test_login.robot:14`)
+          - _Tags:_ `regression`, `smoke`
+          - _Metadata:_ Author: Hans Müller, Issue: 4409
+        - **MyProject.Tests.Login.Test Login.Good Password** (`tests/login/test_login.robot:22`)
+          - _Tags:_ `smoke`
+          - _Metadata:_ Issue: 4410
 …
 
 ## Statistics
 
-- _Suites:_ 4
+- _Suites:_ 8
 - _Suites with tests:_ 3
-- _Tests:_ 18
+- _Tests:_ 4
 ```
 
 ### Flag reference
@@ -184,16 +187,16 @@ Sample output:
 ```markdown
 # Tests
 
-- **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
-- **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
-- **MyProject.Checkout.Empty Cart** (`tests/checkout/test_checkout.robot:8`)
+- **MyProject.Tests.Checkout.Test Checkout.Empty Cart** (`tests/checkout/test_checkout.robot:8`)
+- **MyProject.Tests.Login.Test Login.Bad Password** (`tests/login/test_login.robot:14`)
+- **MyProject.Tests.Login.Test Login.Good Password** (`tests/login/test_login.robot:22`)
 …
 
 ## Statistics
 
-- _Suites:_ 4
+- _Suites:_ 8
 - _Suites with tests:_ 3
-- _Tests:_ 18
+- _Tests:_ 4
 ```
 
 ### Flag reference
@@ -234,16 +237,20 @@ Sample output:
 ```markdown
 # Suites
 
-- **MyProject**
-- **MyProject.Login** (`tests/login/test_login.robot`)
-- **MyProject.Checkout** (`tests/checkout/test_checkout.robot`)
-- **MyProject.Search** (`tests/search/test_search.robot`)
+- **MyProject** (`.`)
+- **MyProject.Tests** (`tests`)
+- **MyProject.Tests.Checkout** (`tests/checkout`)
+- **MyProject.Tests.Checkout.Test Checkout** (`tests/checkout/test_checkout.robot`)
+- **MyProject.Tests.Login** (`tests/login`)
+- **MyProject.Tests.Login.Test Login** (`tests/login/test_login.robot`)
+- **MyProject.Tests.Search** (`tests/search`)
+- **MyProject.Tests.Search.Test Search** (`tests/search/test_search.robot`)
 
 ## Statistics
 
-- _Suites:_ 4
+- _Suites:_ 8
 - _Suites with tests:_ 3
-- _Tests:_ 18
+- _Tests:_ 4
 ```
 
 A suite with no surviving tests after filtering disappears from the list — `--include smoke` against a suite where nothing is tagged `smoke` will drop that suite.
@@ -265,16 +272,16 @@ Sample output (`--tests`):
 # Tags
 
 - **regression**
-  - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+  - **MyProject.Tests.Login.Test Login.Bad Password** (`tests/login/test_login.robot:14`)
 - **smoke**
-  - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
-  - **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
+  - **MyProject.Tests.Login.Test Login.Bad Password** (`tests/login/test_login.robot:14`)
+  - **MyProject.Tests.Login.Test Login.Good Password** (`tests/login/test_login.robot:22`)
 
 ## Statistics
 
-- _Suites:_ 4
+- _Suites:_ 8
 - _Suites with tests:_ 3
-- _Tests:_ 18
+- _Tests:_ 4
 ```
 
 ### Flag reference
@@ -312,18 +319,18 @@ Sample output (`--values --tests --suites`, raw markdown):
 
 - **Author**
   - Hans Müller
-    - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+    - **MyProject.Tests.Login.Test Login.Bad Password** (`tests/login/test_login.robot:14`)
 - **Issue**
   - 4409
-    - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+    - **MyProject.Tests.Login.Test Login.Bad Password** (`tests/login/test_login.robot:14`)
   - 4410
-    - **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
+    - **MyProject.Tests.Login.Test Login.Good Password** (`tests/login/test_login.robot:22`)
 
 ## Suites
 
 - **Version**
   - 1.2
-    - **MyProject.Login** (`tests/login/test_login.robot`)
+    - **MyProject.Tests.Login.Test Login** (`tests/login/test_login.robot`)
 ```
 
 How the index is built:
@@ -350,9 +357,9 @@ Test metadata exists since Robot Framework 7.5. With an older version installed,
 | `--search TEXT` / `--search-regex PATTERN` | Filter the underlying tests first. |
 | `-bl` / `-ebl` / `-btm` / `-ebtm` / *any `robot` flag* | Pass-through. |
 
-## `files` — source files Robot would parse
+## `files` — flat list of source files
 
-`files` lists every `.robot` and `.resource` file Robot Framework would even consider loading from the given paths (or the profile's default paths), honouring `.gitignore` / [`.robotignore`](/guides/ignoring-files/).
+`files` lists every `.robot` and `.resource` file in the given paths (or the profile's default paths), honouring `.gitignore` / [`.robotignore`](/guides/ignoring-files/). Files and folders whose names start with `_` are listed too, although Robot Framework skips them when it collects suites.
 
 ```bash
 robotcode discover files                          # respects profile paths
@@ -372,7 +379,7 @@ Sample output:
 _Total:_ 3 file(s)
 ```
 
-Files under directories ignored by `.gitignore` / `.robotignore` are excluded automatically. Use this when you need to feed a list of files into another tool (linter, formatter, custom pre-commit hook) and want exactly the set Robot would walk.
+Files under directories ignored by `.gitignore` / `.robotignore` are excluded automatically. Use this when you need to feed a list of files into another tool (linter, formatter, custom pre-commit hook).
 
 ### Flag reference
 
@@ -434,7 +441,7 @@ Use `-bl` when you have a precise name (often pasted from a failure list or a bu
 
 ## Selecting by test metadata
 
-`-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN` (Robot Framework 7.5+) select tests and tasks by their `[Metadata]`: the issue a test verifies, who wrote or reviewed it, and other data you keep there rather than in tags. Both are repeatable. Several `--by-test-metadata` patterns select the tests matching any of them, `--exclude-by-test-metadata` removes every test matching one, and both narrow every other selection (`--include`, `--suite`, `-bl`, `--search`, …). They work the same with `robotcode robot`, `robotcode robot-debug`, every `discover` subcommand and every [`results`](/guides/analyzing-results/#filters) subcommand.
+`-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN` (Robot Framework 7.5+) select tests and tasks by their `[Metadata]`: the issue a test verifies, who wrote or reviewed it, and other data you keep there rather than in tags. Both are repeatable. Several `--by-test-metadata` patterns select the tests matching any of them, `--exclude-by-test-metadata` removes every test matching one, and both narrow every other selection (`--include`, `--suite`, `-bl`, `--search`, …). They work the same with `robotcode robot`, `robotcode robot-debug`, every `discover` subcommand except `files` and `info`, and every [`results`](/guides/analyzing-results/#filters) subcommand.
 
 ```bash
 robotcode discover tests --by-test-metadata Issue:4409          # every test for issue 4409
@@ -496,12 +503,12 @@ pre-run-modifiers = { "robotcode.modifiers.ByTestMetadata" = ["Issue:4409"] }
 Given an invalid pattern, the modifiers report the error and select no test. Robot Framework would otherwise skip a modifier it cannot create and run every test.
 
 :::note[Robot Framework 7.5+]
-Test metadata exists since Robot Framework 7.5. With an older version installed, `--help` does not list `--by-test-metadata` and `--exclude-by-test-metadata`. They are still accepted, but no test has metadata there: `--by-test-metadata` selects nothing and `--exclude-by-test-metadata` removes nothing.
+Test metadata exists since Robot Framework 7.5. With an older version installed, `--help` does not list `--by-test-metadata` and `--exclude-by-test-metadata`. They are still accepted, but no test has metadata there: `--by-test-metadata` selects nothing and `--exclude-by-test-metadata` removes nothing. A pattern that starts with `NOT` is the exception: it matches every test, so `--by-test-metadata` selects every test and `--exclude-by-test-metadata` removes every test.
 :::
 
 ## Search
 
-`--search` and `--search-regex` are **mutually exclusive** (passing both is a usage error). They prune the discovered tree to tests matching the pattern; surviving tests keep their full ancestor chain so `discover all --search Login` still shows `MyProject → MyProject.Login → Login.Bad Password` with sibling suites pruned.
+`--search` and `--search-regex` are **mutually exclusive** (passing both is a usage error). They prune the discovered tree to tests matching the pattern; surviving tests keep their full ancestor chain so `discover all --search Login` still shows `MyProject → Tests → Login → Test Login → Bad Password` with sibling suites pruned.
 
 The search applies across:
 
@@ -531,7 +538,7 @@ robotcode discover files --search "_keywords"
 
 ### Highlighting in the terminal
 
-Matches are highlighted inline in the TEXT output with a yellow background so they're easy to scan. Structured output (JSON/TOML) is unchanged — searching only filters, it doesn't add markup.
+Matches are marked as inline code in the TEXT output so they're easy to scan. Structured output (JSON/TOML) is unchanged — searching only filters, it doesn't add markup.
 
 ### Search on `tags` and `files`
 
@@ -568,8 +575,8 @@ robotcode --format json discover tags --tests
 
 A few rules hold across every subcommand:
 
-- **camelCase keys.** `fullName`, `relSource`, `supportsParseInclude`, etc.
-- **Optional fields are omitted, not `null`.** A `null` literal never appears. If a field has no value (a test with no tags, a suite with no children), the key is simply absent.
+- **camelCase keys.** `relSource`, `supportsParseInclude`, `robotVersionString`, etc.
+- **Optional fields are omitted, not `null`.** A `null` literal never appears. If a field has no value (a test with no tags), the key is simply absent.
 - **Empty array ≠ missing field.** A field listed in the schema may be `[]` if the section "exists but is empty"; a field absent entirely means the section wasn't computed for this run. `// []` in jq smooths over the difference.
 - **Stability.** Fields are appended over time, never renamed or removed in place. Existing consumers keep working.
 
@@ -580,18 +587,18 @@ Every subcommand that returns tests/tasks/suites uses the same `TestItem` schema
 ```json
 {
   "type": "test",
-  "id": "/abs/path/test_login.robot;MyProject.Login.Bad Password;42",
+  "id": "/abs/path/tests/login/test_login.robot;MyProject.Tests.Login.Test Login.Bad Password;14",
   "name": "Bad Password",
-  "longname": "MyProject.Login.Bad Password",
-  "lineno": 42,
-  "uri": "file:///abs/path/test_login.robot",
+  "longname": "MyProject.Tests.Login.Test Login.Bad Password",
+  "lineno": 14,
+  "uri": "file:///abs/path/tests/login/test_login.robot",
   "relSource": "tests/login/test_login.robot",
-  "source": "/abs/path/test_login.robot",
-  "tags": ["smoke", "regression"],
-  "metadata": { "Issue": "4409", "Owner Team": "core" },
+  "source": "/abs/path/tests/login/test_login.robot",
+  "tags": ["regression", "smoke"],
+  "metadata": { "Author": "Hans Müller", "Issue": "4409" },
   "range": {
-    "start": { "line": 41, "character": 0 },
-    "end":   { "line": 41, "character": 0 }
+    "start": { "line": 13, "character": 0 },
+    "end":   { "line": 13, "character": 0 }
   },
   "children": [ /* nested TestItems for type=suite/workspace */ ],
   "error": "Parse error message (when this item failed to parse)",
@@ -608,7 +615,7 @@ Field notes:
 - `tags` are normalised (`Bug 1`, `bug_1`, `Bug1` all come through as `"bug1"`) and only present when the item has at least one tag.
 - `metadata` is the `[Metadata]` of a test or task (Robot Framework 7.5+) as a name → value object. Names keep the spelling from the source file and values come through verbatim, the lines of a multi-line value joined with `\n`. A `[Metadata]` setting with nothing after it is no metadata and is left out. The key is absent when the test has no metadata and on Robot Framework versions older than 7.5; `suite` and `workspace` items never carry it. The `--show-metadata` flag is render-only for TEXT mode — it doesn't affect the JSON.
 - `description` is declared in the schema, but `discover` never sets it, so the key does not appear in the output. A test's `[Documentation]` is not part of the item.
-- `children` is the nested-tree field — present on `workspace` and `suite` items, absent on `test` / `task`.
+- `children` is the nested-tree field — present on the `workspace` item and on the `suite` items of `discover all` (`[]` when a suite is empty), absent on `test` / `task` items. `discover suites` lists its suites without it.
 - `range` follows the LSP `Range` shape so editors can highlight the source span.
 
 ### `all` / `tests` / `tasks` / `suites` JSON

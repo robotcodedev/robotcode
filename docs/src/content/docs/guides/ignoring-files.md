@@ -87,7 +87,7 @@ legacy/*
 
 ## What's ignored by default
 
-Even with no `.robotignore` at all, RobotCode never walks into `.git/`, `.svn/`, `CVS/`, or any file or directory whose name starts with a dot — `.venv/`, `.cache/`, `.tox/`, and so on (on Windows, items with the hidden attribute or a leading `$` are skipped too). These are skipped in every context (discovery, analysis, and the editor), so listing them in a `.robotignore` is redundant and you can leave them out.
+Even with no `.robotignore` at all, RobotCode never walks into `.git/`, `.svn/`, `CVS/`, or any file or directory whose name starts with a dot — `.venv/`, `.cache/`, `.tox/`, and so on. These are skipped in every context (discovery, analysis, and the editor), so listing them in a `.robotignore` is redundant and you can leave them out. On Windows, the language server, `robotcode analyze` and `robotcode discover files` also skip items with the hidden attribute or a leading `$`; the other `discover` commands, the Test Explorer and test runs don't.
 
 Underscore-prefixed names are a partial exception, and the distinction is worth understanding so you are not surprised. Robot Framework's own *suite collector* ignores names that begin with `.` or `_`, which is why a `_drafts/` folder never turns into a runnable suite. That rule, however, only applies when Robot Framework is collecting suites to **run**. RobotCode's static side — the language server, `robotcode analyze`, and `robotcode discover files` — still walks `_`-prefixed files and analyses them. This is deliberate: a `_keywords.resource` that other files import should absolutely get completion and diagnostics in the editor. The consequence is simply that if you want a `_`-named folder kept out of analysis *as well*, you do have to list it in `.robotignore` — the underscore convention alone won't hide it from the editor.
 
@@ -161,11 +161,11 @@ A `.robotignore` is honoured everywhere RobotCode walks the file system — the 
 - **Test and suite discovery** — [`robotcode discover`](/guides/discovering-tests/) and the editor's Test Explorer. Excluded directories don't appear in the discovered tree, which keeps both the CLI output and the Test Explorer focused on real suites.
 - **Static code analysis** — [`robotcode analyze`](/guides/analyzing-code/). Excluded files are never analysed by `robotcode analyze`, so they produce no diagnostics in a lint run.
 - **Test runs** — `robotcode robot`. Suites in excluded files and directories are left out of the run, which a plain `robot` run doesn't do.
-- **The language server** — diagnostics, completion, and namespace resolution in the editor. Excluded files are never loaded, so they don't contribute keywords or variables and don't slow the editor down.
+- **The language server** — diagnostics, completion, and namespace resolution in the editor. Excluded files are not loaded, so they don't contribute keywords or variables and don't slow the editor down — unless a non-excluded file imports one: that file is loaded for the import, and its keywords and variables resolve as usual.
 
 ## Verifying what's ignored
 
-When a pattern doesn't behave the way you expect, don't guess — ask RobotCode. The quickest way to see what your rules actually do is [`robotcode discover files`](/guides/discovering-tests/#files--source-files-robot-would-parse), which lists every `.robot` and `.resource` file RobotCode would load *after* applying `.robotignore`:
+When a pattern doesn't behave the way you expect, don't guess — ask RobotCode. The quickest way to see what your rules actually do is [`robotcode discover files`](/guides/discovering-tests/#files--flat-list-of-source-files), which lists every `.robot` and `.resource` file that remains *after* applying `.robotignore`:
 
 ```bash
 # every file RobotCode currently considers
@@ -181,7 +181,7 @@ If an excluded directory still appears in the list, your pattern isn't matching 
 
 This is where `.robotignore` earns its keep. For every `.robot` and `.resource` file it loads, the language server builds a namespace and resolves that file's imports — and on a large workspace that work, repeated across thousands of files, is often the dominant cost. One of the most effective things you can do about it is reduce how many files there are to analyse in the first place.
 
-Excluding directories you never actually work in — generated code, vendored libraries, build output, or a large archive of legacy suites — removes them from analysis entirely: no namespace is built and no imports are resolved for them. On big projects this can reduce both analysis time and the language server's memory use, and because a `.robotignore` is trivial to add and easy to verify with `robotcode discover files`, it is usually the first thing to try — before reaching for finer-grained analysis settings such as `robotcode.analysis.diagnosticMode`, which controls whether diagnostics are reported only on the files you have open or across the whole workspace.
+Excluding directories you never actually work in — generated code, vendored libraries, build output, or a large archive of legacy suites — removes them from analysis entirely: no namespace is built and no imports are resolved for them, unless a non-excluded file imports them. On big projects this can reduce both analysis time and the language server's memory use, and because a `.robotignore` is trivial to add and easy to verify with `robotcode discover files`, it is usually the first thing to try — before reaching for finer-grained analysis settings such as `robotcode.analysis.diagnosticMode`, which controls whether diagnostics are reported only on the files you have open or across the whole workspace.
 
 ## Reloading
 
@@ -189,6 +189,6 @@ A `.robotignore` is read while RobotCode walks the workspace, so a change to it 
 
 ## See also
 
-- [`robotcode discover files`](/guides/discovering-tests/#files--source-files-robot-would-parse) — verify exactly which files survive your ignore rules.
+- [`robotcode discover files`](/guides/discovering-tests/#files--flat-list-of-source-files) — verify exactly which files survive your ignore rules.
 - [Analyzing Code](/guides/analyzing-code/) — the static analysis that honours `.robotignore`.
 - [Diagnostics Modifiers](/reference/diagnostics-modifiers/) — suppress individual diagnostics instead of whole files, when excluding a file is too coarse a tool.

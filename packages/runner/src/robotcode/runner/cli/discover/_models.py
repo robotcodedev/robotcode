@@ -1,7 +1,7 @@
 """Data models emitted by `robotcode discover`.
 
 All models inherit from `CamelSnakeMixin` so the JSON output uses
-camelCase keys (`fullName`, `relSource`, `supportsParseInclude`, …)
+camelCase keys (`relSource`, `supportsParseInclude`, `robotVersionString`, …)
 consistent with the `results` family. Editor integrations and CI
 recipes rely on that shape.
 """

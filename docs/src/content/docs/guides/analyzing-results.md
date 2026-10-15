@@ -131,7 +131,7 @@ robotcode --no-color results show
 robotcode --no-color --no-pager results summary
 ```
 
-Use the positive forms (`--pager`, `--color`) to *force* either feature even when stdout isn't a TTY — handy when you want to pipe coloured output into `less -R` yourself.
+The positive forms (`--pager`, `--color`) don't force either feature into a pipe: when stdout isn't a TTY, `--pager` starts no pager, and `--color` renders the TEXT output as formatted text instead of raw markdown but adds no colour codes (JSON and TOML output stays unchanged). To pipe coloured output into `less -R` yourself, set the `FORCE_COLOR=1` environment variable instead — it adds colour codes to TEXT, JSON and TOML output alike, so JSON written that way no longer parses with `jq`.
 
 ## `summary` — headline numbers
 
@@ -207,7 +207,7 @@ Each `--sort` key has a *natural* direction — the one you almost always want. 
 | `elapsed` | Longest first |
 | `start` | Earliest first |
 
-Tests with no value for the sort field (e.g. no recorded start time, no elapsed time) sort to the end regardless of `--reverse`.
+Tests with no value for the sort field (e.g. no recorded start time, no elapsed time) sort first for `start` and last for `elapsed`; `--reverse` puts them at the other end.
 
 ### Recipes
 
@@ -269,7 +269,7 @@ DIR/
 │   └── ...
 ```
 
-Test names are sanitised to filesystem-safe directory names (spaces become underscores, path separators are removed). External file references are resolved relative to the directory containing the result file; if the referenced file doesn't exist, the artefact is recorded as skipped with reason `missing-source` and nothing is copied. References that would escape the base directory via `..` are blocked — there is no way to overwrite files outside `DIR`.
+Test names are sanitised to filesystem-safe directory names (every run of characters other than letters, digits, `_`, `.` and `-` becomes one underscore, and leading and trailing underscores are dropped). External file references are resolved relative to the directory containing the result file; if the referenced file doesn't exist, the artefact is recorded as skipped with reason `missing-source` and nothing is copied. References that would escape the base directory via `..` are blocked — there is no way to overwrite files outside `DIR`.
 
 ### `--raw-html` vs default
 
@@ -423,8 +423,8 @@ robotcode results diff baseline/output.xml current/output.xml # explicit pair
 | `new failures` | passed in baseline, fail in current — regressions |
 | `new passes` | failed or skipped in baseline, pass in current — fixes |
 | `status changes` | otherwise changed status (e.g. `SKIP → FAIL`, `FAIL → SKIP`) |
-| `added` | exist only in current (added since baseline) |
-| `removed` | exist only in baseline (deleted/renamed since baseline) |
+| `added in current` | exist only in current (added since baseline) |
+| `removed from current` | exist only in baseline (deleted/renamed since baseline) |
 
 Tests that have the same status in both runs are **not** reported — `diff` shows changes only.
 
@@ -440,7 +440,7 @@ The standard `--status / -i / -e / -s / -t / -bl / -ebl / --search / --search-re
 
 ```bash
 robotcode results diff baseline.xml --include smoke
-robotcode results diff baseline.xml --suite "*.Checkout.*"
+robotcode results diff baseline.xml --suite "*.Checkout"
 robotcode results diff baseline.xml --search Timeout
 ```
 
@@ -475,8 +475,8 @@ Every subcommand accepts the same filter set. Filters combine with **AND** — e
 | `--failed` / `--passed` / `--skipped` | Shorthands for `--status fail` / `--status pass` / `--status skip`. Additive with `--status` and with each other (OR semantics). Available on `show`, `log`, `stats`. |
 | `-i/--include TAG_PATTERN` | Robot tag-pattern syntax (see below). Repeatable. |
 | `-e/--exclude TAG_PATTERN` | Same syntax, exclusion side. Repeatable. |
-| `-s/--suite GLOB` | Match against the suite's full longname. Repeatable. |
-| `-t/--test GLOB` | Match against the test's full longname. Aliased as `--task`. Repeatable. |
+| `-s/--suite GLOB` | Match against the suite's name or full longname. Repeatable. |
+| `-t/--test GLOB` | Match against the test's name or full longname. Aliased as `--task`. Repeatable. |
 | `-bl/--by-longname NAME` | Exact longname match (no glob expansion). Repeatable. |
 | `-ebl/--exclude-by-longname NAME` | Exclusion variant of `--by-longname`. Repeatable. |
 | `-btm/--by-test-metadata PATTERN` | Tests whose `[Metadata]` matches the pattern (Robot Framework 7.5+, see [below](#test-metadata--btm-ebtm)). Repeatable. |
@@ -496,14 +496,14 @@ You can repeat `-i` to OR multiple patterns: `-i smoke -i regression` selects te
 
 ### Suite / test globs
 
-`-s` / `-t` accept shell-style glob patterns matched against the full longname:
+`-s` / `-t` accept shell-style glob patterns matched against the name or the full longname:
 
-- `*` matches any sequence of characters (including `.`, so `*.Login.*` matches at any depth).
+- `*` matches any sequence of characters (including `.`, so `*.Login` matches at any depth).
 - `?` matches a single character.
-- Matching is case-insensitive and applied to the full longname (`MyProject.Login.Bad Password`).
-- Repeat for OR: `-s "MyProject.Login.*" -s "MyProject.Checkout.*"`.
+- Matching is case-insensitive and ignores whitespace and underscores; a pattern matches if it fits either the name (`Bad Password`) or the full longname (`MyProject.Login.Bad Password`).
+- Repeat for OR: `-s "MyProject.Login" -s "MyProject.Checkout"`.
 
-Quote globs in the shell — `--suite "*.Login.*"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem.
+Quote globs in the shell — `--suite "*.Login"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem.
 
 ### `--by-longname` vs `--suite` / `--test`
 
@@ -549,7 +549,7 @@ A test matches if **any** of those targets matches. Once `log` decides a test ma
 | `--search TEXT` | Case-insensitive substring match. No metacharacters; `[` and `*` are literal. |
 | `--search-regex PATTERN` | Regular expression, **case-sensitive** by default. Use `(?i)` at the start of the pattern for case-insensitive matching. |
 
-When matching against **tags** specifically, both the pattern and each tag are normalised the way Robot Framework normalises tags (lowercase, whitespace and underscores ignored). So `--search "bug 1"` matches tests tagged `bug_1`, `Bug1`, or `BUG 1`. Other targets — name, message, keyword arguments, log text — are matched literally without normalisation.
+When matching against **tags** specifically, each tag is normalised the way Robot Framework normalises tags (lowercase, whitespace and underscores ignored), and so is a `--search` pattern. So `--search "bug 1"` matches tests tagged `bug_1`, `Bug1`, or `BUG 1`. A `--search-regex` pattern is used as written against the normalised tag: `bug1` matches those tests, `Bug 1` doesn't. Other targets — name, message, keyword arguments, log text — are matched literally without normalisation.
 
 ```bash
 robotcode results log --search "TimeoutError"
@@ -563,7 +563,7 @@ The regex is matched against each target string individually, **not anchored** t
 
 ### Highlighting in the terminal
 
-On `log` (and `show`), matches are highlighted inline in the TEXT output with a yellow background so you can scan visually. Structured output (JSON/TOML) is unchanged — searching only filters, it doesn't add markup.
+On `log` (and `show`), matches are marked as inline code in the TEXT output so you can scan visually. Structured output (JSON/TOML) is unchanged — searching only filters, it doesn't add markup.
 
 ### Search on `summary` and `stats`
 
@@ -576,7 +576,7 @@ An unparseable regex (e.g. `[unclosed`) yields a usage error pinpointing where t
 ## Tips for terminal use
 
 - **TEXT output is markdown.** On a coloured TTY the markdown is rendered to themed ANSI via `rich` (and paged if longer than your terminal); on pipes or with `--no-color` the raw markdown goes through verbatim — paste it into a PR description, a Slack message, or feed it straight to an LLM.
-- **Quote your globs.** `--suite "*.Login.*"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem first.
+- **Quote your globs.** `--suite "*.Login"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem first.
 - **Filters apply before aggregation.** `stats`, `summary` and `diff` all run the filter pipeline first, so `--search Login` followed by `--by tag` gives you tag stats over the Login subset, not all tags whose name happens to contain "Login".
 - **`-bl` is for exact names, `-t` is for patterns.** When you copy a failing-test name out of the failure list, `-bl` is usually what you want — no need to escape glob characters.
 - **Save your baselines.** Archive `output.xml` from your green main branch (or main-CI run) and feed it to `diff` from feature branches — that's the fastest way to catch regressions before review.
@@ -603,7 +603,7 @@ A few rules hold across every subcommand:
 - **camelCase keys.** `fullName`, `elapsedSeconds`, `messagesCount`, etc.
 - **ISO-8601 timestamps** with microsecond resolution.
 - **Optional fields are omitted, not `null`.** A `null` literal never appears in the output. If a field has no value (e.g. `failed` without `--failed`, `tags` on an untagged test), the key is simply absent from the JSON object.
-- **Scalar fields with a meaningful zero are always emitted.** `counts.failed = 0`, `truncated = 0`, `elapsedSeconds = 0.0` all stay in the object. Only optional fields disappear when unset.
+- **Scalar fields with a meaningful zero are emitted in JSON.** `counts.failed = 0`, `truncated = 0`, `elapsedSeconds = 0.0` all stay in the object; the exception is a `stats` group's `elapsedSeconds`, which is left out when it is `0.0`. Only optional fields disappear when unset. TOML output also leaves out counters that are `0` (`counts.*`, `truncated`, `extractedCount`) and flags that are `false`.
 - **Empty array ≠ missing field.** Sections that "exist but are empty" come through as `[]`; sections that were never requested (e.g. anything excluded by `diff --only`) are absent. The two are different and your queries should handle both, typically via `// []` in jq.
 - **Stability.** Fields are appended over time, never renamed or removed in place. New fields are additive; existing consumers keep working.
 
@@ -612,7 +612,7 @@ A few rules hold across every subcommand:
 ```json
 {
   "file": {
-    "source": "results/output.xml",
+    "source": "/abs/path/results/output.xml",
     "relSource": "results/output.xml"
   },
   "status": "FAIL",
@@ -631,7 +631,7 @@ A few rules hold across every subcommand:
       "metadata": { "Issue": "4409" },
       "elapsedSeconds": 0.234,
       "startTime": "2026-05-15T08:11:04.906118",
-      "source": "tests/login/test_login.robot",
+      "source": "/abs/path/tests/login/test_login.robot",
       "relSource": "tests/login/test_login.robot",
       "lineno": 42
     }
@@ -643,7 +643,7 @@ A few rules hold across every subcommand:
 
 Field notes:
 
-- `failed` only appears when `--failed` was passed. Its entries have the same shape as the `tests[]` entries of [`show`](#show-json), including `metadata`.
+- `failed` only appears when `--failed` was passed and at least one test failed. Its entries have the same shape as the `tests[]` entries of [`show`](#show-json), including `metadata`.
 - `messagesCount` counts the `WARN`, `ERROR` and `FAIL` messages by level, each message once: those logged in tests and keywords plus the execution messages; other levels are not counted. Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
 - `executionMessagesCount` counts the messages of the `<errors>` section that come from outside the tests, such as parsing and import errors. Robot Framework also copies the warnings and errors logged in tests into `<errors>`; those copies are not counted here. It appears **only** when there were any.
 - `filtersApplied` (see [below](#filtersapplied)) appears when any filter was passed.
@@ -652,7 +652,7 @@ Field notes:
 
 ```json
 {
-  "file": { "source": "results/output.xml" },
+  "file": { "source": "/abs/path/results/output.xml" },
   "counts": { "total": 42, "passed": 37, "failed": 2, "skipped": 3, "notRun": 0 },
   "tests": [
     {
@@ -665,7 +665,7 @@ Field notes:
       "metadata": { "Issue": "4409", "Owner Team": "core" },
       "elapsedSeconds": 0.234,
       "startTime": "2026-05-15T08:11:04.906118",
-      "source": "tests/login/test_login.robot",
+      "source": "/abs/path/tests/login/test_login.robot",
       "lineno": 42
     }
   ],
@@ -688,7 +688,7 @@ Field notes:
 
 ```json
 {
-  "file": { "source": "results/output.xml" },
+  "file": { "source": "/abs/path/results/output.xml" },
   "tests": [
     {
       "fullName": "MyProject.Login.Bad Password",
@@ -696,7 +696,7 @@ Field notes:
       "message": "AssertionError: Expected 'Login failed' …",
       "body": [ /* recursive tree of body items, see below */ ],
       "artifacts": [ /* aggregated artifact refs for the whole test */ ],
-      "source": "tests/login/test_login.robot",
+      "source": "/abs/path/tests/login/test_login.robot",
       "lineno": 42,
       "elapsedSeconds": 0.234,
       "startTime": "2026-05-15T08:11:04.906118",
@@ -711,23 +711,23 @@ Field notes:
       "status": "FAIL",
       "doc": "Exercises the login flow against staging.",
       "metadata": { "OwnerTeam": "identity-squad" },
-      "source": "tests/login.robot",
+      "source": "/abs/path/tests/login.robot",
       "elapsedSeconds": 12.7,
       "startTime": "2026-05-15T08:11:02.190455"
     }
   ],
   "executionMessages": [ /* only with --execution-messages */ ],
-  "extractDir": "./extracted",
+  "extractDir": "/abs/path/extracted",
   "extractedCount": 7
 }
 ```
 
 The `body` array of each test is a recursive tree of body items. Field notes:
 
-- `extractDir` / `extractedCount` appear only with `--extract DIR`.
+- `extractDir` appears only with `--extract DIR`; `extractedCount` is always present (`0` without `--extract`).
 - `executionMessages` appears only with `--execution-messages`.
 - The per-test `metadata` is the test's `[Metadata]` (Robot Framework 7.5+) in the same shape as in [`show`](#show-json) and as the suite-level `metadata` below; absent for tests without metadata. It does not depend on any flag.
-- `suites` and the per-test `suite` cross-reference appear only with `--suite-info`. One `suites` entry per parent suite that has at least one surviving test, in traversal order. Empty `metadata` / `doc` are dropped.
+- `suites` and the per-test `suite` cross-reference appear only with `--suite-info`. One `suites` entry per suite that contains at least one surviving test — directly or in a child suite — in traversal order. Empty `metadata` / `doc` are dropped.
 - Artefact entries carry `kind` (`"image"` | `"file"`), `src`, and — when extraction happened — `extractedTo` (absolute path of the written file). Failed extractions get a `skippedReason` instead (e.g. `"missing-source"`, `"target-traversal"`).
 
 #### Body-item types
@@ -736,7 +736,7 @@ Every body-item entry has a `type` field. The vocabulary tracks Robot Framework'
 
 | `type` | What it represents | Notable fields |
 |---|---|---|
-| `KEYWORD` | A keyword call | `name`, `owner`, `args`, `assign`, `body` |
+| `KEYWORD` | A keyword call | `name` (owner included, e.g. `BuiltIn.Log`), `args`, `assign`, `body` |
 | `SETUP` / `TEARDOWN` | Suite/test setup or teardown keyword | same as `KEYWORD` |
 | `FOR` | `FOR` loop | `flavor` (`IN`/`IN RANGE`/`IN ENUMERATE`/`IN ZIP`), `body` (iterations) |
 | `ITERATION` | One iteration of a `FOR` / `WHILE` loop | `assign` (the loop variable values), `body` |
@@ -765,7 +765,7 @@ Empty entries are dropped — a user keyword without `[Tags]` will not have a `t
 
 ```json
 {
-  "file": { "source": "results/output.xml" },
+  "file": { "source": "/abs/path/results/output.xml" },
   "sections": [
     {
       "dimension": "tag",
@@ -794,15 +794,15 @@ Field notes:
 
 ```json
 {
-  "baseline": { "source": "baseline/output.xml" },
-  "current": { "source": "current/output.xml" },
+  "baseline": { "source": "/abs/path/baseline/output.xml" },
+  "current": { "source": "/abs/path/current/output.xml" },
   "newFailures": [
     {
       "fullName": "MyProject.Login.Bad Password",
       "baselineStatus": "PASS",
       "currentStatus": "FAIL",
       "currentMessage": "AssertionError: Expected 'Login failed' …",
-      "source": "tests/login/test_login.robot",
+      "source": "/abs/path/tests/login/test_login.robot",
       "relSource": "tests/login/test_login.robot",
       "lineno": 42
     }
@@ -829,7 +829,7 @@ Every subcommand's JSON output includes a `filtersApplied` field when **any** fi
   "status": ["fail"],
   "include": ["bug1"],
   "exclude": ["smokeANDregression"],
-  "suite": ["*.Login.*"]
+  "suite": ["*.Login"]
 }
 ```
 
