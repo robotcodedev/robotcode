@@ -261,6 +261,12 @@ def basic_output(session_output_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def teardown_message_output(session_output_dir: Path) -> Path:
+    """A test whose message ("Teardown failed: ...") appears in no keyword message."""
+    return _run_robot(SUITES_DIR / "teardown_message.robot", session_output_dir, "teardown_message")
+
+
+@pytest.fixture(scope="session")
 def tagged_output(session_output_dir: Path) -> Path:
     """`output.xml` from running `suites/tagged.robot` once per session."""
     return _run_robot(SUITES_DIR / "tagged.robot", session_output_dir, "tagged")

@@ -35,6 +35,12 @@ def test_search_substring_matches_failure_message(json_result: JsonRunner, basic
     assert {t["name"] for t in data["tests"]} == {"Failing Test"}
 
 
+def test_search_substring_matches_the_test_message(json_result: JsonRunner, teardown_message_output: Path) -> None:
+    """The test's own message counts too, not only the messages its keywords log."""
+    data = json_result("show", "--search", "Teardown failed", output_path=teardown_message_output)
+    assert {t["name"] for t in data["tests"]} == {"Cleanup Problem"}
+
+
 # ---------------------------------------------------------------------------
 # Regex (--search-regex)
 # ---------------------------------------------------------------------------

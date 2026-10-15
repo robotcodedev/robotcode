@@ -21,6 +21,7 @@ from robot.model import TestCase as ModelTestCase
 from robot.model.control import For, IfBranch, Return, TryBranch, While
 from robot.model.message import Message
 from robot.result import Keyword as ResultKeyword
+from robot.result import TestCase as ResultTestCase
 from robot.result.model import StatusMixin
 from robot.running import TestCase as RunningTestCase
 from robot.running import TestSuite
@@ -324,6 +325,7 @@ class SearchModifier(SuiteVisitor):
     A test matches if any of the following matches the predicate:
     - name, full name, source path
     - documentation, template name (running model only), timeout setting
+    - the test's own message, e.g. its failure message (result-tree only)
     - any of its tags (with Robot's tag normalisation)
     - any of its `[Metadata]` names or values (Robot Framework 7.5+)
     - any keyword name, keyword argument, assigned variable, FOR/WHILE
@@ -356,6 +358,8 @@ class SearchModifier(SuiteVisitor):
         # `template` only exists on the running model — result-tree tests
         # don't preserve it, so guard with isinstance.
         if isinstance(test, RunningTestCase) and self.matcher.general(test.template):
+            return True
+        if isinstance(test, ResultTestCase) and self.matcher.general(test.message):
             return True
         if test.timeout is not None and self.matcher.general(str(test.timeout)):
             return True
