@@ -126,7 +126,7 @@ Breakpoints can be armed three ways — the interactive one is unique to the REP
 
 At a `(rdb)` stop you get the full debug command set — `.where` (stack), `.vars` (variables), `.print ${x}`, `.step` / `.next` / `.continue`, and the rest. It is the *same* debugger as [`robotcode robot-debug`](debugging.md), which attaches it to a real run through the runner (scoped to whatever test/suite you select) rather than to single keywords typed at the prompt — **[debugging.md](debugging.md) is the full reference** for the breakpoint types, every debug command, and stepping through a session interactively.
 
-One trap: at the `(rdb)` prompt `Ctrl-C` / `Ctrl-D` **resume** the run (unlike the `>>>` prompt, where `Ctrl-D` exits) — leave a stop with `.continue` / `.detach` / `.abort`.
+One trap: at the `(rdb)` prompt `Ctrl-D` **resumes** the run (unlike the `>>>` prompt, where `Ctrl-D` exits) — leave a stop with `.continue` / `.detach` / `.abort`.
 
 ## Gotchas
 
