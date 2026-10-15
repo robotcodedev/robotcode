@@ -38,7 +38,7 @@ General form:
 - `error`: Treat the given codes as errors (highest severity, typically used for CI or "problems" views).
 - `reset`: Reset the given codes to their default level as defined by the underlying analyzer and any global configuration.
 - `ignore` without list: Ignore **all** diagnostic messages in the affected scope.
-- `reset` without list: Reset **all** diagnostic messages to their default; any previous `ignore`, `hint`, `information`, `warning` or `error` modifiers in scope are cleared.
+- `reset` without list: Reset **all** diagnostic messages to their default; any previous `ignore`, `hint`, `information`, `warning` or `error` modifiers in scope are cleared. A nearer modifier, such as an indented one in a block, still wins over a `reset` in a top-level comment.
 
 Additional rules:
 
@@ -46,7 +46,7 @@ Additional rules:
 - The `robotcode:` marker and the action names are lowercase; `IGNORE[...]` or `Warn[...]` are not recognized. `warn` = `warning`, `info` = `information`.
 - In global configuration (for example `robot.toml`) you can use `"*"` as a wildcard to match all remaining diagnostics (for example `hint = ["*"]`).
 - Inline `# robotcode:` modifiers on a specific line always override global configuration from `robot.toml` or CLI settings.
-- If several modifiers affect the same line and code, the nearest one wins: inline (end-of-line) > indented block > top-level file comment > global/CLI settings. Within one comment the rightmost action for the same code wins.
+- If several modifiers affect the same line and code, the nearest one wins: inline (end-of-line) > indented block > top-level file comment > global/CLI settings. This also holds between a modifier that names the code and one without a list. Of two modifiers at the same level, the later one wins. Within one comment the rightmost action for the same code wins; an action without a list counts for every code there, so `# robotcode: error[variable-not-found] ignore` ignores `variable-not-found` too.
 
 ### Where do the diagnostic codes come from?
 

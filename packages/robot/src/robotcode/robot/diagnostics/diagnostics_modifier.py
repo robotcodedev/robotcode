@@ -4,7 +4,7 @@ from ast import AST
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Block, File
@@ -36,10 +36,22 @@ class ModifierAction(Enum):
         return cls(value)
 
 
+# How near a modifier is to the line it affects: an inline modifier at the end of the line, an indented comment in
+# a block, or a top-level comment of the file.
+_FILE_LEVEL = 0
+_BLOCK_LEVEL = 1
+_INLINE_LEVEL = 2
+
+# The rank of a modifier: its level, then the line of its comment, then its position in the comment. The higher rank
+# wins, also between a modifier for a code and one without a list (`*`).
+Rank = Tuple[int, int, int]
+
+
 @dataclass
 class RulesAndCodes:
     codes: Dict[Union[str, int], Set[int]]
     actions: Dict[int, Dict[Union[str, int], ModifierAction]]
+    ranks: Dict[int, Dict[Union[str, int], Rank]] = field(default_factory=lambda: defaultdict(dict))
 
 
 _translation_table = str.maketrans("", "", "_- ")
@@ -90,8 +102,9 @@ class ModifiersVisitor(Visitor):
         self._handle_statement_comments(node)
         self.generic_visit(node)
 
-    def _parse_robotcode_disabler(self, comment: str) -> Dict[ModifierAction, List[str]]:
-        result: Dict[ModifierAction, List[str]] = {}
+    def _parse_actions(self, comment: str) -> List[Tuple[ModifierAction, str]]:
+        """The actions of a modifier comment and their codes, in the order they are written."""
+        result: List[Tuple[ModifierAction, str]] = []
 
         comment = comment.strip()
         m = ROBOTCODE_ACTION_AND_CODES_PATTERN.match(comment)
@@ -109,16 +122,28 @@ class ModifiersVisitor(Visitor):
             )
             for code in codes:
                 # A code belongs to the rightmost action that names it, also when an action appears more than once.
-                for other_codes in result.values():
-                    if code in other_codes:
-                        other_codes.remove(code)
-                result.setdefault(action, []).append(code)
+                result = [entry for entry in result if entry[1] != code]
+                result.append((action, code))
 
-        return {action: codes for action, codes in result.items() if codes}
+        return result
+
+    def _parse_robotcode_disabler(self, comment: str) -> Dict[ModifierAction, List[str]]:
+        result: Dict[ModifierAction, List[str]] = {}
+        for action, code in self._parse_actions(comment):
+            result.setdefault(action, []).append(code)
+        return result
+
+    def _add_rule(self, lineno: int, code: str, action: ModifierAction, rank: Rank) -> None:
+        self.rules_and_codes.codes[code].add(lineno)
+        current = self.rules_and_codes.ranks[lineno].get(code)
+        if current is None or rank >= current:
+            self.rules_and_codes.actions[lineno][code] = action
+            self.rules_and_codes.ranks[lineno][code] = rank
 
     def _handle_statement_comments(self, node: Statement) -> None:
         first_comment = True
         has_marker = False
+        position = 0
 
         for token in node.get_tokens(Token.COMMENT):
             value = token.value.strip()
@@ -137,15 +162,15 @@ class ModifiersVisitor(Visitor):
                 continue
 
             if has_marker:
-                actions = self._parse_robotcode_disabler(value)
+                actions = self._parse_actions(value)
 
                 if not actions:
                     break
 
-                for action, codes in actions.items():
-                    for code in codes:
-                        self.rules_and_codes.codes[code].add(token.lineno - 1)
-                        self.rules_and_codes.actions[token.lineno - 1][code] = action
+                lineno = token.lineno - 1
+                for action, code in actions:
+                    self._add_rule(lineno, code, action, (_INLINE_LEVEL, lineno, position))
+                    position += 1
 
     def _handle_comment(self, node: Comment) -> None:
         first_comment = True
@@ -153,9 +178,12 @@ class ModifiersVisitor(Visitor):
 
         start_lineno = node.lineno - 1
         end_lineno = self.file_end_lineno
+        level = _FILE_LEVEL
+        position = 0
 
         if node.tokens[0].type == Token.SEPARATOR and self.current_block is not None:
             end_lineno = self.current_block.end_lineno - 1
+            level = _BLOCK_LEVEL
         for token in node.get_tokens(Token.COMMENT):
             value = token.value.strip()
             if first_comment and value.startswith("#"):
@@ -173,16 +201,16 @@ class ModifiersVisitor(Visitor):
                 continue
 
             if has_marker:
-                actions = self._parse_robotcode_disabler(value)
+                actions = self._parse_actions(value)
 
                 if not actions:
                     break
 
-                for action, codes in actions.items():
-                    for code in codes:
-                        self.rules_and_codes.codes[code].update(range(start_lineno, end_lineno + 1))
-                        for i in range(start_lineno, end_lineno + 1):
-                            self.rules_and_codes.actions[i][code] = action
+                for action, code in actions:
+                    rank = (level, start_lineno, position)
+                    position += 1
+                    for i in range(start_lineno, end_lineno + 1):
+                        self._add_rule(i, code, action, rank)
 
 
 @dataclass
@@ -221,34 +249,25 @@ class DiagnosticsModifier:
                 else "unknowncode"
             )
 
-            lines = self.rules_and_codes.codes.get(code)
-
-            if lines is None or (lines is not None and diagnostic.range.start.line not in lines):
-                code = "*"
-                lines = self.rules_and_codes.codes.get(code)
-
             modified = False
-            if lines is not None and diagnostic.range.start.line in lines:
-                actions = self.rules_and_codes.actions.get(diagnostic.range.start.line)
-                if actions is not None:
-                    action = actions.get(code)
-                    if action is not None:
-                        if action == ModifierAction.IGNORE:
-                            return None
-                        if action == ModifierAction.RESET:
-                            pass
-                        elif action == ModifierAction.ERROR:
-                            modified = True
-                            diagnostic.severity = DiagnosticSeverity.ERROR
-                        elif action == ModifierAction.WARNING:
-                            modified = True
-                            diagnostic.severity = DiagnosticSeverity.WARNING
-                        elif action == ModifierAction.INFORMATION:
-                            modified = True
-                            diagnostic.severity = DiagnosticSeverity.INFORMATION
-                        elif action == ModifierAction.HINT:
-                            modified = True
-                            diagnostic.severity = DiagnosticSeverity.HINT
+            action = self._action_for(diagnostic.range.start.line, code)
+            if action is not None:
+                if action == ModifierAction.IGNORE:
+                    return None
+                if action == ModifierAction.RESET:
+                    pass
+                elif action == ModifierAction.ERROR:
+                    modified = True
+                    diagnostic.severity = DiagnosticSeverity.ERROR
+                elif action == ModifierAction.WARNING:
+                    modified = True
+                    diagnostic.severity = DiagnosticSeverity.WARNING
+                elif action == ModifierAction.INFORMATION:
+                    modified = True
+                    diagnostic.severity = DiagnosticSeverity.INFORMATION
+                elif action == ModifierAction.HINT:
+                    modified = True
+                    diagnostic.severity = DiagnosticSeverity.HINT
 
             if not modified:
                 if orig_code in self.config.ignore:
@@ -273,6 +292,17 @@ class DiagnosticsModifier:
                     return None
 
         return diagnostic
+
+    def _action_for(self, line: int, code: str) -> Optional[ModifierAction]:
+        """The action of the nearest modifier on `line` for `code`: one that names the code, or one without a list."""
+        actions = self.rules_and_codes.actions.get(line)
+        if not actions:
+            return None
+        ranks = self.rules_and_codes.ranks.get(line, {})
+        keys = [key for key in (code, "*") if key in actions]
+        if not keys:
+            return None
+        return actions[max(keys, key=lambda key: ranks.get(key, (-1, -1, -1)))]
 
     def modify_diagnostics(self, diagnostics: List[Diagnostic]) -> List[Diagnostic]:
         return [d for d in map(self.modify_diagnostic, diagnostics) if d is not None]

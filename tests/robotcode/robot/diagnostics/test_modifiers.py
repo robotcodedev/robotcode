@@ -1,5 +1,5 @@
 import io
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pytest
 from robot.api import get_model
@@ -495,3 +495,83 @@ first
             severity=DiagnosticSeverity.HINT,
         )
     ]
+
+
+def _severity_after_modifiers(file: str, line: int) -> Optional[DiagnosticSeverity]:
+    """The severity a `variable-not-found` warning on the 0-based `line` gets from the modifiers of `file`, or `None`
+    when they ignore it."""
+    modifier = DiagnosticsModifier(get_model(io.StringIO(file)))
+    diagnostic = Diagnostic(
+        range=Range(start=Position(line=line, character=4), end=Position(line=line, character=14)),
+        message="Variable not found.",
+        code="VariableNotFound",
+        severity=DiagnosticSeverity.WARNING,
+    )
+    result = modifier.modify_diagnostic(diagnostic)
+    return result.severity if result is not None else None
+
+
+RESET_AFTER_A_CODE = """\
+# robotcode: ignore[variable-not-found]
+
+*** Test Cases ***
+First
+    Log    ${missing}
+
+*** Keywords ***
+# robotcode: reset
+My Keyword
+    Log    ${missing}
+"""
+
+INLINE_WITHOUT_LIST = """\
+*** Test Cases ***
+Block
+    # robotcode: info[variable-not-found]
+    Log    ${missing}
+    Log    ${missing}    # robotcode: error
+"""
+
+BLOCK_WITHOUT_LIST = """\
+# robotcode: info[variable-not-found]
+
+*** Test Cases ***
+Block
+    # robotcode: error
+    Log    ${missing}
+"""
+
+BLOCK_WITH_A_CODE = """\
+# robotcode: error
+
+*** Test Cases ***
+Block
+    # robotcode: info[variable-not-found]
+    Log    ${missing}
+"""
+
+ONE_COMMENT = """\
+*** Test Cases ***
+Inline
+    Log    ${missing}    # robotcode: error[variable-not-found] ignore
+    Log    ${missing}    # robotcode: ignore error[variable-not-found]
+"""
+
+
+@pytest.mark.parametrize(
+    ("file", "line", "expected"),
+    [
+        pytest.param(RESET_AFTER_A_CODE, 4, None, id="before-reset"),
+        pytest.param(RESET_AFTER_A_CODE, 9, DiagnosticSeverity.WARNING, id="reset-without-list-after-a-code"),
+        pytest.param(INLINE_WITHOUT_LIST, 3, DiagnosticSeverity.INFORMATION, id="block-with-a-code"),
+        pytest.param(INLINE_WITHOUT_LIST, 4, DiagnosticSeverity.ERROR, id="inline-without-list-over-block"),
+        pytest.param(BLOCK_WITHOUT_LIST, 5, DiagnosticSeverity.ERROR, id="block-without-list-over-file"),
+        pytest.param(BLOCK_WITH_A_CODE, 5, DiagnosticSeverity.INFORMATION, id="block-with-a-code-over-file"),
+        pytest.param(ONE_COMMENT, 2, None, id="rightmost-without-list"),
+        pytest.param(ONE_COMMENT, 3, DiagnosticSeverity.ERROR, id="rightmost-with-a-code"),
+    ],
+)
+def test_the_nearest_modifier_wins_with_and_without_a_list(
+    file: str, line: int, expected: Optional[DiagnosticSeverity]
+) -> None:
+    assert _severity_after_modifiers(file, line) == expected
