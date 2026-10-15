@@ -1173,6 +1173,7 @@
             ],
             "default": "off",
             "enumDescriptions": [
+              "Show no progress messages.",
               "Show only simple progress messages.",
               "Show detailed progress messages. Displays the filenames that are currently being analyzed."
             ],
@@ -2039,19 +2040,6 @@
                 "hidden": true
               },
               "purpose": "test-profile"
-            }
-          },
-          {
-            "label": "RobotCode: Default",
-            "description": "Default configuration.",
-            "body": {
-              "name": "RobotCode: Default",
-              "type": "robotcode",
-              "request": "launch",
-              "presentation": {
-                "hidden": true
-              },
-              "purpose": "default"
             }
           },
           {

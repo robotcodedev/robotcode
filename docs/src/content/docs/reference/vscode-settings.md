@@ -513,9 +513,9 @@ Progress mode for diagnostics.
 - **Type:** `string`
 - **Default:** `"off"`
 - **Allowed values:**
-  - `off`: Show only simple progress messages.
-  - `simple`: Show detailed progress messages. Displays the filenames that are currently being analyzed.
-  - `detailed`
+  - `off`: Show no progress messages.
+  - `simple`: Show only simple progress messages.
+  - `detailed`: Show detailed progress messages. Displays the filenames that are currently being analyzed.
 - **Can be set in:** user, remote, workspace and folder settings
 
 ### `robotcode.analysis.referencesCodeLens` {#robotcode.analysis.referencesCodeLens}

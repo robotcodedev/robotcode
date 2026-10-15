@@ -580,7 +580,7 @@ export class DebugManager {
           vscode.workspace
             .getConfiguration("launch", session.workspaceFolder)
             ?.get<{ [Key: string]: unknown }[]>("configurations")
-            ?.find((v) => v?.type === "python" && v?.name === pythonConfiguration) ?? {};
+            ?.find((v) => (v?.type === "debugpy" || v?.type === "python") && v?.name === pythonConfiguration) ?? {};
       }
 
       const debugConfiguration: vscode.DebugConfiguration = {
