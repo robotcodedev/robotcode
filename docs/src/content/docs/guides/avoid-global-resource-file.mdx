@@ -18,13 +18,13 @@ In many Robot Framework projects, there is a temptation to simplify setup by con
 ## Why This Approach is Problematic
 
 - **Circular Dependencies:**
-  Using one global file in multiple keyword resource files can create circular dependencies. While Robot Framework does not display warnings during execution, RobotCode flags these issues with warnings about already imported files or circular references. These warnings highlight poor design practices that complicate dependency management, hinder refactoring, and reduce modularity. Tightly coupled components can lead to cascading errors when changes are made.
+  Using one global file in multiple keyword resource files can create circular dependencies. While Robot Framework does not display warnings during execution, RobotCode flags these issues with information-level diagnostics about already imported files or circular references. These diagnostics highlight poor design practices that complicate dependency management, hinder refactoring, and reduce modularity. Tightly coupled components can lead to cascading errors when changes are made.
 
 - **Ambiguities in Keyword Resolution and Variable Precedence:**
   In Robot Framework, keywords are not silently overwritten. Instead, if multiple keywords with the same name are present, test execution fails due to ambiguous matches. This forces test writers to explicitly decide which resource's keyword to use, thereby increasing the effort during test case creation. Additionally, variables behave differently: the first variable declaration takes precedence, and all subsequent declarations in other variable sections from different resource files are ignored. Consequently, when using a global resource file, you must carefully manage the order in which resources are imported to ensure the intended variable values are used—further adding to the overall complexity.
 
 - **Performance Issues:**
-  For every keyword call, Robot Framework iterates through the entire list of known keywords—and code analysis tools like RobotCode must do the same. The performance impact significantly depends on whether the system checks 50, 500, or even 5000 keywords; indeed, 500 to 5000 keywords is a realistic number in an average project. This process is especially time-consuming with embedded arguments that require regular expressions rather than simple string comparisons. A large global file filled with rarely used elements can significantly slow down keyword resolution, particularly in larger projects.
+  For every keyword call, Robot Framework looks the name up in the imported libraries and resource files—and code analysis tools like RobotCode must do the same. Within each of them, normal keywords are found by name through an index, but keywords with embedded arguments are checked one by one, which requires regular expressions rather than simple string comparisons. A large global file filled with rarely used elements, especially keywords with embedded arguments, can slow down keyword resolution, particularly in larger projects.
 
   *Heuristic:* If a global resource file contains more than ~200 keywords or imports more than ~20 resource files, consider modularizing to improve performance and maintainability.
 
@@ -61,7 +61,7 @@ ${DB_CONNECTION}    connection_string
 # 500+ keywords covering every aspect of the system
 ```
 
-Note: importing the same library or resource with different parameters in different places can lead to earlier instances being reused or overwritten, causing surprising behavior. Avoid parameterized duplicates and prefer small, purpose-specific imports.
+Note: importing the same library with different parameters in different places can lead to later imports being ignored—Robot Framework keeps the first one—causing surprising behavior. Robot Framework 7.4 and newer warn about such an import, and RobotCode then reports it as `LibraryImportIgnored`. Avoid parameterized duplicates and prefer small, purpose-specific imports.
 
 When this file gets imported into multiple other resources and suite files, it creates a tangled web of dependencies.
 
@@ -82,7 +82,7 @@ This declaration immediately communicates that this suite deals with login proce
 
 ## Limitations in Import and Package Management
 
-Robot Framework’s import mechanism is quite basic—it lacks namespaces or similar constructs found in other programming languages. Instead, it relies solely on a name alias for libraries or the resource file name. Although Robot Framework does not flag multiple imports as errors, this simplicity can lead to issues. For instance, importing the same library with different parameters may result in the earlier instance being overwritten, causing unpredictable behavior. This limitation is often discussed in roadmap conversations, with hopes that future versions of Robot Framework will include more robust support for modular imports and package management.
+Robot Framework’s import mechanism is quite basic—it lacks namespaces or similar constructs found in other programming languages. Instead, it relies solely on a name alias for libraries or the resource file name. Although Robot Framework does not flag multiple imports as errors, this simplicity can lead to issues. For instance, importing the same library with different parameters may result in the later import being ignored, causing unpredictable behavior. This limitation is often discussed in roadmap conversations, with hopes that future versions of Robot Framework will include more robust support for modular imports and package management.
 
 ## Clean Code Considerations
 
@@ -296,15 +296,15 @@ Get Customer Details
 
 ## When Restructuring Isn't Possible
 
-If restructuring your project isn't an option, you can mitigate potential issues by managing warnings from your development environment. For example, you can suppress warnings related to circular dependencies and redundant imports on a per-file basis or globally.
+If restructuring your project isn't an option, you can mitigate potential issues by managing diagnostics from your development environment. For example, you can suppress diagnostics related to circular dependencies and redundant imports on a per-file basis or globally.
 
 It's important to understand that suppressing warnings doesn't fix the underlying issues—it merely acknowledges them. When you choose to ignore specific diagnostics, you're making a conscious decision that these particular issues are acceptable in your codebase. This explicit acknowledgment is different from simply ignoring random warnings in your IDE. By documenting suppressions in your code or configuration files, you're communicating to your team that you understand the potential problem but have determined that it's an acceptable compromise given your project's constraints.
 
 This approach is particularly useful during transitional periods or when working with legacy codebases where perfect architectural solutions aren't immediately feasible. However, these suppressions should ideally be revisited periodically to determine if the underlying issues can eventually be resolved through refactoring.
 
-### Suppress Warnings in Specific Files
+### Suppress Diagnostics in Specific Files
 
-Use directives to disable warnings for circular dependencies and already-imported resources on a per-file basis.
+Use directives to disable diagnostics for circular dependencies and already-imported resources on a per-file basis.
 
 ```robot
 # example for disabling of specific messages for the whole file
@@ -317,9 +317,9 @@ Resource  already_imported.resource  # robotcode: ignore[ResourceAlreadyImported
 Resource  circular_import.resource  # robotcode: ignore[PossibleCircularImport]
 ```
 
-### Suppress Warnings Globally
+### Suppress Diagnostics Globally
 
-The preferred approach to suppress warnings globally is using a `robot.toml` configuration file. This method is IDE-independent and can be checked into version control to share with your team. Create a [`robot.toml`](/reference/config/) file in your project root with these contents:
+The preferred approach to suppress diagnostics globally is using a `robot.toml` configuration file. This method is IDE-independent and can be checked into version control to share with your team. Create a [`robot.toml`](/reference/config/) file in your project root with these contents:
 
 ```toml
 [tool.robotcode-analyze.modifiers]

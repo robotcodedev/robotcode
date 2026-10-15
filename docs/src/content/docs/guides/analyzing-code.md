@@ -34,7 +34,7 @@ For the exhaustive, auto-generated option list see the [CLI reference](/referenc
 ## Quick start
 
 ```bash
-# Analyze the current project (default paths from the active profile)
+# Analyze the whole project
 robotcode analyze code
 
 # Analyze a specific folder or file
@@ -56,7 +56,7 @@ robotcode analyze code --output-format json
 robotcode analyze code --output-format sarif --output-file robotcode.sarif
 ```
 
-If you don't pass any paths, `analyze code` analyzes the **whole project** — every `.robot` / `.resource` file under the project root, minus the configured exclude patterns. (This is unlike `robotcode robot`, which would run only the default paths/suites from your profile.)
+If you don't pass any paths, `analyze code` analyzes the **whole project** — every `.robot` / `.resource` file under the project root, minus the configured exclude patterns, the paths excluded by [`.robotignore` or `.gitignore`](/guides/ignoring-files/), and hidden files and folders. (This is unlike `robotcode robot`, which would run only the default paths/suites from your profile.)
 
 ## How `analyze code` finds your project
 
@@ -68,7 +68,7 @@ If you don't pass any paths, `analyze code` analyzes the **whole project** — e
 
 This matters: a keyword that only resolves because of a `--pythonpath` entry or a variable file resolves during analysis too, instead of being wrongly reported as missing.
 
-The project's imports and libraries are always resolved up front, across the whole project — that part can't be narrowed. The per-file diagnostics are then computed only for the files selected by `paths` / `--filter`, so a narrower selection does make a run faster.
+Imports and libraries are resolved only for the files selected by `paths` / `--filter`, and the per-file diagnostics are computed only for those files, so a narrower selection makes a run faster.
 
 ## What it checks
 
@@ -85,7 +85,7 @@ This is *static* analysis, so it isn't the last word: actually running the suite
 
 ### Unused keywords and variables
 
-By default `analyze code` does **not** flag unused definitions. Unlike the per-file diagnostics, deciding whether a keyword or variable is unused needs the reference data of the *whole* project — not just the selected files — so it can't take the `paths` / `--filter` shortcut, and it adds an extra pass that is noticeably slower on projects with many keywords and variables. Enable it explicitly:
+By default `analyze code` does **not** flag unused definitions. Unlike the per-file diagnostics, deciding whether a keyword or variable is unused needs the reference data of the *whole* project: with `paths` / `--filter`, only references inside the selected files count, and anything used only outside them is reported as unused, so run it on the whole project. It also adds an extra pass that is noticeably slower on projects with many keywords and variables. Enable it explicitly:
 
 ```bash
 robotcode analyze code --collect-unused
@@ -158,9 +158,9 @@ When neither is given, everything is reported.
 
 `analyze code` exits with a **bitwise combination** of these values, so a single status tells you which severities were present:
 
-| Bit | Value | Meaning |
+| Value | Name | Meaning |
 |---|---|---|
-| — | `0` | **SUCCESS** — nothing reported |
+| `0` | `SUCCESS` | nothing reported |
 | `1` | `ERRORS` | at least one error |
 | `2` | `WARNINGS` | at least one warning |
 | `4` | `INFOS` | at least one information |
@@ -185,11 +185,12 @@ Valid mask values: `error`, `warn` (alias `warning`), `info` (alias `information
 exit-code-mask = ["warn", "info", "hint"]   # CI fails only on errors
 ```
 
-Any non-zero exit means something was reported, which is what makes a CI step fail by default. To branch on a specific severity, test the corresponding bit — in bash:
+A non-zero exit means that something was reported, which is what makes a CI step fail by default, or that the command failed: a usage error, such as an invalid option value or a missing `--output-file` directory, exits with `2`, and other failures, such as an invalid `robot.toml`, exit with `1`. To branch on a specific severity, make sure a report was written, then test the corresponding bit — in bash:
 
 ```bash
-robotcode analyze code
-code=$?
+robotcode analyze code | tee analyze.txt
+code=${PIPESTATUS[0]}
+[ -s analyze.txt ] || exit "$code"   # nothing written: the command itself failed
 (( code & 1 )) && echo "errors present"
 (( code & 2 )) && echo "warnings present"
 ```
@@ -252,7 +253,7 @@ robotcode analyze code --output-format github
 Each diagnostic becomes one annotation line:
 
 ```
-::error file=tests/login.robot,line=4,col=5,endColumn=14,title=KeywordNotFound::No keyword with name 'Lgin User' found.
+::error file=tests/login.robot,line=4,endLine=4,col=5,endColumn=14,title=KeywordNotFound::No keyword with name 'Lgin User' found.
 ```
 
 ## GitLab Code Quality
@@ -360,7 +361,7 @@ robotcode analyze code --output-format json | jq '.summary'
 
 ## Managing the analysis cache
 
-To speed up repeat analysis, RobotCode caches resolved library/variable imports (and, with `--cache-namespaces`, analyzed namespaces) on disk. Library and variable file imports are cached per set of import arguments, so changing an import's arguments loads it again with the new ones. The `analyze cache` subcommands let you inspect and clear it:
+To speed up repeat analysis, RobotCode caches resolved library/variable imports (and, unless you pass `--no-cache-namespaces`, analyzed namespaces) on disk. Library and variable file imports are cached per set of import arguments, so changing an import's arguments loads it again with the new ones. The `analyze cache` subcommands let you inspect and clear it:
 
 ```bash
 robotcode analyze cache info     # where the cache lives and how big it is
@@ -404,7 +405,7 @@ See the [`robot.toml` configuration reference](/reference/config/) for the compl
 
 ## JSON reference
 
-`--output-format json` (or `json-indent`) emits a single object with two keys, using the same LSP `Diagnostic` shape as `robotcode discover` and `robotcode results`:
+`--output-format json` (or `json-indent`) emits a single object with two keys, using the same LSP `Diagnostic` shape as `robotcode discover`:
 
 ```json
 {

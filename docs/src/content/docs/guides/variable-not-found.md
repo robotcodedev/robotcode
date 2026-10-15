@@ -103,7 +103,7 @@ Robot Framework offers several methods to define variables and assign them a sco
 - **VAR syntax**: More readable syntax (available from Robot Framework 7.0) with an optional scope parameter
 - **Return values**: Variables created by assigning a keyword return value are local by default
 
-An important concept in Robot Framework is the **scope override mechanism**: If you define a variable with a name that already exists in a narrower scope and specify a wider scope, the variable in the narrower scope is automatically deleted. This behavior ensures that the variable has the last assigned value, regardless of the scope specified.
+An important concept in Robot Framework is the **scope override mechanism**: If you define a variable with a name that already exists in a narrower scope and specify a wider scope, the variable in the narrower scope is automatically overwritten. This behavior ensures that the variable has the last assigned value, regardless of the scope specified.
 
 Consider the following example:
 
@@ -116,12 +116,12 @@ test variable scopes
 
     # 2. Create a suite variable with the same name
     VAR    ${a_var}  a suite value  scope=suite
-    # The local variable is automatically deleted
+    # The local variable is automatically overwritten
     Log    ${a_var}  # Output: "a suite value"
 
     # 3. Create a global variable with the same name
     VAR    ${a_var}  a global value  scope=global
-    # The suite variable is automatically deleted
+    # The suite variable is automatically overwritten
     Log    ${a_var}  # Output: "a global value"
 ```
 
@@ -202,7 +202,7 @@ The following points explain why RobotCode sometimes does not recognize variable
   *** Test Cases ***
   Setup Configuration
       [Tags]    setup
-      Set Suite Variable    ${CONFIG_VALUE}    production
+      Set Suite Variable    $CONFIG_VALUE    production
 
   Use Configuration
       [Tags]    functional
@@ -218,13 +218,13 @@ The following points explain why RobotCode sometimes does not recognize variable
   - Variables created only within a `FOR` loop
   - Variables whose assignment depends on dynamic conditions
 
-  ```robot del={9,10}
+  ```robot del={3,9,10}
   *** Test Cases ***
   test different environments
-    IF    '${ENV}' == 'production'
-        Set Suite Variable    ${API_URL}    https://api.production.example.com
+    IF    '${ENV}' == 'production'  # Error: VariableNotFound
+        Set Suite Variable    $API_URL    https://api.production.example.com
     ELSE
-        Set Suite Variable    ${TEST_URL}    https://api.test.example.com
+        Set Suite Variable    $TEST_URL    https://api.test.example.com
     END
 
     Log    ${API_URL}  # Error: VariableNotFound
@@ -253,9 +253,11 @@ The following points explain why RobotCode sometimes does not recognize variable
 RobotCode deliberately follows a cautious approach to variable recognition, partly due to technical limitations regarding complexity and performance. It only marks a variable as valid if it is explicitly defined in one of the following ways:
 
 - As a command line parameter
+- In the `variables` or `variable-files` of `robot.toml`, or in the editor settings `robotcode.robot.variables` and `robotcode.robot.variableFiles`
 - In a `*** Variables ***` section, of the file itself or of an imported resource file
 - In an imported variable file
 - In the currently analyzable scope (such as keyword arguments or local variables)
+- As a built-in variable of Robot Framework, such as `${OUTPUT_DIR}` or `${TEST_NAME}`
 
 All other variables are consistently marked as `VariableNotFound` - even if they might exist at runtime. This conservative strategy is not merely a technical limitation but a deliberate design principle that offers significant advantages for test quality and maintenance:
 
@@ -364,7 +366,7 @@ Create resource files that define commonly used variables:
 *** Variables ***
 ${WAIT_TIMEOUT}         10 seconds
 ${SCREENSHOT_DIR}       ${OUTPUT_DIR}/screenshots
-${LOG_LEVEL}           INFO
+${DEFAULT_LOG_LEVEL}    INFO
 
 # Complex data structures
 &{DEFAULT_HEADERS}      Content-Type=application/json    Accept=application/json
@@ -462,7 +464,7 @@ Setup Test Environment
 When RobotCode shows a `VariableNotFound` error, you can use the built-in quick fixes:
 1. **Create suite variable** - Adds the variable to `*** Variables ***` section
 2. **Create local variable** - Creates a local variable with `Set Variable`
-3. **Add as keyword argument** - Adds the variable as a keyword parameter
+3. **Add argument** - Adds the variable as a keyword parameter
 
 These quick fixes help maintain clean, analyzable code while resolving variable issues.
 
@@ -618,9 +620,9 @@ Database Test With Error Handling
 *** Keywords ***
 Setup Test Data
     ${user}=    Create Test User
-    Set Suite Variable    ${TEST_USER}    ${user}
+    Set Suite Variable    $TEST_USER    ${user}
     ${token}=    Get Auth Token    ${user}
-    Set Suite Variable    ${AUTH_TOKEN}    ${token}
+    Set Suite Variable    $AUTH_TOKEN    ${token}
 
 # New approach - Clear data flow
 *** Keywords ***
@@ -652,7 +654,7 @@ Test With Clear Data Flow
 - Rely on `Set Suite/Global Variable` for data passing
 - Create variables in deeply nested keywords
 - Use dynamic variable names unnecessarily
-- Ignore RobotCode's VariableNotFound warnings
+- Ignore RobotCode's VariableNotFound errors
 - Mix variable definition patterns within the same suite
 
 #### RobotCode Features
@@ -660,8 +662,8 @@ Test With Clear Data Flow
 1. **Quick Fixes (Ctrl+.):**
    - Create suite variable
    - Create local variable
-   - Add as keyword argument
-   - Disable warning for line
+   - Add argument
+   - Disable 'VariableNotFound' for this line
 
 2. **IntelliSense Support:**
    - Autocomplete for defined variables
@@ -686,7 +688,7 @@ Test With Clear Data Flow
 
 ## Conclusion
 
-Understanding how RobotCode analyzes variables and following the best practices outlined in this guide will help you write more maintainable and reliable Robot Framework tests. While the `VariableNotFound` warnings might seem frustrating at first, they are valuable indicators that guide you toward better code structure and clearer variable management.
+Understanding how RobotCode analyzes variables and following the best practices outlined in this guide will help you write more maintainable and reliable Robot Framework tests. While the `VariableNotFound` errors might seem frustrating at first, they are valuable indicators that guide you toward better code structure and clearer variable management.
 
 Remember that RobotCode's conservative approach to variable recognition is designed to help you catch potential issues early in development rather than during test execution. By embracing explicit variable definitions and clear data flow patterns, you'll create test suites that are not only free from variable warnings but also easier to understand, maintain, and scale.
 
