@@ -6,28 +6,28 @@ Defines how the VS Code extension shows the progress of a Robot Framework run in
 
 ## ADDED Requirements
 
-### Requirement: The execution view is off by default
+### Requirement: Two settings, both off by default
 
-The execution view in the editor SHALL be controlled by the setting `robotcode.run.showExecutionInEditor`, off by default. While it is off, the extension SHALL NOT request keyword events from the debugger and SHALL show no highlights and no durations. Runs started outside VS Code SHALL never show them.
+The execution view in the editor SHALL be controlled by two settings, both off by default: `robotcode.run.highlightRunningKeyword` for the highlighted lines and `robotcode.run.showStepDurations` for the durations. While both are off, the extension SHALL NOT request keyword events from the debugger and SHALL show neither; while one of them is on, it SHALL request them. Runs started outside VS Code SHALL never show highlights or durations.
 
 #### Scenario: Default
 
-- **WHEN** a test is run from the Test Explorer with the setting at its default
+- **WHEN** a test is run from the Test Explorer with both settings at their default
 - **THEN** the editor shows no highlighted lines and no durations, and the launch request carries no `keywordEvents`
 
-#### Scenario: Setting on
+#### Scenario: Only the durations on
 
-- **WHEN** the setting is on and a test is run from the Test Explorer or the editor, or debugged
-- **THEN** the launch request carries `keywordEvents: true`
+- **WHEN** `robotcode.run.showStepDurations` is on, `robotcode.run.highlightRunningKeyword` is off, and a test is run from the Test Explorer or the editor, or debugged
+- **THEN** the launch request carries `keywordEvents: true`, the editor shows durations as keywords end, and no line is highlighted
 
 #### Scenario: Run in the terminal
 
-- **WHEN** the setting is on and the user runs `robotcode robot` in the integrated terminal
+- **WHEN** both settings are on and the user runs `robotcode robot` in the integrated terminal
 - **THEN** the editor shows no highlights and no durations for that run
 
 ### Requirement: Running lines are highlighted
 
-While the setting is on and a run or debug session started from VS Code executes, the extension SHALL highlight, in every visible editor of the file, the line of each test and keyword that has started and not ended, from the running test down to the innermost keyword, and SHALL remove each highlight when its item ends or the run ends.
+While `robotcode.run.highlightRunningKeyword` is on and a run or debug session started from VS Code executes, the extension SHALL highlight, in every visible editor of the file, the line of each test and keyword that has started and not ended, from the running test down to the innermost keyword, and SHALL remove each highlight when its item ends, the run ends or the setting is turned off.
 
 #### Scenario: Nested keywords
 
@@ -45,9 +45,14 @@ While the setting is on and a run or debug session started from VS Code executes
 - **WHEN** the user stops the run while keywords are executing
 - **THEN** all highlights disappear
 
+#### Scenario: Highlight turned off
+
+- **WHEN** the user turns `robotcode.run.highlightRunningKeyword` off during a run
+- **THEN** the highlights disappear from all editors and no new ones appear while the run goes on
+
 ### Requirement: Durations are shown at the end of the line
 
-When a keyword ends, the extension SHALL show its elapsed time at the end of the line it was called from, in the editors of that file, in the format the Test Explorer uses for durations. A line executed several times in the same run SHALL show how often it ran and the total time.
+While `robotcode.run.showStepDurations` is on, the extension SHALL show the elapsed time of each keyword that ends at the end of the line it was called from, in the editors of that file, in the format the Test Explorer uses for durations. A line executed several times in the same run SHALL show how often it ran and the total time.
 
 #### Scenario: Single call
 
@@ -61,7 +66,7 @@ When a keyword ends, the extension SHALL show its elapsed time at the end of the
 
 ### Requirement: Durations are cleared
 
-Durations SHALL stay after the run ends and SHALL be removed from a file when a new run starts in the same workspace folder, when the document is edited, or when the setting is turned off.
+Durations SHALL stay after the run ends and SHALL be removed from a file when a new run starts in the same workspace folder, when the document is edited, or when `robotcode.run.showStepDurations` is turned off.
 
 #### Scenario: Next run
 
@@ -73,10 +78,10 @@ Durations SHALL stay after the run ends and SHALL be removed from a file when a 
 - **WHEN** the user edits the resource file after the run
 - **THEN** the durations of that file disappear
 
-#### Scenario: Setting turned off
+#### Scenario: Durations turned off
 
-- **WHEN** the user turns the setting off after a run
-- **THEN** highlights and durations disappear from all editors
+- **WHEN** the user turns `robotcode.run.showStepDurations` off after a run
+- **THEN** the durations disappear from all editors
 
 ### Requirement: The editor stays responsive
 
@@ -84,5 +89,5 @@ Updates of highlights and durations SHALL be batched; a run that produces thousa
 
 #### Scenario: Tight loop
 
-- **WHEN** a test runs a `FOR` loop with ten thousand iterations of `No Operation` with the setting on
-- **THEN** the editor stays usable during the run and the run takes no longer than it does with the setting off, apart from the time the debugger needs to send the events
+- **WHEN** a test runs a `FOR` loop with ten thousand iterations of `No Operation` with both settings on
+- **THEN** the editor stays usable during the run and the run takes no longer than it does with both settings off, apart from the time the debugger needs to send the events

@@ -14,7 +14,7 @@ See proposal.md for the motivation. Observed in the code on 2026-10-15:
 
 **Goals:**
 
-- A run with the setting off behaves exactly as today, on both sides.
+- A run with both settings off behaves exactly as today, on both sides.
 - Keyword events never slow the run down beyond the cost of sending them, and never block on the client.
 - The editor view is built from what the debugger already reports; no second channel, no log parsing.
 
@@ -28,7 +28,7 @@ See proposal.md for the motivation. Observed in the code on 2026-10-15:
 
 ### The client opts in per launch, through the existing option path
 
-A new boolean option `--keyword-events/--no-keyword-events` of `robotcode debug` (default off), a `keyword_events` flag on `Debugger.instance` set in `run.py`, and the launch attribute `keywordEvents` that the launcher maps to the option, exactly like `outputMessages`. `debugmanager.ts` sets the attribute from the new setting `robotcode.run.showExecutionInEditor` when the launch configuration leaves it out, so Test Explorer runs, editor runs and debug sessions all follow the setting, while a launch configuration can still force it either way. A debugger-side default of "on" was rejected: every other client, including IntelliJ and the command-line debugger, would pay for events it does not use.
+A new boolean option `--keyword-events/--no-keyword-events` of `robotcode debug` (default off), a `keyword_events` flag on `Debugger.instance` set in `run.py`, and the launch attribute `keywordEvents` that the launcher maps to the option, exactly like `outputMessages`. `debugmanager.ts` sets the attribute when the launch configuration leaves it out and one of the two new settings, `robotcode.run.highlightRunningKeyword` or `robotcode.run.showStepDurations`, is on, so Test Explorer runs, editor runs and debug sessions all follow the settings, while a launch configuration can still force it either way. Two settings instead of one, so that each part can be used alone: the highlight is a live view of the run, the durations are a result that stays after it. A debugger-side default of "on" was rejected: every other client, including IntelliJ and the command-line debugger, would pay for events it does not use.
 
 ### The events reuse `robotStarted`/`robotEnded` with type `keyword`
 
@@ -40,11 +40,11 @@ The client already dispatches these two events by `type` and keeps the started o
 
 ### The client renders in batches from one model per run
 
-`TestRunInfo` keeps `startedEvents` as today and gets a durations map: source path → line → `{ count, total }`, filled from the `elapsedtime` of every keyword `robotEnded`. A single timer, started by the first event after an idle period and firing after about 100 ms, repaints the visible editors of the files touched since the last repaint: the running highlight with the existing `activeStepDecorationType`, the durations with a new decoration type whose `after.contentText` is the formatted duration in the CodeLens colour. Rendering per event was rejected: a tight loop produces events faster than `setDecorations` should be called, and the mutex-per-event of the dormant code would make the extension host the bottleneck. Visible-editor changes (`onDidChangeVisibleTextEditors`) trigger a repaint, so an editor opened during the run shows the current state.
+`TestRunInfo` keeps `startedEvents` as today and gets a durations map: source path → line → `{ count, total }`, filled from the `elapsedtime` of every keyword `robotEnded` while `robotcode.run.showStepDurations` is on; the highlight is painted only while `robotcode.run.highlightRunningKeyword` is on. A single timer, started by the first event after an idle period and firing after about 100 ms, repaints the visible editors of the files touched since the last repaint: the running highlight with the existing `activeStepDecorationType`, the durations with a new decoration type whose `after.contentText` is the formatted duration in the CodeLens colour. Rendering per event was rejected: a tight loop produces events faster than `setDecorations` should be called, and the mutex-per-event of the dormant code would make the extension host the bottleneck. Visible-editor changes (`onDidChangeVisibleTextEditors`) trigger a repaint, so an editor opened during the run shows the current state.
 
 ### Durations outlive the run; highlights do not
 
-Highlights are removed when the item ends, and all of a run's highlights when `robotExited` arrives or the run is cancelled, so a stopped run leaves nothing behind. Durations are kept per workspace folder after the run and cleared when a new run starts in that folder, when the document changes (`onDidChangeTextDocument` for that file), or when the setting is turned off. Durations are shown as keywords end, not only after the run, because the model is the same and a tester watching a long run gets the information earlier; the Playwright extension shows them afterwards, which is a presentation choice, not a constraint.
+Highlights are removed when the item ends, and all of a run's highlights when `robotExited` arrives or the run is cancelled, so a stopped run leaves nothing behind. Durations are kept per workspace folder after the run and cleared when a new run starts in that folder, when the document changes (`onDidChangeTextDocument` for that file), or when `robotcode.run.showStepDurations` is turned off; turning `robotcode.run.highlightRunningKeyword` off removes the highlights. Durations are shown as keywords end, not only after the run, because the model is the same and a tester watching a long run gets the information earlier; the Playwright extension shows them afterwards, which is a presentation choice, not a constraint.
 
 ### Formatting and paths
 
