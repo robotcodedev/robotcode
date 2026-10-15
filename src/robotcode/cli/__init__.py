@@ -260,8 +260,9 @@ class RobotCodeGroup(AliasedGroup):
     "color",
     default=None,
     help=(
-        "Force or disable colored output. Default (no flag): auto-detect — colors only when stdout is a TTY,"
-        " disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set."
+        "Enable or disable colored output. Color codes are written only to a terminal; set `FORCE_COLOR` to get"
+        " them in a pipe. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR`"
+        " is set, forced if `FORCE_COLOR` is set."
     ),
     show_envvar=True,
 )
@@ -270,7 +271,8 @@ class RobotCodeGroup(AliasedGroup):
     "pager",
     default=None,
     help=(
-        "Force or disable the pager. Default (no flag): auto-page when the rendered output exceeds the terminal height."
+        "Force or disable the pager on a terminal; no pager starts when stdout isn't a TTY. Default (no flag):"
+        " auto-page when the rendered output exceeds the terminal height."
     ),
     show_envvar=True,
 )

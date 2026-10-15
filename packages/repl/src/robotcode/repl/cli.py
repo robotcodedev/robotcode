@@ -530,7 +530,7 @@ def repl(
     "--stop-on-entry",
     is_flag=True,
     default=False,
-    help="Break at the very first keyword.",
+    help="Break at the very first step.",
 )
 @add_options(*ROBOT_VERSION_OPTIONS)
 @pass_application

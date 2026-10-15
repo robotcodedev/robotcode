@@ -130,12 +130,12 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 - `--color / --no-color`
 
-   Force or disable colored output. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set.  [env var: ROBOTCODE_COLOR]
+   Enable or disable colored output. Color codes are written only to a terminal; set `FORCE_COLOR` to get them in a pipe. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set.  [env var: ROBOTCODE_COLOR]
 
 
 - `--pager / --no-pager`
 
-   Force or disable the pager. Default (no flag): auto-page when the rendered output exceeds the terminal height.  [env var: ROBOTCODE_PAGER]
+   Force or disable the pager on a terminal; no pager starts when stdout isn't a TTY. Default (no flag): auto-page when the rendered output exceeds the terminal height.  [env var: ROBOTCODE_PAGER]
 
 
 - `-v, --verbose`
@@ -484,7 +484,7 @@ Performs static code analysis to identify potential issues in the specified
 missing arguments, and other problems.
 
 - **PATHS**: Can be individual files or directories. If no *PATHS* are
-provided, the current directory is   analyzed by default.
+provided, the whole project is   analyzed.
 
 The return code is a bitwise combination of the following values:
 
@@ -3115,7 +3115,7 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--stop-on-entry`
 
-   Break at the very first keyword.
+   Break at the very first step.
 
 
 - `--version`

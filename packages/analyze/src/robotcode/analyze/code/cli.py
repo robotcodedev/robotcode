@@ -473,8 +473,8 @@ def code(
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
         errors, missing keywords or variables, missing arguments, and other problems.
 
-        - **PATHS**: Can be individual files or directories. If no *PATHS* are provided, the current directory is
-          analyzed by default.
+        - **PATHS**: Can be individual files or directories. If no *PATHS* are provided, the whole project is
+          analyzed.
 
         The return code is a bitwise combination of the following values:
 
