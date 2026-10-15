@@ -111,6 +111,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, CodeA
     @code_action_kinds(
         [
             CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION,
+            CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE,
             CODE_ACTION_KIND_SURROUND_WITH,
         ]
     )
