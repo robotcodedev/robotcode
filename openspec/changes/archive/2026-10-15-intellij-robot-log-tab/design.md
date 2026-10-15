@@ -58,7 +58,9 @@ Alternatives:
 
 `RobotCodeRunnerConsoleView` creates a read-only console with `TextConsoleBuilderFactory`, registers `RobotCodeConsoleFilter` on it and attaches it to the run's process handler, so it shows everything the process writes, with its colors, as the console of any other run does. It disposes the console with itself, so a rerun, which creates a new run console, starts with an empty "Terminal" tab. The converter no longer reports process output to the results tree; the platform's system output, the command line and the exit message, stays uncaptured output of the run, so the root of the results tree keeps it, and the "Terminal" tab shows it as well.
 
-Alternative: printing the process output from the converter into the "Terminal" console: the console attached to the process handler shows the same text without a second path through the converter's ordering.
+Alternatives:
+- Printing the process output from the converter into the "Terminal" console: the console attached to the process handler shows the same text without a second path through the converter's ordering.
+- The title "Output", which avoids confusion with IntelliJ's Terminal tool window: the maintainer chose "Terminal" when the plan was written (2026-10-15).
 
 ### The tab in Run sessions through `ExecutionConsoleEx`
 
@@ -97,7 +99,3 @@ Alternatives:
 ## Migration Plan
 
 None. Nothing is stored; the platform remembers the new tab in the layout of Robot Framework runs from the first run on.
-
-## Open Questions
-
-- The tab title "Terminal" may be mistaken for IntelliJ's Terminal tool window; "Output" would avoid that.
