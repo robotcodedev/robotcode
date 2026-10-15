@@ -22,6 +22,7 @@ import com.intellij.openapi.util.Key
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.Urls
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.debugging.RobotEnqueuedArguments
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionAttributes
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
@@ -56,7 +57,10 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
         }
 
         override fun onTestFailure(event: TestFailedEvent) {
-            calls.add("testFailed ${event.name} ${event.id} ${event.localizedFailureMessage} ${event.durationMillis}")
+            val trace = event.stacktrace?.let { " trace ${it.replace("\n", " | ")}" } ?: ""
+            calls.add(
+                "testFailed ${event.name} ${event.id} ${event.localizedFailureMessage} ${event.durationMillis}$trace"
+            )
         }
 
         override fun onTestIgnored(event: TestIgnoredEvent) {
@@ -173,6 +177,44 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
         )
         // every debugger event waits for the process output written before it
         assertEquals(8, awaitedOutput)
+    }
+
+    fun testAFailureInAKeywordCarriesTheFailedKeywordsAsItsStackTrace() {
+        val resource = Path.of(System.getProperty("java.io.tmpdir"), "common.resource").toString()
+        val failed = test("t1", "First", 5, "FAIL", "Hello, Robot != Hello, World", 4).copy(
+            failedKeywords = arrayOf(
+                RobotExecutionAttributes(kwname = "Build Greeting", libname = "common", source = source, lineno = 6),
+                RobotExecutionAttributes(kwname = "Should Be Equal", libname = "BuiltIn", source = resource, lineno = 4)
+            )
+        )
+        converter.startTesting()
+        client.onRobotStarted.fire(suite())
+        client.onRobotStarted.fire(test("t1", "First", 5))
+        client.onRobotEnded.fire(failed)
+        client.onRobotStarted.fire(test("t2", "Second", 9))
+        client.onRobotEnded.fire(test("t2", "Second", 9, "FAIL", "failed in the test itself", 1))
+
+        assertEquals(
+            listOf(
+                "testFailed First t1 Hello, Robot != Hello, World 4 trace " +
+                    "    at BuiltIn.Should Be Equal ($resource:4) |     at common.Build Greeting ($source:6)",
+                "testFailed Second t2 failed in the test itself 1"
+            ),
+            processor.calls.filter { it.startsWith("testFailed") }
+        )
+    }
+
+    fun testTheCountOfTheRunReachesTheProgressBeforeTheFirstSuiteStarts() {
+        client.onRobotEnqueued.fire(
+            RobotEnqueuedArguments(arrayOf("$source;Suite", "$source;Suite.First;5", "$source;Suite.Second;8"))
+        )
+        client.onRobotStarted.fire(suite())
+        converter.startTesting()
+
+        assertEquals(
+            listOf("startTesting", "count 2", "suiteStarted Suite s1 0 ${url(0)} Suite"),
+            processor.calls
+        )
     }
 
     fun testItemsBeforeTheStartAreAppliedAfterItInTheirOrder() {

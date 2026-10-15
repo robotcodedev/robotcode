@@ -9,6 +9,7 @@ See proposal.md for the motivation.
 - `intellij-run-configuration-target`: the run configuration extends PyCharm's `AbstractPythonRunConfiguration` and stores its target in `RobotCodeRunConfigurationOptions`. A "Tests and suites" target (`SELECTION`) holds items with kind, full name, label, `relSource`, suite and the suite's `relSource`, as discovery reports them, plus the name of the top-level suite; `selectionItemOf` builds such an item for a discovery item, as gutter and context runs store it. An item that has only a full name is looked up in the current discovery model at the start of the run; if it is not found, only `-bl` is passed for it (`resolveStoredSelection`). `ModuleBasedConfiguration.clone()` copies a configuration with its options. The run state's `createAndAttachConsole` creates `RobotCodeRunnerConsoleView`, and its `execute(Executor)` adds the rerun-failed action to the result. Both program runners start the run state off the UI thread.
 - `intellij-run-selection-args`: `selectionArguments` turns resolved items into `-I`, `-N` with the top-level suite, `-s` and `-bl` after `--`. A "Files and folders" target (`PATHS`) passes its paths and no `-N` (`targetArguments`).
 - `intellij-run-and-debug-options`: the report or the log opens after a run, and the run and debug tabs have "Open Report" and "Open Log"; all of them open the file in the target of "Open output target" (`RobotCodeOutputFiles.kt`).
+- `intellij-output-preview`: the target "Built-in preview" shows the report or log in the plugin's own preview tab, which a later run reloads.
 
 **Current code** (checked on 2026-10-14):
 
@@ -22,10 +23,10 @@ See proposal.md for the motivation.
 **Platform API** (javap against PyCharm 2026.1):
 
 - `TestFailedEvent` has public constructors that take a stack trace. `TestStartedEvent(name, id, parentId, locationUrl, metainfo, nodeType, nodeArgs, running)` is public, and `SMTestProxy.getMetainfo()` returns the metainfo.
-- `SMTRunnerConsoleProperties.addStackTraceFilter(Filter)` adds to the filters that its default `getErrorNavigatable(Location, String)` applies to the stack trace, line by line; the first `FileHyperlinkInfo` found becomes the navigation target of a failed leaf (`SMTestProxy.getDescriptor`). These filters do not create links in the console; `BaseTestsOutputConsoleView.addMessageFilter(Filter)` does.
+- `SMTRunnerConsoleProperties.addStackTraceFilter(Filter)` adds to the filters that its default `getErrorNavigatable(Location, String)`, public and not final, applies to the stack trace, line by line; the first `FileHyperlinkInfo` found becomes the navigation target of a failed leaf (`SMTestProxy.getDescriptor`). These filters do not create links in the console; `BaseTestsOutputConsoleView.addMessageFilter(Filter)` does.
 - `GeneralTestEventsProcessor.onTestsCountInSuite(int)` sets the number of tests the progress counts against.
 - `AbstractRerunFailedTestsAction`: `init(TestConsoleProperties)`, `setModel(TestFrameworkRunningModel)`, the protected `getRunProfile(ExecutionEnvironment)` and `getFailedTests(Project)`, and the public abstract `MyRunProfile(RunConfigurationBase)`, which implements `WrappingRunConfiguration` with `getPeer()`. By default, failed means failed or interrupted, and not ignored. `SMTRunnerConsoleView.getResultsViewer()` is public. None of these is `@Internal`; `setModelProvider` takes an obsolete `Getter`.
-- `OpenFileHyperlinkInfo` is public.
+- `OpenFileHyperlinkInfo` and `LazyFileHyperlinkInfo` are public; the latter finds its file with `LocalFileSystem.refreshAndFindFileByPath` when it is clicked.
 
 ## Goals / Non-Goals
 
@@ -54,17 +55,23 @@ The converter reports a failed test with a `TestFailedEvent` whose message is Ro
 
 The name is `<libname>.<kwname>`, or `kwname` alone when there is no library name; the location is the call site from `source` and `lineno`. `RobotExecutionAttributes` gets `kwname` and `libname`. A test without failed keywords gets no stack trace, so it keeps navigating to its own line.
 
-Alternative: one message per keyword, as VS Code's test messages. The platform's failure has exactly one message and one stack trace, and the console shows them together.
+Robot Framework's log is the model for failures that a test caught before it failed. The log keeps them, with status FAIL, inside the keyword or control structure that caught them and passed: `Run Keyword And Ignore Error`, `Run Keyword And Expect Error`, a passing `Wait Until Keyword Succeeds`, or a TRY/EXCEPT. When a failed test is opened, the log expands only elements that failed (`expandFailed` in `log.js`), so caught failures stay collapsed. The listener marks a failed keyword with `caught` when the log would not expand it, because a keyword or control structure around it ended without failing. Robot Framework reports the branches of a TRY/EXCEPT to listener version 2, but not the TRY/EXCEPT itself, whose status the log follows (checked with 5.0, 6.1 and 7.5). So an EXCEPT branch that passed marks the failures of its TRY branch, and a FINALLY branch that fails afterwards takes the mark back, since the TRY/EXCEPT then fails; after an EXCEPT branch that fails, the log expands both branches, so nothing is marked.
+
+The stack trace lists the unmarked keywords first, innermost first, then each caught failure under a line `Caught: <message>`. Navigation looks only at the lines before the first `Caught:` line, so it never opens a caught failure, and a test with only caught failures navigates to its own line. VS Code's test messages show every failed keyword, as before, and ignore the mark.
+
+Alternatives:
+- One message per keyword, as VS Code's test messages: the platform's failure has exactly one message and one stack trace, and the console shows them together.
+- Leaving caught failures out, as an earlier version of this change did: the log shows them, and VS Code's test messages would lose them.
 
 ### One filter class for locations and output files
 
 A filter recognizes two forms in a console line:
 - a location `(<path>:<line>)` at the end of a line, where the path may contain spaces, a drive letter and backslashes; it links the path and line to an `OpenFileHyperlinkInfo` for that line;
-- an output file line `Output:`, `Log:`, `Report:`, `XUnit:` or `Debug:`, followed by spaces and a path; it links the path: an `.html` file opens in the target of "Open output target", through the function of Open Report and Open Log, any other file with an `OpenFileHyperlinkInfo`.
+- an output file line `Output:`, `Log:`, `Report:`, `XUnit:` or `Debug:`, followed by spaces and a path; it links the path: an `.html` file opens in the target of "Open output target", through the function of Open Report and Open Log, any other file with a `LazyFileHyperlinkInfo`, which finds the file when it is clicked.
 
-Both forms get a link only for an absolute path of an existing file, so `NONE` stays plain text.
+Both forms get a link only for an absolute path of an existing file on disk, so `NONE` stays plain text. The disk decides, not the IDE's file system: when a run writes into a new output folder, the IDE learns of the folder only after the run's last lines were filtered, so a check through the IDE gave the output file lines of a passing first run no links. The source files of locations are known to the IDE.
 
-The console properties register it with `addStackTraceFilter`, so navigation from a failed test uses the first location of the stack trace, which is the innermost keyword. The run console registers it with `addMessageFilter`, so the stack trace and the output file lines are clickable. No override of `getErrorNavigatable` is needed.
+The console properties register it with `addStackTraceFilter`, so navigation from a failed test uses the first location of the stack trace, which is the innermost keyword of the failure; they override `getErrorNavigatable` only to pass it the lines before the first `Caught:` line. The run console registers it with `addMessageFilter`, so the stack trace and the output file lines are clickable.
 
 Alternatives:
 - Switching on the platform's predefined message filters: they know no Robot Framework formats and add filters, such as URL detection, that the run console does not have today.
@@ -84,6 +91,7 @@ Alternatives:
 - **Run profile:** the action's `getRunProfile` returns a `MyRunProfile` around the configuration of the console properties. Its `getState` builds the state of a copy of that configuration (`clone()`) whose target is a `SELECTION` of the failed tests (`getFailedTests`).
 - **Items:** each failed test is looked up in the current discovery model: the test with its name in the file suite whose URI is the file of the test's location. A found test is stored as `selectionItemOf` stores the item of a gutter run, with discovery's top-level suite, so the run resolves it and the selection-argument builder turns it into `-I`, `-N`, `-s` and `-bl`. A failed test that discovery does not know becomes an item with only its long name from the run.
 - **Runners:** both runners accept a `WrappingRunConfiguration` whose peer is a Robot Framework configuration, and keep accepting the configuration itself.
+- **Debug tab:** the debug process adds the run's restart actions to its tab in `registerAdditionalActions`, as it adds Open Report and Open Log; the new UI shows them in the tab's More menu. `XDebugSessionImpl.addRestartActions`, which would put the action beside Rerun, is internal API.
 
 File and name identify a test after both kinds of run: a run of a "Tests and suites" target passes `-N` with discovery's top-level suite, so its long names are discovery's, while a run of a "Files and folders" target passes no `-N`, so its long names can start with another top-level suite when its paths differ from discovery's. A rerun's console properties belong to the copy, so a second rerun works from the copy and narrows down further.
 

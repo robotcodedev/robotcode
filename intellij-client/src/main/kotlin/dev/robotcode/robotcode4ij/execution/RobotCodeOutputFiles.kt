@@ -62,8 +62,13 @@ internal fun effectiveOutputTarget(
 /** Opens the reported file of [kind] in the target of the "Run" page, when it exists. */
 internal fun openReportedOutputFile(project: Project, kind: RobotOpenOutput, exited: RobotExitedEventArguments?) {
     val file = reportedOutputFile(kind, exited) { Files.isRegularFile(it) } ?: return
+    openOutputFileInTarget(project, file)
+}
+
+/** Opens [path], a report or log, in the target of the "Run" page, as Open Report and Open Log do. */
+internal fun openOutputFileInTarget(project: Project, path: Path) {
     // finding the file for a browser refreshes the file system, which may take a while
-    ApplicationManager.getApplication().executeOnPooledThread { openOutputFile(project, file) }
+    ApplicationManager.getApplication().executeOnPooledThread { openOutputFile(project, path) }
 }
 
 /** Opens [path] in the target of the "Run" page: in its preview tab, or in a browser. */

@@ -6,7 +6,7 @@ In PyCharm and IntelliJ IDEA, a failed Robot Framework test shows only its failu
 
 ## What Changes
 
-- A failed test lists the keywords that failed below its failure message, innermost first, each with the file and line where it was called. Each location is a link to that line. Navigating from the failed test opens the call of the innermost failed keyword.
+- A failed test lists the keywords that failed below its failure message, innermost first, each with the file and line where it was called. Each location is a link to that line. Navigating from the failed test opens the call of the innermost failed keyword. Failures that the test caught before, for example with `TRY`/`EXCEPT`, follow, marked as caught, as Robot Framework's log keeps them collapsed.
 - The console lines in which Robot Framework names its output files (`Output:`, `Log:`, `Report:`, `XUnit:`, `Debug:`) become links: `log.html` and `report.html` open where "Open output target" says, like Open Report and Open Log, `output.xml` and the other files in the editor.
 - The run tab knows from the start how many tests the run executes, so its progress shows the finished tests out of that total.
 - "Rerun Failed Tests" is enabled after a run with failed tests. It runs exactly the tests that failed, including tests that failed through their suite teardown, with the run configuration's other settings, in the same tab, for Run and for Debug, also after a run of files and folders. Rerunning again narrows down to the tests that still fail.
@@ -32,6 +32,7 @@ _None._
 - A new console filter in `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/` for locations and output file lines, registered by `RobotRunnerConsoleProperties.kt` and `RobotCodeRunnerConsoleView.kt`.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeOutputFiles.kt`: opening a file in the target of "Open output target", shared by Open Report, Open Log and the links.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotRunnerConsoleProperties.kt`: the rerun action with its model and run profile, which finds the failed tests in the discovery model.
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeProgramRunner.kt` and `debugging/RobotCodeDebugProgramRunner.kt`: accept the rerun profile.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeProgramRunner.kt` and `debugging/RobotCodeDebugProgramRunner.kt`: accept the rerun profile; `debugging/RobotCodeDebugProcess.kt`: the rerun action in the debug tab.
+- `packages/debugger/src/robotcode/debugger/listeners.py`: each failed keyword says whether its failure was caught; VS Code's test messages ignore the mark and stay as they are; a test under `tests/robotcode/debugger/`.
 - New unit tests under `intellij-client/src/test/kotlin/`.
-- No change to robotcode, the language server, the VS Code extension or `robot.toml`.
+- No change to the language server, the VS Code extension or `robot.toml`.

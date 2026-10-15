@@ -48,6 +48,10 @@ data class RobotExecutionAttributes(
     var endtime: String? = null,
     var tags: Array<String>? = null,
     var metadata: Map<String, String>? = null,
+    // the name and the library or resource of a keyword, and whether a failed keyword's failure was caught
+    var kwname: String? = null,
+    var libname: String? = null,
+    var caught: Boolean? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -71,7 +75,10 @@ data class RobotExecutionAttributes(
             if (!tags.contentEquals(other.tags)) return false
         } else if (other.tags != null) return false
         if (metadata != other.metadata) return false
-        
+        if (kwname != other.kwname) return false
+        if (libname != other.libname) return false
+        if (caught != other.caught) return false
+
         return true
     }
     
@@ -89,6 +96,9 @@ data class RobotExecutionAttributes(
         result = 31 * result + (endtime?.hashCode() ?: 0)
         result = 31 * result + (tags?.contentHashCode() ?: 0)
         result = 31 * result + (metadata?.hashCode() ?: 0)
+        result = 31 * result + (kwname?.hashCode() ?: 0)
+        result = 31 * result + (libname?.hashCode() ?: 0)
+        result = 31 * result + (caught?.hashCode() ?: 0)
         return result
     }
 }

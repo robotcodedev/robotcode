@@ -4,7 +4,7 @@
 
 ### Requirement: Failure details list the failed keywords
 
-When a test fails in a keyword, the plugin SHALL show below the test's failure message the keywords that failed, innermost first. Each entry SHALL name the keyword, with its library or resource where Robot Framework reports one, and the file and line where the keyword was called. Each location SHALL be a link that opens the file at that line.
+When a test fails in a keyword, the plugin SHALL show below the test's failure message the keywords that failed, innermost first. Each entry SHALL name the keyword, with its library or resource where Robot Framework reports one, and the file and line where the keyword was called. Each location SHALL be a link that opens the file at that line. Failures that the test caught before, which Robot Framework's log keeps collapsed, SHALL follow, marked as caught.
 
 #### Scenario: Failure in a keyword of a resource file
 
@@ -21,14 +21,24 @@ When a test fails in a keyword, the plugin SHALL show below the test's failure m
 - **WHEN** the project folder's path contains spaces and a test fails in a keyword
 - **THEN** every location in the failure details is a complete link to its file and line
 
+#### Scenario: A failure that was caught earlier
+
+- **WHEN** a test catches a failing keyword, with `TRY`/`EXCEPT` or `Run Keyword And Ignore Error`, and later fails in another keyword
+- **THEN** the failure details list the keywords of the later failure first, then the caught keyword, marked as caught
+
 ### Requirement: Navigating from a failed test
 
-Navigating from a failed test whose failure details list failed keywords SHALL open the call of the innermost failed keyword. A failed test without failed keywords, for example one that failed in its suite setup or suite teardown, SHALL show its message only and SHALL navigate to its own line.
+Navigating from a failed test whose failure details list failed keywords SHALL open the call of the innermost failed keyword that is not marked as caught. A failed test without failed keywords, for example one that failed in its suite setup or suite teardown, SHALL show its message only. A failed test without failed keywords other than caught ones SHALL navigate to its own line.
 
 #### Scenario: Navigating from the failed test
 
 - **WHEN** the user navigates to the source of `Third Test Fails` from the results tree
 - **THEN** the editor opens `resources/common.resource` at the line of the `Should Be Equal` call
+
+#### Scenario: Navigating past a caught failure
+
+- **WHEN** a test caught a failing `Should Be Equal` with `TRY`/`EXCEPT` and then failed in the keyword `Check Value`
+- **THEN** navigating from the test opens the call that failed inside `Check Value`
 
 #### Scenario: Failure in the suite setup
 

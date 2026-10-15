@@ -1,5 +1,6 @@
 package dev.robotcode.robotcode4ij.debugging
 
+import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.ui.ExecutionConsole
@@ -203,6 +204,8 @@ class RobotCodeDebugProcess(
     override fun registerAdditionalActions(
         leftToolbar: DefaultActionGroup, topToolbar: DefaultActionGroup, settings: DefaultActionGroup
     ) {
+        // "Rerun Failed Tests" of the run, as the run tab shows it
+        (executionResult as? DefaultExecutionResult)?.let { leftToolbar.addAll(*it.restartActions) }
         leftToolbar.addAll(*state.openOutputActions())
     }
 

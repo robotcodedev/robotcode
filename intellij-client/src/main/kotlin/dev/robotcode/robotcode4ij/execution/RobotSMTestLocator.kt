@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -42,6 +43,13 @@ private fun currentLine(project: Project, file: VirtualFile, longname: String?):
     return suite.children?.firstOrNull { it.longname == longname }?.range?.start?.line?.toInt()
 }
 
+// the URL of a result's file and line, from the path of its location URL `robotcode://<file>?line=<line>`
+private fun resultUrl(path: String) = Urls.parse("file://$path", true)
+
+/** The file of a result with the location URL [locationUrl]. */
+internal fun resultSourcePath(locationUrl: String): String? =
+    resultUrl(VirtualFileManager.extractPath(locationUrl))?.path
+
 // reads files, documents and the discovery result, not the indexes, so results keep Run and Jump to Source while the
 // IDE indexes
 class RobotSMTestLocator : SMTestLocator, DumbAware {
@@ -54,7 +62,7 @@ class RobotSMTestLocator : SMTestLocator, DumbAware {
         protocol: String, path: String, metainfo: String?, project: Project, scope: GlobalSearchScope
     ): MutableList<Location<PsiElement>> {
 
-        val uri = Urls.parse("file://$path", true) ?: return mutableListOf()
+        val uri = resultUrl(path) ?: return mutableListOf()
         val line = uri.parameters?.drop(1)?.split("&")?.firstOrNull { it.startsWith("line=") }?.substring(5)
             ?.toIntOrNull()
         val virtualFile = LocalFileSystem.getInstance().findFileByPath(uri.path) ?: return mutableListOf()

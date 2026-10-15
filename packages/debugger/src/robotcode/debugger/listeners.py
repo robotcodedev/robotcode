@@ -61,6 +61,11 @@ class ListenerV2:
 
     def __init__(self) -> None:
         self.failed_keywords: Optional[List[Dict[str, Any]]] = None
+        # the number of failed keywords when each running keyword or control structure started; per depth, the failed
+        # keywords of the last TRY branch there, and those of them that its EXCEPT branch caught
+        self.failed_keyword_marks: List[int] = []
+        self.try_failures: Dict[int, List[Dict[str, Any]]] = {}
+        self.caught_by_except: Dict[int, List[Dict[str, Any]]] = {}
         self.last_fail_message: Optional[str] = None
         self.suite_id_stack: List[str] = []
 
@@ -163,6 +168,8 @@ class ListenerV2:
         self.failed_keywords = None
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        self.failed_keyword_marks.append(len(self.failed_keywords or []))
+
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
             Debugger.instance.start_output_group(
                 f"{name}({', '.join(repr(v) for v in attributes.get('args', []))})",
@@ -191,6 +198,7 @@ class ListenerV2:
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance.end_keyword(name, attributes)
+        mark = self.failed_keyword_marks.pop() if self.failed_keyword_marks else 0
 
         # if Debugger.instance.state != State.CallKeyword:
         #     Debugger.instance.send_event(
@@ -217,6 +225,31 @@ class ListenerV2:
                     self.failed_keywords = []
 
                 self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
+
+        self._mark_caught_failures(attributes, mark, len(self.failed_keyword_marks))
+
+    def _mark_caught_failures(self, attributes: Dict[str, Any], mark: int, depth: int) -> None:
+        # Robot Framework's log expands a failed test only along what failed, so a failure inside a keyword or control
+        # structure that did not fail was caught, as by Run Keyword And Ignore Error. Listener version 2 gets the
+        # branches of a TRY/EXCEPT but not the TRY/EXCEPT, whose status the log follows: an EXCEPT branch that passed
+        # caught the failures of its TRY branch, unless the FINALLY branch fails and with it the TRY/EXCEPT
+        kind, status = attributes["type"], attributes["status"]
+        failed = self.failed_keywords or []
+        inside = failed[: max(0, len(failed) - mark)]
+        if status != "FAIL":
+            for keyword in inside:
+                keyword["caught"] = True
+        if kind == "TRY":
+            self.try_failures[depth] = inside
+            self.caught_by_except[depth] = []
+        elif kind == "EXCEPT" and status == "PASS":
+            caught = [keyword for keyword in self.try_failures.get(depth, []) if not keyword.get("caught")]
+            for keyword in caught:
+                keyword["caught"] = True
+            self.caught_by_except[depth] = caught
+        elif kind == "FINALLY" and status == "FAIL":
+            for keyword in self.caught_by_except.pop(depth, []):
+                keyword.pop("caught", None)
 
     RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
 

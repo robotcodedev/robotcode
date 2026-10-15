@@ -59,7 +59,7 @@ class RobotCodeProgramRunner : AsyncProgramRunner<RunnerSettings>() {
     }
 
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
-        return (executorId == DefaultRunExecutor.EXECUTOR_ID) && profile is RobotCodeRunConfiguration
+        return (executorId == DefaultRunExecutor.EXECUTOR_ID) && isRobotRunProfile(profile)
     }
 
     override fun execute(environment: ExecutionEnvironment, state: RunProfileState): Promise<RunContentDescriptor?> {
@@ -78,7 +78,7 @@ class RobotCodeProfileRunner : AsyncProgramRunner<RunnerSettings>() {
     
     // the id of PyCharm Professional's profiler executor
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
-        return executorId == "Profiler" && profile is RobotCodeRunConfiguration
+        return executorId == "Profiler" && isRobotRunProfile(profile)
     }
     
     override fun execute(environment: ExecutionEnvironment, state: RunProfileState): Promise<RunContentDescriptor?> {

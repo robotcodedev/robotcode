@@ -11,7 +11,7 @@ import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugProcessStarter
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
-import dev.robotcode.robotcode4ij.execution.RobotCodeRunConfiguration
+import dev.robotcode.robotcode4ij.execution.isRobotRunProfile
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunProfileState
 import dev.robotcode.robotcode4ij.execution.startInBackground
 import org.jetbrains.concurrency.Promise
@@ -22,7 +22,7 @@ class RobotCodeDebugProgramRunner : AsyncProgramRunner<RunnerSettings>() {
     }
 
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
-        return (executorId == DefaultDebugExecutor.EXECUTOR_ID) && profile is RobotCodeRunConfiguration
+        return (executorId == DefaultDebugExecutor.EXECUTOR_ID) && isRobotRunProfile(profile)
     }
 
     // the session wraps the started run; the debug process subscribes to the handshake before the session starts it

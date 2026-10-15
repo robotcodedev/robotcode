@@ -13,6 +13,8 @@ class RobotCodeRunnerConsoleView(consoleProperties: TestConsoleProperties, split
     
     override fun initUI() {
         super.initUI()
+        // the locations of failures and the output files that Robot Framework names become links
+        addMessageFilter(RobotCodeConsoleFilter(properties.project))
     }
     
 }

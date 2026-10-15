@@ -16,6 +16,7 @@ import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.debugging.RobotEnqueuedArguments
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
@@ -48,6 +49,7 @@ class RobotOutputToGeneralTestEventsConverter(
     private val runningIds = mutableListOf<String>()
 
     init {
+        debugClient?.onRobotEnqueued?.advise(subscriptions) { args -> applyAfterOutput { robotEnqueued(args) } }
         debugClient?.onRobotStarted?.advise(subscriptions) { args -> applyAfterOutput { robotStarted(args) } }
         debugClient?.onRobotEnded?.advise(subscriptions) { args -> applyAfterOutput { robotEnded(args) } }
         debugClient?.onRobotSetFailed?.advise(subscriptions) { args -> applyAfterOutput { robotSetFailed(args) } }
@@ -108,6 +110,11 @@ class RobotOutputToGeneralTestEventsConverter(
 
     private fun duration(args: RobotExecutionEventArguments): Long = (args.attributes.elapsedtime ?: 0).toLong()
 
+    // the listener announces the run's tests once, when the first suite starts, so the progress has its total
+    private fun robotEnqueued(args: RobotEnqueuedArguments) {
+        processor?.onTestsCountInSuite(enqueuedTestCount(args.items))
+    }
+
     private fun robotStarted(args: RobotExecutionEventArguments) {
         runningIds.add(args.id)
         val processor = processor ?: return
@@ -143,8 +150,11 @@ class RobotOutputToGeneralTestEventsConverter(
         }
     }
 
-    private fun failure(args: RobotExecutionEventArguments, message: String, duration: Long) =
-        TestFailedEvent(args.name, args.id, message, null, false, null, null, null, null, false, false, duration)
+    // the failed keywords as the stack trace, whose first location is where navigating from the test goes
+    private fun failure(args: RobotExecutionEventArguments, message: String, duration: Long) = TestFailedEvent(
+        args.name, args.id, message, failureStackTrace(args.failedKeywords), false, null, null, null, null, false,
+        false, duration
+    )
 
     // a failed or skipped suite teardown marks the suite's tests again, also tests that passed
     private fun robotSetFailed(args: RobotExecutionEventArguments) {
