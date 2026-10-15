@@ -95,13 +95,15 @@ variables = { TIMEOUT = "20s" }
 # Development profile builds on base settings
 [profiles.dev]
 inherits = ["base"]
-variables = { ENVIRONMENT = "development", API_URL = "http://dev-api.example.com" }
+extend-variables = { ENVIRONMENT = "development", API_URL = "http://dev-api.example.com" }
 
 # Testing profile also builds on base settings
 [profiles.test]
 inherits = ["base"]
-variables = { ENVIRONMENT = "testing", API_URL = "http://test-api.example.com" }
+extend-variables = { ENVIRONMENT = "testing", API_URL = "http://test-api.example.com" }
 ```
+
+`extend-variables` adds to the variables of `base`; `variables` would replace them (see [Extending vs. Replacing Settings](#extending-vs-replacing-settings)).
 
 ### Conditional Profiles
 
@@ -134,13 +136,15 @@ variables = { LOG_LEVEL = "INFO", BROWSER = "chrome" }
 # Override with higher precedence
 [profiles.debug]
 precedence = 100
-variables = { LOG_LEVEL = "DEBUG" }
+extend-variables = { LOG_LEVEL = "DEBUG" }
 
 # Highest priority settings
 [profiles.critical]
 precedence = 200
-variables = { RETRIES = 3 }
+extend-variables = { RETRIES = "3" }
 ```
+
+With `-p base -p debug -p critical`, the variables are `LOG_LEVEL = "DEBUG"`, `BROWSER = "chrome"` and `RETRIES = "3"`.
 
 ## Test Execution
 
@@ -226,7 +230,7 @@ RobotCode loads configuration files in a specific sequence, with each file poten
      - Linux: `~/.config/robotcode/robot.toml` (or `$XDG_CONFIG_HOME/robotcode/robot.toml`)
      - macOS: `~/Library/Application Support/robotcode/robot.toml`
      - Windows: `%LOCALAPPDATA%\robotcode\robot.toml`
-   - Sets system-wide defaults
+   - Sets per-user defaults for all projects; if the file is missing, RobotCode creates it with `output-dir = "results"` and `python-path = ["./lib", "./resources"]`
 
 2. **Project `pyproject.toml`**
    - Located in the project root

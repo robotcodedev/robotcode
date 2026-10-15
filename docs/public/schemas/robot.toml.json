@@ -330,8 +330,8 @@
             }
           ],
           "default": null,
-          "description": "Extend the ignore arguments for library settings.",
-          "markdownDescription": "Extend the ignore arguments for library settings.",
+          "description": "Extend the ignore arguments for library settings.\nIt takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
+          "markdownDescription": "Extend the ignore arguments for library settings.\nIt takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
           "title": "Extend Ignore Arguments For Library",
           "x-taplo": {
             "links": {
@@ -352,8 +352,8 @@
             }
           ],
           "default": null,
-          "description": "Extend the ignored libraries setting.",
-          "markdownDescription": "Extend the ignored libraries setting.",
+          "description": "Extend the ignored libraries setting.\nIt takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
+          "markdownDescription": "Extend the ignored libraries setting.\nIt takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
           "title": "Extend Ignored Libraries",
           "x-taplo": {
             "links": {
@@ -374,8 +374,8 @@
             }
           ],
           "default": null,
-          "description": "Extend the ignored variables setting.",
-          "markdownDescription": "Extend the ignored variables setting.",
+          "description": "Extend the ignored variables setting.\nIt takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
+          "markdownDescription": "Extend the ignored variables setting.\nIt takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
           "title": "Extend Ignored Variables",
           "x-taplo": {
             "links": {
@@ -534,8 +534,8 @@
             }
           ],
           "default": null,
-          "description": "Extend the exit code mask setting.",
-          "markdownDescription": "Extend the exit code mask setting.",
+          "description": "Extend the exit code mask setting.\nIt takes effect in `[tool.robotcode-analyze.extend-code]`, where it adds to the mask set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
+          "markdownDescription": "Extend the exit code mask setting.\nIt takes effect in `[tool.robotcode-analyze.extend-code]`, where it adds to the mask set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n",
           "title": "Extend Exit Code Mask",
           "x-taplo": {
             "links": {
@@ -850,11 +850,11 @@
             }
           ],
           "default": null,
-          "description": "\nExtend the diagnostics codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as errors.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "examples": [
-            "[tool.robotcode-analyze.modifiers]\nextend_error = [\"VariableNotFound\", \"multiple-keywords\"]"
+            "[tool.robotcode-analyze.extend-modifiers]\nextend-error = [\"VariableNotFound\", \"multiple-keywords\"]"
           ],
-          "markdownDescription": "\nExtend the diagnostics codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "markdownDescription": "\nExtend the diagnostics codes to treat as errors.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "title": "Extend Error",
           "x-taplo": {
             "links": {
@@ -875,11 +875,11 @@
             }
           ],
           "default": null,
-          "description": "\nExtend the diagnostics codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as hint.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "examples": [
-            "[tool.robotcode-analyze.modifiers]\nextend_hint = [\"VariableNotFound\", \"multiple-keywords\"]"
+            "[tool.robotcode-analyze.extend-modifiers]\nextend-hint = [\"VariableNotFound\", \"multiple-keywords\"]"
           ],
-          "markdownDescription": "\nExtend the diagnostics codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "markdownDescription": "\nExtend the diagnostics codes to treat as hint.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "title": "Extend Hint",
           "x-taplo": {
             "links": {
@@ -900,11 +900,11 @@
             }
           ],
           "default": null,
-          "description": "\nExtend the diagnostics codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to ignore.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "examples": [
-            "[tool.robotcode-analyze.modifiers]\nextend_ignore = [\"VariableNotFound\", \"multiple-keywords\"]"
+            "[tool.robotcode-analyze.extend-modifiers]\nextend-ignore = [\"VariableNotFound\", \"multiple-keywords\"]"
           ],
-          "markdownDescription": "\nExtend the diagnostics codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "markdownDescription": "\nExtend the diagnostics codes to ignore.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "title": "Extend Ignore",
           "x-taplo": {
             "links": {
@@ -925,11 +925,11 @@
             }
           ],
           "default": null,
-          "description": "\nExtend the diagnostics codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as information.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "examples": [
-            "[tool.robotcode-analyze.modifiers]\nextend_information = [\"VariableNotFound\", \"multiple-keywords\"]"
+            "[tool.robotcode-analyze.extend-modifiers]\nextend-information = [\"VariableNotFound\", \"multiple-keywords\"]"
           ],
-          "markdownDescription": "\nExtend the diagnostics codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "markdownDescription": "\nExtend the diagnostics codes to treat as information.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "title": "Extend Information",
           "x-taplo": {
             "links": {
@@ -950,11 +950,11 @@
             }
           ],
           "default": null,
-          "description": "\nExtend the diagnostics codes to treat as warning.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as warning.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "examples": [
-            "[tool.robotcode-analyze.modifiers]\nextend_warning = [\"VariableNotFound\", \"multiple-keywords\"]"
+            "[tool.robotcode-analyze.extend-modifiers]\nextend-warning = [\"VariableNotFound\", \"multiple-keywords\"]"
           ],
-          "markdownDescription": "\nExtend the diagnostics codes to treat as warning.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "markdownDescription": "\nExtend the diagnostics codes to treat as warning.\nIt takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,\nfor example in `robot.toml` when used in `.robot.toml`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend-modifiers]\nextend-warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "title": "Extend Warning",
           "x-taplo": {
             "links": {
@@ -8424,8 +8424,8 @@
             }
           ],
           "default": null,
-          "description": "Precedence of the profile. Lower values are executed first. If not set the order is undefined.\n",
-          "markdownDescription": "Precedence of the profile. Lower values are executed first. If not set the order is undefined.\n",
+          "description": "Precedence of the profile. Lower values are executed first. A profile without a precedence counts as 0;\nprofiles with the same precedence are applied in the order they are selected, for example on the command line.\n",
+          "markdownDescription": "Precedence of the profile. Lower values are executed first. A profile without a precedence counts as 0;\nprofiles with the same precedence are applied in the order they are selected, for example on the command line.\n",
           "title": "Precedence",
           "x-taplo": {
             "links": {

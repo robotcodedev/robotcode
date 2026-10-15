@@ -3134,7 +3134,8 @@ class RobotProfile(RobotExtendBaseProfile):
 
     precedence: Optional[int] = field(
         description="""\
-        Precedence of the profile. Lower values are executed first. If not set the order is undefined.
+        Precedence of the profile. Lower values are executed first. A profile without a precedence counts as 0;
+        profiles with the same precedence are applied in the order they are selected, for example on the command line.
         """
     )
 

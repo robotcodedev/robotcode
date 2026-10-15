@@ -255,7 +255,7 @@ hint = ["*"]
 
 - `ignore`, `error`, `warning`, `information`, `hint` are lists of diagnostic
     codes that are merged into the global modifier configuration.
-- If you want to **add** to existing lists without replacing them (for example when an extension provides defaults), use the matching `extend-*` keys, e.g. `extend-warning = ["variable-not-found"]`. See the [`robot.toml` reference](/reference/config/) for the full set.
+- A `[tool.robotcode-analyze.modifiers]` section in a later configuration file, for example `.robot.toml`, replaces the one of an earlier file, such as `robot.toml` or the user configuration, as a whole. To **add** to the earlier lists instead, use a `[tool.robotcode-analyze.extend-modifiers]` section with the matching `extend-*` keys, e.g. `extend-warning = ["variable-not-found"]`; a key without `extend-` there replaces only that one list. See the [`robot.toml` reference](/reference/config/) for the full set.
 - You can use `"*"` as a wildcard to match all remaining diagnostics if needed.
 
 The `analyze code` command and the language server read these values

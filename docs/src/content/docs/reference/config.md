@@ -68,7 +68,8 @@ inherits = ["default", "Firefox"]
 
 Type: `int | None`
 
-Precedence of the profile. Lower values are executed first. If not set the order is undefined.
+Precedence of the profile. Lower values are executed first. A profile without a precedence counts as 0;
+profiles with the same precedence are applied in the order they are selected, for example on the command line.
 
 ## args {#args}
 
@@ -3500,18 +3501,24 @@ cache_namespaces = false
 Type: `list[str] | None`
 
 Extend the ignore arguments for library settings.
+It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.cache.extend-ignored-libraries {#tool-robotcode-analyze-cache-extend-ignored-libraries}
 
 Type: `list[str] | None`
 
 Extend the ignored libraries setting.
+It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.cache.extend-ignored-variables {#tool-robotcode-analyze-cache-extend-ignored-variables}
 
 Type: `list[str] | None`
 
 Extend the ignored variables setting.
+It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.cache.ignore-arguments-for-library {#tool-robotcode-analyze-cache-ignore-arguments-for-library}
 
@@ -3608,6 +3615,8 @@ exit_code_mask = ["error", "warn"]
 Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
 
 Extend the exit code mask setting.
+It takes effect in `[tool.robotcode-analyze.extend-code]`, where it adds to the mask set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.exclude-patterns {#tool-robotcode-analyze-exclude-patterns}
 
@@ -3650,18 +3659,24 @@ cache_namespaces = false
 Type: `list[str] | None`
 
 Extend the ignore arguments for library settings.
+It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.extend-cache.extend-ignored-libraries {#tool-robotcode-analyze-extend-cache-extend-ignored-libraries}
 
 Type: `list[str] | None`
 
 Extend the ignored libraries setting.
+It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.extend-cache.extend-ignored-variables {#tool-robotcode-analyze-extend-cache-extend-ignored-variables}
 
 Type: `list[str] | None`
 
 Extend the ignored variables setting.
+It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.extend-cache.ignore-arguments-for-library {#tool-robotcode-analyze-extend-cache-ignore-arguments-for-library}
 
@@ -3751,6 +3766,8 @@ exit_code_mask = ["error", "warn"]
 Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
 
 Extend the exit code mask setting.
+It takes effect in `[tool.robotcode-analyze.extend-code]`, where it adds to the mask set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 ## tool.robotcode-analyze.extend-exclude-patterns {#tool-robotcode-analyze-extend-exclude-patterns}
 
@@ -3797,12 +3814,14 @@ error = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as errors.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_error = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-error = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.extend-modifiers.extend-hint {#tool-robotcode-analyze-extend-modifiers-extend-hint}
@@ -3810,12 +3829,14 @@ extend_error = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as hint.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_hint = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-hint = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.extend-modifiers.extend-ignore {#tool-robotcode-analyze-extend-modifiers-extend-ignore}
@@ -3823,12 +3844,14 @@ extend_hint = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to ignore.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_ignore = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-ignore = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.extend-modifiers.extend-information {#tool-robotcode-analyze-extend-modifiers-extend-information}
@@ -3836,12 +3859,14 @@ extend_ignore = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as information.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_information = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-information = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.extend-modifiers.extend-warning {#tool-robotcode-analyze-extend-modifiers-extend-warning}
@@ -3849,12 +3874,14 @@ extend_information = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as warning.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_warning = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-warning = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.extend-modifiers.hint {#tool-robotcode-analyze-extend-modifiers-hint}
@@ -3985,12 +4012,14 @@ error = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as errors.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_error = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-error = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.modifiers.extend-hint {#tool-robotcode-analyze-modifiers-extend-hint}
@@ -3998,12 +4027,14 @@ extend_error = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as hint.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_hint = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-hint = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.modifiers.extend-ignore {#tool-robotcode-analyze-modifiers-extend-ignore}
@@ -4011,12 +4042,14 @@ extend_hint = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to ignore.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_ignore = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-ignore = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.modifiers.extend-information {#tool-robotcode-analyze-modifiers-extend-information}
@@ -4024,12 +4057,14 @@ extend_ignore = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as information.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_information = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-information = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.modifiers.extend-warning {#tool-robotcode-analyze-modifiers-extend-warning}
@@ -4037,12 +4072,14 @@ extend_information = ["VariableNotFound", "multiple-keywords"]
 Type: `list[str] | None`
 
 Extend the diagnostics codes to treat as warning.
+It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+for example in `robot.toml` when used in `.robot.toml`.
 
 Examples:
 
 ```toml
-[tool.robotcode-analyze.modifiers]
-extend_warning = ["VariableNotFound", "multiple-keywords"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-warning = ["VariableNotFound", "multiple-keywords"]
 ```
 
 ## tool.robotcode-analyze.modifiers.hint {#tool-robotcode-analyze-modifiers-hint}

@@ -30,12 +30,14 @@ class ModifiersConfig(BaseOptions):
     extend_ignore: Optional[List[str]] = field(
         description="""
             Extend the diagnostics codes to ignore.
+            It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
 
             Examples:
 
             ```toml
-            [tool.robotcode-analyze.modifiers]
-            extend_ignore = ["VariableNotFound", "multiple-keywords"]
+            [tool.robotcode-analyze.extend-modifiers]
+            extend-ignore = ["VariableNotFound", "multiple-keywords"]
             ```
         """,
         alias="extend-ignore",
@@ -55,12 +57,14 @@ class ModifiersConfig(BaseOptions):
     extend_error: Optional[List[str]] = field(
         description="""
             Extend the diagnostics codes to treat as errors.
+            It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
 
             Examples:
 
             ```toml
-            [tool.robotcode-analyze.modifiers]
-            extend_error = ["VariableNotFound", "multiple-keywords"]
+            [tool.robotcode-analyze.extend-modifiers]
+            extend-error = ["VariableNotFound", "multiple-keywords"]
             ```
         """,
         alias="extend-error",
@@ -80,12 +84,14 @@ class ModifiersConfig(BaseOptions):
     extend_warning: Optional[List[str]] = field(
         description="""
             Extend the diagnostics codes to treat as warning.
+            It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
 
             Examples:
 
             ```toml
-            [tool.robotcode-analyze.modifiers]
-            extend_warning = ["VariableNotFound", "multiple-keywords"]
+            [tool.robotcode-analyze.extend-modifiers]
+            extend-warning = ["VariableNotFound", "multiple-keywords"]
             ```
         """,
         alias="extend-warning",
@@ -105,12 +111,14 @@ class ModifiersConfig(BaseOptions):
     extend_information: Optional[List[str]] = field(
         description="""
             Extend the diagnostics codes to treat as information.
+            It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
 
             Examples:
 
             ```toml
-            [tool.robotcode-analyze.modifiers]
-            extend_information = ["VariableNotFound", "multiple-keywords"]
+            [tool.robotcode-analyze.extend-modifiers]
+            extend-information = ["VariableNotFound", "multiple-keywords"]
             ```
         """,
         alias="extend-information",
@@ -130,12 +138,14 @@ class ModifiersConfig(BaseOptions):
     extend_hint: Optional[List[str]] = field(
         description="""
             Extend the diagnostics codes to treat as hint.
+            It takes effect in `[tool.robotcode-analyze.extend-modifiers]`, where it adds to the codes set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
 
             Examples:
 
             ```toml
-            [tool.robotcode-analyze.modifiers]
-            extend_hint = ["VariableNotFound", "multiple-keywords"]
+            [tool.robotcode-analyze.extend-modifiers]
+            extend-hint = ["VariableNotFound", "multiple-keywords"]
             ```
         """,
         alias="extend-hint",
@@ -172,7 +182,11 @@ class CacheConfig(BaseOptions):
         alias="ignored-libraries",
     )
     extend_ignored_libraries: Optional[List[str]] = field(
-        description="Extend the ignored libraries setting.",
+        description="""\
+            Extend the ignored libraries setting.
+            It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
+            """,
         alias="extend-ignored-libraries",
     )
 
@@ -191,7 +205,11 @@ class CacheConfig(BaseOptions):
         alias="ignored-variables",
     )
     extend_ignored_variables: Optional[List[str]] = field(
-        description="Extend the ignored variables setting.",
+        description="""\
+            Extend the ignored variables setting.
+            It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
+            """,
         alias="extend-ignored-variables",
     )
 
@@ -215,7 +233,11 @@ class CacheConfig(BaseOptions):
         alias="ignore-arguments-for-library",
     )
     extend_ignore_arguments_for_library: Optional[List[str]] = field(
-        description="Extend the ignore arguments for library settings.",
+        description="""\
+            Extend the ignore arguments for library settings.
+            It takes effect in `[tool.robotcode-analyze.extend-cache]`, where it adds to the list set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
+            """,
         alias="extend-ignore-arguments-for-library",
     )
 
@@ -285,7 +307,11 @@ class CodeConfig(BaseOptions):
         alias="exit-code-mask",
     )
     extend_exit_code_mask: Optional[ExitCodeMaskList] = field(
-        description="Extend the exit code mask setting.",
+        description="""\
+            Extend the exit code mask setting.
+            It takes effect in `[tool.robotcode-analyze.extend-code]`, where it adds to the mask set so far,
+            for example in `robot.toml` when used in `.robot.toml`.
+            """,
         alias="extend-exit-code-mask",
     )
 
