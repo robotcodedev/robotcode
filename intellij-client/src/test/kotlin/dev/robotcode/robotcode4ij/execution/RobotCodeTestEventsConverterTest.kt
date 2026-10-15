@@ -27,6 +27,7 @@ import dev.robotcode.robotcode4ij.debugging.RobotExecutionAttributes
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
+import org.eclipse.lsp4j.debug.Source
 import java.nio.file.Path
 
 class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
@@ -232,7 +233,6 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
                 "uncaptured system robotcode debug\n",
                 "startTesting",
                 "suiteStarted Suite s1 0 ${url(0)} Suite",
-                "output s1 stdout Suite\n",
                 "testStarted First t1 s1 ${url(4)} Suite.First",
             ),
             processor.calls
@@ -249,15 +249,16 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
         assertEquals(listOf("startTesting"), processor.calls)
     }
 
-    fun testProcessTextWithoutALineEndArrivesAtOnce() {
+    fun testSystemTextWithoutALineEndArrivesAtOnce() {
         converter.startTesting()
 
-        converter.process("First", ProcessOutputTypes.STDOUT)
+        converter.process("robotcode debug", ProcessOutputTypes.SYSTEM)
 
-        assertEquals(listOf("startTesting", "uncaptured stdout First"), processor.calls)
+        assertEquals(listOf("startTesting", "uncaptured system robotcode debug"), processor.calls)
     }
 
-    fun testProcessOutputBelongsToTheInnermostRunningItem() {
+    // the process output belongs to the "Terminal" tab; the results tree keeps only the platform's system output
+    fun testProcessOutputStaysOutOfTheResultsTree() {
         converter.startTesting()
         client.onRobotStarted.fire(suite())
         converter.process("Suite\n", ProcessOutputTypes.STDOUT)
@@ -270,46 +271,43 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
         converter.process("Process finished\n", ProcessOutputTypes.SYSTEM)
 
         assertEquals(
-            listOf(
-                "output s1 stdout Suite\n",
-                "output t1 stdout first console\n",
-                "output t1 stderr [ WARN ] a warning\n",
-                "output s1 stdout \u001b[32m| PASS |\n",
-                "uncaptured system Process finished\n",
-            ),
+            listOf("uncaptured system Process finished\n"),
             processor.calls.filter { it.startsWith("output") || it.startsWith("uncaptured") }
         )
     }
 
-    fun testProcessOutputKeepsItsOrderWithNestedSuites() {
+    private fun log(text: String) = OutputEventArguments().apply {
+        output = text
+        category = OutputEventArgumentsCategory.CONSOLE
+    }
+
+    fun testLogMessagesKeepTheirOrderWithNestedSuites() {
         val root = SMTestProxy.SMRootTestProxy()
         converter.setProcessor(GeneralIdBasedToSMTRunnerEventsConvertor(project, root, "RobotCode"))
         converter.startTesting()
-        // with these ids, the platform keeps the outer suite first among the running suites, where it puts uncaptured
-        // output that is written between two tests
         client.onRobotStarted.fire(item("suite", "A", "Tests", null))
         client.onRobotStarted.fire(item("suite", "B", "Inner", "A"))
-        converter.process("First    ", ProcessOutputTypes.STDOUT)
+        client.onOutput.fire(log("suite setup message\n"))
         client.onRobotStarted.fire(item("test", "t1", "First", "B", 5))
-        converter.process("first console\n", ProcessOutputTypes.STDOUT)
+        client.onOutput.fire(log("first message\n"))
         client.onRobotEnded.fire(item("test", "t1", "First", "B", 5, "PASS", elapsed = 1))
-        converter.process("| PASS |\nSecond    ", ProcessOutputTypes.STDOUT)
         client.onRobotStarted.fire(item("test", "t2", "Second", "B", 8))
-        converter.process("second console\n", ProcessOutputTypes.STDOUT)
+        client.onOutput.fire(log("second message\n"))
         client.onRobotEnded.fire(item("test", "t2", "Second", "B", 8, "PASS", elapsed = 1))
-        converter.process("| PASS |\n", ProcessOutputTypes.STDOUT)
         client.onRobotEnded.fire(item("suite", "B", "Inner", "A", status = "PASS"))
         client.onRobotEnded.fire(item("suite", "A", "Tests", null, status = "PASS"))
         converter.finishTesting()
 
-        val written = "First    first console\n| PASS |\nSecond    second console\n| PASS |\n"
-        // the root shows the output in the order it was written, also when it is selected again after the run
-        assertEquals(written, printed(root))
-        // the test names and status lines belong to the suite that runs the tests
-        assertEquals(written, printed(root.children.single().children.single()))
+        val inner = root.children.single().children.single()
+        // the run and a suite show the messages of everything below them in their order, a test only its own
+        assertEquals("suite setup message\nfirst message\nsecond message\n", printed(root))
+        assertEquals("suite setup message\nfirst message\nsecond message\n", printed(inner))
+        assertEquals("first message\n", printed(inner.children[0]))
+        assertEquals("second message\n", printed(inner.children[1]))
     }
 
     fun testDebuggerOutputBelongsToTheInnermostRunningItem() {
+        val file = source
         converter.startTesting()
         client.onOutput.fire(OutputEventArguments().apply {
             output = "before"
@@ -321,11 +319,24 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
             output = "a log message"
             category = OutputEventArgumentsCategory.STDERR
         })
+        // a warning of a keyword call and a system message, as the debugger sends them
+        client.onOutput.fire(OutputEventArguments().apply {
+            output = "[ WARN ] a warning\n"
+            category = OutputEventArgumentsCategory.CONSOLE
+            source = Source().apply { path = file }
+            line = 6
+        })
+        client.onOutput.fire(OutputEventArguments().apply {
+            output = "[ ERROR ] a system message\n"
+            category = "messages"
+        })
 
         assertEquals(
             listOf(
-                "output 0 stdout \u001b[38;5;243mbefore\u001b[0m",
-                "output t1 stderr \u001b[38;5;243ma log message\u001b[0m",
+                "output 0 stdout before",
+                "output t1 stderr a log message",
+                "output t1 stdout \u001b[33m[ WARN ] a warning ($file:6)\u001b[0m\n",
+                "output t1 stdout \u001b[31m[ ERROR ] a system message\u001b[0m\n",
             ),
             processor.calls.filter { it.startsWith("output") }
         )

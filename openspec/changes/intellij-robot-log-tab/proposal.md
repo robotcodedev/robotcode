@@ -12,10 +12,10 @@ In PyCharm and IntelliJ IDEA, every log message of a Robot Framework run is prin
   - each with a link at its end to the file and line it was logged from, where RobotCode reports one;
   - followed by the test's failure details, as before.
 - Selecting a suite or the run shows the messages of everything below it. The results tree no longer shows the output of the Robot Framework process, so Robot Framework's console options no longer change what a test shows.
-- The output of the Robot Framework process moves to a "Terminal" tab next to the results, complete and in its order, as a terminal run shows it: for example the text of `Log To Console`, the test status lines, the `[ WARN ]` and `[ ERROR ]` lines that Robot Framework writes, and the `Output:`, `Log:` and `Report:` lines, which stay links.
-- Debug sessions show the same "Terminal" tab next to their Console and Debugger tabs; their Console tab shows the results tree with the messages per test.
+- The output of the Robot Framework process moves to a "Terminal" tab, complete and in its order, as a terminal run shows it: for example the text of `Log To Console`, the test status lines, the `[ WARN ]` and `[ ERROR ]` lines that Robot Framework writes, and the `Output:`, `Log:` and `Report:` lines, which stay links. It is the first tab of the run window and the one shown when a run starts; the results tree with the messages follows in a tab named "Debug Console".
+- Debug sessions show the same "Terminal" tab, also shown when the session starts, next to their Debugger tab and their console, which is named "Debug Console" and shows the results tree with the messages per test.
 
-Behaviour that users notice, for the release notes (not breaking): a selected test shows its log messages instead of the process output, also when Robot Framework's console is switched off, and the process output has a "Terminal" tab of its own that looks like a terminal run (#528).
+Behaviour that users notice, for the release notes (not breaking): a selected test shows its log messages instead of the process output, also when Robot Framework's console is switched off; the process output has a "Terminal" tab of its own that looks like a terminal run and is shown first (#528); the tab of the results tree is named "Debug Console".
 
 Not part of this change: the debugger's `robotLog` and `robotMessage` events; settings beyond "Output log", "Output messages" and "Output timestamps", which already decide what the debugger sends; filtering messages by level.
 

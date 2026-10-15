@@ -6,6 +6,7 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.ui.ExecutionConsole
 import com.intellij.execution.ui.RunnerLayoutUi
 import com.intellij.execution.ui.layout.PlaceInGrid
+import com.intellij.ui.content.Content
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
@@ -33,6 +34,9 @@ import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeFailureKind
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointHandler
 import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointProperties
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunProfileState
+import dev.robotcode.robotcode4ij.execution.RobotCodeRunnerConsoleView
+import dev.robotcode.robotcode4ij.execution.addTerminalContent
+import dev.robotcode.robotcode4ij.execution.nameDebugConsole
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -181,9 +185,15 @@ class RobotCodeDebugProcess(
         return executionResult.executionConsole
     }
 
-    // adds the Robot Debug Console where the platform puts the run's console
+    // adds the run's "Terminal" tab and the Robot Debug Console where the platform puts the run's console
     override fun createTabLayouter(): XDebugTabLayouter {
         return object : XDebugTabLayouter() {
+            // the "Terminal" tab first, as in the window of a run, then the platform's console as the "Debug Console"
+            override fun registerConsoleContent(ui: RunnerLayoutUi, console: ExecutionConsole): Content {
+                (console as? RobotCodeRunnerConsoleView)?.let { addTerminalContent(ui, it.terminal, 1) }
+                return super.registerConsoleContent(ui, console).also { nameDebugConsole(ui) }
+            }
+
             override fun registerAdditionalContent(ui: RunnerLayoutUi) {
                 val console = RobotCodeDebugConsole(session)
                 val content = ui.createContent(

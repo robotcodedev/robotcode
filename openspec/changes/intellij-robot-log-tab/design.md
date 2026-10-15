@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for the motivation. Issue #528 asks for a console that looks like a terminal run. The maintainer's decision of 2026-10-15: what the results tree shows for a test comes from the debugger, because Robot Framework's console can be configured (`--console none`, `dotted` or `quiet`), and the process output gets a "Terminal" tab of its own. This replaces the earlier plan of this change, a "Robot Log" tab next to a console that kept the process output per test.
+See proposal.md for the motivation. Issue #528 asks for a console that looks like a terminal run. The maintainer's decision of 2026-10-15: what the results tree shows for a test comes from the debugger, because Robot Framework's console can be configured (`--console none`, `dotted` or `quiet`), and the process output gets a "Terminal" tab of its own. This replaces the earlier plan of this change, a "Robot Log" tab next to a console that kept the process output per test. A second decision of the same day: the "Terminal" tab is what users look at first, so it is shown when a run or debug session starts, and the tab of the results tree is named "Debug Console".
 
 **Builds on landed changes** (all archived):
 - `intellij-test-result-events`: the converter reports to the platform's events processor directly, with the robot event ids as node ids, and applies robot events, DAP `output` events and process output in one order. Process output and `output` events become `TestOutputEvent`s of the innermost running suite or test, the `output` events in grey (`RobotOutputToGeneralTestEventsConverter.kt:171-196`).
@@ -72,8 +72,21 @@ Alternatives:
 
 The tab layouter of `RobotCodeDebugProcess`, which adds the Robot Debug Console, adds the "Terminal" content as well, unless the layout already has content with its id; the guard covers a platform version that would call `ExecutionConsoleEx.buildUi` for debug tabs too. A shared helper creates the content for both paths, with the title from `RobotCode.properties`. The session's Console tab is the run console, so it shows the results tree with the messages per test.
 
+### The "Terminal" tab first, and the console named "Debug Console"
+
+In the run window, `buildUi` adds the "Terminal" content before the console content and names the console content "Debug Console" with `Content.setDisplayName`. In a debug session, the tab layouter overrides `registerConsoleContent`: it adds the "Terminal" content and then lets the platform add its console (`DebuggerContentInfo.CONSOLE_CONTENT`, the same id `ConsoleContent` as `ExecutionConsole.CONSOLE_CONTENT_ID`) at the same place, and names it, so the "Terminal" tab comes first there as well.
+
+A window's layout keeps one content per attraction condition (`RunnerLayout.myDefaultFocus`), and the debugger's tab (`DebuggerSessionTabBase`) attracts its console on `startup` and on `finish`. The helper gives the "Terminal" content the attraction for `LayoutViewOptions.STARTUP` with `LayoutAttractionPolicy.FocusOnce(false)`, which replaces the console's, so the "Terminal" tab is selected, without taking the focus, when a run or a debug session starts; at the end of a debug session, the platform still selects the console. The ids, `setDisplayName`, `registerConsoleContent`, `initContentAttraction` and the attraction policies are public and unannotated in 2026.1.
+
+Alternatives:
+- Leaving the platform's "Console" title: the results tree no longer shows the process output, and the "Terminal" tab would sit next to a "Console" that is not the process's console.
+- Selecting the "Terminal" tab with `selectAndFocus` when it is added, also later on the UI thread: the debug session's startup attraction selected its console afterwards (checked in the harness).
+
 ## Risks / Trade-offs
 
+- [In a debug session, the "Debug Console" stands next to the "Robot Debug Console", where expressions are evaluated] → The maintainer's choice of the name, which VS Code uses for its log output; the tabs have different titles and the Robot Debug Console only takes input while the run is paused.
+- [A layout that the user arranged for Robot Framework runs] → The platform remembers it under the console's id; the attraction only selects the "Terminal" tab at the start.
+- [At the end of a debug session, the platform selects the "Debug Console"] → Its own attraction on `finish`, which the plugin leaves as it is; the "Terminal" tab stays one click away.
 - [Users who looked for the text of `Log To Console` under a test] → It is in the "Terminal" tab, in the order of a terminal run; the release notes say so.
 - [With "Output log" switched off, a test shows no messages] → It is the user's switch; the "Terminal" tab still has the process output, and `log.html` has every message.
 - [Long lines from the full paths of the locations] → The same form as the failed keywords of the failure details; the console can soft-wrap.

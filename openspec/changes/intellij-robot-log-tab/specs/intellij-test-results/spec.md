@@ -38,7 +38,12 @@ Selecting a test in the results tree SHALL show the log messages that the RobotC
 
 ### Requirement: Process output in a "Terminal" tab
 
-The run window of every Robot Framework run SHALL have a "Terminal" tab next to its results. The tab SHALL show the output of the Robot Framework process in the order the process wrote it, as a terminal run of the same suite shows it, whatever is selected in the results tree. It SHALL NOT show the log messages that the results tree shows.
+The run window of every Robot Framework run SHALL show a "Terminal" tab first, selected when the run starts, and the results tree in a "Debug Console" tab after it. The "Terminal" tab SHALL show the output of the Robot Framework process in the order the process wrote it, as a terminal run of the same suite shows it, whatever is selected in the results tree. It SHALL NOT show the log messages that the results tree shows.
+
+#### Scenario: The tabs when a run starts
+
+- **WHEN** a Robot Framework run starts
+- **THEN** its window shows the tabs "Terminal" and "Debug Console" in this order, with "Terminal" selected
 
 #### Scenario: `Log` and `Log To Console`
 
@@ -62,12 +67,17 @@ The run window of every Robot Framework run SHALL have a "Terminal" tab next to 
 
 ### Requirement: Debug sessions show the "Terminal" tab
 
-A Debug session of a Robot Framework run configuration SHALL show the same "Terminal" tab next to its Console and Debugger tabs, and its Console tab SHALL show the results tree with the log messages per test, as a run does.
+A Debug session of a Robot Framework run configuration SHALL show the same "Terminal" tab, selected when the session starts, next to its Debugger tab and its console, which SHALL be named "Debug Console" and SHALL show the results tree with the log messages per test, as a run does.
+
+#### Scenario: The tabs when a debug session starts
+
+- **WHEN** a Debug session of a Robot Framework run configuration starts
+- **THEN** its "Terminal" tab is selected, and its console tab is named "Debug Console"
 
 #### Scenario: Log message while debugging
 
 - **WHEN** a test that calls `Log    should not in console` and `Log To Console    show in console` is debugged and stops at a breakpoint on a later line of the test
-- **THEN** selecting the test in the Console tab shows `should not in console`, and the "Terminal" tab shows `show in console`
+- **THEN** selecting the test in the "Debug Console" tab shows `should not in console`, and the "Terminal" tab shows `show in console`
 
 ## MODIFIED Requirements
 

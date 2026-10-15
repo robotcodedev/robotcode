@@ -1,6 +1,5 @@
 package dev.robotcode.robotcode4ij.execution
 
-import com.intellij.execution.process.ProcessOutputType
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.testframework.sm.runner.OutputToGeneralTestEventsConverter
 import com.intellij.execution.testframework.sm.runner.events.TestFailedEvent
@@ -27,11 +26,11 @@ import kotlin.concurrent.withLock
 private const val ROOT_ID = "0"
 
 /**
- * Turns a Robot Framework run into the results tree of the run tab. Robot Framework's events come from the
- * [debugClient], the output of the process through [process]. Both reach the platform's events processor under one
- * lock and in the order they were written: before a debugger event is applied, [awaitOutput] waits until the process
- * output written before it has arrived. Nothing reaches the processor before the platform has started the tree, and
- * nothing after it has finished it.
+ * Turns a Robot Framework run into the results tree of the run tab. Robot Framework's events and log messages come from
+ * the [debugClient], the platform's system output through [process]. Both reach the platform's events processor under
+ * one lock and in the order they were written: before a debugger event is applied, [awaitOutput] waits until the
+ * process output written before it has arrived. Nothing reaches the processor before the platform has started the
+ * tree, and nothing after it has finished it.
  */
 class RobotOutputToGeneralTestEventsConverter(
     testFrameworkName: String,
@@ -166,19 +165,10 @@ class RobotOutputToGeneralTestEventsConverter(
         }
     }
 
-    // the output of the process belongs to the innermost running suite or test, as the debugger's output does; as
-    // uncaptured output, the platform would give it to any running suite, not necessarily the innermost one
+    // the output of the process belongs to the run's "Terminal" tab, which shows it as a terminal does, whatever Robot
+    // Framework's console options are; the results tree keeps only the platform's command line and exit message
     private fun processOutput(text: String, outputType: Key<*>) {
-        val processor = processor ?: return
-        val id = runningIds.lastOrNull()
-        if (id == null || outputType == ProcessOutputTypes.SYSTEM) {
-            processor.onUncapturedOutput(text, outputType)
-            return
-        }
-        // the event has no colors of its own, so the colors that Robot Framework writes with console colors on go into
-        // the text
-        val color = (outputType as? ProcessOutputType)?.escapeSequence ?: ""
-        processor.onTestOutput(TestOutputEvent("", id, color + text, !ProcessOutputType.isStderr(outputType)))
+        if (outputType == ProcessOutputTypes.SYSTEM) processor?.onUncapturedOutput(text, outputType)
     }
 
     // log messages and other debugger output belong to the innermost running suite or test
@@ -188,7 +178,7 @@ class RobotOutputToGeneralTestEventsConverter(
             TestOutputEvent(
                 args.category ?: OutputEventArgumentsCategory.CONSOLE,
                 runningIds.lastOrNull() ?: ROOT_ID,
-                "\u001b[38;5;243m${args.output}\u001b[0m",
+                logLine(args.output ?: "", args.source?.path, args.line),
                 args.category != OutputEventArgumentsCategory.STDERR
             )
         )
