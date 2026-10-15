@@ -1,9 +1,5 @@
 # Spec Delta
 
-## Purpose
-
-Defines how the IntelliJ plugin turns the events of a Robot Framework run into the results shown in the run tab: the results tree, test statuses and failure details, the output of each test, and the actions that work on these results.
-
 ## ADDED Requirements
 
 ### Requirement: Failure details list the failed keywords
@@ -55,12 +51,12 @@ When a run starts, the run tab SHALL know how many tests and tasks the run execu
 
 ### Requirement: Robot Framework's output files are links in the console
 
-In the run console, each line in which Robot Framework names an output file, `Output:`, `Log:`, `Report:`, `XUnit:` or `Debug:` followed by the file's path, SHALL be a link. An HTML file SHALL open in the browser, any other file in the editor. A line that names no file, such as `Output:  NONE`, SHALL stay plain text.
+In the run console, each line in which Robot Framework names an output file, `Output:`, `Log:`, `Report:`, `XUnit:` or `Debug:` followed by the file's path, SHALL be a link. An HTML file SHALL open in the target of "Open output target", as with Open Report and Open Log, any other file in the editor. A line that names no file, such as `Output:  NONE`, SHALL stay plain text.
 
 #### Scenario: Opening the report
 
-- **WHEN** a run has ended and the user clicks the path in the `Report:` line of the console
-- **THEN** `report.html` opens in the browser
+- **WHEN** a run has ended, "Open output target" is "Built-in preview", and the user clicks the path in the `Report:` line of the console
+- **THEN** `report.html` opens in the built-in preview
 
 #### Scenario: Opening the output file
 
@@ -79,6 +75,11 @@ After a run in which tests failed, the "Rerun Failed Tests" action of the run ta
 #### Scenario: Rerunning one failed test
 
 - **WHEN** `tests/sample.robot` was run and only `Third Test Fails` failed, and the user chooses "Rerun Failed Tests"
+- **THEN** only `Third Test Fails` runs, in the same tab
+
+#### Scenario: Rerunning after a run of a folder
+
+- **WHEN** a configuration whose target is the folder `tests` ran, only `Third Test Fails` failed, and the user chooses "Rerun Failed Tests"
 - **THEN** only `Third Test Fails` runs, in the same tab
 
 #### Scenario: Tests failed through the suite teardown
