@@ -333,8 +333,8 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
 
     let robotcodeExtraArgs = config.get<string[]>("extraArgs", []);
 
-    if (session.configuration.launcherArgs) {
-      robotcodeExtraArgs = [...robotcodeExtraArgs, ...(session.configuration.launcherArgs as string[])];
+    if (session.configuration.launcherExtraArgs) {
+      robotcodeExtraArgs = [...robotcodeExtraArgs, ...(session.configuration.launcherExtraArgs as string[])];
     }
 
     const options: cp.SpawnOptions = {

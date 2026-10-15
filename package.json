@@ -317,14 +317,14 @@
         }
       },
       "robotcode-tidy": {
-        "description": "Python Icon",
+        "description": "Robotidy Icon",
         "default": {
           "fontPath": "./icons/robotcode.woff2",
           "fontCharacter": "\\E903"
         }
       },
       "robotcode-robotcode": {
-        "description": "Python Icon",
+        "description": "RobotCode Icon",
         "default": {
           "fontPath": "./icons/robotcode.woff2",
           "fontCharacter": "\\E904"
@@ -1766,6 +1766,11 @@
                 "markdownDescription": "Verifies test data and runs tests so that library keywords are not executed. Corresponds to the `--dryrun` option of __robot__.",
                 "default": false
               },
+              "stopOnEntry": {
+                "type": "boolean",
+                "markdownDescription": "Breaks into the debugger when the Robot Framework run starts, before the first keyword is executed. Corresponds to the `--stop-on-entry` option of __robotcode debug__.",
+                "default": false
+              },
               "python": {
                 "type": "string",
                 "description": "Specifies the python interpreter to use. If not specified, the python interpreter defined for the extension is used.",
@@ -1839,12 +1844,12 @@
               },
               "launcherArgs": {
                 "type": "array",
-                "description": "Command line arguments passed to launcher.",
+                "markdownDescription": "Command line arguments for the debug launcher, `robotcode debug-launch`, placed after the `debug-launch` subcommand.",
                 "default": []
               },
               "launcherExtraArgs": {
                 "type": "array",
-                "description": "Extra command line arguments passed to launcher.",
+                "markdownDescription": "Command line arguments for `robotcode` itself when it starts the debug launcher, placed before the `debug-launch` subcommand, in addition to `robotcode.extraArgs`.",
                 "default": []
               },
               "launcherTimeout": {

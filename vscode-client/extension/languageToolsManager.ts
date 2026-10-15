@@ -240,6 +240,7 @@ export class LanguageToolsManager {
       this.robotVersion,
       this.pythonVersion,
       this.robocopVersion,
+      this.profiles,
       vscode.commands.registerCommand("robotcode.createNewFile", LanguageToolsManager.createNewFile),
       vscode.commands.registerCommand(
         "robotcode.startTerminalRepl",
