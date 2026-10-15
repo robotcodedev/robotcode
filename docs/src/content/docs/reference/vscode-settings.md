@@ -692,9 +692,11 @@ The plugins use the project-aware `robotcode` CLI to discover and run tests, ana
 
 ### `robotcode.ai.enableLanguageModelTools` {#robotcode.ai.enableLanguageModelTools}
 
-Enable AI language model tools that can be used in chat to retrieve information about keywords, libraries, or the Robot Framework environment.
+:::caution[Deprecated]
+This setting is deprecated. The language model tools are replaced by the RobotCode chat plugin, which uses the `robotcode` CLI, and will be removed in a later release.
+:::
 
-**Note:** This setting is planned to be deprecated in an upcoming release and removed in a later release. Use the new chat plugins, skills, and agents based on the `robotcode` CLI instead.
+Enable AI language model tools that can be used in chat to retrieve information about keywords, libraries, or the Robot Framework environment.
 
 - **Type:** `boolean`
 - **Default:** `false`
