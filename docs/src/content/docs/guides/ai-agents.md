@@ -99,7 +99,7 @@ To use the marketplace version in VS Code's Copilot Chat (instead of, or alongsi
 - **RobotCode: Add Chat Plugins Marketplace**
 - **RobotCode: Remove Chat Plugins Marketplace**
 
-Only the applicable one is shown at a time — *Add* until the marketplace is registered, *Remove* afterwards. (Removing also clears the entry if it was added by hand as a GitHub URL rather than the `owner/repo` shorthand.)
+Only the applicable one is shown at a time — *Add* until the marketplace is registered, *Remove* afterwards. (Removing also clears the entry if it was added by hand as a GitHub URL rather than the `owner/repo` shorthand, or pinned to a tag.)
 
 The `chat.plugins.marketplaces` setting is owned by GitHub Copilot Chat, not by RobotCode, so these commands require Copilot Chat (or another agent that provides that setting) to be installed — without it, updating it fails with an error.
 

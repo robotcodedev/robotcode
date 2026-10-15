@@ -43,7 +43,8 @@ export class ChatPluginsManager implements vscode.Disposable {
   }
 
   private static matchesOurMarketplace(entry: string): boolean {
-    return MARKETPLACE_ALIASES.includes(entry.trim().toLowerCase());
+    // An entry pinned to a tag (`owner/repo#tag`) is ours too.
+    return MARKETPLACE_ALIASES.includes(entry.trim().toLowerCase().replace(/#.*$/, ""));
   }
 
   private static isRegistered(list: string[]): boolean {
