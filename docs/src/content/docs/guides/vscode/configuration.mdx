@@ -17,7 +17,7 @@ RobotCode takes its configuration from two places: the `robot.toml` of your proj
 
 **The settings of VS Code** decide how the extension behaves in the editor: the analysis and its cache, completion, inlay hints, the Test Explorer, the output of a debug session, the Documentation Viewer. They are listed in the [VS Code settings](/reference/vscode-settings/).
 
-The settings `robotcode.robot.args`, `robotcode.robot.paths`, `robotcode.robot.pythonPath`, `robotcode.robot.variables`, `robotcode.robot.variableFiles`, `robotcode.robot.env`, `robotcode.robot.languages`, `robotcode.robot.mode` and `robotcode.robot.outputDir` pass options to the runs, the test discovery and the analysis as well, but only in VS Code. Put options that the command line and other editors need too into `robot.toml` instead.
+The settings `robotcode.robot.args`, `robotcode.robot.paths`, `robotcode.robot.pythonPath`, `robotcode.robot.variables`, `robotcode.robot.variableFiles`, `robotcode.robot.env`, `robotcode.robot.languages`, `robotcode.robot.mode` and `robotcode.robot.outputDir` pass options to the runs as well, but only in VS Code. Of these, the test discovery gets `args`, `paths`, `pythonPath`, `languages` and `mode`, and the analysis `pythonPath`, `variables`, `variableFiles`, `env` and `languages`. Put options that the command line and other editors need too into `robot.toml` instead.
 
 ### Editing `robot.toml`
 

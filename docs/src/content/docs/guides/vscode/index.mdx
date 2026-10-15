@@ -30,7 +30,7 @@ RobotCode adds Robot Framework support to VS Code: it helps you write and naviga
 3. **The Test Explorer** opens with the Testing icon of the activity bar. It lists the suites, tests and tasks of the workspace and runs or debugs them. See [Test Explorer](/guides/vscode/test-explorer/).
 4. **The language status.** The braces next to "Robot Framework" in the status bar show RobotCode's status items when you hover over them, see [below](#the-language-status).
 5. **The output channels** of RobotCode in the Output panel, see [Output and logs](#output-and-logs).
-6. **The Command Palette** opens with <kbd>Ctrl+Shift+P</kbd> (<kbd>Cmd+Shift+P</kbd> on macOS) or a click on the search field in the title bar. Type `RobotCode` to see RobotCode's [commands](#commands).
+6. **The Command Palette** opens with <kbd>Ctrl+Shift+P</kbd> (<kbd>Cmd+Shift+P</kbd> on macOS) or a click on the search field in the title bar and then on **Show and Run Commands**. Type `RobotCode` to see RobotCode's [commands](#commands).
 
 ## The language status
 
@@ -57,11 +57,11 @@ RobotCode writes to two channels of the Output panel (**View: Toggle Output**, t
 
 ## Menus and shortcuts
 
-Many actions are in a menu too, not only behind a keyboard shortcut. A right-click in the editor opens its context menu: it goes to definitions and references, renames, formats and refactors, and in a suite file it offers RobotCode's **Run Current File** and **Debug Current File** and VS Code's commands to run or debug the test at the cursor. Its last entry opens the Command Palette.
+Many actions are in a menu too, not only behind a keyboard shortcut. A right-click in the editor opens its context menu: it goes to definitions and references, renames, formats and refactors, and in a suite file it offers RobotCode's **Run Current File** and **Debug Current File** and VS Code's commands to run or debug the test at the cursor or all tests of the file. Its last entry opens the Command Palette.
 
 <ThemeImage
   name="overview-context-menu"
-  alt="The context menu of the editor after a right-click on the keyword call Create Order in orders.robot, with Go to Definition, Go to References, Peek, Find All References, Rename Symbol, Format Document, Refactor..., Source Action..., Run Current File, Debug Current File, Run Test at Cursor, Debug Test at Cursor and Command Palette..., most of them with their keyboard shortcut."
+  alt="The context menu of the editor after a right-click on the keyword call Create Order in orders.robot, with Go to Definition, Go to References, Peek, Find All References, Rename Symbol, Format Document, Refactor..., Source Action..., Run Current File, Debug Current File, Run Test at Cursor, Debug Test at Cursor, Run Tests in Current File, Debug Tests in Current File and Command Palette..., most of them with their keyboard shortcut."
 />
 
 The pages of this guide name an action's keyboard shortcut and, where VS Code offers one, its menu entry or button.
@@ -77,8 +77,8 @@ All of RobotCode's commands start with `RobotCode:` in the Command Palette. **Ro
 | RobotCode: Select Configuration Profiles | Chooses the `robot.toml` profiles that test discovery, runs and the language server use. |
 | RobotCode: Select Python Environment | Chooses the Python environment RobotCode uses for a workspace folder. |
 | RobotCode: Start Terminal REPL | Starts the interactive Robot Framework REPL in a terminal, see [REPL](/guides/vscode/repl/). |
-| RobotCode: Open Documentation Viewer | Opens the documentation of a library, resource file or keyword in a viewer, see [Documentation Viewer](/guides/vscode/documentation-viewer/). |
-| RobotCode: Open Documentation Viewer in New Window | The same in a new viewer instead of the existing one. |
+| RobotCode: Open Documentation Viewer | Opens a new viewer on `BuiltIn`, ready for the target you type, see [Documentation Viewer](/guides/vscode/documentation-viewer/). |
+| RobotCode: Open Documentation Viewer in New Window | Opens a viewer in a new window, with the target of the active or last-used viewer. |
 | RobotCode: New Robot Framework File | Creates a suite file, a resource file or an `__init__.robot` file. |
 | RobotCode: Enable RoboCop | Switches Robocop's diagnostics on, see [Diagnostics and Linting](/guides/vscode/diagnostics-and-linting/). |
 | RobotCode: Disable RoboCop | Switches Robocop's diagnostics off. |

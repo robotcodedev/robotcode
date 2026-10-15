@@ -20,7 +20,7 @@ An icon beside each suite, test and task in the editor shows its last result; cl
   alt="The context menu of the icon beside the test Order Coffee with Run Test, Debug Test, Execute Using Profile..., Reveal in Test Explorer and the breakpoint actions."
 />
 
-**RobotCode: Run Current File** and **RobotCode: Debug Current File** run or debug all tests and tasks of the file in the active editor. Both are also in the context menu of the editor and at the run button at the top right of the editor: a click on it runs the file, the arrow beside it offers **Debug Current File**. The context menu of the editor also has VS Code's **Run Test at Cursor** and **Debug Test at Cursor** for the test the cursor is in.
+**RobotCode: Run Current File** and **RobotCode: Debug Current File** run or debug all tests and tasks of the file in the active editor. Both are also in the context menu of the editor and at the run button at the top right of the editor: a click on it runs the file, the arrow beside it offers **Debug Current File**. The context menu of the editor also has VS Code's **Run Test at Cursor** and **Debug Test at Cursor** for the test the cursor is in, and **Run Tests in Current File** and **Debug Tests in Current File** for all tests and tasks of the file.
 
 ## Choosing the configuration profiles
 
@@ -88,7 +88,7 @@ The launch configurations of type `robotcode` in `.vscode/launch.json` start run
 | RobotCode: Default | With `"purpose": "default"`: its settings apply to all other RobotCode launch configurations. |
 | RobotCode: Remote-Attach | Attaches to a run that waits for a debugger, by default on `localhost:6612`. |
 
-A configuration takes the options of a run, such as `profiles`, `variables`, `include`, `exclude`, `args` and `env`; VS Code completes and explains them while you edit `launch.json`. The defaults for these come from the `robotcode.robot.*` and `robotcode.debug.*` settings, see the [VS Code settings](/reference/vscode-settings/#debug).
+A configuration takes the options of a run, such as `profiles`, `variables`, `include`, `exclude`, `args` and `env`; VS Code completes and explains them while you edit `launch.json`. The settings `robotcode.robot.args`, `robotcode.robot.variables` and `robotcode.robot.env` are combined with these options, `profiles` falls back to `robotcode.profiles`, and options such as `console` and `attachPython` fall back to the `robotcode.debug.*` settings, see the [VS Code settings](/reference/vscode-settings/#debug).
 
 ## The log after a run
 
