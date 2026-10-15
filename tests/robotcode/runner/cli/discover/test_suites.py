@@ -22,6 +22,12 @@ def test_suites_includes_nested_hierarchy(json_discover: JsonRunner, nested_suit
     assert {"Nested", "Child", "A", "B"}.issubset(names)
 
 
+def test_suites_are_a_flat_list_without_children(json_discover: JsonRunner, nested_suite: Path) -> None:
+    data = json_discover("suites", suite_path=nested_suite)
+    assert len(data["items"]) > 1
+    assert all("children" not in item for item in data["items"])
+
+
 def test_suites_text_lists_longnames_and_paths(robotcode_cli: CliRunner, nested_suite: Path) -> None:
     result = robotcode_cli(["discover", "suites", str(nested_suite)])
     assert "Nested" in result.stdout

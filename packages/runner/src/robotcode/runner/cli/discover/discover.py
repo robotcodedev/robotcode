@@ -1,3 +1,4 @@
+import dataclasses
 import os
 import platform
 import re
@@ -954,7 +955,8 @@ def suites(
         else:
             app.print_data(
                 ResultItem(
-                    collector.suites,
+                    # a flat list: the suites without their nested suites and tests
+                    [dataclasses.replace(suite, children=None) for suite in collector.suites],
                     diagnostics,
                     filters_applied=_filters_applied(search_substring, search_regex),
                     supports_parse_include=SUPPORTS_PARSE_INCLUDE,
