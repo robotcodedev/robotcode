@@ -169,7 +169,7 @@ Use `robotcode discover` to inspect what the active profile would see without ex
 | Suites only | `robotcode discover suites` |
 | Tags and tagged tests/tasks | `robotcode discover tags --tests` / `--tasks` |
 | Metadata names/values and what carries them (test metadata RF 7.5+) | `robotcode discover metadata --values --tests` / `--suites` |
-| Source files Robot would parse | `robotcode discover files` |
+| `.robot` / `.resource` files after `.gitignore` / `.robotignore` | `robotcode discover files` |
 
 Filter discovery like a run with Robot options (`-i`, `-e`, `-s`, `-t`, paths, variables). Add `--search TEXT` or `--search-regex PATTERN` to match names, paths, docs, tags, metadata, and test-body content. Use `--format json` when an integration needs the tree shape.
 

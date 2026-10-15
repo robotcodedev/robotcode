@@ -61,7 +61,7 @@ Triggers combine freely. Pass them to `robot-debug` (most also work on `repl`):
 | **Line** | `--break path/to/test.robot:42` — pause when execution reaches that line. Repeatable. |
 | **Keyword** | `--break "Open Browser"` — pause whenever that keyword is about to run. Repeatable. |
 | **Embedded `Breakpoint`** | A `Breakpoint` step in a `.robot` / `.resource` — see below. No flag needed. |
-| **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first keyword of the run. |
+| **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first step of the run. |
 | **Uncaught failure** | **On by default** — pause at the first failing keyword not caught by `TRY`/`EXCEPT` or `Run Keyword And …`, *before* it unwinds. Turn off with `--no-break-on-exception`. |
 | **Every failure** | `--break-on-all-exceptions` — pause at *every* failing keyword, even caught ones. |
 | **Failing test / suite** | `--break-on-failed-test` / `--break-on-failed-suite` — pause at the end of a failing test / suite. |
@@ -98,7 +98,7 @@ Login
 
 ## At a stop: inspecting state
 
-At the `(rdb)` prompt you have the full debug command set, every shell dot-command (`.kw`, `.doc`, …), and keyword execution in context. Each command has a long name and often a one-letter shortcut; long names accept any unambiguous prefix (`.bre` → `.break`).
+At the `(rdb)` prompt you have the full debug command set, every shell dot-command (`.kw`, `.doc`, …), and keyword execution in context. Each command has a long name and often a one- or two-letter shortcut; long names accept any unambiguous prefix (`.cond` → `.condition`), except `.abort`, which must be typed in full.
 
 **Stack & frames.** Execution is a stack of keyword frames — `#0` is the innermost (where you stopped), higher numbers are its callers. Variable lookups and expressions are evaluated **in the selected frame**, so moving frames changes what `.print` sees:
 

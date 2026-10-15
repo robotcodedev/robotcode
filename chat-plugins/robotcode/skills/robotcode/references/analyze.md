@@ -56,7 +56,7 @@ Off by default — opt in:
 robotcode analyze code --collect-unused
 ```
 
-Surfaces `KeywordNotUsed` / `VariableNotUsed`. Great for cleanup, but **noisy** on libraries/resources that *intentionally* export keywords for other projects — ignore it on those paths (`-mi KeywordNotUsed`) or persist the policy in config (below).
+Surfaces `KeywordNotUsed` / `VariableNotUsed`. Run it on the whole project: with paths or `--filter`, only references inside the selection count, so anything used only elsewhere is reported as unused. Great for cleanup, but **noisy** on libraries/resources that *intentionally* export keywords for other projects — ignore it on those paths (`-mi KeywordNotUsed`) or persist the policy in config (below).
 
 ## Severity & suppression (modifiers)
 

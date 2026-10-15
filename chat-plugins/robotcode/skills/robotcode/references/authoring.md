@@ -104,7 +104,7 @@ robotcode doc keyword resources/items.resource "Item Should Exist"  # your keywo
 robotcode analyze code --collect-unused                              # spot keywords/variables nothing references
 ```
 
-`--collect-unused` is noisy on resource files that *intentionally* export keywords for other suites — scope it or suppress `KeywordNotUsed` there (see [analyze.md](analyze.md), or workflow D in [workflows.md](workflows.md)).
+`--collect-unused` is noisy on resource files that *intentionally* export keywords for other suites — suppress `KeywordNotUsed` there rather than narrowing the run to other paths (see [analyze.md](analyze.md), or workflow D in [workflows.md](workflows.md)).
 
 ## 8. Best practices
 
