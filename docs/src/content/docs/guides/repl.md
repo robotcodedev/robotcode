@@ -74,7 +74,7 @@ Two commands:
 | `robotcode repl` (alias `shell`) | The interactive shell described on this page. Every existing `robotcode repl …` invocation keeps working unchanged. The debugger starts **detached** — a failing keyword just prints its error and you stay at the prompt, and nothing pauses. Attach it with `.debug on` (or start with `--debugger-attached`, or pass `--break …`) to make breakpoints, an embedded `Breakpoint`, and failures pause into the `(rdb)` prompt. |
 | `robotcode robot-debug` (alias `run-debug`) | Runs a real `.robot` suite through the normal runner with the debugger attached. Takes the same arguments as [`robotcode robot`](/reference/cli/#robot) plus the debugger trigger flags. See [Command-line debugging](/guides/robot-debug/). |
 
-The shell-specific flags (`-v`, `-P`, `-d/-o/-l/-r/-x`, `--source`, `--inspect`, `--show-keywords`, `--statusrc/--nostatusrc`, and `.robotrepl` file arguments) live on `repl`. `robot-debug` instead accepts the full `robotcode robot` option set. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) and the debugger triggers (`--break`, the `--break-on-*` exception flags, and — on `robot-debug` — `--stop-on-entry`) work on both.
+The shell-specific flags (`--source`, `--inspect`, `--show-keywords`, and `.robotrepl` file arguments) live on `repl`. `robot-debug` instead accepts the full `robotcode robot` option set. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) and the debugger triggers (`--break`, the `--break-on-*` exception flags, and — on `robot-debug` — `--stop-on-entry`) work on both.
 
 ## How the prompt works
 
@@ -171,13 +171,15 @@ Tab understands Robot's cell-separator semantics (2+ spaces or a tab) and its ca
 
 | Where you press Tab | What you get |
 |---|---|
-| At the start of a cell | Keyword names from every loaded library and imported resource |
+| In the keyword cell | Keyword names from every loaded library and imported resource |
 | Inside `${...}` / `@{...}` / `&{...}` | Variables from the live suite scope |
 | Inside `%{...}` | Environment variables from the process environment |
 | After `Import Library    ` | Library names — installed modules (`Coll<Tab>` → `Collections`), dotted module paths (`robot.libraries.Coll<Tab>`), filesystem paths (`./libs/My<Tab>` → `./libs/MyLib.py`) |
 | After `Import Resource    ` | `.robot` / `.resource` files on disk |
 | After `Import Variables    ` | `.py` / `.yaml` / `.yml` / `.json` variable files, plus discoverable variables modules |
 | After `<keyword>    <arg>=` (RF 7+) | Literal values declared on the argument's type — e.g. for a library keyword `my_kw(level: Literal['DEBUG', 'INFO', 'WARN'])`, typing `my_kw    level=<Tab>` shows the three options. Activation rules mirror Robot itself: the name before `=` must be a real positional-or-named / named-only argument of the keyword (or the keyword takes `**kwargs`). Otherwise the cell stays a literal positional value — same as Robot's own runtime behaviour. |
+
+In other argument cells, Tab inserts a cell separator instead.
 
 When the prefix is ambiguous the full candidate list appears on the first Tab press — no double-tap, no `Display all NNN possibilities? (y or n)` prompt.
 
@@ -194,11 +196,11 @@ When you open a Robot block construct (`FOR`, `WHILE`, `IF`, `TRY`, `GROUP`), th
 ... END
 ```
 
-On the prompt-toolkit backend you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Alt-Enter** (`Esc` then `Enter`) and **Ctrl-J** always insert a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
+On the prompt-toolkit backend you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Ctrl-J** always inserts a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. **Alt-Enter** (`Esc` then `Enter`) does the same while no completion popup is open; with the popup open, `Esc` closes it and `Enter` then acts as plain Enter. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
 
 Shift-Enter isn't bound by default: most terminals send the same byte (`\r`) for Shift-Enter as for plain Enter, so a binding would never fire portably. Use Alt-Enter or Ctrl-J — both work in every terminal.
 
-The plain backend falls back to one prompt per line; the auto-indent still works as a prefill on the next `... ` prompt.
+The plain backend falls back to one prompt per line, without auto-indent.
 
 ### What the prompt-toolkit backend adds
 
@@ -206,7 +208,7 @@ Beyond the basic `plain` prompt, the default backend gives you several extra cap
 
 - **Live candidate popup** — completions appear *as you type*, in an inline menu under the cursor, with arrow-keys to pick and Enter to accept. No Tab needed (though Tab still works).
 - **Fish-style auto-suggest** — as you type, the rest of the line you typed last time (matching the same prefix) appears greyed-out behind the cursor. Right-arrow accepts it.
-- **Bracket auto-match**, multi-line cursor movement (up/down inside an open block), `Ctrl-R` reverse search with a dedicated UI.
+- **Multi-line cursor movement** (up/down inside an open block), `Ctrl-R` reverse search with a dedicated UI.
 - **Persistent history** — see *History across sessions* above. The plain backend has none.
 
 The completion popup stays responsive even when there are hundreds of importable modules installed.
@@ -216,8 +218,8 @@ The completion popup stays responsive even when there are hundreds of importable
 When the cursor sits in an argument cell of a recognised keyword, a single status line appears at the bottom of the prompt with the keyword's signature and the active argument highlighted:
 
 ```
- Log    message · level='INFO' · html=False · console=False · repr=False
-                  ─────────
+ Log    message · level='INFO' · html=False · console=None · repr='DEPRECATED' · formatter='str'
+                  ────────────
 ```
 
 Highlight follows `name=…` syntax: typing `Log    msg    html=True` lights up `html`, not the positional cell at that index. Falls back to the positional cell index when the name before `=` isn't a real argument of the keyword.
@@ -228,7 +230,7 @@ The row only shows up when there's a signature to render — outside of an argum
 
 Each candidate in the completion popup shows a short context string to its right, so you know *what* a candidate is before picking it:
 
-- **Keywords**: the first line of the keyword's docstring (`Log a message with the given level` next to `Log`, etc.).
+- **Keywords**: the first line of the keyword's docstring (`Logs the given message with the given level.` next to `Log`, etc.).
 - **Library / resource / variables imports**: the kind of import — a built-in library, a third-party library, a `.resource` file, or a Python file discovered on disk.
 - **Variables (`${…}` / `@{…}` / `&{…}`)**: a truncated preview of the current value in the live suite scope — handy when you're trying to remember whether `${COUNT}` is `42` or `"42"`.
 - **Environment variables (`%{…}`)**: a truncated preview of the environment variable's value.
@@ -268,7 +270,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 
 `.kw` and `.doc` show the same documentation the editor displays on hover — full per-keyword pages with signature, argument table (types + defaults), tags, and docstring body. It's rendered as styled Markdown, so headings, lists, code blocks, tables, and inline emphasis show up formatted in any modern terminal.
 
-With Robot Framework 7.5 or newer, keywords that document their arguments in Google style (`Args:`, `Returns:`, `Raises:`, as the standard libraries do) show that documentation with the signature: the arguments are listed with their type, default value and description instead of the argument table, the description of the return value stands next to the return type, and the exceptions the keyword raises are listed.
+With Robot Framework 7.5 or newer, keywords that document their arguments in Google style (`Args:`, `Returns:`, `Raises:`, as the standard libraries do) show that documentation with the signature: the argument table gets a fifth column with the description of each argument, the description of the return value stands next to the return type, and the exceptions the keyword raises are listed.
 
 For libraries documented in Markdown, references such as `[Set Log Level]` are resolved. In `.doc` they are links to the keyword or section on the same page, in `.kw` they are links that open the documentation of that keyword (on the plain backend they are shown as inline code), and a `%TOC%` marker becomes a table of contents.
 
@@ -307,7 +309,7 @@ On the page of `.doc`, `s` opens a sidebar with the outline of the page: the sec
 
 In a terminal with at least 94 columns, the sidebar stands left of the page, which is rendered narrower; after a jump it stays open and the page gets the focus, and `s` moves the focus back to the sidebar. `Esc` on the page hides the sidebar, and only the next `Esc` closes the viewer. Showing or hiding it keeps the heading at the top of the page in place, but clears the back / forward history, as resizing the terminal does. In a narrower terminal, the sidebar lies over the left part of the page and closes after a jump.
 
-On the plain backend the doc-display commands still work — they print the rendered markdown through the pager with no colour, no fullscreen overlay. Useful in AI-agent sessions and headless environments where a fullscreen overlay would get in the way.
+On the plain backend the doc-display commands still work — they print the Markdown source through the pager with no colour, no fullscreen overlay. Useful in AI-agent sessions and headless environments where a fullscreen overlay would get in the way.
 
 ### Saving a session as a runnable `.robot` file
 
@@ -317,8 +319,9 @@ On the plain backend the doc-display commands still work — they print the rend
 robotcode repl
 >>> Import Library    Collections
 >>> ${d}=    Create Dictionary    a=1    b=2
+[ INFO ] ${d} = {'a': '1', 'b': '2'}
 >>> Log    ${d}[a]
-1
+[ INFO ] 1
 >>> .save scratch.robot
 Wrote scratch.robot (3 entries)
 >>> .exit
@@ -357,10 +360,12 @@ Variables, library imports, and the suite's variable scope all carry over from o
 
 ```
 >>> ${greeting}=    Set Variable    Hello
+[ INFO ] ${greeting} = Hello
 >>> Log To Console    ${greeting}, world!
 Hello, world!
 >>> Import Library    Collections
 >>> ${items}=    Create List    apple    banana    cherry
+[ INFO ] ${items} = ['apple', 'banana', 'cherry']
 >>> Log To Console    ${items}
 ['apple', 'banana', 'cherry']
 ```
@@ -369,7 +374,7 @@ Variables behave the way they would inside a single test case.
 
 ## Loading libraries and resources
 
-`BuiltIn` is the only library available out of the box (same as a normal Robot run). Everything else — `Collections`, `OperatingSystem`, `SeleniumLibrary`, your own libraries — needs an explicit import:
+`BuiltIn` is the only library available out of the box (same as a normal Robot run), apart from `robotcode.repl.Repl`, which provides the `Breakpoint` keyword. Everything else — `Collections`, `OperatingSystem`, `SeleniumLibrary`, your own libraries — needs an explicit import:
 
 ```
 >>> Import Library    SeleniumLibrary
@@ -421,7 +426,7 @@ You can also define variables inline via the `VAR` statement (RF 7+) or classic 
 robotcode -p dev repl
 ```
 
-`output`, `log`, `report`, and `xunit` from the profile are not used; pass the REPL's own `-o/-l/-r/-x` flags to write them (see [Capturing the session as a Robot run](#capturing-the-session-as-a-robot-run)).
+`output`, `log`, `report`, and `xunit` from the profile are not used; pass the REPL's own `-o/-l/-r/-x` flags to write them (`-l` needs `-o`; see [Capturing the session as a Robot run](#capturing-the-session-as-a-robot-run)).
 
 The whole session runs as a single internal test. Settings that would deselect or skip that test, so the REPL wouldn't start, or turn the session into a dry run in which nothing you type is executed, are ignored:
 
@@ -464,7 +469,7 @@ By default, `repl` runs everything in-process and discards the report. The stand
 |---|---|
 | `-d, --outputdir DIR` | Directory for any output files. |
 | `-o, --output FILE` | Write `output.xml`. |
-| `-l, --log FILE` | Write `log.html`. |
+| `-l, --log FILE` | Write `log.html`; needs `-o`. |
 | `-r, --report FILE` | Write `report.html`. |
 | `-x, --xunit FILE` | Write a JUnit-style `xunit.xml`. |
 
@@ -632,6 +637,6 @@ Log To Console    pinging ${BASE_URL}
 - **Not a Python REPL.** It's keyword-driven, not expression-driven. Type Robot Framework syntax, not Python.
 - **Not a *graphical* debugger.** `robot-debug` is a *command-line* debugger (see [Command-line debugging](/guides/robot-debug/)). For step-debugging inside the editor — gutter breakpoints, a Variables pane, the call-stack view — use the **RobotCode** VS Code extension's debugger.
 - **Not a way to define new user keywords.** Those go in `.resource` files; the REPL imports them.
-- **Not persistent.** Closing the prompt throws away the session unless you've passed `-o` / `-l` / `-r` / `-x` to capture artefacts.
+- **Not persistent.** Closing the prompt throws away the session unless you've passed `-o` / `-r` / `-x` to capture artefacts.
 
 For the per-flag reference of the base `repl` options see the auto-generated [CLI reference](/reference/cli/#repl).

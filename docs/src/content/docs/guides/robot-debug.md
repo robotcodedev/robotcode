@@ -40,14 +40,14 @@ robotcode robot-debug tests/
 # Pause at a specific line, then step and inspect
 robotcode robot-debug --break login.robot:42 tests/
 
-# Pause at the very first keyword of a run
+# Pause at the very first step of a run
 robotcode robot-debug --stop-on-entry tests/login.robot
 
 # Combine line + keyword breakpoints
 robotcode robot-debug --break login.robot:42 --break "Submit Login" tests/
 ```
 
-`robot-debug` accepts the full `robotcode robot` option set (see the [CLI reference](/reference/cli/#robot)) plus the debugger triggers below. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) work here too — see [Prompt features](/guides/repl/#prompt-features). The interactive shell's setup flags (`-v`, `-P`, output flags, `--source`, …) live on [`robotcode repl`](/guides/repl/), not here.
+`robot-debug` accepts the full `robotcode robot` option set (see the [CLI reference](/reference/cli/#robot)) plus the debugger triggers below. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) work here too — see [Prompt features](/guides/repl/#prompt-features). The interactive shell's setup flags (`--source`, `--inspect`, `--show-keywords`) and `.robotrepl` file arguments live on [`robotcode repl`](/guides/repl/), not here.
 
 ## Setting breakpoints
 
@@ -58,7 +58,7 @@ There are several ways to make a run pause; they combine freely.
 | **Line breakpoint** | `--break path/to/test.robot:42` — pause when execution reaches that line. Repeatable. |
 | **Keyword breakpoint** | `--break "Open Browser"` — pause whenever a keyword with that name is about to run. Repeatable. |
 | **Embedded `Breakpoint` keyword** | Add `Breakpoint` as a step in your `.robot` / `.resource` (after `Library    robotcode.repl.Repl`). It's a no-op when run normally and a hard breakpoint under the debugger — no flag needed. |
-| **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first keyword. |
+| **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first step. |
 | **`Ctrl-C`** | Press `Ctrl-C` while the run runs to pause at the next keyword (reason `pause`), as `pdb` pauses a running program. The keyword that runs isn't interrupted; the debugger says right away that it will pause. A second `Ctrl-C` before then interrupts that keyword: it fails with `Execution interrupted`, and the run stops at the failure if an exception breakpoint applies, otherwise at the next keyword. This works while the debugger is attached. Without it (`--no-debugger-attached`, or after `.detach`), `Ctrl-C` ends the run as in `robotcode robot`, and a second `Ctrl-C` ends it at once. |
 | **Uncaught exception** | Pause at an uncaught failing keyword (not caught by `TRY`/`EXCEPT` or `Run Keyword And …`), *before* the failure unwinds. **Armed by default**, but it only fires while the debugger is attached — so it triggers out of the box under `robot-debug`, while the interactive `repl` (detached by default) just prints the error until you attach with `.debug on` / `--debugger-attached`. Disarm the filter with `--no-break-on-exception`. |
 | **Every exception** | `--break-on-all-exceptions` — pause at *every* failing keyword, even ones caught by `TRY`/`EXCEPT` or `Run Keyword And …`. |
@@ -115,7 +115,7 @@ The banner is `* <reason>  <keyword>  (<file>:<line>)`, where reason is `breakpo
 
 ## Debug commands
 
-Each command has a canonical long name and, where it helps, a single-letter shortcut; long names also accept any unambiguous prefix (`.bre` → `.break`). At the *shell* prompt, where there is no active stop, the navigation/resume commands simply report `not at a breakpoint`.
+Each command has a canonical long name and, where it helps, a one- or two-letter shortcut; long names also accept any unambiguous prefix (`.cond` → `.condition`), except `.abort`, which must be typed in full. At the *shell* prompt, where there is no active stop, the navigation/resume commands simply report `not at a breakpoint`.
 
 **Stepping and resuming**
 
@@ -167,7 +167,7 @@ You can also just type a keyword at the `(rdb)` prompt to run it in the paused c
 | `.disable <n>` / `.enable <n>` | Turn breakpoint `<n>` off / on; bare form applies to all. |
 | `.commands <n>` | Attach debugger commands to breakpoint `<n>`, replayed at each hit (enter one per line, end with `end`; a leading `silent` suppresses the banner; a resuming command lets the run continue automatically). `Ctrl-C` at the `(com)` prompt aborts the entry, and the breakpoint keeps the commands it had before. |
 
-Breakpoints are referenced by the stable number shown in `.breakpoints`. A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway, even past `.ignore` or with `silent` commands, and appends the error to the stop line (`— condition error: Variable '${item_id}' not found.`). A keyword breakpoint stops at the call, before the keyword's arguments are bound, so its condition sees the caller's variables; to test an argument, put a line breakpoint on the keyword's first body line instead. `.ignore` skips the next *N* triggering hits.
+Breakpoints are referenced by the stable number shown in `.breakpoints`. A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway, even past `.ignore`, and appends the error to the stop line (`— condition error: Variable '${item_id}' not found.`), which it prints even with `silent` commands; a resuming command attached to the breakpoint still lets the run continue after that line. A keyword breakpoint stops at the call, before the keyword's arguments are bound, so its condition sees the caller's variables; to test an argument, put a line breakpoint on the keyword's first body line instead. `.ignore` skips the next *N* triggering hits.
 
 **Logpoints — log and continue.** There's no dedicated logpoint command, but you get the "print a value on every hit, never stop" effect by attaching commands to a breakpoint: a leading `silent` suppresses the banner and a trailing resuming command (`.continue`) carries on without prompting.
 
