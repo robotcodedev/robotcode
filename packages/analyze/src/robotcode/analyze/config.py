@@ -146,7 +146,15 @@ class ModifiersConfig(BaseOptions):
 class CacheConfig(BaseOptions):
     """Cache configuration."""
 
-    cache_dir: Optional[str] = field(description="Path to the cache directory.", alias="cache-dir")
+    cache_dir: Optional[str] = field(
+        description="""\
+            Path to the cache directory. A relative path counts from the project root.
+
+            `robotcode analyze` and the language server keep their cache there, in a `.robotcode_cache`
+            folder. For `robotcode analyze`, the `ROBOTCODE_CACHE_DIR` environment variable takes precedence.
+            """,
+        alias="cache-dir",
+    )
 
     ignored_libraries: Optional[List[str]] = field(
         description="""\
@@ -440,7 +448,6 @@ class AnalyzeConfig(BaseOptions):
             semantic_model=self.semantic_model if self.semantic_model is not None else False,
             cache=(
                 WorkspaceCacheConfig(
-                    # TODO savelocation
                     ignored_libraries=self.cache.ignored_libraries or [],
                     ignored_variables=self.cache.ignored_variables or [],
                     ignore_arguments_for_library=self.cache.ignore_arguments_for_library or [],
@@ -449,6 +456,7 @@ class AnalyzeConfig(BaseOptions):
                 if self.cache is not None
                 else WorkspaceCacheConfig()
             ),
+            cache_dir=self.cache.cache_dir if self.cache is not None else None,
             robot=AnalysisRobotConfig(
                 global_library_search_order=self.global_library_search_order or [],
                 load_library_timeout=self.load_library_timeout,

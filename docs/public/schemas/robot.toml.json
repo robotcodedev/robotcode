@@ -286,8 +286,8 @@
             }
           ],
           "default": null,
-          "description": "Path to the cache directory.",
-          "markdownDescription": "Path to the cache directory.",
+          "description": "Path to the cache directory. A relative path counts from the project root.\n\n`robotcode analyze` and the language server keep their cache there, in a `.robotcode_cache`\nfolder. For `robotcode analyze`, the `ROBOTCODE_CACHE_DIR` environment variable takes precedence.\n",
+          "markdownDescription": "Path to the cache directory. A relative path counts from the project root.\n\n`robotcode analyze` and the language server keep their cache there, in a `.robotcode_cache`\nfolder. For `robotcode analyze`, the `ROBOTCODE_CACHE_DIR` environment variable takes precedence.\n",
           "title": "Cache Dir",
           "x-taplo": {
             "links": {

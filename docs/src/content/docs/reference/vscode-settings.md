@@ -343,13 +343,13 @@ Specifies robot execution mode. Corresponds to the `--rpa` or `--norpa` option o
 
 ### `robotcode.analysis.cache.saveLocation` {#robotcode.analysis.cache.saveLocation}
 
-Specifies where cached data is saved.
+Specifies where cached data is saved. `cache-dir` in the `[tool.robotcode-analyze.cache]` section of `robot.toml` takes precedence.
 
 - **Type:** `string`
 - **Default:** `"workspaceStorage"`
 - **Allowed values:**
-  - `workspaceStorage`: Save cached data into workspace folder.
-  - `workspaceFolder`: Save cached data into workspace storage.
+  - `workspaceStorage`: Save cached data into workspace storage.
+  - `workspaceFolder`: Save cached data into workspace folder.
 - **Can be set in:** user, remote, workspace and folder settings
 
 ### `robotcode.analysis.cache.ignoredLibraries` {#robotcode.analysis.cache.ignoredLibraries}

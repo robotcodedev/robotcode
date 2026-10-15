@@ -1039,10 +1039,10 @@
               "workspaceFolder"
             ],
             "enumDescriptions": [
-              "Save cached data into workspace folder.",
-              "Save cached data into workspace storage."
+              "Save cached data into workspace storage.",
+              "Save cached data into workspace folder."
             ],
-            "description": "Specifies where cached data is saved.",
+            "markdownDescription": "Specifies where cached data is saved. `cache-dir` in the `[tool.robotcode-analyze.cache]` section of `robot.toml` takes precedence.",
             "default": "workspaceStorage",
             "scope": "resource"
           },

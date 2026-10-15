@@ -372,6 +372,8 @@ robotcode analyze cache prune    # delete the whole cache directory, for every P
 
 `prune` refuses while another process uses the cache; `--force` deletes it anyway.
 
+The cache lives in a `.robotcode_cache` folder in the project root. [`cache-dir`](/reference/config/#tool-robotcode-analyze-cache-cache-dir) in the `[tool.robotcode-analyze.cache]` section of `robot.toml` moves it, for `analyze` and for the language server; for `analyze`, the `ROBOTCODE_CACHE_DIR` environment variable takes precedence.
+
 Clearing the cache is the usual fix after changing cache-affecting settings such as `ignore-arguments-for-library`.
 
 ## Configuration via `robot.toml`

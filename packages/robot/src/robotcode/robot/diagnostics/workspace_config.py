@@ -87,6 +87,9 @@ class ExperimentalConfig(ConfigBase):
 class WorkspaceAnalysisConfig:
     exclude_patterns: List[str] = field(default_factory=list)
     cache: CacheConfig = field(default_factory=CacheConfig)
+    # `cache-dir` of the project's robot.toml, relative to the folder root. It wins over the location the editor
+    # gives the language server.
+    cache_dir: Optional[str] = None
     robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)
     modifiers: AnalysisDiagnosticModifiersConfig = field(default_factory=AnalysisDiagnosticModifiersConfig)
     semantic_model: bool = False

@@ -6,10 +6,12 @@ Robocop formatter mutates the model in place, so it relies on the uncached
 variant - otherwise the mutations corrupt the shared cached model and repeated
 formatting becomes non-idempotent (see
 https://github.com/robotcodedev/robotcode/issues/612).
+
+The helper also decides where `robotcode analyze code` keeps its cache.
 """
 
 from pathlib import Path
-from typing import cast
+from typing import Optional, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,6 +20,7 @@ from robot.parsing.model.blocks import File
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.robot.diagnostics.document_cache_helper import DocumentsCacheHelper
+from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
 
 TEXT = '*** Test Cases ***\nTest\n    Embedded "args"\n\n\n*** Keywords ***\nEmbedded "${args}"\n    No Operation\n'
 
@@ -214,3 +217,39 @@ def test_try_load_reads_type_keyed_entry(cache_helper: DocumentsCacheHelper, tmp
     assert result is None
     read_args = imports_manager.data_cache.read_entry.call_args[0]
     assert read_args[1] == _namespace_cache_key(str(source_file), DocumentType.RESOURCE)
+
+
+def _cache_helper_with(cache_dir: Optional[str]) -> DocumentsCacheHelper:
+    return DocumentsCacheHelper(
+        workspace=MagicMock(),
+        documents_manager=MagicMock(),
+        file_watcher_manager=MagicMock(),
+        robot_profile=None,
+        analysis_config=WorkspaceAnalysisConfig(cache_dir=cache_dir),
+    )
+
+
+@pytest.mark.parametrize(
+    ("cache_dir", "expected"),
+    [pytest.param(None, ".", id="no-cache-dir"), pytest.param("mycache", "mycache", id="relative-cache-dir")],
+)
+def test_cache_path_follows_the_cache_dir_of_the_robot_toml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cache_dir: Optional[str], expected: str
+) -> None:
+    monkeypatch.delenv("ROBOTCODE_CACHE_DIR", raising=False)
+    folder = Uri.from_path(tmp_path)
+
+    assert _cache_helper_with(cache_dir).calc_cache_path(folder) == folder.to_path() / expected
+
+
+def test_cache_path_takes_an_absolute_cache_dir_as_it_is(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ROBOTCODE_CACHE_DIR", raising=False)
+    cache_dir = tmp_path / "elsewhere"
+
+    assert _cache_helper_with(str(cache_dir)).calc_cache_path(Uri.from_path(tmp_path / "project")) == cache_dir
+
+
+def test_robotcode_cache_dir_wins_over_the_cache_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ROBOTCODE_CACHE_DIR", str(tmp_path / "env"))
+
+    assert _cache_helper_with("mycache").calc_cache_path(Uri.from_path(tmp_path)) == tmp_path / "env"

@@ -38,8 +38,12 @@ class DocumentsCachePart(RobotLanguageServerProtocolPart, DocumentsCacheHelper):
         )
 
     def calc_cache_path(self, folder_uri: Uri) -> Path:
-        cache_config = self.parent.workspace.get_configuration(CacheConfig, folder_uri)
         cache_base_path = folder_uri.to_path()
+        # `cache-dir` of the robot.toml wins over the location the editor asks for.
+        if self.analysis_config.cache_dir:
+            return cache_base_path / self.analysis_config.cache_dir
+
+        cache_config = self.parent.workspace.get_configuration(CacheConfig, folder_uri)
         if (
             cache_config.save_location == CacheSaveLocation.WORKSPACE_STORAGE
             and isinstance(self.parent.initialization_options, dict)

@@ -43,7 +43,7 @@ def _resolve_cache(
     cache_base_path = root_folder or Path.cwd()
     if analyzer_config is not None and isinstance(analyzer_config, AnalyzeConfig):
         if analyzer_config.cache is not None and analyzer_config.cache.cache_dir is not None:
-            cache_base_path = Path(analyzer_config.cache.cache_dir)
+            cache_base_path = cache_base_path / analyzer_config.cache.cache_dir
 
     cache_base_path = resolve_cache_base_path(cache_base_path)
 
@@ -392,7 +392,7 @@ def _resolve_cache_root(
     cache_base_path = root_folder or Path.cwd()
     if analyzer_config is not None and isinstance(analyzer_config, AnalyzeConfig):
         if analyzer_config.cache is not None and analyzer_config.cache.cache_dir is not None:
-            cache_base_path = Path(analyzer_config.cache.cache_dir)
+            cache_base_path = cache_base_path / analyzer_config.cache.cache_dir
 
     cache_base_path = resolve_cache_base_path(cache_base_path)
 

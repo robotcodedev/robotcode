@@ -3475,7 +3475,10 @@ Defines the cache configuration.
 
 Type: `str | None`
 
-Path to the cache directory.
+Path to the cache directory. A relative path counts from the project root.
+
+`robotcode analyze` and the language server keep their cache there, in a `.robotcode_cache`
+folder. For `robotcode analyze`, the `ROBOTCODE_CACHE_DIR` environment variable takes precedence.
 
 ## tool.robotcode-analyze.cache.cache-namespaces {#tool-robotcode-analyze-cache-cache-namespaces}
 
@@ -3622,7 +3625,10 @@ Extend the cache configuration.
 
 Type: `str | None`
 
-Path to the cache directory.
+Path to the cache directory. A relative path counts from the project root.
+
+`robotcode analyze` and the language server keep their cache there, in a `.robotcode_cache`
+folder. For `robotcode analyze`, the `ROBOTCODE_CACHE_DIR` environment variable takes precedence.
 
 ## tool.robotcode-analyze.extend-cache.cache-namespaces {#tool-robotcode-analyze-extend-cache-cache-namespaces}
 
