@@ -183,7 +183,7 @@ enter commands for breakpoint 1, one per line; `end` to finish:
 breakpoint 1: 3 command(s)
 ```
 
-Now every hit on `Process Item` prints `${item}` and runs on without pausing. (Graphical gutter logpoints are a feature of the VS Code / DAP debugger; in the CLI, `.breakpoints` shows a `logpoint` flag for any breakpoint that carries one.)
+Now every hit on `Process Item` prints `${item}` and runs on without pausing. (Graphical gutter logpoints are a feature of the VS Code / DAP debugger.)
 
 **Exception breakpoints**
 
