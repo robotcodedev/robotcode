@@ -12,13 +12,21 @@ See proposal.md for the motivation. The current workflow, `.github/workflows/bui
 The plugin build (`intellij-client/build.gradle.kts`, IntelliJ Platform Gradle Plugin 2.19.0, Gradle wrapper 9.8.0):
 
 - **Tests:** `testFramework(TestFrameworkType.Platform)`, JUnit 4. The test sandbox copies `package.json`, the syntaxes and `bundled/` from the repository root. The current tests need no Python.
-- **Verifier:** `pluginVerification` fails on `INVALID_PLUGIN`, `COMPATIBILITY_PROBLEMS` and `MISSING_DEPENDENCIES`, writes Markdown and plain reports, and checks `ides { recommended() }`.
+- **Verifier:**
+  - `pluginVerification` fails on `INVALID_PLUGIN`, `COMPATIBILITY_PROBLEMS` and `MISSING_DEPENDENCIES`, writes Markdown and plain reports, and checks `ides { recommended() }`.
+  - `recommended()` reads JetBrains' release list on every run and includes the current EAP build. On 2026-10-16 (`./gradlew printProductsReleases`) it picked PY-2026.1.5, PY-2026.2.3 and PY-263.6800.43, a 2026.3 build without a release name.
+  - The plugin claims `pluginSinceBuild = 261` and `pluginUntilBuild = 271.*`, so EAP builds of 2027.1 would come next.
 
-**Checked locally on 2026-10-04:**
-- `./gradlew test --rerun` passes: 15 tests in 5 classes, about 10 seconds.
-- `./gradlew verifyPlugin` passes in 58 seconds against PY-261.27258.51, PY-262.10968.92 and PY-263.6259.38, all "Compatible". The reports list two or three deprecated and 15–20 experimental API usages; neither is a configured failure level.
-  - The deprecated usages are the status bar widget's `getPresentation` and the run configuration editor's `EnvironmentVariablesComponent()` constructor. Both go away with planned changes.
-  - The verifier's IDEs and plugins came from the Gradle cache; `~/.pluginVerifier/ides` stays empty.
+**Checked locally:**
+- `./gradlew test`, 2026-10-16:
+  - it passes with 374 tests in 78 classes in about 31 seconds of test time;
+  - `RobotCodeEnvironmentProbeTest` is skipped without the environment variable `ROBOTCODE_TEST_PYTHON`;
+  - the maintainer ran the tests on Windows the same day and pushed the fixes (0f5df45d); they have not run on macOS.
+- `./gradlew verifyPlugin`, 2026-10-15:
+  - it passes against PY-261.27258.51, PY-262.10968.92 and PY-263.6800.43, all "Compatible";
+  - the reports list 25–30 experimental API usages, and against 263 also 9 deprecated ones: `MacrosDialog.Filters` in the run configuration's option fragments and target panel, `FileEditorManager.openFile(VirtualFile, boolean)` and `FileEditorManager.openTextEditor(OpenFileDescriptor, boolean)`;
+  - neither kind is a configured failure level.
+- On 2026-10-04 the verifier's IDEs and plugins came from the Gradle cache, and `~/.pluginVerifier/ides` stayed empty.
 
 ## Goals / Non-Goals
 
@@ -57,16 +65,25 @@ The job uploads `intellij-client/build/test-results/test/` as `test-results-jetb
 
 `package` needs `test` and `test-jetbrains`. `publish` already needs `package`, so a failing plugin test also stops a release.
 
-### The verifier step comes back, as a gate
+### The verifier comes back: a gate on released versions, a report on EAP builds
 
-The step runs in `code-quality` after the Python checks, as `./gradlew verifyPlugin` in `intellij-client/`.
-- The exit trap that appends each `report.md` to the job summary stays, with its heading shift. Each report starts with the verdict (for example "Compatible. 3 usages of deprecated API. 15 usages of experimental API") and lists the deprecated and experimental API usages below it, so the notes appear in the summary even when the step passes. Before the reports, the trap writes one line per IDE with its verdict, so the result is visible without scrolling through three reports of about 8 KB each.
-- The upload of `build/reports/pluginVerifier` stays, with `if: always()`.
-- `continue-on-error` and `-Dplugin.verifier.home.dir` go. The property belonged to the 1.x Gradle plugin; version 2.x resolves the verifier's IDEs as Gradle dependencies, as the local run showed.
+The maintainer decided this split on 2026-10-16.
 
-A failure at a configured level fails `code-quality` and with it `publish`. Experimental and deprecated API usages are only reported.
+- **Selection of IDEs:** `pluginVerification.ides` uses `select` instead of `recommended()`, with the plugin's platform type, its build range from `pluginSinceBuild` and `pluginUntilBuild`, and the channel `RELEASE`. A Gradle property switches the channel to `EAP` and the report directory to `build/reports/pluginVerifier-eap`. Without the property, `./gradlew verifyPlugin` checks the released versions, locally as in CI.
+- **The gate:** the first step runs `./gradlew --console=plain verifyPlugin` in `code-quality` after the Python checks, without `continue-on-error`. A failure at a configured level fails `code-quality` and with it `publish`.
+- **The EAP step:** it runs after the gate with the property and with `continue-on-error: true`. When it fails, the run gets a warning (`::warning::`) that names the problem, and the job stays green.
+- **Summary:**
+  - Each step has an exit trap that writes a heading, released versions or EAP, then one line per IDE with its verdict, and then each `report.md` with its headings shifted one level.
+  - Each report starts with the verdict, for example "Compatible. 3 usages of deprecated API. 15 usages of experimental API", and lists the deprecated and experimental API usages, so the notes appear even when the step passes.
+- **Artifacts:** the upload of `build/reports/pluginVerifier` and `build/reports/pluginVerifier-eap` stays, with `if: always()`.
+- **`-Dplugin.verifier.home.dir` goes:** the property belonged to the 1.x Gradle plugin. Version 2.x resolves the verifier's IDEs as Gradle dependencies, as the local run showed.
 
-Alternative: keep `continue-on-error: true` until the first runs are green. The local run is already green against all three IDEs, and a check that cannot fail protects nothing.
+Experimental and deprecated API usages are only reported.
+
+Alternatives:
+- `recommended()` as the gate, as planned before. It includes the current EAP build, so an EAP build that removes an API the plugin uses would block every release for the released versions too. The nine deprecated usages against 263 are such candidates.
+- No EAP verification at all. The removal of an API would then show up only once that version is released.
+- `continue-on-error: true` for the gate until the first runs are green. The local run is already green, and a check that cannot fail protects nothing.
 
 ### Caching
 
@@ -74,10 +91,10 @@ Alternative: keep `continue-on-error: true` until the first runs are green. The 
 
 ## Risks / Trade-offs
 
-- [The first CI run downloads PyCharm on three operating systems and three IDE versions for the verifier] → `setup-gradle`'s cache. If a job stays slow, narrow the verifier's IDEs or skip the test job for changes outside `intellij-client/` with path filters; neither is part of this change.
-- [The verifier finds something in CI that it did not find locally, for example because `recommended()` picks a newer IDE] → The change fixes the plugin or, if the finding is not a real problem, adjusts the failure levels together with the maintainer. The verifier's report in the job summary names the problem.
-- [Windows-specific test failures appear for the first time] → `fail-fast: false` shows them per operating system; fixing them belongs to this change, because the tests are meant to run on all three.
+- [The first CI run downloads PyCharm on three operating systems and the IDE versions of both verifier steps] → `setup-gradle`'s cache. If a job stays slow, narrow the verifier's IDEs or skip the test job for changes outside `intellij-client/` with path filters; neither is part of this change.
+- [A new release of a supported version enters the gate on its own, and the verifier finds a problem there] → The change fixes the plugin or, if the finding is not a real problem, adjusts the failure levels together with the maintainer. The job summary names the problem, and EAP builds usually show it earlier as a warning.
+- [Test failures that only macOS shows appear for the first time; Windows was fixed on 2026-10-16 (0f5df45d)] → `fail-fast: false` shows them per operating system. Fixing them belongs to this change, because the tests are meant to run on all three.
 
 ## Migration Plan
 
-None. Rolling back means deleting the job and commenting the step out again.
+None. Rolling back means deleting the job, commenting the verifier steps out again and going back to `recommended()`.

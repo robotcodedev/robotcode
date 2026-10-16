@@ -7,9 +7,22 @@
 
 ## 2. Plugin verifier
 
-- [ ] 2.1 Replace the commented-out verifier steps in `code-quality` with active ones: `./gradlew --console=plain verifyPlugin` in `intellij-client/`, the exit trap that writes one line per IDE with its verdict (the report's second line) and then appends each `build/reports/pluginVerifier/*/report.md` to `$GITHUB_STEP_SUMMARY` with headings shifted one level, no `continue-on-error`, no `-Dplugin.verifier.home.dir`, and the upload of `intellij-client/build/reports/pluginVerifier` with `if: always()`. Verify locally that `./gradlew verifyPlugin` still passes and that running the trap's script with `GITHUB_STEP_SUMMARY` pointing to a temporary file produces the verdict lines and the three reports with their deprecated and experimental API usages.
+- [ ] 2.1 In `intellij-client/build.gradle.kts`, replace `recommended()` in `pluginVerification.ides` with `select`, using the plugin's platform type, `pluginSinceBuild`/`pluginUntilBuild` and the channel `RELEASE`. A Gradle property switches the channel to `EAP` and the reports to `build/reports/pluginVerifier-eap`. Verify locally:
+  - `./gradlew verifyPlugin` checks only released versions (on 2026-10-16 these were PY-2026.1.5 and PY-2026.2.3) and passes;
+  - with the property it checks the current EAP build (on 2026-10-16 PY-263.6800.43) and writes its reports to the EAP directory.
+- [ ] 2.2 Replace the commented-out verifier steps in `code-quality` with two active steps.
+  - **Gate:** `./gradlew --console=plain verifyPlugin` in `intellij-client/`, without `continue-on-error` and without `-Dplugin.verifier.home.dir`.
+  - **EAP step:** the same with the property, with `continue-on-error: true`, and with a `::warning::` that names the problem when it fails.
+  - **Exit trap of each step:** it writes a heading (released versions or EAP), then one line per IDE with its verdict (the report's second line), then each `report.md` of its directory with headings shifted one level, into `$GITHUB_STEP_SUMMARY`.
+  - **Upload:** both report directories, with `if: always()`.
+
+  Verify that the workflow still parses as YAML, and that running both trap scripts with `GITHUB_STEP_SUMMARY` pointing to a temporary file produces the headings, the verdict lines and the reports with their deprecated and experimental API usages.
 
 ## 3. Verification
 
-- [ ] 3.1 After the maintainer pushes: check the first run. `test-jetbrains` is green on all three operating systems, the published test results list the plugin's 15 tests, `code-quality` shows the verdict per IDE and the reports with the deprecated and experimental API usages in its summary and has the report artifact, and `package` started only after `test-jetbrains`. Note the duration of the first and of a second run (cache). Fix any failure that the run reveals, or agree with the maintainer how to handle a verifier finding that is not a real problem.
+- [ ] 3.1 After the maintainer pushes, check the first run:
+  - `test-jetbrains` is green on all three operating systems, and the published test results list the plugin's tests;
+  - `code-quality` shows the verdicts and reports of both verifier steps in its summary and has the report artifact;
+  - the result of the EAP step doesn't decide the job;
+  - `package` started only after `test-jetbrains`. Note the duration of the first and of a second run (cache). Fix any failure that the run reveals, or agree with the maintainer how to handle a verifier finding that is not a real problem.
 - [ ] 3.2 Only if the maintainer wants it: check the gate with a throw-away pull request whose deliberately failing assertion in one plugin test makes `test-jetbrains` fail and keeps `package` from running; close the pull request afterwards. Otherwise verify the gate by reading the `needs` graph and mark the task with that note.

@@ -31,12 +31,21 @@ The CI SHALL build the RobotCode packages, including the JetBrains plugin, only 
 
 ### Requirement: The plugin verifier runs in CI
 
-The code-quality checks of the CI SHALL run the JetBrains plugin verifier (`gradle verifyPlugin` in `intellij-client/`) against the IDE versions that the plugin's build configures. A problem at one of the failure levels the build configures, such as an invalid plugin, a compatibility problem or a missing dependency, SHALL fail the code-quality checks.
+The code-quality checks of the CI SHALL run the JetBrains plugin verifier (`gradle verifyPlugin` in `intellij-client/`) against the released versions of the IDE within the build range the plugin supports. A problem at one of the failure levels the build configures, such as an invalid plugin, a compatibility problem or a missing dependency, SHALL fail the code-quality checks.
 
 #### Scenario: Compatibility problem
 
-- **WHEN** a change makes the plugin use an API that one of the configured IDE versions does not have
+- **WHEN** a change makes the plugin use an API that one of the released IDE versions in the plugin's range does not have
 - **THEN** the code-quality checks fail, and the job summary shows the verifier's report with the problem
+
+### Requirement: EAP builds are verified without failing the checks
+
+The CI SHALL also run the plugin verifier against the current EAP builds of the IDE within the plugin's build range. A problem it finds there SHALL be shown in the job summary and as a warning of the run, and SHALL NOT fail the code-quality checks.
+
+#### Scenario: API removed in an EAP build
+
+- **WHEN** the current EAP build no longer has an API that the plugin uses, while the released versions still have it
+- **THEN** the code-quality checks pass, the run shows a warning, and the job summary shows the EAP report with the problem
 
 ### Requirement: The plugin verifier's results are shown
 
