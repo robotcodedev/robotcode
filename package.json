@@ -342,6 +342,23 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "testing",
+        "contents": "RobotCode found no tests or tasks in this workspace. Tests are looked for as robotcode discover does, with the paths, profiles and .robotignore of the folder's robot.toml. Problems while reading them are listed in the Problems view.\n[Refresh Tests](command:testing.refreshTests)\n[Troubleshooting](https://robotcode.io/guides/vscode/troubleshooting/)",
+        "when": "robotcode.testExplorer.state == noTests"
+      },
+      {
+        "view": "testing",
+        "contents": "RobotCode's Test Explorer integration is switched off by the setting robotcode.testExplorer.enabled or robotcode.disableExtension.\n[Open Settings](command:workbench.action.openSettings?%22robotcode.testExplorer%22)",
+        "when": "robotcode.testExplorer.state == disabled"
+      },
+      {
+        "view": "testing",
+        "contents": "RobotCode needs a Python environment with Robot Framework for this folder to find its tests.\n[Select Python Environment](command:robotcode.selectPythonEnvironment)",
+        "when": "robotcode.testExplorer.state == noEnvironment"
+      }
+    ],
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",

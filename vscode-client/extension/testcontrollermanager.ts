@@ -10,6 +10,12 @@ import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
 
 const ROOT_TEST_ITEM_KEY = "__root__";
+// Why the Testing view is empty; the manifest's viewsWelcome entries pick their hint by this key.
+const CONTEXT_TEST_EXPLORER_STATE = "robotcode.testExplorer.state";
+
+function setTestExplorerState(state: "noTests" | "noEnvironment" | "disabled" | "hasTests" | undefined): void {
+  void vscode.commands.executeCommand("setContext", CONTEXT_TEST_EXPLORER_STATE, state);
+}
 
 function rootSnapshotKey(folder: vscode.WorkspaceFolder): string {
   return `${ROOT_TEST_ITEM_KEY}:${folder.uri.toString()}`;
@@ -1011,7 +1017,9 @@ export class TestControllerManager {
     );
 
     if (robotFiles.length === 0) {
-      return undefined;
+      // A folder without Robot Framework files is a completed discovery without tests, not an aborted
+      // one (`undefined`); a file created later reaches the tree through the watcher's workspace refresh.
+      return [];
     }
 
     try {
@@ -1225,10 +1233,22 @@ export class TestControllerManager {
     } else {
       const keptIds = new Set<string>();
       const liveFolderKeys = new Set<string>();
+      const folders = vscode.workspace.workspaceFolders ?? [];
+      let enabledFolders = 0;
+      let discoveryComplete = true;
+      let noEnvironment = false;
 
-      for (const folder of vscode.workspace.workspaceFolders ?? []) {
+      for (const folder of folders) {
         if (token?.isCancellationRequested) return;
         if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
+        enabledFolders++;
+
+        if (this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder)) {
+          // No discovery can run without a valid environment. The cached answer is used so that this refresh does
+          // not wait for the environment dialog; the language client start refreshes again once an environment is valid.
+          noEnvironment = true;
+          continue;
+        }
 
         const folderKey = rootSnapshotKey(folder);
         liveFolderKeys.add(folderKey);
@@ -1237,6 +1257,13 @@ export class TestControllerManager {
           const items = await this.getTestsFromWorkspaceFolder(folder, token);
           if (items === undefined) {
             this.lastKnownChildren.delete(folderKey);
+            // Without a valid Python environment the discovery never ran; that is a state of its own,
+            // everything else here is an aborted discovery.
+            if (this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder)) {
+              noEnvironment = true;
+            } else {
+              discoveryComplete = false;
+            }
             continue;
           }
           const supportsParseInclude = this.lastDiscoverResults.get(folder)?.supportsParseInclude ?? false;
@@ -1246,6 +1273,7 @@ export class TestControllerManager {
         const folderChildren = this.robotTestItems.get(folder)?.items;
         if (folderChildren === undefined) {
           this.lastKnownChildren.delete(folderKey);
+          discoveryComplete = false;
           continue;
         }
 
@@ -1273,6 +1301,21 @@ export class TestControllerManager {
       }
 
       this.removeNotAddedTestItems(undefined, keptIds);
+
+      // The Testing view shows welcome content only while the tree is empty; the context key says why it is
+      // empty, so the manifest's viewsWelcome entries can pick the right hint. An aborted discovery leaves
+      // the previous state, the next refresh sets it again.
+      if (folders.length === 0) {
+        setTestExplorerState(undefined);
+      } else if (enabledFolders === 0) {
+        setTestExplorerState("disabled");
+      } else if (this.testController.items.size > 0) {
+        setTestExplorerState("hasTests");
+      } else if (noEnvironment) {
+        setTestExplorerState("noEnvironment");
+      } else if (discoveryComplete) {
+        setTestExplorerState("noTests");
+      }
     }
   }
 

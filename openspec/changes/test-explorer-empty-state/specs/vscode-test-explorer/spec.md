@@ -11,6 +11,11 @@ When the discovery of every enabled workspace folder has ended without an error 
 - **WHEN** the workspace folder has a `robot.toml` whose `paths` point to a folder without suite files, and discovery has ended
 - **THEN** the Testing view shows the RobotCode hint with both actions
 
+#### Scenario: Folder without Robot Framework files
+
+- **WHEN** the workspace folder has a `robot.toml` but no Robot Framework file at all, whatever its `paths` say
+- **THEN** the Testing view shows the RobotCode hint, because there is nothing to discover
+
 #### Scenario: Only resource files
 
 - **WHEN** the workspace folder contains resource files but no suite file with tests or tasks
@@ -33,7 +38,7 @@ When the discovery of every enabled workspace folder has ended without an error 
 
 #### Scenario: Failed discovery
 
-- **WHEN** discovery fails, for example because `paths` in `robot.toml` names a folder that does not exist
+- **WHEN** the workspace folder contains Robot Framework files and discovery fails, for example because `paths` in `robot.toml` names a folder that does not exist or `robot.toml` is not valid TOML
 - **THEN** the tree shows the workspace item with the error, as before, and no hint is shown
 
 #### Scenario: Several folders
@@ -54,3 +59,22 @@ When the Test Explorer integration is switched off for every workspace folder, b
 
 - **WHEN** the user sets `robotcode.testExplorer.enabled` back to `true`
 - **THEN** the hint disappears and the tests of the folder appear in the tree
+
+### Requirement: A missing Python environment says so
+
+When an enabled workspace folder has no valid Python environment with Robot Framework, so that RobotCode cannot look for tests, and the tree is empty, the Testing view SHALL show a hint that RobotCode needs a Python environment with Robot Framework for the folder, with the action **Select Python Environment**, instead of the hint for a discovery without tests.
+
+#### Scenario: Invalid interpreter
+
+- **WHEN** the folder's Python interpreter does not exist or has no Robot Framework, and the folder contains Robot Framework files
+- **THEN** the Testing view shows the environment hint, and its action opens RobotCode's environment selection
+
+#### Scenario: Invalid interpreter and no Robot Framework files
+
+- **WHEN** the folder has a `robot.toml` but no Robot Framework file, and its Python interpreter is invalid
+- **THEN** the Testing view shows the environment hint, not the hint for a discovery without tests
+
+#### Scenario: Environment selected
+
+- **WHEN** the user selects a Python environment with Robot Framework
+- **THEN** the tests of the folder appear in the tree, or the hint for a discovery without tests takes over when there are none

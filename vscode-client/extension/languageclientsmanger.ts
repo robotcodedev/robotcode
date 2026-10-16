@@ -409,6 +409,14 @@ export class LanguageClientsManager {
     }
   }
 
+  /**
+   * Whether the last environment check of the folder failed. This is the cached answer and never waits, unlike
+   * `isValidRobotEnvironmentInFolder`, which holds a lock while the environment dialog asks the user.
+   */
+  public isRobotEnvironmentKnownInvalid(folder: vscode.WorkspaceFolder): boolean {
+    return this._pythonValidPythonAndRobotEnv.get(folder) === false;
+  }
+
   public async isValidRobotEnvironmentInFolder(
     folder: vscode.WorkspaceFolder,
     showDialogs?: boolean,
