@@ -185,7 +185,13 @@ class RobotFrameworkEx(RobotFramework):
                     if Path(arg).is_absolute():
                         continue
 
-                    arguments[i] = str((self._orig_cwd / Path(arg)).absolute().relative_to(self.root_folder))
+                    absolute = (self._orig_cwd / Path(arg)).absolute()
+                    try:
+                        arguments[i] = str(absolute.relative_to(self.root_folder))
+                    except ValueError:
+                        # The path lies outside the project root, which the run changes into,
+                        # so it stays valid only as an absolute path.
+                        arguments[i] = str(absolute)
 
         except DataError:
             options, arguments = super().parse_arguments((*cli_args, *self.paths))
