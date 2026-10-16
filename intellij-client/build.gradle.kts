@@ -3,6 +3,8 @@ import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.Constants.Constraints
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+import org.jetbrains.intellij.platform.gradle.providers.ProductReleasesFilterParameters
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask.FailureLevel.INVALID_PLUGIN
@@ -116,8 +118,21 @@ intellijPlatform {
     pluginVerification {
         failureLevel = listOf(INVALID_PLUGIN, COMPATIBILITY_PROBLEMS, MISSING_DEPENDENCIES)
         verificationReportsFormats = listOf(MARKDOWN, PLAIN)
+
+        // released IDE versions by default; -PverifyEap checks the current EAP build instead, with reports of their own
+        val eap = providers.gradleProperty("verifyEap").isPresent
+        if (eap) {
+            verificationReportsDirectory = layout.buildDirectory.dir("reports/pluginVerifier-eap")
+        }
         ides {
-            recommended()
+            val filter: ProductReleasesFilterParameters.() -> Unit = {
+                types = listOf(IntelliJPlatformType.PyCharm)
+                channels = listOf(if (eap) ProductRelease.Channel.EAP else ProductRelease.Channel.RELEASE)
+                sinceBuild = providers.gradleProperty("pluginSinceBuild")
+                untilBuild = providers.gradleProperty("pluginUntilBuild")
+            }
+            // only the newest EAP build: select would also return the last EAP build of every released version
+            if (eap) latest(filter) else select(filter)
         }
     }
 }

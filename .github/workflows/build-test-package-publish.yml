@@ -89,8 +89,43 @@ jobs:
           name: test-results-os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}
           path: test-results
 
+  test-jetbrains:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: jetbrains
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: always
+
+      - name: Test JetBrains Plugin
+        working-directory: intellij-client
+        run: ./gradlew --console=plain test
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-jetbrains-${{ matrix.os }}
+          path: intellij-client/build/test-results/test
+
   publish-test-results:
-    needs: test
+    needs: [test, test-jetbrains]
     runs-on: ubuntu-latest
     permissions:
       checks: write
@@ -111,7 +146,9 @@ jobs:
         if: (!cancelled())
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./**/test-results.xml
+          files: |
+            ./**/test-results.xml
+            ./**/TEST-*.xml
 
   code-quality:
     runs-on: ubuntu-latest
@@ -159,28 +196,75 @@ jobs:
       - run: hatch run lint:typing
         if: always()
 
-      # - name: Run Plugin Verification tasks
-      #   continue-on-error: true
-      #   run: |
-      #     cd intellij-client
+      - name: Verify JetBrains Plugin (released IDE versions)
+        if: always()
+        working-directory: intellij-client
+        run: |
+          finish() {
+            shopt -s nullglob
+            reports=(build/reports/pluginVerifier/*/report.md)
+            {
+              echo "# Plugin Verifier: Released IDE Versions"
+              echo
+              [ ${#reports[@]} -gt 0 ] || echo "No report was written, see the log of this step."
+              for report in "${reports[@]}"; do
+                echo "- $(basename "$(dirname "$report")"): $(awk 'NR > 1 && NF { print; exit }' "$report")"
+              done
+              for report in "${reports[@]}"; do
+                echo
+                sed 's/^#/##/' "$report"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          trap finish EXIT
 
-      #     finish() {
-      #       REPORTS=$(cat build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
-      #       echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
-      #     }
-      #     trap finish EXIT
+          ./gradlew --console=plain verifyPlugin
 
-      #     gradle --no-daemon verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
+      - name: Verify JetBrains Plugin (EAP builds)
+        if: always()
+        # EAP builds only warn; the released versions above are the gate
+        continue-on-error: true
+        working-directory: intellij-client
+        run: |
+          finish() {
+            status=$?
+            shopt -s nullglob
+            reports=(build/reports/pluginVerifier-eap/*/report.md)
+            problems=""
+            {
+              echo "# Plugin Verifier: EAP Builds"
+              echo
+              [ ${#reports[@]} -gt 0 ] || echo "No report was written, see the log of this step."
+              for report in "${reports[@]}"; do
+                ide=$(basename "$(dirname "$report")")
+                verdict=$(awk 'NR > 1 && NF { print; exit }' "$report")
+                echo "- $ide: $verdict"
+                [[ $verdict == Compatible* ]] || problems+="${problems:+; }$ide: $verdict"
+              done
+              for report in "${reports[@]}"; do
+                echo
+                sed 's/^#/##/' "$report"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "$status" -ne 0 ]; then
+              echo "::warning title=Plugin verifier (EAP builds)::${problems:-verifyPlugin failed, see the log of this step}"
+            fi
+          }
+          trap finish EXIT
 
-      # - name: Collect Plugin Verifier Result
-      #   if: ${{ always() }}
-      #   uses: actions/upload-artifact@v7
-      #   with:
-      #     name: pluginVerifier-result
-      #     path: ./intellij-client/build/reports/pluginVerifier
+          ./gradlew --console=plain verifyPlugin -PverifyEap
+
+      - name: Upload Plugin Verifier Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pluginVerifier-result
+          path: |
+            intellij-client/build/reports/pluginVerifier
+            intellij-client/build/reports/pluginVerifier-eap
 
   package:
-    needs: [test]
+    needs: [test, test-jetbrains]
 
     runs-on: ubuntu-latest
 
@@ -222,13 +306,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           cache-cleanup: always
-
-      # Set environment variables
-      - name: Export Properties
-        id: properties
-        shell: bash
-        run: |
-          echo "pluginVerifierHomeDir=~/.pluginVerifier" >> $GITHUB_OUTPUT
 
       - name: install node modules
         run: npm install --include=dev

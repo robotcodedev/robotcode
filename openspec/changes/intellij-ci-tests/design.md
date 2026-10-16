@@ -69,19 +69,20 @@ The job uploads `intellij-client/build/test-results/test/` as `test-results-jetb
 
 The maintainer decided this split on 2026-10-16.
 
-- **Selection of IDEs:** `pluginVerification.ides` uses `select` instead of `recommended()`, with the plugin's platform type, its build range from `pluginSinceBuild` and `pluginUntilBuild`, and the channel `RELEASE`. A Gradle property switches the channel to `EAP` and the report directory to `build/reports/pluginVerifier-eap`. Without the property, `./gradlew verifyPlugin` checks the released versions, locally as in CI.
+- **Selection of IDEs:** `pluginVerification.ides` uses `select` instead of `recommended()`, with the plugin's platform type, its build range from `pluginSinceBuild` and `pluginUntilBuild`, and the channel `RELEASE`. The Gradle property `verifyEap` switches to `latest` with the same filter and the channel `EAP`, and the report directory to `build/reports/pluginVerifier-eap`. `latest` keeps only the newest matching build, the current EAP build; between a release and the next EAP build, that is the last EAP build of the version just released. Without the property, `./gradlew verifyPlugin` checks the released versions, locally as in CI.
 - **The gate:** the first step runs `./gradlew --console=plain verifyPlugin` in `code-quality` after the Python checks, without `continue-on-error`. A failure at a configured level fails `code-quality` and with it `publish`.
 - **The EAP step:** it runs after the gate with the property and with `continue-on-error: true`. When it fails, the run gets a warning (`::warning::`) that names the problem, and the job stays green.
 - **Summary:**
   - Each step has an exit trap that writes a heading, released versions or EAP, then one line per IDE with its verdict, and then each `report.md` with its headings shifted one level.
-  - Each report starts with the verdict, for example "Compatible. 3 usages of deprecated API. 15 usages of experimental API", and lists the deprecated and experimental API usages, so the notes appear even when the step passes.
+  - Each report starts with a heading and, after an empty line, the verdict, for example "Compatible. 3 usages of deprecated API. 15 usages of experimental API". Then it lists the deprecated and experimental API usages, so the notes appear even when the step passes.
 - **Artifacts:** the upload of `build/reports/pluginVerifier` and `build/reports/pluginVerifier-eap` stays, with `if: always()`.
-- **`-Dplugin.verifier.home.dir` goes:** the property belonged to the 1.x Gradle plugin. Version 2.x resolves the verifier's IDEs as Gradle dependencies, as the local run showed.
+- **`-Dplugin.verifier.home.dir` goes:** the property belonged to the 1.x Gradle plugin. Version 2.x resolves the verifier's IDEs as Gradle dependencies, as the local run showed. The step "Export Properties" of the `package` job goes with it: it writes the output `pluginVerifierHomeDir` (`~/.pluginVerifier`), which no step has read since the step was added on 2024-12-29.
 
 Experimental and deprecated API usages are only reported.
 
 Alternatives:
 - `recommended()` as the gate, as planned before. It includes the current EAP build, so an EAP build that removes an API the plugin uses would block every release for the released versions too. The nine deprecated usages against 263 are such candidates.
+- `select` with the channel `EAP` for the EAP step. It returns the newest EAP build of every version in the range, on 2026-10-16 also PY-261.22158.126 and PY-262.8665.97, the last EAP builds of 2026.1 and 2026.2. That means two more IDE downloads in CI for builds that the released versions have superseded.
 - No EAP verification at all. The removal of an API would then show up only once that version is released.
 - `continue-on-error: true` for the gate until the first runs are green. The local run is already green, and a check that cannot fail protects nothing.
 
