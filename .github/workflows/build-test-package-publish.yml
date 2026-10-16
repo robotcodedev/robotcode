@@ -107,6 +107,9 @@ jobs:
         with:
           distribution: jetbrains
           java-version: 21
+        env:
+          # the JetBrains distribution reads the token for its GitHub API requests only from here
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -184,6 +187,9 @@ jobs:
         with:
           distribution: jetbrains
           java-version: 21
+        env:
+          # the JetBrains distribution reads the token for its GitHub API requests only from here
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -301,6 +307,9 @@ jobs:
         with:
           distribution: jetbrains
           java-version: 21
+        env:
+          # the JetBrains distribution reads the token for its GitHub API requests only from here
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -377,6 +386,9 @@ jobs:
         with:
           distribution: jetbrains
           java-version: 21
+        env:
+          # the JetBrains distribution reads the token for its GitHub API requests only from here
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5

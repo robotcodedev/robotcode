@@ -51,11 +51,13 @@ The plugin build (`intellij-client/build.gradle.kts`, IntelliJ Platform Gradle P
 - `gradle/actions/setup-gradle@v5`;
 - `./gradlew test` in `intellij-client/`, with `shell: bash` so that the same line works on Windows.
 
+The step that sets up Java gets `GITHUB_TOKEN` in its environment, here and in the other jobs that use the JetBrains distribution. The distribution looks up its versions through the GitHub API and reads the token only from that variable, not from the step's `token` input; without it, the first CI run failed twice on macOS with the rate limit for anonymous requests.
+
 It uses the wrapper, so CI runs the Gradle version the repository pins. `gradle` on the runner image is whatever version the image ships.
 
 No Python, Node or Hatch setup: the tests need none of them. A test that needs them later adds the setup itself.
 
-Alternative: steps in the existing `test` job. That job runs 135 combinations of Python and Robot Framework, none of which matters to the plugin; the tests would run 45 times per operating system.
+Alternative: steps in the existing `test` job. That job runs 99 combinations of operating system, Python and Robot Framework, none of which matters to the plugin; the tests would run 33 times per operating system.
 
 ### Results in the published test report
 

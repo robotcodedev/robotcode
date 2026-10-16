@@ -30,7 +30,7 @@ _None._
 
 ## Impact
 
-- `.github/workflows/build-test-package-publish.yml`: the two verifier steps in `code-quality`, the new job `test-jetbrains`, the `needs` of `package` and `publish-test-results`, the result pattern of `publish-test-results`, and the removal of the step "Export Properties" from `package`, whose output no step reads.
+- `.github/workflows/build-test-package-publish.yml`: the two verifier steps in `code-quality`, the new job `test-jetbrains`, the `needs` of `package` and `publish-test-results`, the result pattern of `publish-test-results`, the removal of the step "Export Properties" from `package`, whose output no step reads, and the GitHub token for the steps that set up Java.
 - `intellij-client/build.gradle.kts`: the verifier's selection of IDEs, which checks released versions by default, and the current EAP build with its own report directory when the Gradle property `verifyEap` is set. No other change to the plugin is expected; the verifier's first CI run decides.
 - `intellij-marketplace-publish` relies on the `needs` of `package` and `publish` that this change sets.
 - CI time: one job per operating system with a Gradle build and the IDE download for the tests, and the IDE downloads of both verifier steps in `code-quality`. Caching keeps both small after the first run.
