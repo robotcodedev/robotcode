@@ -1,4 +1,5 @@
 import * as net from "net";
+import * as path from "path";
 import * as vscode from "vscode";
 import {
   CloseHandlerResult,
@@ -21,7 +22,14 @@ import {
 } from "vscode-languageclient/node";
 import { sleep, Mutex } from "./utils";
 import { CONFIG_SECTION } from "./config";
-import { PythonManager } from "./pythonmanger";
+import {
+  PythonManager,
+  PythonEnvironmentProblem,
+  PythonVersion,
+  ResolvedPythonEnvironment,
+  formatPythonVersion,
+  virtualEnvironmentDir,
+} from "./pythonmanger";
 import { getAvailablePort } from "./net_utils";
 
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
@@ -31,6 +39,28 @@ const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
 const CLIENT_DISPOSE_TIMEOUT = 5000;
 const CLIENT_SLEEP_DURATION = 500;
 const LANGUAGE_CLIENT_PREFIX = "$robotCode:";
+const ROBOT_FRAMEWORK_POLL_INTERVAL = 5000;
+const ROBOT_FRAMEWORK_POLL_SLOW_INTERVAL = 10000;
+const ROBOT_FRAMEWORK_POLL_FAST_ATTEMPTS = 60;
+const ENVIRONMENT_EVENT_DEBOUNCE = 500;
+const SELECT_ENVIRONMENT = "Select Environment";
+const CREATE_ENVIRONMENT = "Create Environment";
+const RETRY = "Retry";
+const OPEN_SETTINGS = "Open Settings";
+const DISABLE_FOR_SESSION = "For this session";
+const DISABLE_FOR_PROJECT = "For this project";
+// The Python side's own selection arrives shortly after RobotCode's first check at startup; the message waits for it.
+const ENVIRONMENT_NOTIFICATION_DELAY = 2500;
+const ENVIRONMENT_ACTION_COMMAND = "robotcode.environmentAction";
+
+type EnvironmentAction = "select" | "create" | "useVenv" | "retry" | "settings";
+
+/** The environment message of a folder: a progress notification whose text is replaced and which code can close. */
+interface EnvironmentNotification {
+  message: string;
+  report: (message: string) => void;
+  close: () => void;
+}
 
 // the packages of Robot Framework and RobotCode, not the libraries and tools named after them
 const ROBOT_PACKAGE = String.raw`(?:robotframework|robotcode)`;
@@ -124,21 +154,142 @@ interface RobotCodeContributions {
   };
 }
 
+/** Why a workspace folder's Python environment cannot run Robot Framework. */
+export type RobotEnvironmentProblem = PythonEnvironmentProblem | "pythonTooOld" | "robotMissing" | "robotTooOld";
+
+/**
+ * What RobotCode knows about the Python environment of a workspace folder: `unknown` until something asked for it,
+ * `checking` while a check runs, then `usable` or `unusable` with the problem.
+ */
+export interface RobotEnvironmentState {
+  readonly state: "unknown" | "checking" | "usable" | "unusable";
+  readonly problem?: RobotEnvironmentProblem;
+  readonly environment?: ResolvedPythonEnvironment;
+  readonly executable?: string;
+  readonly version?: PythonVersion;
+  readonly sysPrefix?: string;
+  /** The Robot Framework version the check found. */
+  readonly robotVersion?: string;
+  /** A virtual environment in the folder that is known to the Python extension but not selected. */
+  readonly venvCandidate?: string;
+}
+
+export interface RobotEnvironmentStateChangedEvent {
+  readonly folder: vscode.WorkspaceFolder;
+  readonly state: RobotEnvironmentState;
+}
+
+const UNKNOWN_ENVIRONMENT: RobotEnvironmentState = { state: "unknown" };
+
+export function isRobotFrameworkProblem(problem: RobotEnvironmentProblem | undefined): boolean {
+  return problem === "robotMissing" || problem === "robotTooOld";
+}
+
+function useVirtualEnvironmentAction(executable: string): string {
+  return `Use ${path.basename(virtualEnvironmentDir(executable))}`;
+}
+
+function environmentActionLink(folder: vscode.WorkspaceFolder, label: string, action: EnvironmentAction): string {
+  const args = encodeURIComponent(JSON.stringify([folder.uri.toString(), action]));
+  return `[${label}](command:${ENVIRONMENT_ACTION_COMMAND}?${args})`;
+}
+
+// What a cancelled message was about: the problem and the virtual environment it offered, if any.
+function cancelKey(state: RobotEnvironmentState): string {
+  return `${state.problem ?? ""}:${state.venvCandidate ?? ""}`;
+}
+
+function usableEnvironmentMessage(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): string {
+  const where =
+    state.environment?.name !== undefined && !isFromSetting(state) ? state.environment.name : state.executable;
+  const python = state.version !== undefined ? `Python ${formatPythonVersion(state.version)}` : "Python";
+  const robot = state.robotVersion !== undefined ? `Robot Framework ${state.robotVersion}` : "Robot Framework";
+  return `Environment for '${folder.name}' found: ${where ?? ""} with ${python} and ${robot}. RobotCode is ready.`;
+}
+
+function describeRobotEnvironmentState(state: RobotEnvironmentState): string {
+  const version = state.version !== undefined ? ` Python ${formatPythonVersion(state.version)}` : "";
+  const executable = state.executable !== undefined ? ` ${state.executable}` : "";
+  return `${state.state}${state.problem !== undefined ? ` (${state.problem})` : ""}${executable}${version}`;
+}
+
+function isFromSetting(state: RobotEnvironmentState): boolean {
+  return state.environment?.source === "setting";
+}
+
+function robotEnvironmentProblemMessage(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): string {
+  const found = `Found a Robot Framework project in '${folder.name}', but `;
+  const executable = state.executable !== undefined ? ` '${state.executable}'` : "";
+  const version = state.version !== undefined ? ` ${formatPythonVersion(state.version)}` : "";
+  const robotVersion = state.robotVersion !== undefined ? ` ${state.robotVersion}` : "";
+  // the setting robotcode.python wins over the Python side, so the message names it
+  const fromSetting = isFromSetting(state);
+  const name = fromSetting ? undefined : state.environment?.name;
+  const environment = fromSetting
+    ? `the Python environment of the setting robotcode.python (${state.executable ?? ""})`
+    : name !== undefined
+      ? `the selected Python environment '${name}'`
+      : "the selected Python environment";
+  switch (state.problem) {
+    case "noInterpreter":
+      return `${found}no Python interpreter is selected for it.`;
+    case "interpreterMissing":
+      return fromSetting
+        ? `${found}the interpreter${executable} of the setting robotcode.python no longer exists or cannot be started.`
+        : `${found}its Python interpreter${executable} no longer exists or cannot be started.`;
+    case "pythonTooOld":
+      return fromSetting
+        ? `${found}the Python${version} of the setting robotcode.python (${state.executable ?? ""}) is older than 3.10, which RobotCode needs.`
+        : `${found}its Python${version} is older than 3.10, which RobotCode needs.`;
+    case "robotTooOld":
+      return `${found}the Robot Framework${robotVersion} in ${environment} is older than 5.0, which RobotCode needs. Update it.`;
+    default:
+      return `${found}${environment} has no Robot Framework. Install it into that environment.`;
+  }
+}
+
 export class LanguageClientsManager {
   private clientsMutex = new Mutex();
-  private _pythonValidPythonAndRobotEnvMutex = new Mutex();
 
   public readonly clients: Map<string, LanguageClient> = new Map();
   public readonly outputChannels: Map<string, vscode.LogOutputChannel> = new Map();
 
   private _disposables: vscode.Disposable;
-  public _pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-  public _pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
+
+  // The environment state per workspace folder (key: folder URI), the running check, the Robot Framework polling and
+  // the pending looks after environment events.
+  private readonly _environmentStates = new Map<string, RobotEnvironmentState>();
+  private readonly _environmentChecks = new Map<string, Promise<RobotEnvironmentState>>();
+  // Bumped by a reset: a check that started before does not publish its result.
+  private readonly _environmentGenerations = new Map<string, number>();
+  private readonly _environmentPollers = new Map<string, NodeJS.Timeout>();
+  private readonly _environmentReconsiderTimers = new Map<string, NodeJS.Timeout>();
+  private readonly _environmentReconsiders = new Map<string, Promise<void>>();
+  private readonly _environmentReconsiderAgain = new Set<string>();
+  // Folders whose callers want the environment message; the open message per folder, the pending request to show
+  // it, the problem the user cancelled it for, when the user asked for a new check, and the folders switched off
+  // for this session.
+  private readonly _environmentNotifyWanted = new Set<string>();
+  private readonly _environmentNotifications = new Map<string, EnvironmentNotification>();
+  private readonly _environmentNotificationTimers = new Map<string, NodeJS.Timeout>();
+  private readonly _environmentNotificationsCancelled = new Map<string, string>();
+  private readonly _environmentRetriedAt = new Map<string, string>();
+  // Folders whose message was shown: when they become usable, a short information message says so.
+  private readonly _environmentMessageShown = new Set<string>();
+  private readonly _foldersDisabledForSession = new Set<string>();
 
   private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
 
   public get onClientStateChanged(): vscode.Event<ClientStateChangedEvent> {
     return this._onClientStateChangedEmitter.event;
+  }
+
+  private readonly _onRobotEnvironmentStateChangedEmitter =
+    new vscode.EventEmitter<RobotEnvironmentStateChangedEvent>();
+
+  /** Fires when a folder's environment check ends, with the usable or unusable state. */
+  public get onRobotEnvironmentStateChanged(): vscode.Event<RobotEnvironmentStateChangedEvent> {
+    return this._onRobotEnvironmentStateChangedEmitter.event;
   }
 
   private _supportedLanguages?: string[];
@@ -210,34 +361,36 @@ export class LanguageClientsManager {
       this.invalidateExtensionCaches();
     });
 
+    const virtualEnvironmentWatcher = vscode.workspace.createFileSystemWatcher("**/pyvenv.cfg", false, true, true);
+
     this._disposables = vscode.Disposable.from(
       fileWatcher1,
       extensionChangeListener,
-
-      this.pythonManager.onActivePythonEnvironmentChanged(async (event) => {
-        if (event.resource !== undefined) {
-          this.inselectPythonEnvironment = true;
-
-          this._pythonValidPythonAndRobotEnv.delete(event.resource);
-          this._pythonCanceledPythonAndRobotEnv.delete(event.resource);
-          this.selectPythonEnvironmentCancelTokenSource?.cancel();
-          await this.refresh(event.resource.uri, true);
-        } else {
-          this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-          this._pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-
-          await this.restart();
-        }
+      virtualEnvironmentWatcher,
+      virtualEnvironmentWatcher.onDidCreate((uri) => {
+        this.onVirtualEnvironmentCreated(uri).catch((error) => this.logger.error(`${error}`));
       }),
+      this.pythonManager.onDidChangeEnvironment((event) => this.scheduleEnvironmentReconsider(event.folder)),
+      this._onRobotEnvironmentStateChangedEmitter,
 
-      vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => this.refresh()),
+      vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
+        for (const folder of event.removed) this.forgetFolder(folder);
+        await this.refresh();
+      }),
       vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document)),
+      vscode.commands.registerCommand(
+        ENVIRONMENT_ACTION_COMMAND,
+        async (folderUri: string, action: EnvironmentAction) => {
+          const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(folderUri));
+          if (folder !== undefined) await this.runEnvironmentAction(folder, action);
+        },
+      ),
       vscode.commands.registerCommand("robotcode.restartLanguageServers", async (uri?: vscode.Uri) => {
-        this.forgetCanceledPythonEnvironment(uri);
+        this.enableFoldersForSession(uri);
         await this.restart(uri);
       }),
       vscode.commands.registerCommand("robotcode.clearCacheRestartLanguageServers", async (uri?: vscode.Uri) => {
-        this.forgetCanceledPythonEnvironment(uri);
+        this.enableFoldersForSession(uri);
         await this.clearCaches(uri);
         await this.restart(uri);
       }),
@@ -305,6 +458,10 @@ export class LanguageClientsManager {
       (_) => undefined,
       (error) => this.logger.error(`Error during dispose: ${error}`),
     );
+    for (const timer of this._environmentPollers.values()) clearTimeout(timer);
+    for (const timer of this._environmentReconsiderTimers.values()) clearTimeout(timer);
+    for (const timer of this._environmentNotificationTimers.values()) clearTimeout(timer);
+    for (const notification of this._environmentNotifications.values()) notification.close();
     this._disposables.dispose();
   }
 
@@ -333,187 +490,514 @@ export class LanguageClientsManager {
     return serverOptions;
   }
 
-  private inselectPythonEnvironment = false;
-  private selectPythonEnvironmentCancelTokenSource: vscode.CancellationTokenSource | undefined;
+  /** The environment state of a workspace folder; `unknown` until something asked for it. */
+  public getRobotEnvironmentState(folder: vscode.WorkspaceFolder): RobotEnvironmentState {
+    return this._environmentStates.get(folder.uri.toString()) ?? UNKNOWN_ENVIRONMENT;
+  }
 
-  public async selectPythonEnvironment(
-    title: string,
-    folder?: vscode.WorkspaceFolder,
-    showRetry: boolean = true,
-  ): Promise<void> {
-    this.selectPythonEnvironmentCancelTokenSource?.cancel();
+  /**
+   * Whether the last environment check of the folder found a problem. This never waits: a check that is running
+   * keeps the problem it started with.
+   */
+  public isRobotEnvironmentKnownInvalid(folder: vscode.WorkspaceFolder): boolean {
+    const state = this.getRobotEnvironmentState(folder);
+    return state.state === "unusable" || (state.state === "checking" && state.problem !== undefined);
+  }
 
-    if (folder !== undefined) {
-      this._pythonCanceledPythonAndRobotEnv.set(folder, false);
+  /**
+   * Whether the folder's Python environment can run Robot Framework. The first call checks the environment, later
+   * calls answer from the state until it is reset or the environment changes. With `notify`, a folder with a problem
+   * gets its notification; callers that know the folder has Robot Framework files pass it.
+   */
+  public async isValidRobotEnvironmentInFolder(folder: vscode.WorkspaceFolder, notify = false): Promise<boolean> {
+    if (this.isDisabledForFolder(folder)) return false;
+
+    const key = folder.uri.toString();
+    if (notify) this._environmentNotifyWanted.add(key);
+
+    let state = this.getRobotEnvironmentState(folder);
+    if (state.state === "unknown" || state.state === "checking") {
+      state = await this.checkRobotEnvironment(folder);
     }
 
-    this.inselectPythonEnvironment = false;
-    this.selectPythonEnvironmentCancelTokenSource = new vscode.CancellationTokenSource();
+    if (state.state === "unusable" && notify) this.requestEnvironmentNotification(folder);
 
-    this.outputChannel.appendLine(`${title}`);
+    return state.state === "usable";
+  }
 
-    const item = await vscode.window.showQuickPick(
-      [
-        {
-          id: "select",
-          label: "Select Python Interpreter...",
-          detail:
-            "Choose a Python interpreter version 3.10 or newer that has `robotframework` version 5.0 or higher installed",
-        },
-        {
-          id: "create",
-          label: "Create Virtual Environment...",
-          detail: "Create a new virtual Python environment",
-        },
-        ...(showRetry
-          ? [
-              {
-                id: "retry",
-                label: "Retry",
-                detail:
-                  "Install `robotframework` version 5.0 or higher manually in the current environment, then restart the language server",
-              },
-            ]
-          : []),
-        { id: "ignore", label: "Ignore", detail: "Ignore this at the moment" },
-        { id: "disable", label: "Disable", detail: "Disable the RobotCode extension for this workspace or folder" },
-      ],
-      { title: title, placeHolder: "Choose an option...", ignoreFocusOut: true },
-      this.selectPythonEnvironmentCancelTokenSource.token,
-    );
+  // Runs the environment check of a folder, one at a time per folder; a second caller gets the running check.
+  private checkRobotEnvironment(folder: vscode.WorkspaceFolder): Promise<RobotEnvironmentState> {
+    const key = folder.uri.toString();
+    let check = this._environmentChecks.get(key);
+    if (check === undefined) {
+      const started = this.doCheckRobotEnvironment(folder);
+      check = started.finally(() => {
+        if (this._environmentChecks.get(key) === check) this._environmentChecks.delete(key);
+      });
+      this._environmentChecks.set(key, check);
+    }
+    return check;
+  }
 
-    switch (item?.id) {
-      case "create":
-        await vscode.commands.executeCommand("python.createEnvironment");
-        break;
-      case "select":
-        await vscode.commands.executeCommand("python.setInterpreter");
-        break;
-      case "retry":
-        return;
-      case "disable":
-        if (folder !== undefined) {
-          const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-          await config.update("disableExtension", true, vscode.ConfigurationTarget.WorkspaceFolder);
+  private async doCheckRobotEnvironment(folder: vscode.WorkspaceFolder): Promise<RobotEnvironmentState> {
+    const key = folder.uri.toString();
+    const generation = this._environmentGenerations.get(key) ?? 0;
+    const previous = this.getRobotEnvironmentState(folder);
+    this.setRobotEnvironmentState(folder, { ...previous, state: "checking" });
+
+    let result: RobotEnvironmentState;
+    try {
+      result = await this.determineRobotEnvironment(folder);
+    } catch (error) {
+      this.logger.error(`checking the Python environment of folder '${folder.name}' failed: ${error}`);
+      result = { state: "unusable", problem: "interpreterMissing" };
+    }
+
+    if ((this._environmentGenerations.get(key) ?? 0) !== generation) {
+      this.logger.info(`Python environment of folder '${folder.name}': check superseded by a reset`);
+      return result;
+    }
+
+    this.logger.info(`Python environment of folder '${folder.name}': ${describeRobotEnvironmentState(result)}`);
+    this.setRobotEnvironmentState(folder, result);
+    this.updateRobotFrameworkPolling(folder, result);
+    return result;
+  }
+
+  private async determineRobotEnvironment(folder: vscode.WorkspaceFolder): Promise<RobotEnvironmentState> {
+    const environment = await this.pythonManager.resolveEnvironment(folder);
+    let result: RobotEnvironmentState;
+
+    if (environment.problem !== undefined || environment.executable === undefined) {
+      result = {
+        state: "unusable",
+        problem: environment.problem ?? "noInterpreter",
+        environment,
+        executable: environment.executable,
+      };
+    } else {
+      const executable = environment.executable;
+      let version = environment.version;
+      let sysPrefix = environment.sysPrefix;
+      if (version === undefined || sysPrefix === undefined) {
+        const info = await this.pythonManager.queryInterpreter(executable);
+        version ??= info?.version;
+        sysPrefix ??= info?.sysPrefix;
+      }
+
+      if (version === undefined) {
+        result = { state: "unusable", problem: "interpreterMissing", environment, executable, sysPrefix };
+      } else if (version.major < 3 || (version.major === 3 && version.minor < 10)) {
+        result = { state: "unusable", problem: "pythonTooOld", environment, executable, version, sysPrefix };
+      } else {
+        const robot = await this.pythonManager.checkRobotVersion(executable);
+        if (robot.kind === "ok") {
+          result = { state: "usable", environment, executable, version, sysPrefix, robotVersion: robot.version };
+        } else if (robot.kind === "failed") {
+          result = { state: "unusable", problem: "interpreterMissing", environment, executable, version, sysPrefix };
+        } else {
+          result = {
+            state: "unusable",
+            problem: robot.kind === "missing" ? "robotMissing" : "robotTooOld",
+            environment,
+            executable,
+            version,
+            sysPrefix,
+            robotVersion: robot.version,
+          };
         }
-        break;
-      default:
-        if (!showRetry) return;
+      }
     }
 
-    // only the dialog for an invalid environment remembers a cancel, a selection the user started does not
-    if (folder !== undefined && showRetry && !this.inselectPythonEnvironment) {
-      this._pythonCanceledPythonAndRobotEnv.set(folder, true);
+    if (result.state === "unusable" && !isFromSetting(result)) {
+      result = {
+        ...result,
+        venvCandidate: await this.pythonManager.findVirtualEnvironmentCandidate(folder, result.executable),
+      };
+    }
+    return result;
+  }
 
-      throw new Error(`Select Python Interpreter for folder '${folder.name}' canceled.`);
+  private setRobotEnvironmentState(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): void {
+    this._environmentStates.set(folder.uri.toString(), state);
+    if (state.state === "usable") {
+      this._onRobotEnvironmentStateChangedEmitter.fire({ folder, state });
+      this.closeEnvironmentNotification(folder);
+      if (this._environmentMessageShown.delete(folder.uri.toString())) {
+        void vscode.window.showInformationMessage(usableEnvironmentMessage(folder, state));
+      }
+    } else if (state.state === "unusable") {
+      this._onRobotEnvironmentStateChangedEmitter.fire({ folder, state });
+      this.requestEnvironmentNotification(folder);
+    }
+  }
+
+  /** Forgets the environment state of a folder, or of all folders, so that the next use checks again. */
+  private resetRobotEnvironmentState(folder?: vscode.WorkspaceFolder): void {
+    this.pythonManager.forgetInterpreters();
+    for (const f of folder !== undefined ? [folder] : (vscode.workspace.workspaceFolders ?? [])) {
+      const key = f.uri.toString();
+      this.stopRobotFrameworkPolling(f);
+      this._environmentStates.delete(key);
+      this._environmentChecks.delete(key);
+      this._environmentRetriedAt.delete(key);
+      this._environmentGenerations.set(key, (this._environmentGenerations.get(key) ?? 0) + 1);
+    }
+  }
+
+  private forgetFolder(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    this.stopRobotFrameworkPolling(folder);
+    this.closeEnvironmentNotification(folder);
+    clearTimeout(this._environmentReconsiderTimers.get(key));
+    this._environmentReconsiderTimers.delete(key);
+    this._environmentStates.delete(key);
+    this._environmentNotifyWanted.delete(key);
+    this._environmentNotificationsCancelled.delete(key);
+    this._environmentRetriedAt.delete(key);
+    this._environmentGenerations.delete(key);
+    this._environmentMessageShown.delete(key);
+    this._foldersDisabledForSession.delete(key);
+  }
+
+  /** Whether RobotCode is switched off for the folder, by `robotcode.disableExtension` or for this session. */
+  public isDisabledForFolder(folder: vscode.WorkspaceFolder): boolean {
+    return (
+      this._foldersDisabledForSession.has(folder.uri.toString()) ||
+      (vscode.workspace.getConfiguration(CONFIG_SECTION, folder).get<boolean>("disableExtension") ?? false)
+    );
+  }
+
+  // Off for the session: until the window is reloaded or the restart commands run.
+  private disableFolderForSession(folder: vscode.WorkspaceFolder): void {
+    this._foldersDisabledForSession.add(folder.uri.toString());
+    this.logger.info(`RobotCode switched off for folder '${folder.name}' for this session`);
+    this.stopRobotFrameworkPolling(folder);
+    this.closeEnvironmentNotification(folder);
+    this._onRobotEnvironmentStateChangedEmitter.fire({ folder, state: this.getRobotEnvironmentState(folder) });
+    // the Test Explorer drops the folder's run profiles on this event, as after a restart
+    this._onClientStateChangedEmitter.fire({ uri: folder.uri, state: ClientState.Refreshed });
+  }
+
+  private enableFoldersForSession(uri?: vscode.Uri): void {
+    const folder = uri !== undefined ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
+    for (const f of folder !== undefined ? [folder] : (vscode.workspace.workspaceFolders ?? [])) {
+      this._foldersDisabledForSession.delete(f.uri.toString());
+      this._environmentNotificationsCancelled.delete(f.uri.toString());
+    }
+  }
+
+  // While Robot Framework is missing or too old, runs the check script every few seconds: it finds the package as
+  // Python itself does (site-packages, user site, PYTHONPATH, .pth files), where a file watcher does not report files
+  // deep inside a directory created while the window is open. Slower after five minutes, so that a folder left alone
+  // costs little.
+  private updateRobotFrameworkPolling(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): void {
+    this.stopRobotFrameworkPolling(folder);
+    const executable = state.executable;
+    if (state.state !== "unusable" || !isRobotFrameworkProblem(state.problem) || executable === undefined) return;
+
+    const key = folder.uri.toString();
+    let attempts = 0;
+    const schedule = (): void => {
+      const timer = setTimeout(
+        () => {
+          attempts++;
+          this.pythonManager
+            .checkRobotVersion(executable)
+            .then(async (robot) => {
+              if (this._environmentPollers.get(key) !== timer) return;
+              if (robot.kind !== "ok") {
+                schedule();
+                return;
+              }
+              this.logger.info(`Robot Framework ${robot.version ?? ""} appeared for '${executable}'`);
+              this._environmentPollers.delete(key);
+              await this.reconsiderFolder(folder);
+            })
+            .catch((error) => {
+              this.logger.error(`checking Robot Framework for '${executable}' failed: ${error}`);
+              if (this._environmentPollers.get(key) === timer) schedule();
+            });
+        },
+        attempts < ROBOT_FRAMEWORK_POLL_FAST_ATTEMPTS
+          ? ROBOT_FRAMEWORK_POLL_INTERVAL
+          : ROBOT_FRAMEWORK_POLL_SLOW_INTERVAL,
+      );
+      this._environmentPollers.set(key, timer);
+    };
+    schedule();
+  }
+
+  private stopRobotFrameworkPolling(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    const timer = this._environmentPollers.get(key);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this._environmentPollers.delete(key);
+    }
+  }
+
+  // Environment events come in bursts; one look per folder after they settle is enough.
+  private scheduleEnvironmentReconsider(folder: vscode.WorkspaceFolder | undefined): void {
+    for (const f of folder !== undefined ? [folder] : (vscode.workspace.workspaceFolders ?? [])) {
+      const key = f.uri.toString();
+      if (!this._environmentStates.has(key) || this.isDisabledForFolder(f)) continue;
+
+      clearTimeout(this._environmentReconsiderTimers.get(key));
+      this._environmentReconsiderTimers.set(
+        key,
+        setTimeout(() => {
+          this._environmentReconsiderTimers.delete(key);
+          this.reconsiderFolder(f).catch((error) =>
+            this.logger.error(`looking at the environment of '${f.name}' again failed: ${error}`),
+          );
+        }, ENVIRONMENT_EVENT_DEBOUNCE),
+      );
     }
   }
 
   /**
-   * Whether the last environment check of the folder failed. This is the cached answer and never waits, unlike
-   * `isValidRobotEnvironmentInFolder`, which holds a lock while the environment dialog asks the user.
+   * Looks at a folder's environment again after something changed: a usable folder whose interpreter changed
+   * restarts its language server, an unusable folder is checked again and gets its language server when it is
+   * usable now.
    */
-  public isRobotEnvironmentKnownInvalid(folder: vscode.WorkspaceFolder): boolean {
-    return this._pythonValidPythonAndRobotEnv.get(folder) === false;
+  private async reconsiderFolder(folder: vscode.WorkspaceFolder): Promise<void> {
+    const key = folder.uri.toString();
+    const running = this._environmentReconsiders.get(key);
+    if (running !== undefined) {
+      this._environmentReconsiderAgain.add(key);
+      return running;
+    }
+
+    const run = (async () => {
+      await this._environmentChecks.get(key);
+      const previous = this._environmentStates.get(key);
+      if (previous === undefined || previous.state === "unknown") return;
+      if (this.isDisabledForFolder(folder)) return;
+
+      if (previous.state === "usable") {
+        const environment = await this.pythonManager.resolveEnvironment(folder);
+        if (environment.problem === undefined && environment.executable === previous.executable) return;
+
+        this.logger.info(`Python environment of folder '${folder.name}' changed, restarting its language server`);
+        await this.restart(folder.uri);
+        return;
+      }
+
+      const result = await this.checkRobotEnvironment(folder);
+      if (result.state === "usable") await this.refresh(folder.uri, true);
+    })().finally(() => this._environmentReconsiders.delete(key));
+    this._environmentReconsiders.set(key, run);
+    await run;
+
+    if (this._environmentReconsiderAgain.delete(key)) await this.reconsiderFolder(folder);
   }
 
-  public async isValidRobotEnvironmentInFolder(
-    folder: vscode.WorkspaceFolder,
-    showDialogs?: boolean,
-  ): Promise<boolean> {
-    return this._pythonValidPythonAndRobotEnvMutex.dispatch(async () => {
-      if (this._pythonCanceledPythonAndRobotEnv.get(folder)) {
-        return false;
-      }
+  private async onVirtualEnvironmentCreated(uri: vscode.Uri): Promise<void> {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (folder === undefined) return;
 
-      let result = false;
-      while (!result) {
-        result = await this._isValidRobotEnvironmentInFolder(folder, showDialogs);
-        if (!showDialogs) break;
-      }
-
-      return result;
-    });
+    this.logger.info(`virtual environment appeared: ${uri.fsPath}`);
+    this.pythonManager.rememberVirtualEnvironment(uri);
+    await this.pythonManager.refreshEnvironments(folder);
+    await this.reconsiderFolder(folder);
   }
 
-  public async _isValidRobotEnvironmentInFolder(
-    folder: vscode.WorkspaceFolder,
-    showDialogs?: boolean,
-  ): Promise<boolean> {
-    if (this._pythonValidPythonAndRobotEnv.has(folder)) {
-      const r = this._pythonValidPythonAndRobotEnv.get(folder) ?? false;
-      if (r || !showDialogs) {
-        return r;
-      }
+  private requestEnvironmentNotification(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    clearTimeout(this._environmentNotificationTimers.get(key));
+    this._environmentNotificationTimers.set(
+      key,
+      setTimeout(() => {
+        this._environmentNotificationTimers.delete(key);
+        this.updateEnvironmentNotification(folder);
+      }, ENVIRONMENT_NOTIFICATION_DELAY),
+    );
+  }
+
+  // Shows, replaces or closes the folder's environment message according to its state: one progress notification per
+  // folder, which stays until the folder is usable or the user cancels it. Its actions are links, because a progress
+  // notification is the only one code can close. No install action: which tool and which version a project wants (uv
+  // sync, uv add, pip, poetry, conda, a pin in pyproject.toml or a lock file) is not ours to guess; the polling picks
+  // up what the user installs.
+  private updateEnvironmentNotification(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    const state = this.getRobotEnvironmentState(folder);
+    const open = this._environmentNotifications.get(key);
+    if (
+      state.state !== "unusable" ||
+      !this._environmentNotifyWanted.has(key) ||
+      this.isDisabledForFolder(folder) ||
+      this._environmentNotificationsCancelled.get(key) === cancelKey(state)
+    ) {
+      open?.close();
+      return;
     }
 
-    const pythonCommand = await this.pythonManager.getPythonCommand(folder);
-    if (!pythonCommand) {
-      this._pythonValidPythonAndRobotEnv.set(folder, false);
-      if (showDialogs) {
-        await this.selectPythonEnvironment(
-          `Can't find a valid python executable for workspace folder '${folder.name}'`,
-          folder,
-        );
-      }
-
-      return false;
+    const message = this.environmentNotificationMessage(folder, state);
+    if (open !== undefined) {
+      if (open.message !== message) open.report(message);
+      return;
     }
 
-    if (!this.pythonManager.checkPythonVersion(pythonCommand)) {
-      this._pythonValidPythonAndRobotEnv.set(folder, false);
-      if (showDialogs) {
-        await this.selectPythonEnvironment(
-          `Python 3.10 or newer is required for workspace folder '${folder.name}'`,
-          folder,
-        );
+    this.logger.warn(`environment message for folder '${folder.name}': ${describeRobotEnvironmentState(state)}`);
+    this._environmentMessageShown.add(key);
+    const notification: EnvironmentNotification = {
+      message,
+      report: (text) => {
+        notification.message = text;
+      },
+      close: () => undefined,
+    };
+    this._environmentNotifications.set(key, notification);
+    vscode.window
+      .withProgress(
+        { location: vscode.ProgressLocation.Notification, title: "RobotCode", cancellable: true },
+        (progress, token) =>
+          new Promise<void>((resolve) => {
+            notification.report = (text) => {
+              notification.message = text;
+              progress.report({ message: text });
+            };
+            notification.close = resolve;
+            progress.report({ message: notification.message });
+            token.onCancellationRequested(() => {
+              resolve();
+              this.onEnvironmentNotificationCancelled(folder);
+            });
+          }),
+      )
+      .then(
+        () => {
+          if (this._environmentNotifications.get(key) === notification) this._environmentNotifications.delete(key);
+        },
+        (error) => this.logger.error(`environment message failed: ${error}`),
+      );
+  }
+
+  private closeEnvironmentNotification(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    clearTimeout(this._environmentNotificationTimers.get(key));
+    this._environmentNotificationTimers.delete(key);
+    this._environmentNotifications.get(key)?.close();
+  }
+
+  private environmentNotificationMessage(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): string {
+    const links: string[] = [];
+    if (isFromSetting(state)) {
+      // selecting or creating an environment changes nothing while the setting wins
+      links.push(environmentActionLink(folder, OPEN_SETTINGS, "settings"));
+    } else {
+      if (state.venvCandidate !== undefined) {
+        links.push(environmentActionLink(folder, useVirtualEnvironmentAction(state.venvCandidate), "useVenv"));
       }
-
-      return false;
+      links.push(
+        environmentActionLink(folder, SELECT_ENVIRONMENT, "select"),
+        environmentActionLink(folder, CREATE_ENVIRONMENT, "create"),
+      );
     }
+    links.push(environmentActionLink(folder, RETRY, "retry"));
+    const retried = this._environmentRetriedAt.get(folder.uri.toString());
+    const checked = retried !== undefined ? ` Checked again at ${retried}.` : "";
+    return `${robotEnvironmentProblemMessage(folder, state)}${checked} ${links.join(" · ")}`;
+  }
 
-    const robotCheck = this.pythonManager.checkRobotVersion(pythonCommand);
-    if (robotCheck === undefined) {
-      this._pythonValidPythonAndRobotEnv.set(folder, false);
+  // Cancel in the message: it stays closed for this problem (a virtual environment that appears afterwards opens it
+  // again, because its Use .venv is new), and the user is asked whether to switch RobotCode off.
+  private onEnvironmentNotificationCancelled(folder: vscode.WorkspaceFolder): void {
+    const state = this.getRobotEnvironmentState(folder);
+    if (state.problem !== undefined)
+      this._environmentNotificationsCancelled.set(folder.uri.toString(), cancelKey(state));
+    this.askToDisableFolder(folder).catch((error) => this.logger.error(`${error}`));
+  }
 
-      if (showDialogs) {
-        await this.selectPythonEnvironment(
-          `Robot Framework package not found in workspace folder '${folder.name}'.`,
-          folder,
-        );
+  private async askToDisableFolder(folder: vscode.WorkspaceFolder): Promise<void> {
+    if (!this.isRobotEnvironmentKnownInvalid(folder)) return;
+
+    const choice = await vscode.window.showWarningMessage(
+      `Switch RobotCode off for the folder '${folder.name}'? For this session: until the window is reloaded or the language servers are restarted. For this project: with the folder setting robotcode.disableExtension, until you remove it.`,
+      DISABLE_FOR_SESSION,
+      DISABLE_FOR_PROJECT,
+    );
+    if (choice === DISABLE_FOR_SESSION) {
+      this.disableFolderForSession(folder);
+    } else if (choice === DISABLE_FOR_PROJECT) {
+      this.stopRobotFrameworkPolling(folder);
+      this.closeEnvironmentNotification(folder);
+      await vscode.workspace
+        .getConfiguration(CONFIG_SECTION, folder)
+        .update("disableExtension", true, vscode.ConfigurationTarget.WorkspaceFolder);
+    }
+  }
+
+  private async runEnvironmentAction(folder: vscode.WorkspaceFolder, action: EnvironmentAction): Promise<void> {
+    try {
+      switch (action) {
+        case "select":
+          await this.selectPythonEnvironment(folder);
+          break;
+        case "create":
+          await vscode.commands.executeCommand("python.createEnvironment", { workspaceFolder: folder });
+          break;
+        case "useVenv": {
+          const state = this.getRobotEnvironmentState(folder);
+          if (state.state !== "usable" && state.venvCandidate !== undefined) {
+            await this.pythonManager.useVirtualEnvironment(folder, state.venvCandidate);
+          }
+          break;
+        }
+        case "retry":
+          await this.retryEnvironment(folder);
+          break;
+        case "settings":
+          await vscode.commands.executeCommand("workbench.action.openSettings", "robotcode.python");
+          break;
       }
-
-      return false;
+    } catch (error) {
+      const label = {
+        select: SELECT_ENVIRONMENT,
+        create: CREATE_ENVIRONMENT,
+        useVenv: "Use the virtual environment",
+        retry: RETRY,
+        settings: OPEN_SETTINGS,
+      }[action];
+      this.logger.error(`${label} failed: ${error}`);
+      void vscode.window.showErrorMessage(`${label} failed: ${error}`);
     }
+  }
 
-    if (robotCheck === false) {
-      this._pythonValidPythonAndRobotEnv.set(folder, false);
+  /** Checks the folder's environment again on the user's request, after asking the Python side to look for environments. */
+  private async retryEnvironment(folder: vscode.WorkspaceFolder): Promise<void> {
+    const key = folder.uri.toString();
+    this._environmentNotificationsCancelled.delete(key);
+    this._environmentNotifications.get(key)?.report("Checking the Python environment again…");
+    await this.pythonManager.refreshEnvironments(folder);
+    await this.restart(folder.uri);
+    this._environmentRetriedAt.set(key, new Date().toLocaleTimeString());
+    clearTimeout(this._environmentNotificationTimers.get(key));
+    this._environmentNotificationTimers.delete(key);
+    this.updateEnvironmentNotification(folder);
+  }
 
-      if (showDialogs) {
-        await this.selectPythonEnvironment(
-          `Robot Framework version in workspace folder '${folder.name}' not supported.`,
-          folder,
-        );
+  /** Opens the environment picker of the Python side for the folder; a selection comes back through its events. */
+  public async selectPythonEnvironment(folder?: vscode.WorkspaceFolder): Promise<void> {
+    if ((await this.pythonManager.getPythonEnvironmentsApi()) !== undefined) {
+      try {
+        await vscode.commands.executeCommand("python-envs.set", folder?.uri);
+        return;
+      } catch (error) {
+        this.logger.warn(`python-envs.set failed, using python.setInterpreter: ${error}`);
       }
-
-      return false;
     }
-
-    this._pythonValidPythonAndRobotEnv.set(folder, true);
-
-    return true;
+    await vscode.commands.executeCommand("python.setInterpreter");
   }
 
   private async getServerOptions(folder: vscode.WorkspaceFolder, mode: string): Promise<ServerOptions | undefined> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
-    try {
-      if (!(await this.isValidRobotEnvironmentInFolder(folder, true))) return undefined;
-    } catch {
-      return undefined;
-    }
-    const pythonCommand = await this.pythonManager.getPythonCommand(folder);
-    if (!pythonCommand) return undefined;
+    if (!(await this.isValidRobotEnvironmentInFolder(folder, true))) return undefined;
+    const pythonCommand = this.getRobotEnvironmentState(folder).executable;
+    if (pythonCommand === undefined) return undefined;
 
     const robotCodeExtraArgs = config.get<string[]>("languageServer.extraArgs", []);
 
@@ -587,7 +1071,7 @@ export class LanguageClientsManager {
 
       if (!workspaceFolder) return undefined;
 
-      if (vscode.workspace.getConfiguration(CONFIG_SECTION, workspaceFolder).get<boolean>("disableExtension")) {
+      if (this.isDisabledForFolder(workspaceFolder)) {
         return undefined;
       }
 
@@ -786,18 +1270,11 @@ export class LanguageClientsManager {
   }
 
   public async restart(uri?: vscode.Uri): Promise<void> {
-    this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-    await this.refresh(uri, true);
-  }
-
-  // a restart the user asks for checks the environment again, even after a canceled dialog
-  private forgetCanceledPythonEnvironment(uri?: vscode.Uri): void {
     const folder = uri !== undefined ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
-    if (folder !== undefined) {
-      this._pythonCanceledPythonAndRobotEnv.delete(folder);
-    } else {
-      this._pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-    }
+    if (uri !== undefined && folder === undefined) return;
+
+    this.resetRobotEnvironmentState(folder);
+    await this.refresh(uri, true);
   }
 
   public async refresh(uri?: vscode.Uri, restart?: boolean): Promise<void> {

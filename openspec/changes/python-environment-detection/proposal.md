@@ -7,9 +7,9 @@ When a tester creates a virtual environment while VS Code is open, with `uv sync
 ## What Changes
 
 - RobotCode resolves the Python environment of a workspace folder through the Python Environments extension when it offers its API, and through the old Python extension API otherwise. The `robotcode.python` setting keeps overriding both.
-- Whether an interpreter exists and is Python 3.10 or newer comes from the data of that API; RobotCode no longer starts Python for it. Only the Robot Framework check stays RobotCode's own: a look for the package's metadata in the environment, confirmed by the existing check script.
-- RobotCode notices changes by itself: the events of both APIs, a new `pyvenv.cfg` in the workspace, after which it asks the Python side to refresh its environments, and, while a folder's environment is not usable, a look every few seconds for a Robot Framework that was installed in the meantime. As soon as the environment is usable, the language server starts without the user doing anything.
-- The quick pick loop is replaced by one non-modal notification per workspace folder and problem: no interpreter selected, interpreter missing, Python too old, Robot Framework missing. Its actions are **Install Robot Framework**, **Select Environment**, **Create Environment** and, without the Python Environments extension, **Use .venv** when a virtual environment in the folder is known but not selected. Nothing waits for the notification: discovery, the language status and the Test Explorer's hint show the state on their own. Disabling the extension for a folder stays possible with the setting `robotcode.disableExtension`.
+- Whether an interpreter exists and is Python 3.10 or newer comes from the data of that API; RobotCode no longer starts Python for it. Only the Robot Framework check stays RobotCode's own: the existing check script, which finds the package as Python itself does.
+- RobotCode notices changes by itself: the events of both APIs, a new `pyvenv.cfg` in the workspace, after which it asks the Python side to refresh its environments, and, while a folder's environment lacks Robot Framework, the check script every few seconds, so that an install in the meantime is noticed wherever Python finds it. As soon as the environment is usable, the language server starts without the user doing anything.
+- The quick pick loop is replaced by one message per workspace folder, a progress notification that stays on screen, names the problem (no interpreter selected, interpreter missing, Python too old, Robot Framework missing or too old), is replaced in place when the problem changes and closes by itself when the folder becomes usable. Its actions are the links **Select Environment**, **Create Environment**, **Retry** and, without the Python Environments extension, **Use .venv** when a virtual environment in the folder is known but not selected, plus **Cancel**, after which RobotCode asks whether to switch itself off for the folder, for this session or for this project with `robotcode.disableExtension`. It does not install Robot Framework itself and does not suggest how: which tool and which version a project wants is the project's decision, so the message only says that it has to be installed and that the message closes when RobotCode finds it. Nothing waits for the message: discovery, the language status and the Test Explorer's hint show the state on their own.
 - **Select Environment**, also behind **RobotCode: Select Python Environment** and the Python item of the language status, opens the environment picker of the Python side directly instead of RobotCode's own menu.
 - The VS Code guide describes the notification instead of the quick pick.
 
@@ -23,7 +23,8 @@ Not part of this change: the IntelliJ plugin and the CLI, which have their own e
 
 ### Modified Capabilities
 
-- `vscode-extension-compatibility`: the requirement "Python interpreters the extension accepts" shows the environment notification for an older Python instead of the choice dialog.
+- `vscode-extension-compatibility`: the requirement "Python interpreters the extension accepts" shows the environment message for an older Python instead of the choice dialog.
+- `vscode-test-explorer`: the requirement "A switched-off integration says so" also covers a folder switched off for the session from the environment message.
 
 ## Impact
 

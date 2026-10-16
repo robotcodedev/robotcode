@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import site
@@ -26,11 +27,11 @@ if __name__ == "__main__":
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
     )
     try:
-        __import__("robot")
+        import robot.version
     except ModuleNotFoundError:
         print("Robot Framework not installed", file=sys.stderr)
         sys.exit(1)
 
     from robotcode.robot.utils import RF_VERSION
 
-    print(RF_VERSION >= (5, 0))
+    print(json.dumps({"ok": RF_VERSION >= (5, 0), "version": robot.version.get_version()}))

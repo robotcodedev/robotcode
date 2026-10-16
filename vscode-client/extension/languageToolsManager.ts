@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ClientState, LanguageClientsManager, ProjectInfo } from "./languageclientsmanger";
+import { ClientState, LanguageClientsManager, ProjectInfo, isRobotFrameworkProblem } from "./languageclientsmanger";
 import {
   CONFIG_ANALYSIS_DIAGNOSTICMODE,
   CONFIG_ANALYSIS_DIAGNOSTICMODE_OPENFILESONLY,
@@ -148,11 +148,7 @@ export class LanguageToolsManager {
       label: "Select Python Environment",
       description: "Selects the Python interpreter to use",
       action: async (folder?: vscode.WorkspaceFolder) =>
-        await this.languageClientsManager.selectPythonEnvironment(
-          `Select Environment for workspace folder '${folder?.name}'`,
-          folder,
-          false,
-        ),
+        await this.languageClientsManager.selectPythonEnvironment(folder),
     },
     { label: "Developer Tools", kind: vscode.QuickPickItemKind.Separator },
     {
@@ -305,7 +301,7 @@ export class LanguageToolsManager {
       }),
       vscode.commands.registerCommand(
         "robotcode.selectPythonEnvironment",
-        async (folder: vscode.WorkspaceFolder | undefined = undefined, showRetry: boolean = false) => {
+        async (folder: vscode.WorkspaceFolder | undefined = undefined) => {
           if (folder === undefined) {
             folder =
               vscode.window.activeTextEditor !== undefined
@@ -322,11 +318,7 @@ export class LanguageToolsManager {
           }
           if (folder === undefined) return;
 
-          await this.languageClientsManager.selectPythonEnvironment(
-            `Select Environment for workspace folder '${folder?.name}'`,
-            folder,
-            showRetry,
-          );
+          await this.languageClientsManager.selectPythonEnvironment(folder);
         },
       ),
 
@@ -475,13 +467,8 @@ export class LanguageToolsManager {
         }
         await this.updateItems();
       }),
-      pythonManager.onActivePythonEnvironmentChanged(async (event) => {
-        if (event.resource !== undefined) {
-          this.removeFolder(event.resource);
-        } else {
-          this._workspaceFolderLanguageStatuses = new WeakMap<vscode.WorkspaceFolder, ProjectInfo>();
-        }
-
+      languageClientsManager.onRobotEnvironmentStateChanged(async (event) => {
+        this.removeFolder(event.folder);
         await this.updateItems();
       }),
       vscode.window.onDidChangeActiveTextEditor(async (editor) => {
@@ -622,8 +609,24 @@ export class LanguageToolsManager {
 
     const projectInfo = folder !== undefined ? this._workspaceFolderLanguageStatuses.get(folder) : undefined;
 
-    this.robotVersion.text = `$(robotcode-robot) ${projectInfo?.robotVersionString ?? NOT_INSTALLED}`;
-    this.robotVersion.detail = "Robot Framework Version";
+    const environmentState =
+      folder !== undefined ? this.languageClientsManager.getRobotEnvironmentState(folder) : undefined;
+    const robotProblem = environmentState?.problem;
+    const installedRobotVersion = environmentState?.robotVersion;
+
+    this.robotVersion.text = `$(robotcode-robot) ${
+      projectInfo?.robotVersionString ??
+      (robotProblem === "robotTooOld" && installedRobotVersion !== undefined
+        ? `${installedRobotVersion} (not supported)`
+        : NOT_INSTALLED)
+    }`;
+    this.robotVersion.detail = `Robot Framework Version${
+      robotProblem === "robotMissing"
+        ? " - not installed in the Python environment"
+        : robotProblem === "robotTooOld"
+          ? " - RobotCode needs 5.0 or newer"
+          : ""
+    }`;
 
     if (projectInfo !== undefined) {
       this.robotVersion.severity = LanguageStatusSeverity.Information;
@@ -645,16 +648,34 @@ export class LanguageToolsManager {
 
     const pythonInfo = folder !== undefined ? await this.pythonManager.getPythonInfo(folder) : undefined;
 
-    this.pythonVersion.text = `$(robotcode-python) ${pythonInfo?.version ?? NOT_INSTALLED} ${pythonInfo?.name ?? NOT_INSTALLED}`;
-    this.pythonVersion.detail = "Python Version";
+    const pythonProblem =
+      robotProblem !== undefined && !isRobotFrameworkProblem(robotProblem) ? robotProblem : undefined;
+
+    // the Python side names a global interpreter with its version already, for example `Python 3.15.0`
+    const pythonDescription =
+      pythonInfo === undefined
+        ? NOT_INSTALLED
+        : pythonInfo.name.includes(pythonInfo.version)
+          ? pythonInfo.name
+          : `${pythonInfo.version} ${pythonInfo.name}`;
+    this.pythonVersion.text = `$(robotcode-python) ${
+      pythonProblem === "noInterpreter" ? "no interpreter selected" : pythonDescription
+    }`;
+    this.pythonVersion.detail = `Python Version${
+      pythonProblem === "interpreterMissing"
+        ? " - the interpreter no longer exists or cannot be started"
+        : pythonProblem === "pythonTooOld"
+          ? " - RobotCode needs 3.10 or newer"
+          : ""
+    }`;
     this.pythonVersion.command = {
       title: "Select Environment",
       command: "robotcode.selectPythonEnvironment",
-      arguments: [folder, false],
+      arguments: [folder],
       tooltip: pythonInfo?.path,
     };
 
-    if (projectInfo !== undefined) {
+    if (projectInfo !== undefined || (environmentState?.state === "usable" && pythonProblem === undefined)) {
       this.pythonVersion.severity = LanguageStatusSeverity.Information;
     } else {
       this.pythonVersion.severity = LanguageStatusSeverity.Error;

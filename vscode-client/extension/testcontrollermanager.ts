@@ -273,6 +273,13 @@ export class TestControllerManager {
       this.diagnosticCollection,
       fileWatcher,
       this.activeStepDecorationType,
+      this.languageClientsManager.onRobotEnvironmentStateChanged(async (event) => {
+        // A folder that became usable gets its tests when its language server starts; a folder that lost its
+        // environment, or was switched off, shows the hint instead of its tests.
+        if (event.state.state === "unusable" || this.languageClientsManager.isDisabledForFolder(event.folder)) {
+          await this.refreshWorkspace(event.folder);
+        }
+      }),
       this.languageClientsManager.onClientStateChanged(async (event) => {
         const folder = vscode.workspace.getWorkspaceFolder(event.uri);
         switch (event.state) {
@@ -920,7 +927,7 @@ export class TestControllerManager {
     prune?: boolean,
     token?: vscode.CancellationToken,
   ): Promise<RobotCodeDiscoverResult> {
-    if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder))) {
+    if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder, true))) {
       if (prune) {
         this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
           if (vscode.workspace.getWorkspaceFolder(uri) === folder) collection.delete(uri);
@@ -1135,9 +1142,8 @@ export class TestControllerManager {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
   private isTestExplorerEnabledForWorkspace(workspace: vscode.WorkspaceFolder): boolean {
-    if (vscode.workspace.getConfiguration(CONFIG_SECTION, workspace).get<boolean>("disableExtension")) {
+    if (this.languageClientsManager.isDisabledForFolder(workspace)) {
       return false;
     }
 

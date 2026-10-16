@@ -350,7 +350,7 @@
       },
       {
         "view": "testing",
-        "contents": "RobotCode's Test Explorer integration is switched off by the setting robotcode.testExplorer.enabled or robotcode.disableExtension.\n[Open Settings](command:workbench.action.openSettings?%22robotcode.testExplorer%22)",
+        "contents": "RobotCode's Test Explorer integration is switched off by the setting robotcode.testExplorer.enabled or robotcode.disableExtension, or for this session from RobotCode's message about the Python environment.\n[Open Settings](command:workbench.action.openSettings?%22robotcode.testExplorer%22)",
         "when": "robotcode.testExplorer.state == disabled"
       },
       {
@@ -2265,6 +2265,7 @@
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@vscode-elements/elements": "2.5.1",
     "@vscode/codicons": "^0.0.45",
+    "@vscode/python-environments": "^1.4.0",
     "@vscode/python-extension": "^1.0.6",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",

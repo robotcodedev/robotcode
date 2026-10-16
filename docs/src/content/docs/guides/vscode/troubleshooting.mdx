@@ -19,7 +19,7 @@ Hover over the braces next to "Robot Framework" in the status bar to see the [la
   alt="The language status lists RobotCode 2.7.0, Robot Framework 7.5, Python 3.13.12 of the environment .venv, Robocop 9.1.0 and the configuration profiles None, with the actions Show Tool Menu, Select Environment, Disable and Select."
 />
 
-If Robot Framework shows "not installed", or the Python environment is not the one you expect, choose the right environment with **Select Environment**, or install Robot Framework into the environment, see [The Python environment](/guides/vscode/configuration/#the-python-environment). Check the profiles too: a profile can change the paths, the Python path and the variables of a project.
+If Robot Framework shows "not installed", or the Python environment is not the one you expect, choose the right environment with **Select Environment**, or install Robot Framework into the environment; RobotCode notices the install and starts the language server by itself, see [The Python environment](/guides/vscode/configuration/#the-python-environment). The item says what is wrong with the environment: Robot Framework missing or too old, no interpreter selected, or Python too old. Check the profiles too: a profile can change the paths, the Python path and the variables of a project.
 
 ## The RobotCode menu
 
@@ -41,7 +41,7 @@ RobotCode writes to two channels of the Output panel:
 
 ## Restart and clear the cache
 
-- **RobotCode: Restart Language Servers** stops the language servers and starts them again. It also checks the Python environment again, for example after you dismissed RobotCode's prompt about a missing Robot Framework and installed it yourself.
+- **RobotCode: Restart Language Servers** stops the language servers and starts them again. It also checks the Python environment again and switches a folder back on that you switched off for the session from the environment message; RobotCode normally notices a changed environment or a later install of Robot Framework by itself, so this is for the cases it missed.
 - **RobotCode: Clear Cache and Restart Language Servers** also deletes RobotCode's [analysis cache](/guides/vscode/diagnostics-and-linting/#the-analysis-cache), so that every library and file is loaded and analyzed again. Use it when diagnostics stay outdated although the files are right.
 
 The RobotCode menu offers both for the workspace folder of the active file.
