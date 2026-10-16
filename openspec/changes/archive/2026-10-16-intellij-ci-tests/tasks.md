@@ -21,10 +21,11 @@
 
 ## 3. Verification
 
-- [ ] 3.1 After the maintainer pushes, check the first run:
+- [x] 3.1 After the maintainer pushes, check the first run:
   - `test-jetbrains` is green on all three operating systems, and the published test results list the plugin's tests;
   - `code-quality` shows the verdicts and reports of both verifier steps in its summary and has the report artifact;
   - the result of the EAP step doesn't decide the job;
   - `package` started only after `test-jetbrains`. Note the duration of the first and of a second run (cache). Fix any failure that the run reveals, or agree with the maintainer how to handle a verifier finding that is not a real problem.
+  - Checked on 2026-10-16. First run (3b1fffa4): `setup-java` failed twice on macOS with the GitHub API rate limit for anonymous requests, fixed in 4737158f with `GITHUB_TOKEN` for the Java setup steps; `package` was skipped while macOS failed; the test report listed the plugin's tests from Ubuntu and Windows. Second run (4737158f): `test-jetbrains` green on all three systems, 374 tests in 78 classes each, one skipped; the code-quality summary shows both verifier sections; the EAP step passed both times, so its `continue-on-error` hasn't been needed yet. Durations, first → second run: `test-jetbrains` Ubuntu 5:01 → 1:40, Windows 6:20 → 2:51, macOS 9:31 without cache; `code-quality` 8:53 → 5:53, of which the gate 4:52 → 0:53 and the EAP step 1:10 → 0:29.
 - [x] 3.2 Only if the maintainer wants it: check the gate with a throw-away pull request whose deliberately failing assertion in one plugin test makes `test-jetbrains` fail and keeps `package` from running; close the pull request afterwards. Otherwise verify the gate by reading the `needs` graph and mark the task with that note.
   - Verified by reading the `needs` graph; the maintainer decided against the pull request on 2026-10-16. `package` needs `test` and `test-jetbrains` and has no `if` of its own, so GitHub skips it when `test-jetbrains` fails, and `publish` needs `package`. A failing test fails the step: `build.gradle.kts` doesn't set `ignoreFailures`, and the step has no `continue-on-error`.
