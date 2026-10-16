@@ -12,6 +12,7 @@ import com.intellij.openapi.projectRoots.SdkAdditionalData
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.EditorNotificationPanel
@@ -101,6 +102,14 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
             .orElse(Path.of(System.getProperty("java.home"), "bin", "java").toString())
     }
 
+    // a Python path that does not exist, as an SDK stores it; the light fixture's temporary folder `temp:///` is no path
+    // on Windows
+    private fun missingPython(folder: String): String {
+        return FileUtil.toSystemIndependentName(
+            Path.of(FileUtil.getTempDirectory(), "robotcode-no-python-$folder", "python").toString()
+        )
+    }
+
     // 1.2
 
     fun testNoSdkGivesNoInterpreter() {
@@ -128,7 +137,7 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
     }
 
     fun testLocalSdkWhosePathDoesNotExist() {
-        val path = Path.of(myFixture.tempDirPath, "missing", "python").toString()
+        val path = missingPython("missing")
         val interpreter = pythonInterpreterOf(pythonSdk("Missing Python", path))
 
         assertEquals(InterpreterKind.LOCAL, interpreter.kind)
@@ -185,7 +194,7 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
         environment.watchWorkspaceModel()
         environment.markRobotProject()
         waitForChecks(noInterpreter, 1)
-        val sdk = registeredPythonSdk("Python A", Path.of(myFixture.tempDirPath, "a", "python").toString())
+        val sdk = registeredPythonSdk("Python A", missingPython("a"))
 
         ModuleRootModificationUtil.setModuleSdk(module, sdk)
 
@@ -194,7 +203,7 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
 
     fun testSdkChangeChecksOnlyAnUnusableInterpreter() {
         environment.watchWorkspaceModel()
-        val sdk = registeredPythonSdk("Python B", Path.of(myFixture.tempDirPath, "b", "python").toString())
+        val sdk = registeredPythonSdk("Python B", missingPython("b"))
         ModuleRootModificationUtil.setModuleSdk(module, sdk)
         val interpreter = pythonInterpreterOf(sdk)
         PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
@@ -212,7 +221,7 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
         environment.watchWorkspaceModel()
         environment.markRobotProject()
         ModuleRootModificationUtil.setSdkInherited(module)
-        val sdk = registeredPythonSdk("Python C", Path.of(myFixture.tempDirPath, "c", "python").toString())
+        val sdk = registeredPythonSdk("Python C", missingPython("c"))
 
         WriteAction.run<Throwable> { ProjectRootManager.getInstance(project).projectSdk = sdk }
 

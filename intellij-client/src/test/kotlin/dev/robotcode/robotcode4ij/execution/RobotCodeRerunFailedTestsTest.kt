@@ -14,6 +14,7 @@ import com.intellij.execution.testframework.Filter
 import com.intellij.execution.testframework.actions.AbstractRerunFailedTestsAction
 import com.intellij.execution.testframework.sm.runner.SMTestProxy
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.Urls
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
@@ -23,9 +24,17 @@ class RobotCodeRerunFailedTestsTest : BasePlatformTestCase() {
 
     private val factory get() = runConfigurationType<RobotCodeConfigurationType>().configurationFactories.first()
 
-    // the output of `robotcode -dp . discover all` with Robot Framework 7.5
+    // the folder of the project; on Windows on a drive, because a path without one is not absolute there and comes back
+    // from a location URL as a UNC path
+    private val projectRoot = if (SystemInfo.isWindows) "C:/project" else "/project"
+    private val projectUri = if (SystemInfo.isWindows) "file:///C:/project" else "file:///project"
+
+    // the output of `robotcode -dp . discover all` with Robot Framework 7.5, for a project in [projectRoot]
     private val model = javaClass.getResourceAsStream("/discover/selection-project.json")!!.bufferedReader()
-        .use { decodeDiscoverResult(it.readText()).items!! }
+        .use { reader ->
+            val text = reader.readText().replace("file:///project", projectUri).replace("\"/project", "\"$projectRoot")
+            decodeDiscoverResult(text).items!!
+        }
 
     // a node as the converter starts it, with the location URL and the long name of the run
     private fun node(name: String, isSuite: Boolean, source: String, line: Int, longname: String) = SMTestProxy(
@@ -52,7 +61,7 @@ class RobotCodeRerunFailedTestsTest : BasePlatformTestCase() {
         )
         Disposer.register(testRootDisposable, properties)
         // a run of the folder `tests`, whose top-level suite is named after the folder
-        val source = "/project/tests/sample.robot"
+        val source = "$projectRoot/tests/sample.robot"
         val root = SMTestProxy.SMRootTestProxy()
         val suite = node("Sample", true, source, 1, "Tests.Sample").also { root.addChild(it) }
         node("First Test Passes", false, source, 3, "Tests.Sample.First Test Passes").also {
