@@ -1,9 +1,12 @@
 import contextlib
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+from semantic_version import Version
 
 if __name__ == "__main__" and not __package__:
     file = Path(__file__).resolve()
@@ -29,6 +32,26 @@ def run(title: str, *args: Any, **kwargs: Any) -> None:
         raise
     except BaseException as e:
         print(f"{title} failed: {e}", file=sys.stderr)
+
+
+def publish_jetbrains_plugin(dist_path: Path, version: Version) -> None:
+    plugin_path = Path(dist_path, f"robotcode4ij-{version}.zip")
+
+    if not plugin_path.exists():
+        raise FileNotFoundError(f"JetBrains plugin '{plugin_path}' not found")
+
+    channel = "dev" if version.prerelease else ""
+
+    print("running JetBrains Marketplace upload")
+    # the shell expands the token, so it is not part of the command that an error shows
+    subprocess.run(
+        'curl --fail-with-body --silent --show-error --header "Authorization: Bearer $PUBLISH_TOKEN"'
+        f" --form xmlId=dev.robotcode.robotcode4ij --form {shlex.quote(f'file=@{plugin_path}')}"
+        f" --form channel={channel} https://plugins.jetbrains.com/api/updates/upload",
+        shell=True,
+        check=True,
+        timeout=600,
+    )
 
 
 def main() -> None:
@@ -61,6 +84,8 @@ def main() -> None:
         shell=True,
         timeout=600,
     )
+
+    publish_jetbrains_plugin(dist_path, version)
 
 
 if __name__ == "__main__":

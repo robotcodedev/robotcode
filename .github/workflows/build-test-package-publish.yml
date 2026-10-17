@@ -444,7 +444,7 @@ jobs:
           body_path: ./auto_relnotes.md
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: publish vsix and python packages
+      - name: publish vsix, python packages and jetbrains plugin
         if: github.ref_type == 'tag' && startsWith( github.ref, 'refs/tags/v')
         run: hatch -q run build:publish
         env:

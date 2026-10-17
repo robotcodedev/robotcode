@@ -4,7 +4,7 @@ Implement this change after `intellij-ci-tests`.
 
 ## 1. Marketplace upload
 
-- [ ] 1.1 Add the upload of the JetBrains plugin to `scripts/publish.py`, after `hatch publish`:
+- [x] 1.1 Add the upload of the JetBrains plugin to `scripts/publish.py`, after `hatch publish`:
   - `curl --fail-with-body` posts `dist/robotcode4ij-<version>.zip` to `https://plugins.jetbrains.com/api/updates/upload` with the header `Authorization: Bearer $PUBLISH_TOKEN` (expanded by the shell) and the form fields `xmlId=dev.robotcode.robotcode4ij`, `file` and `channel`;
   - `channel` is `dev` when `get_version().prerelease` is set, and empty otherwise;
   - it runs through `subprocess.run` with `check=True` and a timeout, not through `run()`;
@@ -15,7 +15,7 @@ Implement this change after `intellij-ci-tests`.
   - the token never appears in the printed output;
   - a stub that exits with code 22 fails the call;
   - `hatch run lint:style` and `hatch run lint:typing` pass.
-- [ ] 1.2 Rename the step "publish vsix and python packages" in `.github/workflows/build-test-package-publish.yml` so that its name also covers the JetBrains plugin. Verify that the file still parses as YAML (`python -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" <file>`) and that the step keeps its tag condition and its `PUBLISH_TOKEN`.
+- [x] 1.2 Rename the step "publish vsix and python packages" in `.github/workflows/build-test-package-publish.yml` so that its name also covers the JetBrains plugin. Verify that the file still parses as YAML (`python -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" <file>`) and that the step keeps its tag condition and its `PUBLISH_TOKEN`.
 
 ## 2. Verification
 
