@@ -93,6 +93,30 @@ Alternatives:
 - LSP4IJ's cache entry for the last commit instead of asking the Marketplace. The Marketplace's list also covers a failed upload, which the next night retries, and versions uploaded by hand.
 - A timestamp version, or a label that the IDE ranks below the release, such as `eap`. The plugin would then carry a different version than the VS Code extension and the Python packages of the same build.
 
+### Change notes that the Marketplace accepts
+
+The first manual run of "publish dev build" (2026-10-17) reached the Marketplace, which rejected the plugin: "The value of the '<change-notes>' parameter is too long. Its length is 209290 which is more than maximum 65535 characters long."
+
+- **Where the change notes come from:** `build.gradle.kts` renders the changelog section of the plugin's version, or the unreleased section for a dev build, as HTML. The package job regenerates `CHANGELOG.md` with git-cliff first, so for 2.8.0-dev.479 the section held all 481 commits since v2.7.0, each with its commit message body:
+
+  | Section | Characters | Entries |
+  |---|---|---|
+  | Features | 41,281 | 64 |
+  | Bug Fixes | 51,472 | 92 |
+  | Documentation | 109,760 | 262, 215 of them `openspec` |
+  | Performance | 1,514 | 3 |
+  | Refactor | 4,595 | 9 |
+
+  The change notes of 2.7.0, 16 commits after 2.6.2, had 5,524 characters. The section of the release 2.8.0 holds the same entries as the dev build, so its upload would fail too, by hand as well.
+- **Decision** (maintainer, 2026-10-17): when the rendered section has at most 65,535 characters, it stays the change notes. Otherwise the change notes list only Features, Bug Fixes and Performance, each entry reduced to its first line, the subject with its commit link, and end with a sentence that links to the full list: the commit history of `main` for the unreleased section, `CHANGELOG.md` for a release. If that is still too long, entries are dropped from the end. For 2.8.0-dev.479 this gives about 32,000 characters.
+- **Releases too:** the package job builds the zip for tags with the same `build.gradle.kts`, and the publish job uploads that zip unchanged, so a release with a long section gets the same short change notes.
+- The section headings that git-cliff writes carry an ordering prefix (`<!-- 0 -->Features`), so the sections are matched by the text after it.
+
+Alternatives:
+- Always the short form. Small releases would lose the commit message bodies, which are written for users.
+- Only a sentence and the link when the section is too long. The release 2.8.0 and nearly every dev build would show no list.
+- Leaving `openspec` commits out of the changelog in `cliff.toml`. That changes `CHANGELOG.md` and the GitHub release notes, and Features and Bug Fixes alone exceed the limit already.
+
 ### No signing
 
 The plugin is uploaded unsigned, as the maintainer decided; the `signing` block in `build.gradle.kts` stays as it is.

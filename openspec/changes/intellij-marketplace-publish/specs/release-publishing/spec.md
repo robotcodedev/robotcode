@@ -81,6 +81,25 @@ The CI SHALL upload a plugin file to the Marketplace only after the plugin's uni
 - **WHEN** one of the plugin's unit tests fails in the latest run on `main`
 - **THEN** the nightly upload doesn't take the plugin of that run, but at most the plugin of the most recent successful run
 
+### Requirement: The plugin's change notes fit the Marketplace's limit
+
+The plugin's change notes SHALL be the changelog section of its version when that section has at most 65,535 characters. Otherwise they SHALL list only the features, bug fixes and performance improvements, one line each, shortened at the end if needed, and SHALL link to the full list of changes, so that the Marketplace accepts every release and dev build.
+
+#### Scenario: Small release
+
+- **WHEN** the changelog section of version 2.7.0 has 5,524 characters
+- **THEN** the change notes are that section, with the commit message bodies and all its sections
+
+#### Scenario: Large release
+
+- **WHEN** the changelog section of version 2.8.0 is longer than 65,535 characters
+- **THEN** the change notes list the subject lines of its features, bug fixes and performance improvements, link to `CHANGELOG.md`, and the Marketplace accepts the upload
+
+#### Scenario: Dev build
+
+- **WHEN** the unreleased changes of a dev build are longer than 65,535 characters
+- **THEN** the change notes list the subject lines of the features, bug fixes and performance improvements and link to the commit history of `main`
+
 ### Requirement: A rejected upload fails the run
 
 When the Marketplace rejects an upload, for example because the token is invalid or the version already exists, the CI SHALL fail the job that uploads and SHALL show the Marketplace's response in the job's log.

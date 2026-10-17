@@ -86,10 +86,37 @@ intellijPlatform {
         // local variable for configuration cache compatibility // Get the latest available change notes from the changelog file
         changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
             with(changelog) {
-                renderItem(
-                    (getOrNull(pluginVersion) ?: getUnreleased()).withHeader(false).withEmptySections(false),
-                    Changelog.OutputType.HTML,
-                )
+                val item = (getOrNull(pluginVersion) ?: getUnreleased()).withHeader(false).withEmptySections(false)
+                val notes = renderItem(item, Changelog.OutputType.HTML)
+
+                // the Marketplace rejects longer change notes; then only the subject lines of what users notice
+                val maxLength = 65535
+                if (notes.length <= maxLength) {
+                    notes
+                } else {
+                    val fullList = if (item.isUnreleased) {
+                        "https://github.com/robotcodedev/robotcode/commits/main"
+                    } else {
+                        "https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md"
+                    }
+                    val footer = markdownToHTML(
+                        "This list shows only the features, bug fixes and performance improvements. " +
+                            "See the [full list of changes]($fullList).",
+                    )
+                    // git-cliff writes the headings with an ordering prefix, like "<!-- 0 -->Features"
+                    val subjects = item.sections
+                        .filterKeys { it.substringAfter("-->").trim() in listOf("Features", "Bug Fixes", "Performance") }
+                        .flatMap { (section, entries) -> entries.map { section to it.lineSequence().first() } }
+
+                    generateSequence(subjects.size) { it - 1 }
+                        .takeWhile { it >= 0 }
+                        .map { count ->
+                            val sections = subjects.take(count).groupBy({ it.first }, { it.second }).mapValues { it.value.toSet() }
+                            renderItem(Changelog.Item(item.version, item.header, items = sections).withHeader(false), Changelog.OutputType.HTML) +
+                                footer
+                        }
+                        .first { it.length <= maxLength }
+                }
             }
         }
 

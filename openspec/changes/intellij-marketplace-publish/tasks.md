@@ -33,6 +33,12 @@ Implement this change after `intellij-ci-tests`.
   - `hatch run lint:style` passes.
 - [x] 2.2 Add `.github/workflows/publish-dev.yml`: a schedule at `23 2 * * *` and `workflow_dispatch`, `permissions` with `actions: read` and `contents: read`, a `concurrency` group, checkout, Python 3.10, Hatch, and `hatch -q run build:publish-dev` with `GH_TOKEN` and `PUBLISH_TOKEN`. Verify that the file parses as YAML.
 
+- [x] 2.3 In `intellij-client/build.gradle.kts`, keep the rendered changelog section as the change notes when it has at most 65,535 characters. Otherwise render only the sections Features, Bug Fixes and Performance, matched by the heading text after git-cliff's `<!-- n -->` prefix, each entry reduced to its first line. End them with a sentence that links to the full list: the commit history of `main` for the unreleased section, `CHANGELOG.md` otherwise. Drop entries from the end until the change notes fit. Verify with `patchPluginXml` in a separate worktree:
+  - version `2.7.0` with the committed `CHANGELOG.md` gives the same change notes as before the change;
+  - a changelog generated as in the package job, with version `2.8.0-dev.479`, gives the short form below 65,535 characters with the link to the commits;
+  - a changelog generated with `--tag v2.8.0`, with version `2.8.0`, gives the short form with the link to `CHANGELOG.md`;
+  - a section with more entries than fit is shortened below the limit and keeps the link.
+
 ## 3. Verification
 
 - [ ] 3.1 With the maintainer, after `intellij-ci-tests` is in place and the maintainer pushes the next version tag, check:
