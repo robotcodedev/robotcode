@@ -76,6 +76,11 @@ When Robot Framework reports a problem while RobotCode reads the tests, the prob
 
 When RobotCode finds no tests or tasks at all and reports no problem, the Testing view shows a hint from RobotCode below VS Code's own text: where tests are looked for, with **Refresh Tests** and a link to the [troubleshooting page](/guides/vscode/troubleshooting/). Without a Python environment with Robot Framework, the hint says so instead and offers **Select Python Environment**.
 
+<ThemeImage
+  name="test-explorer-no-environment"
+  alt="The Testing view below VS Code's text No tests have been found in this workspace yet: RobotCode needs a Python environment with Robot Framework for this folder to find its tests, with the button Select Python Environment and VS Code's button Install Additional Test Extensions...."
+/>
+
 ## Switching the Test Explorer off
 
 The setting [`robotcode.testExplorer.enabled`](/reference/vscode-settings/#robotcode.testExplorer.enabled) switches the Test Explorer integration off, also for single workspace folders. While it is off for every workspace folder, the Testing view says so and offers to open the setting.

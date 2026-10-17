@@ -203,17 +203,19 @@ Remember to include the virtual environment directory `.venv` in your project's 
 
 ## Selecting the Python Interpreter
 
-After creating a virtual environment or if you want to switch to a different Python interpreter with Robot Framework installed for your project, you can select the Python interpreter in Visual Studio Code. This ensures that the correct Python environment is used for running your Robot Framework tests.
+RobotCode uses the Python environment that the Python extension selects for the workspace folder. If you want to switch to a different Python interpreter with Robot Framework installed for your project, you can select the Python interpreter in Visual Studio Code. This ensures that the correct Python environment is used for running your Robot Framework tests.
 
 To select the Python interpreter, follow these steps:
 
 <Steps>
 
 1. Open the Command Palette by pressing <kbd>CONTROL+SHIFT+P</kbd> or <kbd>COMMAND+SHIFT+P</kbd> on Mac.
-2. Search for `Python: Select Interpreter` and select it.
+2. Search for `RobotCode: Select Python Environment` and select it. It opens the environment picker of the Python extension for the workspace folder.
 3. Choose the Python interpreter associated with your virtual environment or the Python interpreter with Robot Framework installed.
 
 </Steps>
+
+As long as the selected environment has no Robot Framework, RobotCode shows a message that says so. You don't need to restart anything: when you install Robot Framework into the environment, RobotCode notices it within a few seconds and starts, and it also notices a virtual environment that you create in the folder; see [The Python environment](/guides/vscode/configuration/#the-python-environment).
 
 
 ## Verifying the Installation
@@ -225,7 +227,7 @@ To select the Python interpreter, follow these steps:
 
 </Steps>
 
-If the command returns the Robot Framework version number, your installation is successful!
+If the command returns the Robot Framework version number, your installation is successful! With a `.robot` file open, the [language status](/guides/vscode/#the-language-status) shows the Robot Framework version that RobotCode uses.
 If you encounter any errors, ensure that your virtual environment is activated and that all dependencies in `requirements.txt` have been installed.
 
 ## Create and Run Your First Suite/Test
