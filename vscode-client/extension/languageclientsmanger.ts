@@ -217,12 +217,16 @@ function isFromSetting(state: RobotEnvironmentState): boolean {
   return state.environment?.source === "setting";
 }
 
-function robotEnvironmentProblemMessage(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): string {
-  const found = `Found a Robot Framework project in '${folder.name}', but `;
+/**
+ * The problem of a folder's Python environment as a clause without a final period, for example "the selected Python
+ * environment '.venv (venv)' has no Robot Framework"; the environment message and the REPL's error message build
+ * their sentences around it.
+ */
+export function describeRobotEnvironmentProblem(state: RobotEnvironmentState): string {
   const executable = state.executable !== undefined ? ` '${state.executable}'` : "";
   const version = state.version !== undefined ? ` ${formatPythonVersion(state.version)}` : "";
   const robotVersion = state.robotVersion !== undefined ? ` ${state.robotVersion}` : "";
-  // the setting robotcode.python wins over the Python side, so the message names it
+  // the setting robotcode.python wins over the Python side, so the text names it
   const fromSetting = isFromSetting(state);
   const name = fromSetting ? undefined : state.environment?.name;
   const environment = fromSetting
@@ -232,20 +236,30 @@ function robotEnvironmentProblemMessage(folder: vscode.WorkspaceFolder, state: R
       : "the selected Python environment";
   switch (state.problem) {
     case "noInterpreter":
-      return `${found}no Python interpreter is selected for it.`;
+      return "no Python interpreter is selected for it";
     case "interpreterMissing":
       return fromSetting
-        ? `${found}the interpreter${executable} of the setting robotcode.python no longer exists or cannot be started.`
-        : `${found}its Python interpreter${executable} no longer exists or cannot be started.`;
+        ? `the interpreter${executable} of the setting robotcode.python no longer exists or cannot be started`
+        : `its Python interpreter${executable} no longer exists or cannot be started`;
     case "pythonTooOld":
       return fromSetting
-        ? `${found}the Python${version} of the setting robotcode.python (${state.executable ?? ""}) is older than 3.10, which RobotCode needs.`
-        : `${found}its Python${version} is older than 3.10, which RobotCode needs.`;
+        ? `the Python${version} of the setting robotcode.python (${state.executable ?? ""}) is older than 3.10, which RobotCode needs`
+        : `its Python${version} is older than 3.10, which RobotCode needs`;
     case "robotTooOld":
-      return `${found}the Robot Framework${robotVersion} in ${environment} is older than 5.0, which RobotCode needs. Update it.`;
+      return `the Robot Framework${robotVersion} in ${environment} is older than 5.0, which RobotCode needs`;
     default:
-      return `${found}${environment} has no Robot Framework. Install it into that environment.`;
+      return `${environment} has no Robot Framework`;
   }
+}
+
+function robotEnvironmentProblemMessage(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): string {
+  const advice =
+    state.problem === "robotTooOld"
+      ? " Update it."
+      : state.problem === "noInterpreter" || state.problem === "interpreterMissing" || state.problem === "pythonTooOld"
+        ? ""
+        : " Install it into that environment.";
+  return `Found a Robot Framework project in '${folder.name}', but ${describeRobotEnvironmentProblem(state)}.${advice}`;
 }
 
 export class LanguageClientsManager {
@@ -523,6 +537,16 @@ export class LanguageClientsManager {
     if (state.state === "unusable" && notify) this.requestEnvironmentNotification(folder);
 
     return state.state === "usable";
+  }
+
+  /**
+   * Checks the environment of a folder with a known problem again, for something the user asks for right now: a
+   * Robot Framework installed since the last check is found without waiting for the polling, and a folder that is
+   * usable now gets its language server. Returns whether the folder is usable.
+   */
+  public async checkRobotEnvironmentAgain(folder: vscode.WorkspaceFolder): Promise<boolean> {
+    if (this.getRobotEnvironmentState(folder).state === "unusable") await this.reconsiderFolder(folder);
+    return this.getRobotEnvironmentState(folder).state === "usable";
   }
 
   // Runs the environment check of a folder, one at a time per folder; a second caller gets the running check.

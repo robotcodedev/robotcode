@@ -67,10 +67,15 @@ When the folder's Python environment cannot run the REPL, because no interpreter
 - **WHEN** the selected Python environment of the folder `shop` has no Robot Framework and the user runs the command
 - **THEN** an error message says that the REPL for `shop` cannot start because the selected Python environment has no Robot Framework, and no terminal opens
 
+#### Scenario: Problem solved since the last check
+
+- **WHEN** RobotCode found no Robot Framework in the folder's environment, the user installs it there, and runs the command before RobotCode looked again
+- **THEN** the REPL starts, without an error message
+
 #### Scenario: Folder switched off
 
 - **WHEN** `robotcode.disableExtension` is `true` for the folder and the user runs the command
-- **THEN** an error message says that RobotCode is switched off for the folder, and no terminal opens
+- **THEN** an error message says that RobotCode is switched off for the folder by that setting, and no terminal opens
 
 ### Requirement: The REPL terminal ends with the REPL
 

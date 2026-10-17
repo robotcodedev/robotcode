@@ -30,7 +30,7 @@ See proposal.md for the motivation. Verified on 2026-10-17 in the isolated harne
 
 ### The REPL is the terminal's process
 
-`vscode.window.createTerminal` with `shellPath` set to the folder's interpreter and `shellArgs` set to `-u -X utf8 <bundled robotcode main> <robotcode.extraArgs> -p <profile>… repl -P <path>… -v <name>:<value>… -V <file>…`, `cwd` the folder, `env` the folder's `robotcode.robot.env`. The arguments go to the process as a list, so paths with spaces need no quoting and no shell is involved.
+`vscode.window.createTerminal` with `shellPath` set to the folder's interpreter and `shellArgs` set to `-u -X utf8 <bundled robotcode main> <robotcode.extraArgs> -p <profile>… repl -P <path>… -V <file>… -v <name>:<value>…`, in the order the debug launcher uses for runs, `cwd` the folder, `env` the folder's `robotcode.robot.env`. The arguments go to the process as a list, so paths with spaces need no quoting and no shell is involved.
 
 Alternative, a shell plus the command after shell integration (today): rejected, it races with the activation of the Python extensions and depends on the PATH, the shell and shell integration; a shell without integration falls back to unquoted `sendText`.
 
@@ -42,11 +42,11 @@ Alternative, a pseudoterminal (`pty`), which the Python extensions skip as well:
 
 ### The interpreter comes from the environment state
 
-The command awaits `isValidRobotEnvironmentInFolder(folder)` without asking for the environment message, then takes the interpreter from `getRobotEnvironmentState(folder)`. It is the interpreter the language server uses, checked for Python 3.10 and Robot Framework 5.0, and the check runs only when the folder has no state yet.
+The command awaits `isValidRobotEnvironmentInFolder(folder)` without asking for the environment message, then takes the interpreter from `getRobotEnvironmentState(folder)`. It is the interpreter the language server uses, checked for Python 3.10 and Robot Framework 5.0; the check runs when the folder has no state yet. A folder with a known problem is checked again first (`checkRobotEnvironmentAgain`, which reuses the look-again of the environment events): the polling notices an install only after up to ten seconds, and the user who starts the REPL right after an install must not get a stale error; a folder that is usable now also gets its language server.
 
 ### An unusable environment gives one error message
 
-For a switched-off folder (`isDisabledForFolder`) the command shows "RobotCode is switched off for the workspace folder '<folder>'." For an unusable environment it shows "Cannot start the Robot REPL for '<folder>': <problem>." with `showErrorMessage`, without buttons, and opens no terminal; the user asked for only this message. The problem part is the environment message's wording without its "Found a Robot Framework project in '<folder>', but" opening, so both read alike: a function in `languageclientsmanger.ts` phrases the problem ("the selected Python environment '<name>' has no Robot Framework", "no Python interpreter is selected", …), and the environment message prefixes it as before; its texts do not change.
+For a switched-off folder (`isDisabledForFolder`) the command shows "RobotCode is switched off for the workspace folder '<folder>' by the setting robotcode.disableExtension." or, for the switch-off of the session, "… for this session; RobotCode: Restart Language Servers switches it on again." For an unusable environment it shows "Cannot start the Robot REPL for '<folder>': <problem>." with `showErrorMessage`, without buttons, and opens no terminal; the user asked for only this message. The problem part is the environment message's wording without its "Found a Robot Framework project in '<folder>', but" opening, so both read alike: a function in `languageclientsmanger.ts` phrases the problem ("the selected Python environment '<name>' has no Robot Framework", "no Python interpreter is selected", …), and the environment message prefixes it as before; its texts do not change.
 
 ### The folder is chosen as before
 
@@ -63,3 +63,14 @@ The existing order stays: the folder argument (RobotCode menu), the active edito
 - [No activated environment in the REPL process] → the same as in runs; a keyword that needs the venv's `bin` on the PATH behaves as in a run.
 - [Windows: `-X utf8`, `.exe` interpreters, ConPTY] → nothing shell-specific remains; not verifiable in the Linux harness.
 - [The guide's screenshot and video show the old shell prompt line] → kept, put on the findings list for a new recording.
+
+## Verification
+
+Harness run of 2026-10-17 (VS Code 1.142.0, ms-python.python 2026.10.0, ms-python.vscode-python-envs 1.40.0), with a `robotcode` without the `repl` command first on the PATH that VS Code passes to terminals (the development venv's):
+
+- With the Python Environments extension, one folder whose `.venv` has Robot Framework and the folder settings `robot.variables` `HOST=staging`, `robot.env` `SHOP_URL`, `robot.pythonPath` `libs` and the profile `ci` from `robot.toml`: after 15 seconds the terminal "Robot REPL" showed only the banner and the prompt, no activation text; the interpreter was the folder's `.venv`; `${HOST}` was `staging`, `%{SHOP_URL}` `http://localhost:8080`, `${PROFILE_VAR}` of the profile `ci-value`, and `MyLib` from `libs` imported and ran. Ctrl-C interrupted a half-typed line and the REPL went on; `.exit` closed the terminal with exit code 0 and no notification.
+- A REPL left open was not restored after VS Code was closed and started again.
+- Workspace with five folders, no active editor: the command asked for the folder and started the REPL of `repl-test2` with its interpreter in a terminal "Robot REPL (repl-test2)"; a cancelled pick opened nothing and showed nothing. A folder without Robot Framework got "Cannot start the Robot REPL for 'env-norf': the selected Python environment 'env-norf (uv)' has no Robot Framework.", a folder with Python 3.9 "Cannot start the Robot REPL for 'env-py39': its Python 3.9 is older than 3.10, which RobotCode needs.", a switched-off folder "RobotCode is switched off for the workspace folder 'env-off'."; none opened a terminal. The environment messages of these folders read as before ("Found a Robot Framework project in 'env-norf', but the selected Python environment 'env-norf (uv)' has no Robot Framework. Install it into that environment.", "… in 'env-py39', but its Python 3.9 is older than 3.10, which RobotCode needs."); old and new wording also agree for all 48 combinations of problem, environment source and details in a direct comparison of both functions.
+- The RobotCode menu of `repl-test` started the REPL of `repl-test`.
+- With `python.useEnvironmentsExtension: false`: clean start without activation text, the `.venv` interpreter, `${HOST}` `staging`, `.exit` closes the terminal.
+- Review round: the command for a folder whose missing Robot Framework was known started the REPL right after `uv pip install robotframework`, before the polling looked again (the log shows the switch to usable from the command's check, without the polling's "appeared" line), and the folder's language server started as well. A folder switched off for the session got "RobotCode is switched off for the workspace folder 'env-py39' for this session; RobotCode: Restart Language Servers switches it on again.", the folder with the setting "… 'env-off' by the setting robotcode.disableExtension."

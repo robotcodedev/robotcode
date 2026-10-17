@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { ClientState, LanguageClientsManager, ProjectInfo, isRobotFrameworkProblem } from "./languageclientsmanger";
+import {
+  ClientState,
+  LanguageClientsManager,
+  ProjectInfo,
+  describeRobotEnvironmentProblem,
+  isRobotFrameworkProblem,
+} from "./languageclientsmanger";
 import {
   CONFIG_ANALYSIS_DIAGNOSTICMODE,
   CONFIG_ANALYSIS_DIAGNOSTICMODE_OPENFILESONLY,
@@ -38,37 +44,6 @@ type QuickPickActionItem = {
 
   action?(folder?: vscode.WorkspaceFolder): Promise<void>;
 };
-
-async function waitForShellIntegration(
-  folder: vscode.WorkspaceFolder,
-  terminal: vscode.Terminal,
-  timeout: number = 3000,
-): Promise<boolean> {
-  const config = vscode.workspace.getConfiguration("terminal.integrated.shellIntegration", folder);
-  const enabled = config.get("enabled", false);
-  if (!enabled) {
-    return false;
-  }
-
-  return new Promise<boolean>((resolve) => {
-    if (terminal.shellIntegration) {
-      resolve(true);
-      return;
-    }
-
-    const listener = vscode.window.onDidChangeTerminalShellIntegration((event) => {
-      if (event.terminal === terminal) {
-        listener.dispose();
-        resolve(true);
-      }
-    });
-
-    setTimeout(() => {
-      listener.dispose();
-      resolve(false);
-    }, timeout);
-  });
-}
 
 export class LanguageToolsManager {
   private _workspaceFolderLanguageStatuses = new WeakMap<vscode.WorkspaceFolder, ProjectInfo>();
@@ -259,30 +234,7 @@ export class LanguageToolsManager {
           }
           if (folder === undefined) return;
 
-          const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-          const profiles = config.get<string[]>("profiles", []);
-
-          const terminal = vscode.window.createTerminal({
-            name: `Robot REPL${vscode.workspace.workspaceFolders?.length === 1 ? "" : ` (${folder.name})`}`,
-            cwd: folder.uri,
-            iconPath: new vscode.ThemeIcon("robotcode-robot"),
-            isTransient: false,
-          });
-          terminal.show();
-          const shellIntegrationActive = await waitForShellIntegration(folder, terminal);
-          if (shellIntegrationActive) {
-            terminal.shellIntegration?.executeCommand("robotcode", [
-              ...(profiles !== undefined ? profiles.flatMap((v) => ["-p", v]) : []),
-              "repl",
-            ]);
-          } else {
-            const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(
-              folder,
-              ["repl"],
-              profiles,
-            );
-            terminal.sendText(`${pythonCommand} ${final_args.join(" ")}`, true);
-          }
+          await this.startTerminalRepl(folder);
         },
       ),
       vscode.commands.registerCommand("robotcode.disableRoboCop", async () => {
@@ -569,6 +521,68 @@ export class LanguageToolsManager {
 
   dispose(): void {
     this._disposables.dispose();
+  }
+
+  // Starts the REPL as the terminal's own process, with the interpreter RobotCode uses for the folder and the settings
+  // runs get. The terminal is created hidden and shown at once: the Python extensions activate every visible terminal
+  // that opens by typing a command into it, which would end up as input of the REPL.
+  private async startTerminalRepl(folder: vscode.WorkspaceFolder): Promise<void> {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    if (this.languageClientsManager.isDisabledForFolder(folder)) {
+      void vscode.window.showErrorMessage(
+        config.get<boolean>("disableExtension")
+          ? `RobotCode is switched off for the workspace folder '${folder.name}' by the setting robotcode.disableExtension.`
+          : `RobotCode is switched off for the workspace folder '${folder.name}' for this session; RobotCode: Restart Language Servers switches it on again.`,
+      );
+      return;
+    }
+
+    // a known problem may be solved by now, for example by an install that the polling has not seen yet
+    const usable =
+      this.languageClientsManager.getRobotEnvironmentState(folder).state === "unusable"
+        ? await this.languageClientsManager.checkRobotEnvironmentAgain(folder)
+        : await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder);
+    const state = this.languageClientsManager.getRobotEnvironmentState(folder);
+    if (!usable || state.executable === undefined) {
+      void vscode.window.showErrorMessage(
+        `Cannot start the Robot REPL for '${folder.name}': ${describeRobotEnvironmentProblem(state)}.`,
+      );
+      return;
+    }
+
+    const shellArgs = [
+      "-u",
+      "-X",
+      "utf8",
+      this.pythonManager.robotCodeMain,
+      ...config.get<string[]>("extraArgs", []),
+      ...config.get<string[]>("profiles", []).flatMap((profile) => ["-p", profile]),
+      "repl",
+      ...config.get<string[]>("robot.pythonPath", []).flatMap((entry) => ["-P", entry]),
+      ...config.get<string[]>("robot.variableFiles", []).flatMap((file) => ["-V", file]),
+      ...Object.entries(config.get<{ [key: string]: unknown }>("robot.variables", {})).flatMap(([name, value]) => [
+        "-v",
+        `${name}:${String(value)}`,
+      ]),
+    ];
+    const env = Object.fromEntries(
+      Object.entries(config.get<{ [key: string]: unknown }>("robot.env", {})).map(([name, value]) => [
+        name,
+        value === null ? null : String(value),
+      ]),
+    );
+
+    const terminal = vscode.window.createTerminal({
+      name: `Robot REPL${vscode.workspace.workspaceFolders?.length === 1 ? "" : ` (${folder.name})`}`,
+      shellPath: state.executable,
+      shellArgs,
+      cwd: folder.uri,
+      env,
+      iconPath: new vscode.ThemeIcon("robotcode-robot"),
+      hideFromUser: true,
+      isTransient: true,
+    });
+    terminal.show();
   }
 
   async updateItems(editor?: vscode.TextEditor): Promise<void> {

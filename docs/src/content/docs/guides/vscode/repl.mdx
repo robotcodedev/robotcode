@@ -11,14 +11,14 @@ import ThemeVideo from "../../../../components/ThemeVideo.astro";
 
 RobotCode's REPL runs Robot Framework statements one by one: import a library, call a keyword and see its result at once, without writing a test. It is a good place to try out a library or to find the right arguments for a keyword.
 
-**RobotCode: Start Terminal REPL**, also in the RobotCode menu (**RobotCode: Show Tool Menu**), opens a terminal named "Robot REPL" in the workspace folder of the active file and starts `robotcode repl` there, with the Python environment that the Python extension activates in the terminal and with the [configuration profiles](/guides/vscode/configuration/#configuration-profiles) you selected:
+**RobotCode: Start Terminal REPL**, also in the RobotCode menu (**RobotCode: Show Tool Menu**), opens a terminal named "Robot REPL" in the workspace folder of the active file and starts the REPL in it. The REPL runs in the [Python environment](/guides/vscode/configuration/#the-python-environment) that RobotCode uses for the folder, the same as the language server, with the [configuration profiles](/guides/vscode/configuration/#configuration-profiles) you selected and with the settings that runs use, such as [`robotcode.robot.variables`](/reference/vscode-settings/#robotcode.robot.variables) and [`robotcode.robot.pythonPath`](/reference/vscode-settings/#robotcode.robot.pythonPath):
 
 <ThemeImage
   name="repl-terminal"
   alt="The terminal Robot REPL: robotcode repl at the prompt robotcode-demo $, the banner RobotCode REPL 2.7.0 (Robot Framework 7.5, Python 3.13.12 on linux) with its hint to type .help for commands and .exit to quit, the inputs Import Library ShopLibrary and ${price}= Price Of coffee, the output [ INFO ] ${price} = 4.5, and the next >>> prompt."
 />
 
-Type statements as you would write them in a test, with at least two spaces between the keyword and its arguments. In a workspace with several folders, the terminal carries the folder's name.
+Type statements as you would write them in a test, with at least two spaces between the keyword and its arguments. In a workspace with several folders, the terminal carries the folder's name. `.exit` ends the REPL and closes the terminal; VS Code does not restore it after a restart. If the folder's Python environment cannot run the REPL, for example because Robot Framework is missing in it, an error message names the problem and no terminal opens.
 
 <ThemeVideo
   name="repl-start"
