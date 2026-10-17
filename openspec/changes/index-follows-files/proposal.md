@@ -9,6 +9,7 @@ Find References, Rename, the references code lens and the hints on unused keywor
   - Creating any file empties the index of all closed files for good (294 fell to 21 and stayed).
   - The references of a deleted file stay (all 47 of `hover.robot`).
   - An analysis that ends after a document was closed puts the document back. This is the cause of the flaky `test_references.py` runs that show extra references from the temporary files of `test_import_navigation.py`.
+  - A Robot Framework file created outside the editor, for example by a branch switch, is not analyzed until it is opened or the server restarts. Its references are missing.
 - **Changes on disk go unnoticed:** the server learns about them only through the client's file events, which not every client sends and which can get lost.
 - **The analysis cache keeps the entries of deleted files.**
 
@@ -17,11 +18,13 @@ Find References, Rename, the references code lens and the hints on unused keywor
 - **Index follows the files.** The index holds, for every file, the references of the latest analysis of that file:
   - When a file's analysis becomes invalid, its references stay until the new analysis replaces them. The server already does this when a file itself changes in the editor.
   - Only files the server still knows count. Deleted files, and analyses that end after a file was closed, leave nothing behind.
-- **Created files:** a created file invalidates only the analyses of files whose imports failed, and these files are analyzed again. Today it invalidates every analysis.
+- **Created files:**
+  - A created Robot Framework file that the workspace includes is analyzed like the files found at startup.
+  - A created file invalidates only the analyses of files whose imports failed, and these files are analyzed again. Today it invalidates every analysis.
 - **Periodic check:** the language server checks the workspace files periodically, also when the client sends file events. It finds:
   - created, changed and deleted Robot Framework files;
   - changed library and variable files;
-  - imports that failed before and resolve now.
+  - imports that failed because their file or module was missing, once it is there.
 
   The interval is a new setting in VS Code and IntelliJ, 5 minutes by default.
 - **Deleted while open:** a document whose file was deleted while it was open in the editor is dropped when the editor closes it.
@@ -44,6 +47,7 @@ Not in this change: dropping the result cache of Find References, what Rename do
 
 ## Impact
 
+- **`packages/core`:** `ignore_spec.py`: whether the startup rules include a single path.
 - **`packages/robot`:**
   - `project_index.py`: which files count in a lookup;
   - `document_cache_helper.py`: no removal from the index when an analysis becomes invalid;
@@ -53,11 +57,16 @@ Not in this change: dropping the result cache of Find References, what Rename do
 - **`packages/language_server`:**
   - the workspace diagnostics loop and the handler from `9a8bb97c`;
   - the handling of file events and of closing a document;
+  - opening created Robot Framework files (`robot_workspace.py`);
   - the periodic check;
   - the new setting in `AnalysisConfig`.
 - **`packages/analyze`:** `robotcode analyze code` cleans up the cache after a run.
-- **`vscode-client`:** the new setting in `package.json`; the generated VS Code settings reference is regenerated.
+- **VS Code extension:** the new setting in the root `package.json`.
 - **`intellij-client`:** the Analysis settings page, the settings model and its texts.
+- **Docs:**
+  - the regenerated VS Code settings reference;
+  - the cache cleanup in `guides/analyzing-code.md`;
+  - the new setting in the PyCharm configuration guide.
 - **Tests:**
   - language server tests with their own sessions for the index, file changes and the periodic check;
   - unit tests for the index and the cache;

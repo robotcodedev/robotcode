@@ -13,8 +13,13 @@ See proposal.md for the motivation and the specs for the required behavior. The 
   - Closing a document for good (`close_document(real_close=True)`) clears its cache and touches the index not at all.
   - The cache is a snapshot of the document. It is invalidated by the document and does not listen to the documents manager.
 - **A created file** fires `imports_changed` in the imports manager. `Namespace._on_imports_changed` then invalidates every namespace, and nothing builds the closed ones again.
+  - The created file itself does not become a document. The documents part only fires `did_create_uri`, `workspace/didCreateFiles` has no listener, and the server loads the workspace files only at startup.
+  - A document opened later is not analyzed by the workspace diagnostics loop until it is marked, since its version did not change. The startup marks every document it loaded.
+- **Failed imports:**
+  - An import of a missing resource file, or of a library or variable file by path, raises before the imports manager creates an entry for it. `_dispatch_import` reports the error.
+  - A library or variables module that cannot be found or loaded comes back as documentation with `errors`. Its entry in the imports manager keeps it, and `_report_entry_errors` reports the errors.
 - **File events:**
-  - `workspace/didChangeWatchedFiles` reaches the handlers registered through `add_file_watchers`: the documents part, the references part and the library and variable entries of the imports manager.
+  - `workspace/didChangeWatchedFiles` reaches the handlers registered through `add_file_watchers`: the documents part, the references part and the library, resource and variable entries of the imports manager.
   - The handlers are registered in any case. Only the registration of the patterns with the client depends on its support for dynamic registration. Without that support no events arrive.
 - **Startup:** the language server collects the workspace files with `iter_files`, the ignore files and the exclude patterns (`robot_workspace.py`). `robotcode analyze code` collects them in the same way.
 - **The analysis cache** (`data_cache.py`) is one SQLite database with a table per section.
@@ -29,6 +34,7 @@ See proposal.md for the motivation and the specs for the required behavior. The 
 
 - The index holds the references of the latest analysis of every file the server knows, without gaps while analyses are renewed, and without files that are gone.
 - One way of handling file changes, fed by the client's events and by the server's own periodic check.
+- A Robot Framework file created in the workspace is analyzed like the files found at startup.
 - The analysis cache loses the entries of deleted Robot Framework files.
 
 **Non-Goals:**
@@ -37,6 +43,9 @@ See proposal.md for the motivation and the specs for the required behavior. The 
 - Watching files in the server itself, with inotify, FSEvents or a polling library.
 - Removing cache entries of deleted library or variable files. They are keyed by their import and are checked against the files when they are used.
 - Detecting a created file that shadows an import that already resolves, such as a resource file of the same name earlier in the search path.
+- Retrying imports whose file or module is found but fails to load, for example because a package it needs is missing. They load again when one of their files changes or the server restarts.
+- Checking documents outside the workspace folders, such as resource files imported from elsewhere. Their changes reach the server only through the client's file events, as today.
+- Following workspace folders that are added or removed while the server runs. The check covers the folders the server started with, as the loading of the workspace does.
 
 ## Decisions
 
@@ -52,6 +61,8 @@ To avoid converting a path for every location, the index keeps the URI-to-source
 
 This one rule covers every way a file can go: a deletion, a document closed for good, and an analysis that ends after the document was closed. That last case is the flaky `test_references.py`. It needs no ordering between closing and indexing.
 
+`robotcode analyze code` uses the same index. It keeps every document open during its run, so its results do not change.
+
 - *Alternative: listen to the documents manager and remove a file's entries on `did_close`.* Rejected: the document cache is a snapshot that the documents themselves invalidate, and a listener still leaves the race with an analysis that ends after the close.
 - *Alternative: check after `update_file` and remove explicitly on deletion.* Rejected: two mechanisms whose order has to be right, for the same result.
 
@@ -61,12 +72,26 @@ This one rule covers every way a file can go: a deletion, a document closed for 
 
 - *Alternative: keep the removal.* Rejected: this is the gap that makes Find References miss files while they are analyzed again (spec: References stay while an analysis is renewed).
 
-### D3: A created file invalidates only namespaces with failed imports
+### D3: Created files
 
-The import resolver records an import when resolving it fails, in the `except` branch of `_dispatch_import` that already reports the error. The namespace exposes whether it has such imports, and `_on_imports_changed` invalidates only then.
+**The created file:** when the language server handles a CREATED event for a `.robot` or `.resource` file, the robot workspace part opens the file as a document and marks it for the workspace diagnostics loop, if the startup rules include it:
+
+- the file lies in a workspace folder and is not hidden;
+- neither the exclude patterns nor a `.robotignore` or `.gitignore` on its way exclude it.
+
+A new function in `ignore_spec.py` tells this for one path, the way `iter_files` decides it while it walks the folders. The files that the periodic check reports as created pass these rules already, since the check collects them with `iter_files` (D4).
+
+**The other files:** the import resolver records an import as failed in two cases:
+
+- resolving it raises, in the `except` branch of `_dispatch_import` that already reports the error;
+- the library or variables documentation it gets has `errors`.
+
+It records the import with the folder and the variables it was resolved with, so that the periodic check can look it up again (D4). The namespace exposes these imports, and `_on_imports_changed` invalidates a namespace only when it has any.
 
 The robot diagnostics part marks the document of an invalidated namespace for the next workspace diagnostics pass, closed documents too. The loop then renews its analysis, which refreshes its index entries and diagnostics. The handlers for changed libraries, resources and variables already do this for the files that import them; marking twice changes nothing.
 
+- *Alternative: let only the periodic check open created files.* Rejected: a created file would wait up to one interval, also when the client reports it.
+- *Alternative: run the check of the folder soon after a CREATED event of the client.* Rejected: the client and the check would report the same file, and each report invalidates the namespaces with failed imports.
 - *Alternative: invalidate every namespace and mark every document.* Rejected: every created file, and every batch of a branch switch, would analyze the whole workspace again.
 - *Alternative: compare the created file's name with the failed import names.* Rejected: import names can contain variables and are resolved through search paths.
 
@@ -74,15 +99,17 @@ The robot diagnostics part marks the document of an invalidated namespace for th
 
 The language server runs one check per workspace folder in a background timer. The interval comes from the setting `robotcode.analysis.fileCheckInterval` of that folder, and a configuration change reschedules the timer. The check always runs; there is no setting to switch it off.
 
-- **Robot Framework files:** the check collects the files with the same `iter_files`, ignore files and exclude patterns as the startup and compares them with the documents manager:
-  - a file without a document counts as created;
-  - a document that is not open in the editor and whose file is gone counts as deleted;
-  - such a document whose size or modification time differs from its snapshot (`disk_info`) counts as changed.
+- **Robot Framework files:** the check collects the files with the same `iter_files`, ignore files and exclude patterns as the startup, and compares them with the documents manager:
+  - a collected file without a document counts as created;
+  - a document of the folder that is not open in the editor counts as deleted when its file no longer exists;
+  - such a document counts as changed when the size or modification time of its file differs from its snapshot (`disk_info`).
 
-  Documents that are open in the editor are left to the editor.
+  The documents include those of excluded files that are loaded because something imports them. Documents that are open in the editor are left to the editor.
 - **Library and variable files:** the check compares the files recorded for the loaded libraries and variable files (`file_infos` in their metadata) and reports the ones that differ as changed.
-- **Failed library and variable imports:** the check tries to resolve them again and invalidates the entries that resolve now. It does not scan the folders of the Python path, which can be large.
-- **Delivery:** the changes go as one batch of file events into `workspace.did_change_watched_files`, the same path as the client's events. Every existing handler reacts as it does today.
+- **Failed imports:** for every document of the folder whose namespace has failed imports (D3), the check looks up the file or module of each failed import again, without loading anything.
+  - When the file or module is found now, the check invalidates the import's entry in the imports manager, if there is one, and the namespace. The namespace's document is then analyzed again (D3).
+  - It does not scan the folders of the Python path, which can be large.
+- **Delivery:** the created, changed and deleted files go as one batch of file events into `workspace.did_change_watched_files`, the same path as the client's events. Every existing handler reacts as it does today.
 
 - *Alternative: rely on the client's events (today).* Rejected: some clients send none, and events can be lost.
 - *Alternative: watch files in the server.* Rejected: a new dependency and platform differences. A check every few minutes is cheap enough.
@@ -106,35 +133,40 @@ The handler of `namespace_initialized` marks only documents open in the editor. 
 
 ### D8: The workspace diagnostics loop skips documents that are gone
 
-Both phases of the loop skip documents that the documents manager no longer knows. This saves the analysis and keeps the server from publishing diagnostics for deleted files. D1 already keeps such documents out of the index.
+Both phases of the loop skip a document that the documents manager no longer holds for its URI. A file that was closed for good and opened again has a new document, so the old one is skipped as well. This saves the analysis and keeps the server from publishing diagnostics for deleted files. D1 already keeps such documents out of the index.
 
 ### D9: The setting
 
 - **Language server:** `AnalysisConfig` gets `file_check_interval` in minutes, 5 by default.
-- **VS Code:** `package.json` declares `robotcode.analysis.fileCheckInterval` as an integer from 1 to 1440 with the default 5.
+- **VS Code:** `package.json` declares `robotcode.analysis.fileCheckInterval` as an integer from 1 to 1440 with the default 5. Its scope is `resource`, like the other analysis settings, so that every workspace folder can have its own interval.
 - **IntelliJ:** the Analysis page gets the setting with its validation, labelled after the VS Code title.
-- **Docs:** the VS Code settings reference is regenerated with `hatch run create-vscode-settings-docs`.
+- **Docs:**
+  - the VS Code settings reference is regenerated with `hatch run create-vscode-settings-docs`;
+  - the PyCharm configuration guide lists the setting with the other settings of the Analysis page.
 
 ### D10: Tests
 
 - **Unit tests:**
   - the index check and its cleanup;
   - removing single cache entries;
-  - recording failed imports;
-  - `_on_imports_changed` with and without failed imports.
-- **Language server tests** with their own sessions on `tmp_path` projects, as `test_namespace_cache_restore.py` does:
+  - recording failed imports, both raised ones and ones reported through `errors`;
+  - `_on_imports_changed` with and without failed imports;
+  - the new function in `ignore_spec.py`, compared with `iter_files` on a tree with ignore files, exclude patterns and hidden folders.
+- **Language server tests** with their own sessions on `tmp_path` projects, started the way `_start` in `test_namespace_cache_restart.py` does it. Its client capabilities register no file watchers, which the tests of the periodic check need:
   - a resource change without a gap;
   - a deleted file;
   - a document analyzed after it was closed for good;
-  - an unrelated and a missing created file;
+  - a created suite, a created suite in an excluded folder, and an unrelated and a missing created file;
   - a document deleted while open;
-  - the periodic check with a client that registers no file watchers. The test calls the check directly instead of waiting for the timer.
+  - the periodic check, also on an unchanged workspace. The test calls the check directly instead of waiting for the timer.
 - **Analyzer:** tests for the cleanup after a run, also on a subset of the paths.
-- **Test fixture:** `open_temp_document` drops its manual `remove_file`, so D1 is exercised by the whole language server suite.
+- **Test fixtures:** `open_temp_document` in `conftest.py` and `_close_project` in `test_namespace_cache_restore.py` drop their manual `remove_file`, so D1 is exercised by the whole language server suite.
 
 ## Risks / Trade-offs
 
 - **[A lookup checks every file in its result]** → One documents manager lookup per file, not per location, and files that fail are removed once. The cost is measured on the synthetic 990-file project.
+- **[A lookup asks the documents manager under the index lock]** → The documents manager holds its own lock only for its lookups and while it notifies `didOpen`. The only listener of `didOpen` marks the document for diagnostics, so nothing waits there for the index lock.
+- **[The function for one path and `iter_files` disagree]** → A unit test runs both on the same tree with ignore files, exclude patterns and hidden folders.
 - **[A file changed on disk shows its old positions until it is analyzed again]** → Accepted, as for changes in the editor today. With file events this lasts seconds, without them up to one check interval.
 - **[The scan takes long in very large workspaces]** → It runs in the background, delivers one batch per interval, and the interval is configurable. Its duration is measured on the synthetic project.
 - **[The client and the check report the same change]** → The check reports only files whose size or modification time differs from the document's snapshot. After the client's event the document was read again, so the two match.
