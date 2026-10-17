@@ -24,12 +24,20 @@ See proposal.md for the motivation. The state that shapes the approach:
 - **`intellij-ci-tests`**, which this change builds on:
   - `package` will need the new job `test-jetbrains`, with the plugin tests on Linux, Windows and macOS;
   - `code-quality` will run the plugin verifier as a gate.
+- **Versions of builds on `main`:** every build without a tag gets `X.Y.Z-dev.N`, the next version and the number of first-parent commits since the last tag. The release commit itself, pushed to `main` together with its tag, builds the release version, because no commit follows the tag.
+- **The channel `dev` on 2026-10-17** (public API `https://plugins.jetbrains.com/api/plugins/26216/updates?channel=dev`): 1.3.0-dev.4 and 1.3.0-dev.5 from June 2025, and the releases 1.3.0 to 2.7.0 except 2.2.0. The maintainer uploaded each release by hand into the default channel and seconds later into `dev`.
+- **How other plugins publish dev builds without a tag:**
+  - IdeaVim (JetBrains): a TeamCity build "Publish Dev Build" runs daily at 02:00 on `master`. The version is the next minor version with `-dev.<commits since the last release>`, the channel `Dev`.
+  - LSP4IJ (Red Hat): the GitHub workflow "Publish Nightly Build" runs daily at 01:00 and by hand. It skips the upload when `HEAD` hasn't changed since the last night (an `actions/cache` entry keyed on the commit), builds the plugin again with a timestamp version (`0.21.1-<date>-<time>`) and publishes it to `nightly` with `publishPlugin`, without running the tests.
+  - The IntelliJ Platform Plugin Template publishes only from GitHub releases, that is from tags.
+- **How the IDE compares versions** (`VersionComparatorUtil` in intellij-community): it splits a version into numbers and words. `dev` is a word it doesn't know, which ranks above the end of a version, so `2.8.0-dev.466` counts as newer than `2.8.0`. `alpha`, `beta`, `rc`, `eap`, `pre`, `preview` and `snapshot` rank below the end, so with them the release would count as newer.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
 - The plugin file that was tested, verified and attached to the GitHub release is the file the Marketplace gets.
+- Between releases, the channel `dev` gets the latest tested and verified build of `main` once a day, without a tag.
 - A problem with the Marketplace can't keep the VS Code extension and the Python packages from being published.
 - A failed Marketplace upload shows up as a failed job.
 
@@ -66,6 +74,25 @@ Alternatives:
 - The upload first. A Marketplace outage would then hold back the other releases.
 - A job of its own, which could be rerun alone. It would need its own checkout, Python environment and the version logic of `publish.py`.
 
+### Dev builds: every night the latest green build of main
+
+The maintainer decided on 2026-10-17 that the channel `dev` gets dev builds without a tag, and that releases go to the default channel only.
+
+- **Workflow:** `.github/workflows/publish-dev.yml` runs on a schedule at 02:23 UTC and by `workflow_dispatch`. GitHub delays scheduled runs at the start of an hour under load, so the minute is not 0. It needs `actions: read` for the runs and artifacts of the build workflow and `contents: read`, and a `concurrency` group keeps a manual start and the schedule from uploading at the same time.
+- **`scripts/publish_dev.py`** (`hatch run build:publish-dev`):
+  - `gh run list` finds the most recent run of `build-test-package-publish.yml` for a push to `main` that succeeded; `gh run download` puts its artifact `intellij-package` into `dist/`.
+  - The version comes from the file name. A version without a pre-release label is skipped: it comes from the release commit, and its tag publishes it.
+  - The version is also skipped when the Marketplace's public API lists it in the channel `dev`.
+  - Otherwise `publish_jetbrains_plugin()` uploads it, which sends a version with a pre-release label to `dev`.
+- **Version:** the build's `X.Y.Z-dev.N` stays, the same version as the VS Code extension and the Python packages of that build, and the same scheme as IdeaVim's dev builds. The IDE counts it as newer than the release with the same `X.Y.Z`, so a dev user isn't offered 2.8.0 itself, but the first dev build after it. IdeaVim and LSP4IJ have the same property.
+
+Alternatives:
+- An upload from every successful push, in the publish job of the build workflow. It needs fewer parts, but would upload several times a day: on 2026-10-16, 6 pushes to `main`, 3 of them successful.
+- A nightly build of its own, like LSP4IJ's. It would not run the tests, and would not upload the file that the build workflow tested and verified.
+- A schedule in the build workflow. It would run the whole test matrix again every night.
+- LSP4IJ's cache entry for the last commit instead of asking the Marketplace. The Marketplace's list also covers a failed upload, which the next night retries, and versions uploaded by hand.
+- A timestamp version, or a label that the IDE ranks below the release, such as `eap`. The plugin would then carry a different version than the VS Code extension and the Python packages of the same build.
+
 ### No signing
 
 The plugin is uploaded unsigned, as the maintainer decided; the `signing` block in `build.gradle.kts` stays as it is.
@@ -74,7 +101,7 @@ Alternative: signing with a certificate, which needs three more secrets. It can 
 
 ### The gate comes from intellij-ci-tests
 
-This change adds no `needs`. The publish job already needs `code-quality`, which runs the verifier gate, and `package`. After `intellij-ci-tests`, `package` also needs `test-jetbrains`.
+This change adds no `needs`. The publish job already needs `code-quality`, which runs the verifier gate, and `package`. After `intellij-ci-tests`, `package` also needs `test-jetbrains`. The nightly upload takes the plugin only from a run that succeeded, so all jobs of that run passed, the plugin tests and the verifier gate among them.
 
 ## Risks / Trade-offs
 
@@ -83,12 +110,17 @@ This change adds no `needs`. The publish job already needs `code-quality`, which
 - [Two channel rules] → The mapping in `build.gradle.kts` only applies to a manual `publishPlugin`. For RobotCode's `-dev.N` prereleases both rules give `dev`.
 - [Unsigned plugin] → According to JetBrains, the IDE shows a warning on installation. That is the state of the manual uploads so far, and signing can be added later in the package job.
 - [The Marketplace processes an update after the upload] → The job reports the upload. When the version becomes available depends on the Marketplace's processing, as for manual uploads.
+- [The Marketplace's list doesn't show an upload yet, and a manual start uploads the same version again] → The Marketplace rejects the second upload and the run fails visibly; the first upload stays.
+- [No run on `main` succeeds for a while] → The nightly upload finds the last successful build already in `dev` and uploads nothing. After 90 days the artifact expires; the download then fails and the run fails visibly.
+- [GitHub disables the schedules of a public repository after 60 days without activity] → Not a concern while RobotCode is developed; a manual start still works.
+- [The channel `dev` holds the releases from the manual uploads] → They don't affect the uploads. The maintainer removes them by hand if the channel should hold dev builds only.
 - Side finding, not part of this change: `run()` in `publish.py` prints failed uploads of `vsce`, `ovsx` and `hatch publish` without failing the job.
 
 ## Migration Plan
 
 1. Implement `intellij-ci-tests` first.
 2. Before the first tag after this change, check that `JETBRAINS_MARKETPLACE_TOKEN` holds a valid permanent token.
-3. From then on, don't upload by hand.
+3. After the push, start "publish dev build" by hand once; it publishes the latest successful build of `main` to `dev`.
+4. From then on, don't upload by hand.
 
-Rollback: remove the upload from `publish.py`.
+Rollback: remove the upload from `publish.py`, and the workflow `publish-dev.yml`.

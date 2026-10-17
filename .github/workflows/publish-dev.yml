@@ -1,0 +1,43 @@
+name: publish dev build
+
+on:
+  # not at the full hour, when GitHub delays scheduled runs under load
+  schedule:
+    - cron: "23 2 * * *"
+
+  workflow_dispatch:
+
+# reads the runs and artifacts of the build workflow
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: publish-dev
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  publish-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: setup python environment
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Hatch
+        uses: pypa/hatch@install
+
+      - name: publish the latest successful build of main to the channel dev
+        run: hatch -q run build:publish-dev
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines what the CI publishes when a version of RobotCode is tagged, where it publishes it and into which channel, so that every release and prerelease reaches its users without a manual upload.
+Defines what the CI publishes when a version of RobotCode is tagged and as dev builds between releases, where it publishes it and into which channel, so that every release, prerelease and dev build reaches its users without a manual upload.
 
 ## ADDED Requirements
 
@@ -34,18 +34,37 @@ The CI SHALL publish a version without a pre-release label to the Marketplace's 
 - **WHEN** version 2.9.0-alpha.1 is published
 - **THEN** it is uploaded to the channel `dev`, like any other prerelease
 
-### Requirement: Builds without a version tag publish nothing to the Marketplace
+### Requirement: Dev builds of main are published to the channel dev every night
 
-Pushes to `main`, pull requests and manual runs without a version tag SHALL NOT upload the plugin to the Marketplace, although the versions of these builds carry a pre-release label too.
+Every night, and when the maintainer starts it by hand, the CI SHALL upload the plugin of the most recent successful CI run on `main` to the channel `dev`, unless the channel has that version already. It SHALL NOT upload a version without a pre-release label this way.
+
+#### Scenario: New dev build
+
+- **WHEN** the most recent successful run on `main` built version 2.8.0-dev.470, and the channel `dev` doesn't have it
+- **THEN** the nightly upload puts 2.8.0-dev.470 into the channel `dev`
+
+#### Scenario: Nothing new since the last upload
+
+- **WHEN** the channel `dev` already has the version of the most recent successful run on `main`
+- **THEN** the nightly upload uploads nothing and succeeds
+
+#### Scenario: Release commit on main
+
+- **WHEN** the most recent successful run on `main` built the release version 2.8.0 from the release commit
+- **THEN** the nightly upload uploads nothing, and the version reaches the Marketplace through its tag
+
+### Requirement: Pushes and pull requests publish nothing by themselves
+
+The runs for pushes to `main`, for pull requests and for manual starts of the build workflow SHALL NOT upload the plugin to the Marketplace unless they run for a version tag. A dev build SHALL reach the Marketplace only through the nightly upload.
 
 #### Scenario: Push to main
 
 - **WHEN** a push to `main` builds the plugin as version 2.8.0-dev.466
-- **THEN** the run uploads nothing to the Marketplace, and the channel `dev` keeps its previous version
+- **THEN** the run itself uploads nothing to the Marketplace, and the next nightly upload publishes 2.8.0-dev.466 if the run succeeded and no newer successful run exists
 
 ### Requirement: Only a tested and verified plugin is published
 
-The CI SHALL upload the plugin to the Marketplace only after the plugin's unit tests and the plugin verifier's checks have passed in the same run.
+The CI SHALL upload a plugin file to the Marketplace only after the plugin's unit tests and the plugin verifier's checks have passed in the run that built that file.
 
 #### Scenario: Failing plugin test on a tag
 
@@ -57,9 +76,14 @@ The CI SHALL upload the plugin to the Marketplace only after the plugin's unit t
 - **WHEN** the plugin verifier reports a problem at a failure level the build configures in the run for a version tag
 - **THEN** the run uploads nothing to the Marketplace
 
+#### Scenario: Failing plugin test on main
+
+- **WHEN** one of the plugin's unit tests fails in the latest run on `main`
+- **THEN** the nightly upload doesn't take the plugin of that run, but at most the plugin of the most recent successful run
+
 ### Requirement: A rejected upload fails the run
 
-When the Marketplace rejects the upload, for example because the token is invalid or the version already exists, the CI SHALL fail the publish job and SHALL show the Marketplace's response in the job's log.
+When the Marketplace rejects an upload, for example because the token is invalid or the version already exists, the CI SHALL fail the job that uploads and SHALL show the Marketplace's response in the job's log.
 
 #### Scenario: Invalid token
 
