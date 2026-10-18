@@ -82,7 +82,11 @@ def run_jsonrpc_server(
 ) -> None:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    run_jsonrpc_server_async(mode, port, bind, pipe_name, interpreter)
+    try:
+        run_jsonrpc_server_async(mode, port, bind, pipe_name, interpreter)
+    finally:
+        # closed here, not by the garbage collector at exit, which can fail with a traceback on Python 3.11
+        loop.close()
 
 
 @wrappable
