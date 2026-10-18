@@ -297,7 +297,8 @@ class BaseOptions(ValidateMixin):
         type_hints = get_type_hints(type(self))
         base_field_names = [f.name for f in dataclasses.fields(self)]
 
-        for f in dataclasses.fields(config):
+        # A setting replaces the value before it and its `extend-` setting adds to it, so the settings come first.
+        for f in sorted(dataclasses.fields(config), key=lambda f: f.name.startswith(EXTEND_PREFIX)):
             if f.name.startswith(EXTEND_PREFIX):
                 if f.name not in base_field_names:
                     continue
@@ -311,7 +312,13 @@ class BaseOptions(ValidateMixin):
                 if new is None:
                     continue
 
-                old_field_name = f.name if combine_extends else f.name[EXTEND_PREFIX_LEN:]
+                # In a profile from `extend-profiles`, an `extend-` setting adds to the setting of the profile it
+                # extends; only if that profile has none does it stay an `extend-` setting of the profile.
+                old_field_name = (
+                    f.name
+                    if combine_extends and getattr(self, f.name[EXTEND_PREFIX_LEN:], None) is None
+                    else f.name[EXTEND_PREFIX_LEN:]
+                )
 
                 old = getattr(self, old_field_name)
                 if old is None:
@@ -342,9 +349,6 @@ class BaseOptions(ValidateMixin):
             if combine_extends:
                 if EXTEND_PREFIX + f.name in base_field_names and getattr(config, f.name, None) is not None:
                     setattr(self, EXTEND_PREFIX + f.name, None)
-
-            if getattr(config, f"{EXTEND_PREFIX}_{f.name}", None) is not None and not combine_extends:
-                continue
 
             new = self._verified_value(f.name, getattr(config, f.name), type_hints[f.name], config)
             if new is not None:
@@ -3202,7 +3206,8 @@ class RobotConfig(RobotExtendBaseProfile):
         description="""\
             Adds profiles to those of the earlier configuration files, for
             example in `.robot.toml` to those of `robot.toml`. For a profile
-            that exists already, it changes the settings given here.
+            that exists already, a setting given here replaces the one of the
+            profile, and an `extend-` setting adds to it.
 
             Examples:
             ```toml
@@ -3392,7 +3397,8 @@ class RobotConfig(RobotExtendBaseProfile):
             if profile.detached:
                 result = RobotBaseProfile()
 
-            for f in dataclasses.fields(profile):
+            # A setting replaces the value before it and its `extend-` setting adds to it, so the settings come first.
+            for f in sorted(dataclasses.fields(profile), key=lambda f: f.name.startswith(EXTEND_PREFIX)):
                 if f.name.startswith(EXTEND_PREFIX):
                     new = self._verified_value(
                         f.name,
@@ -3422,9 +3428,6 @@ class RobotConfig(RobotExtendBaseProfile):
                     continue
 
                 if f.name not in base_field_names:
-                    continue
-
-                if getattr(profile, f"{EXTEND_PREFIX}_{f.name}", None) is not None:
                     continue
 
                 new = self._verified_value(

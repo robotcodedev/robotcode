@@ -1,8 +1,10 @@
 import os
+from pathlib import Path
 
 import pytest
 
-from robotcode.robot.config.loader import load_robot_config_from_robot_toml_str
+from robotcode.robot.config.loader import load_robot_config_from_path, load_robot_config_from_robot_toml_str
+from robotcode.robot.config.model import RobotConfig
 
 
 def test_can_parse_profiles() -> None:
@@ -390,3 +392,110 @@ def test_rebot_options_are_read_from_the_rebot_section() -> None:
     assert config.rebot is not None
     assert config.rebot.console == "quiet"
     assert config.rebot.quiet is True
+
+
+def test_profile_with_a_setting_and_its_extend_setting_uses_both() -> None:
+    data = """\
+        [variables]
+        BROWSER = "chrome"
+
+        [profiles.dev]
+        variables = { A = "1" }
+        extend-variables = { B = "2" }
+    """
+    config = load_robot_config_from_robot_toml_str(data)
+
+    assert config.combine_profiles("dev").variables == {"A": "1", "B": "2"}
+
+
+def load_robot_toml_and_local_robot_toml(tmp_path: Path, robot_toml: str, local_robot_toml: str) -> RobotConfig:
+    (tmp_path / "robot.toml").write_text(robot_toml, encoding="utf-8")
+    (tmp_path / ".robot.toml").write_text(local_robot_toml, encoding="utf-8")
+    return load_robot_config_from_path(tmp_path / "robot.toml", tmp_path / ".robot.toml")
+
+
+def test_a_file_with_a_setting_and_its_extend_setting_uses_both(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [variables]
+        BROWSER = "chrome"
+        """,
+        """\
+        variables = { A = "1" }
+        extend-variables = { B = "2" }
+        """,
+    )
+
+    assert config.combine_profiles().variables == {"A": "1", "B": "2"}
+
+
+def test_extend_profiles_extends_a_setting_of_the_profile(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [profiles.dev]
+        variables = { A = "1" }
+        """,
+        """\
+        [extend-profiles.dev]
+        extend-variables = { B = "2" }
+        """,
+    )
+
+    assert config.combine_profiles("dev").variables == {"A": "1", "B": "2"}
+
+
+def test_extend_profiles_extends_the_extend_setting_of_the_profile(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [variables]
+        BROWSER = "chrome"
+
+        [profiles.dev]
+        extend-variables = { A = "1" }
+        """,
+        """\
+        [extend-profiles.dev]
+        extend-variables = { B = "2" }
+        """,
+    )
+
+    assert config.combine_profiles("dev").variables == {"BROWSER": "chrome", "A": "1", "B": "2"}
+
+
+def test_extend_profiles_replaces_a_setting_given_without_extend(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [variables]
+        BROWSER = "chrome"
+
+        [profiles.dev]
+        extend-variables = { A = "1" }
+        """,
+        """\
+        [extend-profiles.dev]
+        variables = { B = "2" }
+        """,
+    )
+
+    assert config.combine_profiles("dev").variables == {"B": "2"}
+
+
+def test_extend_profiles_adds_a_new_profile(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [profiles.dev]
+        description = "Dev"
+        """,
+        """\
+        [extend-profiles.local]
+        description = "Local"
+        """,
+    )
+
+    assert config.profiles is not None
+    assert sorted(config.profiles) == ["dev", "local"]

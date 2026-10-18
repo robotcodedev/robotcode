@@ -3965,11 +3965,11 @@
             }
           ],
           "default": null,
-          "description": "Adds profiles to those of the earlier configuration files, for\nexample in `.robot.toml` to those of `robot.toml`. For a profile\nthat exists already, it changes the settings given here.\n\nExamples:\n```toml\n[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }\n```\n",
+          "description": "Adds profiles to those of the earlier configuration files, for\nexample in `.robot.toml` to those of `robot.toml`. For a profile\nthat exists already, a setting given here replaces the one of the\nprofile, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }\n```\n",
           "examples": [
             "[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }"
           ],
-          "markdownDescription": "Adds profiles to those of the earlier configuration files, for\nexample in `.robot.toml` to those of `robot.toml`. For a profile\nthat exists already, it changes the settings given here.\n\nExamples:\n```toml\n[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }\n```\n",
+          "markdownDescription": "Adds profiles to those of the earlier configuration files, for\nexample in `.robot.toml` to those of `robot.toml`. For a profile\nthat exists already, a setting given here replaces the one of the\nprofile, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }\n```\n",
           "title": "Extend Profiles",
           "x-taplo": {
             "links": {

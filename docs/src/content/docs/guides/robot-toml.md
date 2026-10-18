@@ -97,7 +97,7 @@ extend-variables = { BROWSER = "headlesschrome" }
 
 When you select profiles, RobotCode starts with the settings outside of profiles and applies the profiles one after the other:
 
-- **A setting in a profile replaces** the one before it. With `extend-` before its name, it **adds** to a list or a table instead: `extend-variables` in `staging` above changes `BASE_URL` and keeps `BROWSER`, while `variables` would leave only the variables of the profile.
+- **A setting in a profile replaces** the one before it. With `extend-` before its name, it **adds** to a list or a table instead: `extend-variables` in `staging` above changes `BASE_URL` and keeps `BROWSER`, while `variables` would leave only the variables of the profile. A profile with both applies `variables` first and adds `extend-variables` to it.
 - **`inherits`** selects the profiles it names along with this one and applies them before it: selecting `ci` applies `staging`, then `ci`.
 - **`precedence`** sets the order: profiles with a lower precedence apply first. A profile without a precedence counts as 0, and profiles with the same precedence apply in the order in which you selected them.
 - **`detached = true`** starts a profile from scratch: the settings outside of profiles, from all configuration files, and the profiles applied before it do not count.
@@ -169,7 +169,7 @@ BROWSER = "firefox"
 
 With both files, the Python path is `libraries` and `my-libraries`, `BROWSER` is `firefox` and `BASE_URL` stays. With `[variables]` instead of `[extend-variables]` in `.robot.toml`, only `BROWSER` would be left.
 
-This applies to profiles too: `[profiles.local]` in `.robot.toml` replaces all profiles of `robot.toml`. `[extend-profiles.local]` adds the profile `local` instead, or, if `robot.toml` has a profile of that name, changes the settings it gives:
+This applies to profiles too: `[profiles.local]` in `.robot.toml` replaces all profiles of `robot.toml`. `[extend-profiles.local]` adds the profile `local` instead, or, if `robot.toml` has a profile of that name, changes it: a setting replaces the one of the profile, and an `extend-` setting adds to it.
 
 ```toml title=".robot.toml"
 [extend-profiles.local]
@@ -178,7 +178,10 @@ extend-variables = { BASE_URL = "http://localhost:9000" }
 
 [extend-profiles.ci]
 output-dir = "results/my-ci"
+extend-variables = { BROWSER = "firefox" }
 ```
+
+Here `local` is a new profile, and `ci` from the [example above](#profiles) writes its results to `results/my-ci` and runs in `firefox`, with its other settings as before.
 
 ### `pyproject.toml`
 

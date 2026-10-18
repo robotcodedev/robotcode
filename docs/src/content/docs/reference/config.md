@@ -627,7 +627,8 @@ Type: `dict[str, RobotProfile] | None`
 
 Adds profiles to those of the earlier configuration files, for
 example in `.robot.toml` to those of `robot.toml`. For a profile
-that exists already, it changes the settings given here.
+that exists already, a setting given here replaces the one of the
+profile, and an `extend-` setting adds to it.
 
 Examples:
 ```toml
