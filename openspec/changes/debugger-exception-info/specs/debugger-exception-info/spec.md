@@ -27,7 +27,7 @@ The debugger SHALL advertise `supportsExceptionInfoRequest`. While a run is stop
 
 #### Scenario: Failed test
 
-- **WHEN** a run with "Failed Test" stops because the test `Login Works` failed with the message `Login failed`
+- **WHEN** a run with the exception filter `failed_test` stops because the test `Login Works` failed with the message `Login failed`
 - **THEN** `exceptionInfo` answers the exception id `Login Works`, the description `Login failed` and the break mode `always`
 
 #### Scenario: VS Code's exception widget
@@ -61,7 +61,7 @@ The answer to `exceptionInfo` at a failure stop SHALL carry a stack trace in its
 
 #### Scenario: Failed test
 
-- **WHEN** a run with "Failed Test" stops because the test `Failing Test` failed
+- **WHEN** a run with the exception filter `failed_test` stops because the test `Failing Test` failed
 - **THEN** the stack trace has only the line `Fail.Failing Test` with the absolute path of `fail.robot` and the line of the test's name
 
 #### Scenario: Links in VS Code's exception widget
