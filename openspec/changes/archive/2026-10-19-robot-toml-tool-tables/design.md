@@ -62,4 +62,4 @@ Nothing to migrate. Whoever wants a filter, `name` or `log-level` for `rebot` pu
 
 ## Open Questions
 
-- Is the changed set of settings that reach `rebot` and `libdoc` a breaking change (commit footer, changelog)? The maintainer decides; it does not change the specs or the tasks.
+- ~~Is the changed set of settings that reach `rebot` and `libdoc` a breaking change (commit footer, changelog)?~~ Decided 2026-10-19 by the maintainer: not a breaking change.
