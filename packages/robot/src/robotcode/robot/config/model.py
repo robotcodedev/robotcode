@@ -338,7 +338,10 @@ class BaseOptions(ValidateMixin):
                     elif isinstance(old, tuple):
                         setattr(self, old_field_name, (*old, *new))
                     elif isinstance(old, BaseOptions):
-                        old.add_options(new)
+                        # The tables of `rebot`, `libdoc` and `testdoc` keep an `extend-` setting that they don't set
+                        # themselves, because the command adds the table to the settings outside of it. The tables of
+                        # the analysis are read as they are, so there it becomes the setting.
+                        old.add_options(new, isinstance(old, (RebotProfile, LibDocProfile, TestDocProfile)))
                     else:
                         setattr(self, old_field_name, new)
                 continue
@@ -2993,20 +2996,29 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
 
     rebot: Optional[RebotProfile] = field(
         description="""\
-            Options to be passed to _rebot_.
+            Options to be passed to _rebot_. They win over the settings outside
+            of this table. Of those, _rebot_ gets the ones that Robot Framework
+            itself passes from _robot_ to _rebot_ after a run, so not
+            `includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`,
+            `doc`, `metadata`, `set-tag`, `output`, `log-level`,
+            `timestamp-outputs`, `console` and `quiet`; `run-empty-suite`
+            becomes `process-empty-suite`.
             """
     )
 
     libdoc: Optional[LibDocProfile] = field(
         description="""\
-            Options to be passed to _libdoc_.
-        """
+            Options to be passed to _libdoc_. Of the settings outside of this
+            table, _libdoc_ gets only `python-path`, and this table wins over it.
+            """
     )
 
     testdoc: Optional[TestDocProfile] = field(
         description="""\
-            Options to be passed to _testdoc_.
-        """
+            Options to be passed to _testdoc_. They win over the settings outside
+            of this table that _testdoc_ shares with _robot_, such as `name`,
+            `metadata` or `includes`.
+            """
     )
 
     def save(self, path: "os.PathLike[str]") -> None:
@@ -3068,6 +3080,51 @@ class RobotExtendBaseProfile(RobotBaseProfile):
             ```
             """,
         alias="extend-wrapper",
+    )
+
+    extend_rebot: Optional[RebotProfile] = field(
+        description="""\
+            Changes the `[rebot]` options that come before it, from an earlier
+            configuration file or before a profile: a setting given here
+            replaces the one of `[rebot]`, and an `extend-` setting adds to it.
+
+            Examples:
+            ```toml
+            [extend-rebot]
+            report-title = "My run"
+            ```
+            """,
+        alias="extend-rebot",
+    )
+
+    extend_libdoc: Optional[LibDocProfile] = field(
+        description="""\
+            Changes the `[libdoc]` options that come before it, from an earlier
+            configuration file or before a profile: a setting given here
+            replaces the one of `[libdoc]`, and an `extend-` setting adds to it.
+
+            Examples:
+            ```toml
+            [extend-libdoc]
+            theme = "DARK"
+            ```
+            """,
+        alias="extend-libdoc",
+    )
+
+    extend_testdoc: Optional[TestDocProfile] = field(
+        description="""\
+            Changes the `[testdoc]` options that come before it, from an earlier
+            configuration file or before a profile: a setting given here
+            replaces the one of `[testdoc]`, and an `extend-` setting adds to it.
+
+            Examples:
+            ```toml
+            [extend-testdoc]
+            title = "My tests"
+            ```
+            """,
+        alias="extend-testdoc",
     )
 
     extend_paths: Union[str, List[str], None] = field(
@@ -3423,6 +3480,12 @@ class RobotConfig(RobotExtendBaseProfile):
                             setattr(result, f.name[EXTEND_PREFIX_LEN:], [*old, *new])
                         elif isinstance(old, tuple):
                             setattr(result, f.name[EXTEND_PREFIX_LEN:], (*old, *new))
+                        elif isinstance(old, BaseOptions):
+                            # a table such as `[rebot]`, changed on a copy because `old` may be the configuration's own;
+                            # it keeps the `extend-` settings it doesn't set itself, see `add_options`
+                            changed = dataclasses.replace(old)
+                            changed.add_options(new, True)
+                            setattr(result, f.name[EXTEND_PREFIX_LEN:], changed)
                         else:
                             setattr(result, f.name[EXTEND_PREFIX_LEN:], new)
                     continue

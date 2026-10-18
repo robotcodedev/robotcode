@@ -78,7 +78,21 @@ The rules above also apply between the files: a setting in `.robot.toml` replace
 - `[profiles.<name>]` in a later file replaces all profiles of the earlier files.
 - `[extend-profiles.<name>]` adds a profile, or changes the profile of that name: a setting replaces the one of the profile, and an `extend-` setting adds to it.
 
-See [Changing profiles in a later file](/guides/robot-toml/profiles/#changing-profiles-in-a-later-file).
+The tables `[rebot]`, `[libdoc]` and `[testdoc]` follow the same rule: a plain table in a later file replaces the whole table before it, and `[extend-rebot]`, `[extend-libdoc]` or `[extend-testdoc]` change it:
+
+```toml title="robot.toml"
+[rebot]
+merge = true
+```
+
+```toml title=".robot.toml"
+[extend-rebot]
+log-title = "My log"
+```
+
+`robotcode rebot` merges and gets the log title of `.robot.toml`; with `[rebot]` instead of `[extend-rebot]` in `.robot.toml`, it would no longer merge.
+
+See [Changing profiles in a later file](/guides/robot-toml/profiles/#changing-profiles-in-a-later-file) and [Settings of other commands](/guides/robot-toml/settings/#settings-of-other-commands).
 
 ## Inheritance and detached profiles
 

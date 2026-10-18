@@ -15,6 +15,25 @@ from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
 
+# The settings that Robot Framework does not pass from `robot` to `rebot` after a run (`not_copied` in
+# `RobotSettings.get_rebot_settings`).
+NOT_PASSED_TO_REBOT = (
+    "includes",
+    "excludes",
+    "tests",
+    "suites",
+    "parse_include",
+    "name",
+    "doc",
+    "metadata",
+    "set_tag",
+    "output",
+    "log_level",
+    "timestamp_outputs",
+    "console",
+    "quiet",
+)
+
 
 class RebotEx(Rebot):
     def __init__(self, dry: bool) -> None:
@@ -84,16 +103,17 @@ def rebot(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         except (TypeError, ValueError) as e:
             raise click.ClickException(str(e)) from e
 
-        rebot_options = profile.rebot
-        if rebot_options is None:
-            rebot_options = RebotProfile()
-
-        # The top-level `console` and `quiet` are `robot` options, only the ones of the `[rebot]`
-        # section apply to `rebot` (Robot Framework itself does not carry them over either, see
-        # `RobotSettings.get_rebot_settings`).
-        console, quiet = rebot_options.console, rebot_options.quiet
+        # Of the settings outside of `[rebot]`, `rebot` gets the ones that Robot Framework passes to it after a
+        # run; `[rebot]` comes last, so it wins and its `extend-` settings add to them.
+        rebot_options = RebotProfile()
         rebot_options.add_options(profile)
-        rebot_options.console, rebot_options.quiet = console, quiet
+        for name in NOT_PASSED_TO_REBOT:
+            setattr(rebot_options, name, None)
+        # as Robot Framework does, `run-empty-suite` becomes `process-empty-suite`
+        if profile.run_empty_suite is not None:
+            rebot_options.process_empty_suite = profile.run_empty_suite
+        if profile.rebot is not None:
+            rebot_options.add_options(profile.rebot)
 
         try:
             options = rebot_options.build_command_line()

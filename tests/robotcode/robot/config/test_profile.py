@@ -499,3 +499,83 @@ def test_extend_profiles_adds_a_new_profile(tmp_path: Path) -> None:
 
     assert config.profiles is not None
     assert sorted(config.profiles) == ["dev", "local"]
+
+
+def test_extend_rebot_in_a_profile_changes_the_rebot_table() -> None:
+    data = """\
+        [rebot]
+        merge = true
+
+        [profiles.ci.extend-rebot]
+        report-title = "CI"
+    """
+    config = load_robot_config_from_robot_toml_str(data)
+
+    rebot = config.combine_profiles("ci").rebot
+    assert rebot is not None
+    assert rebot.merge is True
+    assert rebot.report_title == "CI"
+
+    # applying the profile does not change the configuration's own table
+    assert config.rebot is not None
+    assert config.rebot.report_title is None
+    rebot_without_profile = config.combine_profiles().rebot
+    assert rebot_without_profile is not None
+    assert rebot_without_profile.report_title is None
+
+
+def test_extend_rebot_in_a_later_file_changes_the_rebot_table(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [rebot]
+        merge = true
+        """,
+        """\
+        [extend-rebot]
+        report-title = "Mine"
+        """,
+    )
+
+    rebot = config.combine_profiles().rebot
+    assert rebot is not None
+    assert rebot.merge is True
+    assert rebot.report_title == "Mine"
+
+
+def test_extend_rebot_in_extend_profiles_changes_the_rebot_table_of_the_profile(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [profiles.ci.rebot]
+        merge = true
+        """,
+        """\
+        [extend-profiles.ci.extend-rebot]
+        log-title = "Mine"
+        """,
+    )
+
+    rebot = config.combine_profiles("ci").rebot
+    assert rebot is not None
+    assert rebot.merge is True
+    assert rebot.log_title == "Mine"
+
+
+def test_rebot_in_a_later_file_replaces_the_rebot_table(tmp_path: Path) -> None:
+    config = load_robot_toml_and_local_robot_toml(
+        tmp_path,
+        """\
+        [rebot]
+        merge = true
+        """,
+        """\
+        [rebot]
+        report-title = "Mine"
+        """,
+    )
+
+    rebot = config.combine_profiles().rebot
+    assert rebot is not None
+    assert rebot.merge is None
+    assert rebot.report_title == "Mine"

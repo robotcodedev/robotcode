@@ -82,11 +82,12 @@ def testdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         except (TypeError, ValueError) as e:
             raise click.ClickException(str(e)) from e
 
-        testdoc_options = profile.testdoc
-        if testdoc_options is None:
-            testdoc_options = TestDocProfile()
-
+        # `testdoc` gets the settings outside of `[testdoc]` that it shares with `robot`. `[testdoc]` comes last, so
+        # it wins and its `extend-` settings add to them.
+        testdoc_options = TestDocProfile()
         testdoc_options.add_options(profile)
+        if profile.testdoc is not None:
+            testdoc_options.add_options(profile.testdoc)
 
         options = testdoc_options.build_command_line()
 

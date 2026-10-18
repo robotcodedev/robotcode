@@ -82,11 +82,11 @@ def libdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         except (TypeError, ValueError) as e:
             raise click.ClickException(str(e)) from e
 
-        libdoc_options = profile.libdoc
-        if libdoc_options is None:
-            libdoc_options = LibDocProfile()
-
-        libdoc_options.add_options(profile)
+        # Of the settings outside of `[libdoc]`, only `python-path` means the same for `libdoc`; `name` and `quiet`
+        # there are `robot` options. `[libdoc]` comes last, so it wins and its `extend-` settings add to it.
+        libdoc_options = LibDocProfile(python_path=profile.python_path)
+        if profile.libdoc is not None:
+            libdoc_options.add_options(profile.libdoc)
 
         options = libdoc_options.build_command_line()
 

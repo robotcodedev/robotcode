@@ -257,4 +257,16 @@ BROWSER = "firefox"
 
 Here `local` is a new profile, and `ci` from the `robot.toml` of the [example project](/guides/robot-toml/#an-example-project) writes its results to `results/my-ci` and runs in Firefox, with its other settings as before.
 
+Profiles change the tables `[rebot]`, `[libdoc]` and `[testdoc]` the same way: a `[profiles.ci.rebot]` replaces the whole `[rebot]` while `ci` applies, and a `[profiles.ci.extend-rebot]` changes it. In `.robot.toml`, `[extend-profiles.ci.extend-rebot]` adds to what `ci` sets for `rebot`.
+
+```toml title="robot.toml"
+[rebot]
+merge = true
+
+[profiles.ci.extend-rebot]
+report-title = "CI run"
+```
+
+`robotcode -p ci rebot results/output.xml` merges and gets the report title `CI run`.
+
 `extend-profiles` and `inherits` do different things: `extend-profiles` changes how a profile is defined, `inherits` selects other profiles along with it when it is used.

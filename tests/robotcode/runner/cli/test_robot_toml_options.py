@@ -1,8 +1,10 @@
 """Tests for how `robot.toml` options reach the Robot Framework tools.
 
-The top-level console options are `robot` options and never reach `rebot`;
-the `[rebot]` section has its own `console` and `quiet`, which `rebot` knows
-since Robot Framework 7.5.
+The table of a tool (`[rebot]`, `[libdoc]`, `[testdoc]`) wins over the settings
+outside of it, and each tool takes only some of those settings: `rebot` the ones
+that Robot Framework itself passes from `robot` to `rebot` after a run, so not
+the top-level console options; `libdoc` only `python-path`. The `[rebot]` table
+has its own `console` and `quiet`, which `rebot` knows since Robot Framework 7.5.
 """
 
 from pathlib import Path
@@ -56,13 +58,33 @@ def dry_rebot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DryRebot:
     monkeypatch.delenv("REBOT_OPTIONS", raising=False)
     (tmp_path / "output.xml").write_text(OUTPUT_XML, encoding="utf-8")
 
-    def run(robot_toml: str, *, expect_dry_run: bool = True) -> Result:
+    def run(robot_toml: str, *options: str, expect_dry_run: bool = True) -> Result:
         (tmp_path / "robot.toml").write_text(robot_toml, encoding="utf-8")
-        result = CliRunner().invoke(robotcode, ["--no-color", "--no-pager", "--dry", "rebot", "output.xml"])
+        result = CliRunner().invoke(robotcode, ["--no-color", "--no-pager", "--dry", *options, "rebot", "output.xml"])
         if expect_dry_run:
             # a dry run ends like `--help`: the options are printed instead of running the tool
             assert result.exit_code == INFO_PRINTED, result.output
             assert "Would execute rebot with the following options" in result.output
+        return result
+
+    return run
+
+
+DryTool = Callable[..., Result]
+
+
+@pytest.fixture
+def dry_tool(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DryTool:
+    """Runs `robotcode --dry <tool> <args>` against the given `robot.toml` in an empty project."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(config_utils, "get_user_config_file", lambda *args, **kwargs: None)
+    (tmp_path / "suite.robot").write_text("*** Test Cases ***\nTest\n    No Operation\n", encoding="utf-8")
+
+    def run(robot_toml: str, tool: str, *args: str) -> Result:
+        (tmp_path / "robot.toml").write_text(robot_toml, encoding="utf-8")
+        result = CliRunner().invoke(robotcode, ["--no-color", "--no-pager", "--dry", tool, *args])
+        assert result.exit_code == INFO_PRINTED, result.output
+        assert f"Would execute {tool} with the following" in result.output
         return result
 
     return run
@@ -107,26 +129,186 @@ def test_top_level_console_options_do_not_apply_to_rebot(dry_rebot: DryRebot) ->
     assert "quiet = True" not in result.output
 
 
-def test_top_level_console_is_not_passed_to_rebot(tmp_path: Path) -> None:
-    config_file = tmp_path / "robot.toml"
-    config_file.write_text(
-        'console = "dotted"\n\n[profiles.ci]\nname = "From Profile"\n',
-        encoding="utf-8",
-    )
-    output_file = tmp_path / "output.xml"
-    output_file.write_text(OUTPUT_XML, encoding="utf-8")
+def test_top_level_console_is_not_passed_to_rebot(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('console = "dotted"\n\n[profiles.ci]\nreport-title = "From Profile"\n', "-p", "ci")
 
-    result = CliRunner().invoke(
-        robotcode,
-        ["--no-color", "--no-pager", "--dry", "-c", str(config_file), "-p", "ci", "rebot", str(output_file)],
-    )
-
-    # a dry run ends like `--help`: the options are printed instead of running the tool
-    assert result.exit_code == INFO_PRINTED, result.output
     # the configuration was used ...
-    assert "name = 'From Profile'" in result.output
+    assert "reporttitle = 'From Profile'" in result.output
     # ... but the `robot` only option did not reach `rebot`
     assert "console = 'dotted'" not in result.output
+
+
+def test_rebot_table_wins_over_the_settings_outside_of_it(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('output-dir = "results"\n\n[rebot]\noutput-dir = "merged"\n')
+
+    assert "outputdir = 'merged'" in result.output
+
+
+def test_rebot_takes_a_setting_from_outside_that_its_table_does_not_set(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('output-dir = "results"\n\n[rebot]\nmerge = true\n')
+
+    assert "outputdir = 'results'" in result.output
+
+
+def test_extend_setting_in_the_rebot_table_adds_to_the_setting_outside(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('tag-stat-include = ["smoke"]\n\n[rebot]\nextend-tag-stat-include = ["api"]\n')
+
+    assert "tagstatinclude = ['smoke', 'api']" in result.output
+
+
+def test_settings_that_robot_framework_does_not_pass_to_rebot_do_not_reach_it(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('includes = ["smoke"]\nname = "Shop"\noutput = "output.xml"\nlog-level = "DEBUG"\n')
+
+    assert "include = ['smoke']" not in result.output
+    assert "name = 'Shop'" not in result.output
+    assert "output = 'output.xml'" not in result.output
+    assert "loglevel = 'DEBUG'" not in result.output
+
+
+def test_settings_that_robot_framework_passes_to_rebot_reach_it(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('report-title = "Nightly"\npython-path = ["libraries"]\n')
+
+    assert "reporttitle = 'Nightly'" in result.output
+    assert "pythonpath = ['libraries']" in result.output
+
+
+def test_tasks_reach_rebot_as_robot_framework_passes_them(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('tasks = ["Process*"]\ntests = ["Login*"]\n')
+
+    assert "task = ['Process*']" in result.output
+    assert "test = ['Login*']" not in result.output
+
+
+def test_run_empty_suite_reaches_rebot_as_process_empty_suite(dry_rebot: DryRebot) -> None:
+    result = dry_rebot("run-empty-suite = true\n")
+
+    assert "processemptysuite = True" in result.output
+
+
+def test_process_empty_suite_of_the_rebot_table_wins_over_run_empty_suite(dry_rebot: DryRebot) -> None:
+    result = dry_rebot("run-empty-suite = true\n\n[rebot]\nprocess-empty-suite = false\n")
+
+    assert "processemptysuite = True" not in result.output
+
+
+def test_settings_in_the_rebot_table_reach_rebot(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('[rebot]\nname = "Merged"\nincludes = ["smoke"]\n')
+
+    assert "name = 'Merged'" in result.output
+    assert "include = ['smoke']" in result.output
+
+
+def test_extend_rebot_in_a_later_file_changes_the_rebot_table(dry_rebot: DryRebot, tmp_path: Path) -> None:
+    (tmp_path / ".robot.toml").write_text('[extend-rebot]\nreport-title = "Mine"\n', encoding="utf-8")
+
+    result = dry_rebot("[rebot]\nmerge = true\n")
+
+    assert "merge = True" in result.output
+    assert "reporttitle = 'Mine'" in result.output
+
+
+def test_extend_rebot_in_a_profile_changes_the_rebot_table(dry_rebot: DryRebot) -> None:
+    result = dry_rebot('[rebot]\nmerge = true\n\n[profiles.ci.extend-rebot]\nlog-title = "CI"\n', "-p", "ci")
+
+    assert "merge = True" in result.output
+    assert "logtitle = 'CI'" in result.output
+
+
+def test_extend_setting_in_extend_rebot_of_a_later_file_adds_to_the_setting_outside(
+    dry_rebot: DryRebot, tmp_path: Path
+) -> None:
+    (tmp_path / ".robot.toml").write_text('[extend-rebot]\nextend-tag-stat-include = ["api"]\n', encoding="utf-8")
+
+    result = dry_rebot('tag-stat-include = ["smoke"]\n\n[rebot]\nmerge = true\n')
+
+    assert "merge = True" in result.output
+    assert "tagstatinclude = ['smoke', 'api']" in result.output
+
+
+def test_extend_settings_of_the_rebot_table_and_extend_rebot_add_up(dry_rebot: DryRebot, tmp_path: Path) -> None:
+    (tmp_path / ".robot.toml").write_text('[extend-rebot]\nextend-tag-stat-include = ["b"]\n', encoding="utf-8")
+
+    result = dry_rebot('tag-stat-include = ["smoke"]\n\n[rebot]\nextend-tag-stat-include = ["a"]\n')
+
+    assert "tagstatinclude = ['smoke', 'a', 'b']" in result.output
+
+
+def test_extend_setting_in_extend_rebot_of_a_profile_adds_to_the_setting_outside(dry_rebot: DryRebot) -> None:
+    result = dry_rebot(
+        'tag-stat-include = ["smoke"]\n\n[rebot]\nmerge = true\n\n'
+        '[profiles.ci.extend-rebot]\nextend-tag-stat-include = ["ci"]\n',
+        "-p",
+        "ci",
+    )
+
+    assert "merge = True" in result.output
+    assert "tagstatinclude = ['smoke', 'ci']" in result.output
+
+
+def test_extend_setting_in_extend_rebot_of_extend_profiles_adds_to_the_setting_outside(
+    dry_rebot: DryRebot, tmp_path: Path
+) -> None:
+    (tmp_path / ".robot.toml").write_text(
+        '[extend-profiles.ci.extend-rebot]\nextend-tag-stat-include = ["mine"]\n', encoding="utf-8"
+    )
+
+    result = dry_rebot('tag-stat-include = ["smoke"]\n\n[profiles.ci.rebot]\nmerge = true\n', "-p", "ci")
+
+    assert "merge = True" in result.output
+    assert "tagstatinclude = ['smoke', 'mine']" in result.output
+
+
+@pytest.mark.skipif(RF_VERSION < (6, 0), reason="libdoc knows --theme since Robot Framework 6.0")
+def test_extend_libdoc_in_a_later_file_changes_the_libdoc_table(dry_tool: DryTool, tmp_path: Path) -> None:
+    (tmp_path / ".robot.toml").write_text('[extend-libdoc]\ntheme = "DARK"\n', encoding="utf-8")
+
+    result = dry_tool('[libdoc]\nformat = "HTML"\n', "libdoc", "Collections", "out.html")
+
+    assert "format = 'HTML'" in result.output
+    assert "theme = 'DARK'" in result.output
+
+
+def test_extend_testdoc_in_a_later_file_changes_the_testdoc_table(dry_tool: DryTool, tmp_path: Path) -> None:
+    (tmp_path / ".robot.toml").write_text('[extend-testdoc]\nname = "Shop Tests"\n', encoding="utf-8")
+
+    result = dry_tool('[testdoc]\ntitle = "Shop"\n', "testdoc", "suite.robot", "out.html")
+
+    assert "title = 'Shop'" in result.output
+    assert "name = 'Shop Tests'" in result.output
+
+
+def test_libdoc_takes_only_the_python_path_from_outside_its_table(dry_tool: DryTool) -> None:
+    result = dry_tool(
+        'name = "Shop Tests"\nquiet = true\npython-path = ["libraries"]\n', "libdoc", "Collections", "out.html"
+    )
+
+    assert "name = 'Shop Tests'" not in result.output
+    assert "quiet = True" not in result.output
+    assert "pythonpath = ['libraries']" in result.output
+
+
+def test_libdoc_table_wins_over_the_python_path_outside_of_it(dry_tool: DryTool) -> None:
+    result = dry_tool(
+        'python-path = ["libraries"]\n\n[libdoc]\npython-path = ["doc-libraries"]\n',
+        "libdoc",
+        "Collections",
+        "out.html",
+    )
+
+    assert "pythonpath = ['doc-libraries']" in result.output
+
+
+def test_testdoc_table_wins_over_the_name_outside_of_it(dry_tool: DryTool) -> None:
+    result = dry_tool('name = "Shop"\n\n[testdoc]\nname = "Shop Tests"\n', "testdoc", "suite.robot", "out.html")
+
+    assert "name = 'Shop Tests'" in result.output
+
+
+def test_testdoc_takes_the_settings_it_shares_with_robot(dry_tool: DryTool) -> None:
+    result = dry_tool('name = "Shop"\nincludes = ["smoke"]\n', "testdoc", "suite.robot", "out.html")
+
+    assert "name = 'Shop'" in result.output
+    assert "include = ['smoke']" in result.output
 
 
 @pytest.mark.skipif(RF_VERSION < (7, 5), reason="Libdoc writes Markdown since RF 7.5")

@@ -99,7 +99,7 @@ To find a setting:
 | `args` | Further arguments that are passed to Robot Framework as they are. |
 | `wrapper` | A command that the run goes through, see [Running Tests Through a Wrapper](/guides/wrapper/). |
 | `profiles`, `extend-profiles`, `default-profiles` | Profiles, see [Profiles](/guides/robot-toml/profiles/). |
-| `[rebot]`, `[libdoc]`, `[testdoc]` | The options of other commands, see [below](#settings-of-other-commands). |
+| `[rebot]`, `[libdoc]`, `[testdoc]`, and `[extend-rebot]`, `[extend-libdoc]`, `[extend-testdoc]` | The options of other commands, and changes to them, see [below](#settings-of-other-commands). |
 | `[tool.robotcode-analyze]` | The settings of RobotCode's analysis, see [below](#settings-of-other-commands). |
 
 ## Paths, variables and environment variables
@@ -152,13 +152,30 @@ The conditions in `enabled` and `hidden` of a profile use the same kind of expre
 
 ## Settings of other commands
 
-- **`[rebot]`, `[libdoc]` and `[testdoc]`** hold the options of `robotcode rebot`, `robotcode libdoc` and `robotcode testdoc`. These commands also use the settings outside of these tables that they share with `robot`, for example `python-path`, or `output-dir` for `rebot`.
+- **`[rebot]`, `[libdoc]` and `[testdoc]`** hold the options of `robotcode rebot`, `robotcode libdoc` and `robotcode testdoc`. A setting in the table wins over the same setting outside of it, and an `extend-` setting in the table adds to it. Of the settings outside of the tables, each command takes only some:
+  - **`rebot`** takes the ones that Robot Framework itself passes from `robot` to `rebot` after a run, such as `output-dir`, `python-path`, `log-title` and `report-title`. It does not take `includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`, `doc`, `metadata`, `set-tag`, `output`, `log-level`, `timestamp-outputs`, `console` and `quiet`; put them into `[rebot]` when `rebot` needs them. As in Robot Framework, `run-empty-suite` becomes `process-empty-suite` for `rebot`.
+  - **`libdoc`** takes only `python-path`. Outside of the table, `name` and `quiet` are options of `robot`.
+  - **`testdoc`** takes the settings it shares with `robot`: `name`, `doc`, `metadata`, `set-tag`, `tests`, `suites`, `includes` and `excludes`.
 
   ```toml title="robot.toml"
+  output-dir = "results"
+
   [rebot]
   merge = true
+  output-dir = "merged"
   report-title = "Nightly run"
   ```
+
+  Here the runs write their results to `results`, and `robotcode rebot` writes the merged results to `merged`.
+
+  A `[rebot]` in a profile or in a later file, such as `.robot.toml`, replaces the whole `[rebot]` before it. **`[extend-rebot]`** changes it instead: a setting in it replaces the one of `[rebot]`, and an `extend-` setting adds to it. `[extend-libdoc]` and `[extend-testdoc]` do the same for their tables:
+
+  ```toml title=".robot.toml"
+  [extend-rebot]
+  report-title = "My nightly run"
+  ```
+
+  With the `robot.toml` above, `robotcode rebot` still merges the results into `merged`, with your own report title.
 
 - **`[tool.robotcode-analyze]`** configures the analysis in the editors and in `robotcode analyze code`, for example the severity of diagnostics and the cache; see [Analyzing Code](/guides/analyzing-code/) and [Configuration via `robot.toml`](/reference/diagnostics-modifiers/#configuration-via-robottoml).
 

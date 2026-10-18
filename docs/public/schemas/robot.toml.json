@@ -3702,6 +3702,28 @@
             }
           }
         },
+        "extend-libdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LibDocProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Changes the `[libdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[libdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-libdoc]\ntheme = \"DARK\"\n```\n",
+          "examples": [
+            "[extend-libdoc]\ntheme = \"DARK\""
+          ],
+          "markdownDescription": "Changes the `[libdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[libdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-libdoc]\ntheme = \"DARK\"\n```\n",
+          "title": "Extend Libdoc",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/reference/config/#extend-libdoc"
+            }
+          }
+        },
         "extend-listeners": {
           "anyOf": [
             {
@@ -4006,6 +4028,28 @@
           "x-taplo": {
             "links": {
               "key": "https://robotcode.io/reference/config/#extend-python-path"
+            }
+          }
+        },
+        "extend-rebot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RebotProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Changes the `[rebot]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[rebot]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-rebot]\nreport-title = \"My run\"\n```\n",
+          "examples": [
+            "[extend-rebot]\nreport-title = \"My run\""
+          ],
+          "markdownDescription": "Changes the `[rebot]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[rebot]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-rebot]\nreport-title = \"My run\"\n```\n",
+          "title": "Extend Rebot",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/reference/config/#extend-rebot"
             }
           }
         },
@@ -4385,6 +4429,28 @@
             }
           }
         },
+        "extend-testdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TestDocProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Changes the `[testdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[testdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-testdoc]\ntitle = \"My tests\"\n```\n",
+          "examples": [
+            "[extend-testdoc]\ntitle = \"My tests\""
+          ],
+          "markdownDescription": "Changes the `[testdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[testdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-testdoc]\ntitle = \"My tests\"\n```\n",
+          "title": "Extend Testdoc",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/reference/config/#extend-testdoc"
+            }
+          }
+        },
         "extend-tests": {
           "anyOf": [
             {
@@ -4688,8 +4754,8 @@
             }
           ],
           "default": null,
-          "description": "Options to be passed to _libdoc_.\n",
-          "markdownDescription": "Options to be passed to _libdoc_.\n",
+          "description": "Options to be passed to _libdoc_. Of the settings outside of this\ntable, _libdoc_ gets only `python-path`, and this table wins over it.\n",
+          "markdownDescription": "Options to be passed to _libdoc_. Of the settings outside of this\ntable, _libdoc_ gets only `python-path`, and this table wins over it.\n",
           "title": "Libdoc",
           "x-taplo": {
             "links": {
@@ -5353,8 +5419,8 @@
             }
           ],
           "default": null,
-          "description": "Options to be passed to _rebot_.\n",
-          "markdownDescription": "Options to be passed to _rebot_.\n",
+          "description": "Options to be passed to _rebot_. They win over the settings outside\nof this table. Of those, _rebot_ gets the ones that Robot Framework\nitself passes from _robot_ to _rebot_ after a run, so not\n`includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`,\n`doc`, `metadata`, `set-tag`, `output`, `log-level`,\n`timestamp-outputs`, `console` and `quiet`; `run-empty-suite`\nbecomes `process-empty-suite`.\n",
+          "markdownDescription": "Options to be passed to _rebot_. They win over the settings outside\nof this table. Of those, _rebot_ gets the ones that Robot Framework\nitself passes from _robot_ to _rebot_ after a run, so not\n`includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`,\n`doc`, `metadata`, `set-tag`, `output`, `log-level`,\n`timestamp-outputs`, `console` and `quiet`; `run-empty-suite`\nbecomes `process-empty-suite`.\n",
           "title": "Rebot",
           "x-taplo": {
             "links": {
@@ -5962,8 +6028,8 @@
             }
           ],
           "default": null,
-          "description": "Options to be passed to _testdoc_.\n",
-          "markdownDescription": "Options to be passed to _testdoc_.\n",
+          "description": "Options to be passed to _testdoc_. They win over the settings outside\nof this table that _testdoc_ shares with _robot_, such as `name`,\n`metadata` or `includes`.\n",
+          "markdownDescription": "Options to be passed to _testdoc_. They win over the settings outside\nof this table that _testdoc_ shares with _robot_, such as `name`,\n`metadata` or `includes`.\n",
           "title": "Testdoc",
           "x-taplo": {
             "links": {
@@ -6916,6 +6982,28 @@
             }
           }
         },
+        "extend-libdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LibDocProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Changes the `[libdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[libdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-libdoc]\ntheme = \"DARK\"\n```\n",
+          "examples": [
+            "[extend-libdoc]\ntheme = \"DARK\""
+          ],
+          "markdownDescription": "Changes the `[libdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[libdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-libdoc]\ntheme = \"DARK\"\n```\n",
+          "title": "Extend Libdoc",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/reference/config/#extend-libdoc"
+            }
+          }
+        },
         "extend-listeners": {
           "anyOf": [
             {
@@ -7192,6 +7280,28 @@
           "x-taplo": {
             "links": {
               "key": "https://robotcode.io/reference/config/#extend-python-path"
+            }
+          }
+        },
+        "extend-rebot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RebotProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Changes the `[rebot]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[rebot]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-rebot]\nreport-title = \"My run\"\n```\n",
+          "examples": [
+            "[extend-rebot]\nreport-title = \"My run\""
+          ],
+          "markdownDescription": "Changes the `[rebot]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[rebot]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-rebot]\nreport-title = \"My run\"\n```\n",
+          "title": "Extend Rebot",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/reference/config/#extend-rebot"
             }
           }
         },
@@ -7571,6 +7681,28 @@
             }
           }
         },
+        "extend-testdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TestDocProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Changes the `[testdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[testdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-testdoc]\ntitle = \"My tests\"\n```\n",
+          "examples": [
+            "[extend-testdoc]\ntitle = \"My tests\""
+          ],
+          "markdownDescription": "Changes the `[testdoc]` options that come before it, from an earlier\nconfiguration file or before a profile: a setting given here\nreplaces the one of `[testdoc]`, and an `extend-` setting adds to it.\n\nExamples:\n```toml\n[extend-testdoc]\ntitle = \"My tests\"\n```\n",
+          "title": "Extend Testdoc",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/reference/config/#extend-testdoc"
+            }
+          }
+        },
         "extend-tests": {
           "anyOf": [
             {
@@ -7938,8 +8070,8 @@
             }
           ],
           "default": null,
-          "description": "Options to be passed to _libdoc_.\n",
-          "markdownDescription": "Options to be passed to _libdoc_.\n",
+          "description": "Options to be passed to _libdoc_. Of the settings outside of this\ntable, _libdoc_ gets only `python-path`, and this table wins over it.\n",
+          "markdownDescription": "Options to be passed to _libdoc_. Of the settings outside of this\ntable, _libdoc_ gets only `python-path`, and this table wins over it.\n",
           "title": "Libdoc",
           "x-taplo": {
             "links": {
@@ -8594,8 +8726,8 @@
             }
           ],
           "default": null,
-          "description": "Options to be passed to _rebot_.\n",
-          "markdownDescription": "Options to be passed to _rebot_.\n",
+          "description": "Options to be passed to _rebot_. They win over the settings outside\nof this table. Of those, _rebot_ gets the ones that Robot Framework\nitself passes from _robot_ to _rebot_ after a run, so not\n`includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`,\n`doc`, `metadata`, `set-tag`, `output`, `log-level`,\n`timestamp-outputs`, `console` and `quiet`; `run-empty-suite`\nbecomes `process-empty-suite`.\n",
+          "markdownDescription": "Options to be passed to _rebot_. They win over the settings outside\nof this table. Of those, _rebot_ gets the ones that Robot Framework\nitself passes from _robot_ to _rebot_ after a run, so not\n`includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`,\n`doc`, `metadata`, `set-tag`, `output`, `log-level`,\n`timestamp-outputs`, `console` and `quiet`; `run-empty-suite`\nbecomes `process-empty-suite`.\n",
           "title": "Rebot",
           "x-taplo": {
             "links": {
@@ -9203,8 +9335,8 @@
             }
           ],
           "default": null,
-          "description": "Options to be passed to _testdoc_.\n",
-          "markdownDescription": "Options to be passed to _testdoc_.\n",
+          "description": "Options to be passed to _testdoc_. They win over the settings outside\nof this table that _testdoc_ shares with _robot_, such as `name`,\n`metadata` or `includes`.\n",
+          "markdownDescription": "Options to be passed to _testdoc_. They win over the settings outside\nof this table that _testdoc_ shares with _robot_, such as `name`,\n`metadata` or `includes`.\n",
           "title": "Testdoc",
           "x-taplo": {
             "links": {

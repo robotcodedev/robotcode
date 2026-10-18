@@ -489,6 +489,155 @@ extend-languages = ["German", "Finnish"]
 
 corresponds to the `--language lang *` option of _robot_
 
+## extend-libdoc {#extend-libdoc}
+
+Type: `LibDocProfile | None`
+
+Changes the `[libdoc]` options that come before it, from an earlier
+configuration file or before a profile: a setting given here
+replaces the one of `[libdoc]`, and an `extend-` setting adds to it.
+
+Examples:
+```toml
+[extend-libdoc]
+theme = "DARK"
+```
+
+## extend-libdoc.doc-format {#extend-libdoc-doc-format}
+
+Type: `Literal['ROBOT', 'MARKDOWN', 'HTML', 'TEXT', 'REST'] | None`
+
+Specifies the source documentation format. Possible
+values are Robot Framework's documentation format,
+Markdown, HTML, plain text and reStructuredText.
+The default value can be specified in library source
+code and the initial default value is ROBOT. Markdown
+support is new in RF 7.5.
+
+Examples:
+
+```toml
+doc-format = "REST"
+```
+
+corresponds to the `-F --docformat ROBOT|MARKDOWN|HTML|TEXT|REST` option of _libdoc_
+
+## extend-libdoc.extend-python-path {#extend-libdoc-extend-python-path}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --pythonpath option.
+
+Additional locations where to search for libraries
+and resources.
+
+Examples:
+
+```toml
+extend-python-path = ["libs/", "/opt/libs", "libraries.zip"]
+```
+
+corresponds to the `-P --pythonpath path *` option of _libdoc_
+
+## extend-libdoc.format {#extend-libdoc-format}
+
+Type: `Literal['HTML', 'XML', 'JSON', 'LIBSPEC', 'MARKDOWN'] | None`
+
+Specifies whether to generate an HTML output for
+humans, a machine readable spec file in XML or JSON
+format, or a Markdown file. The LIBSPEC format means
+XML spec with documentations converted to HTML. The
+default format is got from the output file
+extension. MARKDOWN is new in RF 7.5.
+
+Examples:
+
+```toml
+format = "HTML"
+```
+
+corresponds to the `-f --format HTML|XML|JSON|LIBSPEC|MARKDOWN` option of _libdoc_
+
+## extend-libdoc.name {#extend-libdoc-name}
+
+Type: `str | StringExpression | None`
+
+Sets the name of the documented library or resource.
+
+Examples:
+
+```toml
+name = "My Project"
+```
+
+corresponds to the `-n --name name` option of _libdoc_
+
+## extend-libdoc.python-path {#extend-libdoc-python-path}
+
+Type: `list[str | StringExpression] | None`
+
+Additional locations where to search for libraries
+and resources.
+
+Examples:
+
+```toml
+python-path = ["libs/", "/opt/libs", "libraries.zip"]
+```
+
+corresponds to the `-P --pythonpath path *` option of _libdoc_
+
+## extend-libdoc.quiet {#extend-libdoc-quiet}
+
+Type: `bool | Flag | None`
+
+Do not print the path of the generated output file
+to the console.
+
+Examples:
+
+```toml
+quiet = true
+```
+
+corresponds to the `--quiet` option of _libdoc_
+
+## extend-libdoc.spec-doc-format {#extend-libdoc-spec-doc-format}
+
+Type: `Literal['RAW', 'HTML'] | None`
+
+Specifies the documentation format used with XML and
+JSON spec files. RAW means preserving the original
+documentation format and HTML means converting
+documentation to HTML. The default is RAW with XML
+spec files and HTML with JSON specs and when using
+the special LIBSPEC format. Not applicable with HTML
+or MARKDOWN outputs.
+
+Examples:
+
+```toml
+spec-doc-format = "HTML"
+```
+
+corresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_
+
+## extend-libdoc.theme {#extend-libdoc-theme}
+
+Type: `Literal['DARK', 'LIGHT', 'NONE'] | None`
+
+Use dark or light HTML theme. If this option is not
+used, or the value is NONE, the theme is selected
+based on the browser color scheme. New in RF 6.0.
+
+Examples:
+
+```toml
+theme = "DARK"
+```
+
+corresponds to the `--theme DARK|LIGHT|NONE` option of _libdoc_
+
 ## extend-listeners {#extend-listeners}
 
 Type: `dict[str, list[str | StringExpression]] | None`
@@ -657,6 +806,1244 @@ extend-python-path = ["libs/", "/opt/libs", "libraries.zip"]
 ```
 
 corresponds to the `-P --pythonpath path *` option of _robot_
+
+## extend-rebot {#extend-rebot}
+
+Type: `RebotProfile | None`
+
+Changes the `[rebot]` options that come before it, from an earlier
+configuration file or before a profile: a setting given here
+replaces the one of `[rebot]`, and an `extend-` setting adds to it.
+
+Examples:
+```toml
+[extend-rebot]
+report-title = "My run"
+```
+
+## extend-rebot.console {#extend-rebot-console}
+
+Type: `str | Literal['verbose', 'quiet', 'none'] | None`
+
+How to report on the console.
+Built-in consoles:
+
+**verbose:** show output file paths (default)
+
+**quiet:** no output except for errors/warnings
+
+**none:** no output whatsoever
+Other values are interpreted as a custom
+console class or module. Argument format is
+the same as with --listener.
+
+Examples:
+
+```toml
+console = "quiet"
+```
+
+```toml
+# custom console logger class or module
+console = "path/to/Console.py:arg"
+```
+
+corresponds to the `--console console` option of _rebot_
+
+## extend-rebot.console-colors {#extend-rebot-console-colors}
+
+Type: `Literal['auto', 'on', 'ansi', 'off'] | None`
+
+Use colors on console output or not.
+
+**auto:** use colors when output not redirected (default)
+
+**on:** always use colors
+
+**ansi:** like `on` but use ANSI colors also on Windows
+
+**off:** disable colors altogether
+
+Examples:
+
+```toml
+console-colors = "on"
+```
+
+corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
+
+## extend-rebot.console-links {#extend-rebot-console-links}
+
+Type: `Literal['auto', 'off'] | None`
+
+Control making paths to results files hyperlinks.
+
+**auto:** use links when colors are enabled (default)
+
+**off:** disable links unconditionally
+
+Examples:
+
+```toml
+console-links = "off"
+```
+
+corresponds to the `--consolelinks auto|off` option of _robot_
+
+## extend-rebot.doc {#extend-rebot-doc}
+
+Type: `str | StringExpression | None`
+
+Set the documentation of the top level suite.
+Simple formatting is supported (e.g. *bold*). If the
+documentation contains spaces, it must be quoted.
+If the value is path to an existing file, actual
+documentation is read from that file.
+
+Examples:
+
+```toml
+doc = "Very *good* example"
+```
+
+```toml
+# read documentation from a file
+doc = "doc_from_file.txt"
+```
+
+corresponds to the `-D --doc documentation` option of _robot_
+
+## extend-rebot.end-time {#extend-rebot-end-time}
+
+Type: `str | StringExpression | None`
+
+Same as --starttime but for end time. If both options
+are used, elapsed time of the suite is calculated
+based on them. For combined suites, it is otherwise
+calculated by adding elapsed times of the combined
+suites together.
+
+Examples:
+
+```toml
+end-time = "2024-12-15 14:35:42.123"
+```
+
+corresponds to the `--endtime timestamp` option of _rebot_
+
+## extend-rebot.excludes {#extend-rebot-excludes}
+
+Type: `list[str | StringExpression] | None`
+
+Select test cases not to run by tag. These tests are
+not run even if included with --include. Tags are
+matched using same rules as with --include.
+
+Examples:
+
+```toml
+excludes = ["smoke", "wip*"]
+```
+
+corresponds to the `-e --exclude tag *` option of _robot_
+
+## extend-rebot.expand-keywords {#extend-rebot-expand-keywords}
+
+Type: `list[str | NamePattern | TagPattern] | None`
+
+Matching keywords will be automatically expanded in
+the log file. Matching against keyword name or tags
+work using same rules as with --removekeywords.
+
+Examples:
+
+```toml
+expand-keywords = ["name:BuiltIn.Log", "tag:expand"]
+```
+
+corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
+
+## extend-rebot.extend-excludes {#extend-rebot-extend-excludes}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --exclude option.
+
+Select test cases not to run by tag. These tests are
+not run even if included with --include. Tags are
+matched using same rules as with --include.
+
+Examples:
+
+```toml
+extend-excludes = ["smoke", "wip*"]
+```
+
+corresponds to the `-e --exclude tag *` option of _robot_
+
+## extend-rebot.extend-expand-keywords {#extend-rebot-extend-expand-keywords}
+
+Type: `list[str | NamePattern | TagPattern] | None`
+
+Appends entries to the --expandkeywords option.
+
+Matching keywords will be automatically expanded in
+the log file. Matching against keyword name or tags
+work using same rules as with --removekeywords.
+
+Examples:
+
+```toml
+extend-expand-keywords = ["name:BuiltIn.Log", "tag:expand"]
+```
+
+corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
+
+## extend-rebot.extend-flatten-keywords {#extend-rebot-extend-flatten-keywords}
+
+Type: `list[str | Literal['for', 'while', 'iteration'] | NamePattern | TagPattern] | None`
+
+Appends entries to the --flattenkeywords option.
+
+Flattens matching keywords in the generated log file.
+Matching keywords get all log messages from their
+child keywords and children are discarded otherwise.
+
+**for:** flatten FOR loops fully
+
+**while:** flatten WHILE loops fully
+
+**iteration:** flatten FOR/WHILE loop iterations
+
+**foritem:** deprecated alias for `iteration`
+
+**name:\<pattern>:** flatten matched keywords using same
+matching rules as with
+`--removekeywords name:<pattern>`
+
+**tag:\<pattern>:** flatten matched keywords using same
+matching rules as with
+`--removekeywords tag:<pattern>`
+
+Examples:
+
+```toml
+extend-flatten-keywords = ["for", "name:Lib.HugeKw", "tag:flatten"]
+```
+
+corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
+
+## extend-rebot.extend-includes {#extend-rebot-extend-includes}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --include option.
+
+Select tests by tag. Similarly as name with --test,
+tag is case and space insensitive and it is possible
+to use patterns with `*`, `?` and `[]` as wildcards.
+Tags and patterns can also be combined together with
+`AND`, `OR`, and `NOT` operators.
+
+Examples:
+
+```toml
+# match tests tagged "foo" or "bar*"
+extend-includes = ["foo", "bar*"]
+```
+
+```toml
+# tests with both "foo" and "bar*" tags
+extend-includes = ["foo AND bar*"]
+```
+
+corresponds to the `-i --include tag *` option of _robot_
+
+## extend-rebot.extend-metadata {#extend-rebot-extend-metadata}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Appends entries to the --metadata option.
+
+Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+as --doc. Example: --metadata Version:1.2
+
+Examples:
+
+```toml
+[extend-metadata]
+Version = "1.2"
+# value can be read from a file (same rules as --doc)
+ReleaseNotes = "release_notes.txt"
+```
+
+corresponds to the `-M --metadata name:value *` option of _robot_
+
+## extend-rebot.extend-parse-include {#extend-rebot-extend-parse-include}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --parseinclude option.
+
+Parse only files matching `pattern`. It can be:
+- a file name or pattern like `example.robot` or
+`*.robot` to parse all files matching that name,
+- a file path like `path/to/example.robot`, or
+- a directory path like `path/to/example` to parse
+all files in that directory, recursively.
+
+Examples:
+
+```toml
+extend-parse-include = ["*.robot", "tests/**/*.robot"]
+```
+
+corresponds to the `-I --parseinclude pattern *` option of _robot_
+
+## extend-rebot.extend-pre-rebot-modifiers {#extend-rebot-extend-pre-rebot-modifiers}
+
+Type: `dict[str, list[str | StringExpression]] | None`
+
+Appends entries to the --prerebotmodifier option.
+
+Class to programmatically modify the result
+model before creating reports and logs. Accepts
+arguments the same way as with --listener.
+
+Examples:
+
+```toml
+[extend-pre-rebot-modifiers]
+"path/to/Modifier.py" = ["arg1"]
+```
+
+corresponds to the `--prerebotmodifier modifier *` option of _robot_
+
+## extend-rebot.extend-python-path {#extend-rebot-extend-python-path}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --pythonpath option.
+
+Additional locations (directories, ZIPs) where to
+search libraries and other extensions when they are
+imported. Multiple paths can be given by separating
+them with a colon (`:`) or by using this option
+several times. Given path can also be a glob pattern
+matching multiple paths.
+
+Examples:
+
+```toml
+extend-python-path = ["libs/", "/opt/libs", "libraries.zip"]
+```
+
+corresponds to the `-P --pythonpath path *` option of _robot_
+
+## extend-rebot.extend-remove-keywords {#extend-rebot-extend-remove-keywords}
+
+Type: `list[str | Literal['all', 'passed', 'for', 'wuks'] | NamePattern | TagPattern] | None`
+
+Appends entries to the --removekeywords option.
+
+Remove keyword data from the generated log file.
+Keywords containing warnings are not removed except
+in the `all` mode.
+
+**all:** remove data from all keywords
+
+**passed:** remove data only from keywords in passed
+test cases and suites
+
+**for:** remove passed iterations from FOR loops
+
+**while:** remove passed iterations from WHILE loops
+
+**wuks:** remove all but the last failing keyword
+inside `BuiltIn.Wait Until Keyword Succeeds`
+
+**name:\<pattern>:** remove data from keywords that match
+the given pattern. The pattern is matched
+against the full name of the keyword (e.g.
+'MyLib.Keyword', 'resource.Second Keyword'),
+is case, space, and underscore insensitive,
+and may contain `*`, `?` and `[]` wildcards.
+
+
+
+**tag:\<pattern>:** remove data from keywords that match
+the given pattern. Tags are case and space
+insensitive and patterns can contain `*`,
+`?` and `[]` wildcards. Tags and patterns
+can also be combined together with `AND`,
+`OR`, and `NOT` operators.
+
+Examples:
+
+```toml
+# match by keyword name
+extend-remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
+```
+
+```toml
+# match by tag pattern (same rules as --include)
+extend-remove-keywords = ["foo", "foo AND bar*"]
+```
+
+corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
+
+## extend-rebot.extend-set-tag {#extend-rebot-extend-set-tag}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --settag option.
+
+Sets given tag(s) to all executed tests.
+
+Examples:
+
+```toml
+extend-set-tag = ["my-suite-tag", "ci"]
+```
+
+corresponds to the `-G --settag tag *` option of _robot_
+
+## extend-rebot.extend-suites {#extend-rebot-extend-suites}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --suite option.
+
+Select suites by name. When this option is used with
+--test, --include or --exclude, only tests in
+matching suites and also matching other filtering
+criteria are selected. Name can be a simple pattern
+similarly as with --test and it can contain parent
+name separated with a dot. For example, `-s X.Y`
+selects suite `Y` only if its parent is `X`.
+
+Examples:
+
+```toml
+# match a suite by name or by parent.child path
+extend-suites = ["MySuite", "Tests.SubSuite"]
+```
+
+corresponds to the `-s --suite name *` option of _robot_
+
+## extend-rebot.extend-tag-doc {#extend-rebot-extend-tag-doc}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Appends entries to the --tagdoc option.
+
+Add documentation to tags matching the given
+pattern. Documentation is shown in `Test Details` and
+also as a tooltip in `Statistics by Tag`. Pattern can
+use `*`, `?` and `[]` as wildcards like --test.
+
+Examples:
+
+```toml
+[extend-tag-doc]
+mytag = "Example"
+"owner-*" = "Original author"
+```
+
+corresponds to the `--tagdoc pattern:doc *` option of _robot_
+
+## extend-rebot.extend-tag-stat-combine {#extend-rebot-extend-tag-stat-combine}
+
+Type: `list[str | dict[str, str]] | None`
+
+Appends entries to the --tagstatcombine option.
+
+Create combined statistics based on tags.
+These statistics are added into `Statistics by Tag`.
+If the optional `name` is not given, name of the
+combined tag is got from the specified tags. Tags are
+matched using the same rules as with --include.
+
+Examples:
+
+```toml
+extend-tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
+```
+
+corresponds to the `--tagstatcombine tags:name *` option of _robot_
+
+## extend-rebot.extend-tag-stat-exclude {#extend-rebot-extend-tag-stat-exclude}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --tagstatexclude option.
+
+Exclude matching tags from `Statistics by Tag`.
+This option can be used with --tagstatinclude
+similarly as --exclude is used with --include.
+
+Examples:
+
+```toml
+extend-tag-stat-exclude = ["bug-*"]
+```
+
+corresponds to the `--tagstatexclude tag *` option of _robot_
+
+## extend-rebot.extend-tag-stat-include {#extend-rebot-extend-tag-stat-include}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --tagstatinclude option.
+
+Include only matching tags in `Statistics by Tag`
+in log and report. By default all tags are shown.
+Given tag can be a pattern like with --include.
+
+Examples:
+
+```toml
+extend-tag-stat-include = ["owner-*", "feature-*"]
+```
+
+corresponds to the `--tagstatinclude tag *` option of _robot_
+
+## extend-rebot.extend-tag-stat-link {#extend-rebot-extend-tag-stat-link}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Appends entries to the --tagstatlink option.
+
+Add external links into `Statistics by
+Tag`. Pattern can use `*`, `?` and `[]` as wildcards
+like --test. Characters matching to `*` and `?`
+wildcards can be used in link and title with syntax
+%N, where N is index of the match (starting from 1).
+
+Examples:
+
+```toml
+[extend-tag-stat-link]
+mytag = "http://my.domain:Title"
+"bug-*" = "http://url/id=%1:Issue Tracker"
+```
+
+corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
+
+## extend-rebot.extend-tasks {#extend-rebot-extend-tasks}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --task option.
+
+Alias to --test. Especially applicable with --rpa.
+
+Examples:
+
+```toml
+extend-tasks = ["My Task", "Smoke*"]
+```
+
+corresponds to the `--task name *` option of _robot_
+
+## extend-rebot.extend-tests {#extend-rebot-extend-tests}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --test option.
+
+Select tests by name or by long name containing also
+parent suite name like `Parent.Test`. Name is case
+and space insensitive and it can also be a simple
+pattern where `*` matches anything, `?` matches any
+single character, and `[chars]` matches one character
+in brackets.
+
+Examples:
+
+```toml
+extend-tests = ["My Test", "Smoke*"]
+```
+
+corresponds to the `-t --test name *` option of _robot_
+
+## extend-rebot.flatten-keywords {#extend-rebot-flatten-keywords}
+
+Type: `list[str | Literal['for', 'while', 'iteration'] | NamePattern | TagPattern] | None`
+
+Flattens matching keywords in the generated log file.
+Matching keywords get all log messages from their
+child keywords and children are discarded otherwise.
+
+**for:** flatten FOR loops fully
+
+**while:** flatten WHILE loops fully
+
+**iteration:** flatten FOR/WHILE loop iterations
+
+**foritem:** deprecated alias for `iteration`
+
+**name:\<pattern>:** flatten matched keywords using same
+matching rules as with
+`--removekeywords name:<pattern>`
+
+**tag:\<pattern>:** flatten matched keywords using same
+matching rules as with
+`--removekeywords tag:<pattern>`
+
+Examples:
+
+```toml
+flatten-keywords = ["for", "name:Lib.HugeKw", "tag:flatten"]
+```
+
+corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
+
+## extend-rebot.includes {#extend-rebot-includes}
+
+Type: `list[str | StringExpression] | None`
+
+Select tests by tag. Similarly as name with --test,
+tag is case and space insensitive and it is possible
+to use patterns with `*`, `?` and `[]` as wildcards.
+Tags and patterns can also be combined together with
+`AND`, `OR`, and `NOT` operators.
+
+Examples:
+
+```toml
+# match tests tagged "foo" or "bar*"
+includes = ["foo", "bar*"]
+```
+
+```toml
+# tests with both "foo" and "bar*" tags
+includes = ["foo AND bar*"]
+```
+
+corresponds to the `-i --include tag *` option of _robot_
+
+## extend-rebot.legacy-output {#extend-rebot-legacy-output}
+
+Type: `bool | Flag | None`
+
+Create XML output file in format compatible with
+Robot Framework 6.x and earlier.
+
+Examples:
+
+```toml
+legacy-output = true
+```
+
+corresponds to the `--legacyoutput` option of _robot_
+
+## extend-rebot.log {#extend-rebot-log}
+
+Type: `str | StringExpression | None`
+
+HTML log file. Can be disabled by giving a special
+value `NONE`. Default: log.html
+
+Examples:
+
+```toml
+log = "mylog.html"
+```
+
+```toml
+# disable log file generation
+log = "NONE"
+```
+
+corresponds to the `-l --log file` option of _robot_
+
+## extend-rebot.log-level {#extend-rebot-log-level}
+
+Type: `str | StringExpression | None`
+
+Threshold for selecting messages. Available levels:
+TRACE (default), DEBUG, INFO, WARN, NONE (no msgs).
+Use syntax `LOGLEVEL:DEFAULT` to define the default
+visible log level in log files.
+
+Examples:
+
+```toml
+log-level = "DEBUG"
+```
+
+```toml
+# explicit visible level (default: INFO)
+log-level = "DEBUG:INFO"
+```
+
+corresponds to the `-L --loglevel level` option of _rebot_
+
+## extend-rebot.log-title {#extend-rebot-log-title}
+
+Type: `str | StringExpression | None`
+
+Title for the generated log file. The default title
+is `<SuiteName> Log`.
+
+Examples:
+
+```toml
+log-title = "My Project Log"
+```
+
+corresponds to the `--logtitle title` option of _robot_
+
+## extend-rebot.merge {#extend-rebot-merge}
+
+Type: `bool | Flag | None`
+
+When combining results, merge outputs together
+instead of putting them under a new top level suite.
+
+**Example:** rebot --merge orig.xml rerun.xml
+
+Examples:
+
+```toml
+merge = true
+```
+
+corresponds to the `-R --merge` option of _rebot_
+
+## extend-rebot.metadata {#extend-rebot-metadata}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+as --doc. Example: --metadata Version:1.2
+
+Examples:
+
+```toml
+[metadata]
+Version = "1.2"
+# value can be read from a file (same rules as --doc)
+ReleaseNotes = "release_notes.txt"
+```
+
+corresponds to the `-M --metadata name:value *` option of _robot_
+
+## extend-rebot.name {#extend-rebot-name}
+
+Type: `str | StringExpression | None`
+
+Set the name of the top level suite. By default the
+name is created based on the executed file or
+directory.
+
+Examples:
+
+```toml
+name = "My Project"
+```
+
+corresponds to the `-N --name name` option of _robot_
+
+## extend-rebot.no-status-rc {#extend-rebot-no-status-rc}
+
+Type: `bool | Flag | None`
+
+Sets the return code to zero regardless of failures
+in test cases. Error codes are returned normally.
+
+Examples:
+
+```toml
+# always exit 0 regardless of failed tests
+no-status-rc = true
+```
+
+corresponds to the `--nostatusrc` option of _robot_
+
+## extend-rebot.output {#extend-rebot-output}
+
+Type: `str | StringExpression | None`
+
+XML output file. Not created unless this option is
+specified. Given path, similarly as paths given to
+--log, --report and --xunit, is relative to
+--outputdir unless given as an absolute path.
+
+Examples:
+
+```toml
+output = "output.xml"
+```
+
+corresponds to the `-o --output file` option of _rebot_
+
+## extend-rebot.output-dir {#extend-rebot-output-dir}
+
+Type: `str | StringExpression | None`
+
+Where to create output files. The default is the
+directory where tests are run from and the given path
+is considered relative to that unless it is absolute.
+
+Examples:
+
+```toml
+output-dir = "results"
+```
+
+corresponds to the `-d --outputdir dir` option of _robot_
+
+## extend-rebot.parse-include {#extend-rebot-parse-include}
+
+Type: `list[str | StringExpression] | None`
+
+Parse only files matching `pattern`. It can be:
+- a file name or pattern like `example.robot` or
+`*.robot` to parse all files matching that name,
+- a file path like `path/to/example.robot`, or
+- a directory path like `path/to/example` to parse
+all files in that directory, recursively.
+
+Examples:
+
+```toml
+parse-include = ["*.robot", "tests/**/*.robot"]
+```
+
+corresponds to the `-I --parseinclude pattern *` option of _robot_
+
+## extend-rebot.pre-rebot-modifiers {#extend-rebot-pre-rebot-modifiers}
+
+Type: `dict[str, list[str | StringExpression]] | None`
+
+Class to programmatically modify the result
+model before creating reports and logs. Accepts
+arguments the same way as with --listener.
+
+Examples:
+
+```toml
+[pre-rebot-modifiers]
+"path/to/Modifier.py" = ["arg1"]
+```
+
+corresponds to the `--prerebotmodifier modifier *` option of _robot_
+
+## extend-rebot.process-empty-suite {#extend-rebot-process-empty-suite}
+
+Type: `bool | Flag | None`
+
+Processes output also if the top level suite is
+empty. Useful e.g. with --include/--exclude when it
+is not an error that there are no matches.
+
+Examples:
+
+```toml
+process-empty-suite = true
+```
+
+corresponds to the `--processemptysuite` option of _rebot_
+
+## extend-rebot.python-path {#extend-rebot-python-path}
+
+Type: `list[str | StringExpression] | None`
+
+Additional locations (directories, ZIPs) where to
+search libraries and other extensions when they are
+imported. Multiple paths can be given by separating
+them with a colon (`:`) or by using this option
+several times. Given path can also be a glob pattern
+matching multiple paths.
+
+Examples:
+
+```toml
+python-path = ["libs/", "/opt/libs", "libraries.zip"]
+```
+
+corresponds to the `-P --pythonpath path *` option of _robot_
+
+## extend-rebot.quiet {#extend-rebot-quiet}
+
+Type: `bool | Flag | None`
+
+Shortcut for `--console quiet`.
+
+Examples:
+
+```toml
+quiet = true
+```
+
+corresponds to the `--quiet` option of _rebot_
+
+## extend-rebot.remove-keywords {#extend-rebot-remove-keywords}
+
+Type: `list[str | Literal['all', 'passed', 'for', 'wuks'] | NamePattern | TagPattern] | None`
+
+Remove keyword data from the generated log file.
+Keywords containing warnings are not removed except
+in the `all` mode.
+
+**all:** remove data from all keywords
+
+**passed:** remove data only from keywords in passed
+test cases and suites
+
+**for:** remove passed iterations from FOR loops
+
+**while:** remove passed iterations from WHILE loops
+
+**wuks:** remove all but the last failing keyword
+inside `BuiltIn.Wait Until Keyword Succeeds`
+
+**name:\<pattern>:** remove data from keywords that match
+the given pattern. The pattern is matched
+against the full name of the keyword (e.g.
+'MyLib.Keyword', 'resource.Second Keyword'),
+is case, space, and underscore insensitive,
+and may contain `*`, `?` and `[]` wildcards.
+
+
+
+**tag:\<pattern>:** remove data from keywords that match
+the given pattern. Tags are case and space
+insensitive and patterns can contain `*`,
+`?` and `[]` wildcards. Tags and patterns
+can also be combined together with `AND`,
+`OR`, and `NOT` operators.
+
+Examples:
+
+```toml
+# match by keyword name
+remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
+```
+
+```toml
+# match by tag pattern (same rules as --include)
+remove-keywords = ["foo", "foo AND bar*"]
+```
+
+corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
+
+## extend-rebot.report {#extend-rebot-report}
+
+Type: `str | StringExpression | None`
+
+HTML report file. Can be disabled with `NONE`
+similarly as --log. Default: report.html
+
+Examples:
+
+```toml
+report = "report.html"
+```
+
+corresponds to the `-r --report file` option of _robot_
+
+## extend-rebot.report-background {#extend-rebot-report-background}
+
+Type: `str | StringExpression | None`
+
+Background colors to use in the report file.
+Given in format `passed:failed:skipped` where the
+`:skipped` part can be omitted. Both color names and
+codes work.
+
+Examples:
+
+```toml
+# pass:fail:skip colours
+report-background = "green:red:yellow"
+```
+
+```toml
+# pass:fail (skip uses the fail colour)
+report-background = "#00E:#E00"
+```
+
+corresponds to the `--reportbackground colors` option of _robot_
+
+## extend-rebot.report-title {#extend-rebot-report-title}
+
+Type: `str | StringExpression | None`
+
+Title for the generated report file. The default
+title is `<SuiteName> Report`.
+
+Examples:
+
+```toml
+report-title = "My Project Report"
+```
+
+corresponds to the `--reporttitle title` option of _robot_
+
+## extend-rebot.rpa {#extend-rebot-rpa}
+
+Type: `bool | Flag | None`
+
+Turn on the generic automation mode. Mainly affects
+terminology so that "test" is replaced with "task"
+in logs and reports. By default the mode is got
+from test/task header in data files.
+
+Examples:
+
+```toml
+rpa = true
+```
+
+corresponds to the `--rpa` option of _robot_
+
+## extend-rebot.set-tag {#extend-rebot-set-tag}
+
+Type: `list[str | StringExpression] | None`
+
+Sets given tag(s) to all executed tests.
+
+Examples:
+
+```toml
+set-tag = ["my-suite-tag", "ci"]
+```
+
+corresponds to the `-G --settag tag *` option of _robot_
+
+## extend-rebot.split-log {#extend-rebot-split-log}
+
+Type: `bool | Flag | None`
+
+Split the log file into smaller pieces that open in
+browsers transparently.
+
+Examples:
+
+```toml
+split-log = true
+```
+
+corresponds to the `--splitlog` option of _robot_
+
+## extend-rebot.start-time {#extend-rebot-start-time}
+
+Type: `str | StringExpression | None`
+
+Set execution start time. Timestamp must be given in
+format `2007-10-01 15:12:42.268` where all separators
+are optional (e.g. `20071001151242268` is ok too) and
+parts from milliseconds to hours can be omitted if
+they are zero (e.g. `2007-10-01`). This can be used
+to override start time of a single suite or to set
+start time for a combined suite, which would
+otherwise be `N/A`.
+
+Examples:
+
+```toml
+start-time = "2024-12-15 14:30:00.000"
+```
+
+corresponds to the `--starttime timestamp` option of _rebot_
+
+## extend-rebot.suite-stat-level {#extend-rebot-suite-stat-level}
+
+Type: `int | None`
+
+How many levels to show in `Statistics by Suite`
+in log and report. By default all suite levels are
+shown. Example:  --suitestatlevel 3
+
+Examples:
+
+```toml
+suite-stat-level = 2
+```
+
+corresponds to the `--suitestatlevel level` option of _robot_
+
+## extend-rebot.suites {#extend-rebot-suites}
+
+Type: `list[str | StringExpression] | None`
+
+Select suites by name. When this option is used with
+--test, --include or --exclude, only tests in
+matching suites and also matching other filtering
+criteria are selected. Name can be a simple pattern
+similarly as with --test and it can contain parent
+name separated with a dot. For example, `-s X.Y`
+selects suite `Y` only if its parent is `X`.
+
+Examples:
+
+```toml
+# match a suite by name or by parent.child path
+suites = ["MySuite", "Tests.SubSuite"]
+```
+
+corresponds to the `-s --suite name *` option of _robot_
+
+## extend-rebot.tag-doc {#extend-rebot-tag-doc}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Add documentation to tags matching the given
+pattern. Documentation is shown in `Test Details` and
+also as a tooltip in `Statistics by Tag`. Pattern can
+use `*`, `?` and `[]` as wildcards like --test.
+
+Examples:
+
+```toml
+[tag-doc]
+mytag = "Example"
+"owner-*" = "Original author"
+```
+
+corresponds to the `--tagdoc pattern:doc *` option of _robot_
+
+## extend-rebot.tag-stat-combine {#extend-rebot-tag-stat-combine}
+
+Type: `list[str | dict[str, str]] | None`
+
+Create combined statistics based on tags.
+These statistics are added into `Statistics by Tag`.
+If the optional `name` is not given, name of the
+combined tag is got from the specified tags. Tags are
+matched using the same rules as with --include.
+
+Examples:
+
+```toml
+tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
+```
+
+corresponds to the `--tagstatcombine tags:name *` option of _robot_
+
+## extend-rebot.tag-stat-exclude {#extend-rebot-tag-stat-exclude}
+
+Type: `list[str | StringExpression] | None`
+
+Exclude matching tags from `Statistics by Tag`.
+This option can be used with --tagstatinclude
+similarly as --exclude is used with --include.
+
+Examples:
+
+```toml
+tag-stat-exclude = ["bug-*"]
+```
+
+corresponds to the `--tagstatexclude tag *` option of _robot_
+
+## extend-rebot.tag-stat-include {#extend-rebot-tag-stat-include}
+
+Type: `list[str | StringExpression] | None`
+
+Include only matching tags in `Statistics by Tag`
+in log and report. By default all tags are shown.
+Given tag can be a pattern like with --include.
+
+Examples:
+
+```toml
+tag-stat-include = ["owner-*", "feature-*"]
+```
+
+corresponds to the `--tagstatinclude tag *` option of _robot_
+
+## extend-rebot.tag-stat-link {#extend-rebot-tag-stat-link}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Add external links into `Statistics by
+Tag`. Pattern can use `*`, `?` and `[]` as wildcards
+like --test. Characters matching to `*` and `?`
+wildcards can be used in link and title with syntax
+%N, where N is index of the match (starting from 1).
+
+Examples:
+
+```toml
+[tag-stat-link]
+mytag = "http://my.domain:Title"
+"bug-*" = "http://url/id=%1:Issue Tracker"
+```
+
+corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
+
+## extend-rebot.tasks {#extend-rebot-tasks}
+
+Type: `list[str | StringExpression] | None`
+
+Alias to --test. Especially applicable with --rpa.
+
+Examples:
+
+```toml
+tasks = ["My Task", "Smoke*"]
+```
+
+corresponds to the `--task name *` option of _robot_
+
+## extend-rebot.tests {#extend-rebot-tests}
+
+Type: `list[str | StringExpression] | None`
+
+Select tests by name or by long name containing also
+parent suite name like `Parent.Test`. Name is case
+and space insensitive and it can also be a simple
+pattern where `*` matches anything, `?` matches any
+single character, and `[chars]` matches one character
+in brackets.
+
+Examples:
+
+```toml
+tests = ["My Test", "Smoke*"]
+```
+
+corresponds to the `-t --test name *` option of _robot_
+
+## extend-rebot.timestamp-outputs {#extend-rebot-timestamp-outputs}
+
+Type: `bool | Flag | None`
+
+When this option is used, timestamp in a format
+`YYYYMMDD-hhmmss` is added to all generated output
+files between their basename and extension. For
+example `-T -o output.xml -r report.html -l none`
+creates files like `output-20070503-154410.xml` and
+`report-20070503-154410.html`.
+
+Examples:
+
+```toml
+timestamp-outputs = true
+```
+
+corresponds to the `-T --timestampoutputs` option of _robot_
+
+## extend-rebot.xunit {#extend-rebot-xunit}
+
+Type: `str | StringExpression | None`
+
+xUnit compatible result file. Not created unless this
+option is specified.
+
+Examples:
+
+```toml
+xunit = "xunit.xml"
+```
+
+corresponds to the `-x --xunit file` option of _robot_
 
 ## extend-remove-keywords {#extend-remove-keywords}
 
@@ -898,6 +2285,269 @@ extend-tasks = ["My Task", "Smoke*"]
 
 corresponds to the `--task name *` option of _robot_
 
+## extend-testdoc {#extend-testdoc}
+
+Type: `TestDocProfile | None`
+
+Changes the `[testdoc]` options that come before it, from an earlier
+configuration file or before a profile: a setting given here
+replaces the one of `[testdoc]`, and an `extend-` setting adds to it.
+
+Examples:
+```toml
+[extend-testdoc]
+title = "My tests"
+```
+
+## extend-testdoc.doc {#extend-testdoc-doc}
+
+Type: `str | StringExpression | None`
+
+Override the documentation of the top level suite.
+
+Examples:
+
+```toml
+doc = "Very *good* example"
+```
+
+```toml
+# read documentation from a file
+doc = "doc_from_file.txt"
+```
+
+corresponds to the `-D --doc document` option of _testdoc_
+
+## extend-testdoc.excludes {#extend-testdoc-excludes}
+
+Type: `list[str | StringExpression] | None`
+
+Exclude tests by tags.
+
+Examples:
+
+```toml
+excludes = ["smoke", "wip*"]
+```
+
+corresponds to the `-e --exclude tag *` option of _testdoc_
+
+## extend-testdoc.extend-excludes {#extend-testdoc-extend-excludes}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --exclude option.
+
+Exclude tests by tags.
+
+Examples:
+
+```toml
+extend-excludes = ["smoke", "wip*"]
+```
+
+corresponds to the `-e --exclude tag *` option of _testdoc_
+
+## extend-testdoc.extend-includes {#extend-testdoc-extend-includes}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --include option.
+
+Include tests by tags.
+
+Examples:
+
+```toml
+# match tests tagged "foo" or "bar*"
+extend-includes = ["foo", "bar*"]
+```
+
+```toml
+# tests with both "foo" and "bar*" tags
+extend-includes = ["foo AND bar*"]
+```
+
+corresponds to the `-i --include tag *` option of _testdoc_
+
+## extend-testdoc.extend-metadata {#extend-testdoc-extend-metadata}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Appends entries to the --metadata option.
+
+Set/override metadata of the top level suite.
+
+Examples:
+
+```toml
+[extend-metadata]
+Version = "1.2"
+# value can be read from a file (same rules as --doc)
+ReleaseNotes = "release_notes.txt"
+```
+
+corresponds to the `-M --metadata name:value *` option of _testdoc_
+
+## extend-testdoc.extend-set-tag {#extend-testdoc-extend-set-tag}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --settag option.
+
+Set given tag(s) to all test cases.
+
+Examples:
+
+```toml
+extend-set-tag = ["my-suite-tag", "ci"]
+```
+
+corresponds to the `-G --settag tag *` option of _testdoc_
+
+## extend-testdoc.extend-suites {#extend-testdoc-extend-suites}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --suite option.
+
+Include suites by name.
+
+Examples:
+
+```toml
+# match a suite by name or by parent.child path
+extend-suites = ["MySuite", "Tests.SubSuite"]
+```
+
+corresponds to the `-s --suite name *` option of _testdoc_
+
+## extend-testdoc.extend-tests {#extend-testdoc-extend-tests}
+
+Type: `list[str | StringExpression] | None`
+
+Appends entries to the --test option.
+
+Include tests by name.
+
+Examples:
+
+```toml
+extend-tests = ["My Test", "Smoke*"]
+```
+
+corresponds to the `-t --test name *` option of _testdoc_
+
+## extend-testdoc.includes {#extend-testdoc-includes}
+
+Type: `list[str | StringExpression] | None`
+
+Include tests by tags.
+
+Examples:
+
+```toml
+# match tests tagged "foo" or "bar*"
+includes = ["foo", "bar*"]
+```
+
+```toml
+# tests with both "foo" and "bar*" tags
+includes = ["foo AND bar*"]
+```
+
+corresponds to the `-i --include tag *` option of _testdoc_
+
+## extend-testdoc.metadata {#extend-testdoc-metadata}
+
+Type: `dict[str, str | StringExpression] | None`
+
+Set/override metadata of the top level suite.
+
+Examples:
+
+```toml
+[metadata]
+Version = "1.2"
+# value can be read from a file (same rules as --doc)
+ReleaseNotes = "release_notes.txt"
+```
+
+corresponds to the `-M --metadata name:value *` option of _testdoc_
+
+## extend-testdoc.name {#extend-testdoc-name}
+
+Type: `str | StringExpression | None`
+
+Override the name of the top level suite.
+
+Examples:
+
+```toml
+name = "My Project"
+```
+
+corresponds to the `-N --name name` option of _testdoc_
+
+## extend-testdoc.set-tag {#extend-testdoc-set-tag}
+
+Type: `list[str | StringExpression] | None`
+
+Set given tag(s) to all test cases.
+
+Examples:
+
+```toml
+set-tag = ["my-suite-tag", "ci"]
+```
+
+corresponds to the `-G --settag tag *` option of _testdoc_
+
+## extend-testdoc.suites {#extend-testdoc-suites}
+
+Type: `list[str | StringExpression] | None`
+
+Include suites by name.
+
+Examples:
+
+```toml
+# match a suite by name or by parent.child path
+suites = ["MySuite", "Tests.SubSuite"]
+```
+
+corresponds to the `-s --suite name *` option of _testdoc_
+
+## extend-testdoc.tests {#extend-testdoc-tests}
+
+Type: `list[str | StringExpression] | None`
+
+Include tests by name.
+
+Examples:
+
+```toml
+tests = ["My Test", "Smoke*"]
+```
+
+corresponds to the `-t --test name *` option of _testdoc_
+
+## extend-testdoc.title {#extend-testdoc-title}
+
+Type: `str | StringExpression | None`
+
+Set the title of the generated documentation.
+Underscores in the title are converted to spaces.
+The default title is the name of the top level suite.
+
+Examples:
+
+```toml
+title = "My Library"
+```
+
+corresponds to the `-T --title title` option of _testdoc_
+
 ## extend-tests {#extend-tests}
 
 Type: `list[str | StringExpression] | None`
@@ -1085,7 +2735,8 @@ corresponds to the `--legacyoutput` option of _robot_
 
 Type: `LibDocProfile | None`
 
-Options to be passed to _libdoc_.
+Options to be passed to _libdoc_. Of the settings outside of this
+table, _libdoc_ gets only `python-path`, and this table wins over it.
 
 ## libdoc.doc-format {#libdoc-doc-format}
 
@@ -1623,7 +3274,13 @@ corresponds to the `-S --rerunfailedsuites output` option of _robot_
 
 Type: `RebotProfile | None`
 
-Options to be passed to _rebot_.
+Options to be passed to _rebot_. They win over the settings outside
+of this table. Of those, _rebot_ gets the ones that Robot Framework
+itself passes from _robot_ to _rebot_ after a run, so not
+`includes`, `excludes`, `tests`, `suites`, `parse-include`, `name`,
+`doc`, `metadata`, `set-tag`, `output`, `log-level`,
+`timestamp-outputs`, `console` and `quiet`; `run-empty-suite`
+becomes `process-empty-suite`.
 
 ## rebot.console {#rebot-console}
 
@@ -3203,7 +4860,9 @@ corresponds to the `--task name *` option of _robot_
 
 Type: `TestDocProfile | None`
 
-Options to be passed to _testdoc_.
+Options to be passed to _testdoc_. They win over the settings outside
+of this table that _testdoc_ shares with _robot_, such as `name`,
+`metadata` or `includes`.
 
 ## testdoc.doc {#testdoc-doc}
 
