@@ -44,7 +44,7 @@
 
 ## 4. Verification with the maintainer
 
-- [ ] 4.1 After the push, check the artifact `vscode-package` of the next run on `main`:
+- [x] 4.1 After the push, check the artifact `vscode-package` of the next run on `main`:
   - it holds `robotcode-2.7.1NNNNN.vsix`, whose manifest and `extension/package.json` carry that version;
   - its manifest has the property `Microsoft.VisualStudio.Code.PreRelease`;
   - its `extension/bundled/libs/robotcode/cli/__version__.py` holds the run's `2.8.0-dev.N`.
