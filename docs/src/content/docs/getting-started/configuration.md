@@ -18,7 +18,7 @@ python-path = ["libraries", "resources"]
 output-dir = "results"
 
 [variables]
-BROWSER = "chrome"
+BROWSER = "chromium"
 BASE_URL = "http://localhost:8080"
 ```
 
@@ -33,7 +33,7 @@ In VS Code, the extension Even Better TOML completes the settings and shows thei
 
 ## Running the tests
 
-VS Code, PyCharm and IntelliJ IDEA use the configuration for the analysis, the test discovery and runs, and pick up a change of `robot.toml` at once.
+VS Code and PyCharm use the configuration for the analysis, the test discovery and runs, and pick up a change of `robot.toml` at once.
 
 On the command line, run the tests with `robotcode run`; Robot Framework's own `robot` command does not read `robot.toml`. `robotcode run` needs RobotCode's runner in the environment of your project:
 
@@ -58,11 +58,13 @@ A profile holds the settings for another environment. Add one to `robot.toml`:
 
 ```toml title="robot.toml"
 [profiles.staging]
-description = "Staging server"
-extend-variables = { BASE_URL = "https://staging.example.com" }
+description = "Staging shop"
+
+[profiles.staging.extend-variables]
+BASE_URL = "https://staging.shop.example"
 ```
 
-`robotcode -p staging run` runs with it. `extend-variables` adds to the variables outside of the profile, here changing `BASE_URL` and keeping `BROWSER`; `variables` would replace them all. In VS Code, **RobotCode: Select Configuration Profiles** selects the profiles, and in PyCharm **Tools | RobotCode | Select Configuration Profiles...**.
+`robotcode -p staging run` runs with it. `extend-variables` adds to the variables outside of the profile, here changing `BASE_URL` and keeping `BROWSER`; `variables` would replace them all. In VS Code, **RobotCode: Select Configuration Profiles** selects the profiles, and in PyCharm **Tools | RobotCode | Select Configuration Profiles...**. [Profiles](/guides/robot-toml/profiles/) explains default profiles, inheritance and the order of profiles.
 
 ## Personal settings
 
@@ -73,7 +75,7 @@ Settings that only you need go into a file named `.robot.toml` next to `robot.to
 BROWSER = "firefox"
 ```
 
-RobotCode reads `.robot.toml` after `robot.toml`. Its settings replace those of `robot.toml`, and with `extend-` they add to them: `[variables]` here would drop `BASE_URL`.
+RobotCode reads `.robot.toml` after `robot.toml`. Its settings replace those of `robot.toml`, and with `extend-` they add to them: `[variables]` here would drop `BASE_URL`. See [Personal settings in `.robot.toml`](/guides/robot-toml/files/#personal-settings-in-robottoml) for more uses.
 
 ## Checking the configuration
 
@@ -81,6 +83,6 @@ RobotCode reads `.robot.toml` after `robot.toml`. Its settings replace those of 
 
 ## Next steps
 
-- [Configuring Projects with robot.toml](/guides/robot-toml/) explains all files, profiles in detail, expressions and the project root.
+- [Configuring Projects with robot.toml](/guides/robot-toml/) explains the files, the settings, profiles, how settings combine and the command line, with recipes and troubleshooting.
 - The [`robot.toml` reference](/reference/config/) lists every setting.
 - RobotCode's other settings are explained for [VS Code](/guides/vscode/configuration/) and [PyCharm](/guides/pycharm/configuration/).

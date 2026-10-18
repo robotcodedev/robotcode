@@ -1,0 +1,93 @@
+---
+title: Configuring Projects with robot.toml
+description: 'What robot.toml is for, who reads it, an example project that the pages of this guide build on, and what the editors take from it.'
+sidebar:
+  label: Overview
+  order: 100
+---
+
+import AreaOverview from "../../../../components/AreaOverview.astro";
+
+Every run of a Robot Framework project needs options: where the tests are, where Robot Framework finds the libraries and resource files, variables such as the browser or the address of the system under test, and where the results go. On the command line, they make long commands. Kept in argument files and shell scripts, they get copied for every environment, and every editor needs them set up again.
+
+`robot.toml` keeps these options in one file in the project, and profiles hold what differs between environments:
+
+```toml title="robot.toml"
+paths = ["tests"]
+python-path = ["libraries", "resources"]
+
+[variables]
+BASE_URL = "http://localhost:8080"
+
+[profiles.staging.extend-variables]
+BASE_URL = "https://staging.shop.example"
+```
+
+`robotcode run` runs the tests in `tests` against the local server, and `robotcode -p staging run` runs them against the staging server. VS Code and PyCharm use the same file, so a run in the editor gets the same options as a run on the command line or on a CI server. To create a first `robot.toml`, see [Configure Your Project](/getting-started/configuration/); the [`robot.toml` reference](/reference/config/) lists every setting.
+
+## Who reads `robot.toml`
+
+- **Every `robotcode` command**, from `robotcode run`, `discover` and `analyze code` to `repl`, `doc` and `results`: each finds the [project root](/guides/robot-toml/files/#the-project-root) and reads the configuration there, with the profiles you select.
+- **RobotCode's language server** in VS Code, PyCharm and other editors, for the analysis of your files, the test discovery and runs.
+
+Robot Framework's own `robot` command does not read `robot.toml`. Run your tests with `robotcode run`, or `robotcode robot`, which is the same command and passes the configuration on to Robot Framework. On the command line, `robotcode run` needs RobotCode's runner in the environment of your project, for example installed with `pip install "robotcode[runner]"`.
+
+## An example project
+
+The pages of this guide build on a project that tests a web shop. Its `robot.toml` is committed with the project:
+
+```toml title="robot.toml"
+paths = ["tests"]
+python-path = ["libraries", "resources"]
+output-dir = "results"
+
+[variables]
+BROWSER = "chromium"
+HEADLESS = "false"
+BASE_URL = "http://localhost:8080"
+
+[profiles.staging]
+description = "Staging shop"
+
+[profiles.staging.extend-variables]
+BASE_URL = "https://staging.shop.example"
+
+[profiles.ci]
+description = "CI server"
+inherits = ["staging"]
+output-dir = "results/ci"
+
+[profiles.ci.extend-variables]
+HEADLESS = "true"
+```
+
+- The settings at the top are the options of every run: the tests in `tests`, libraries and resource files in `libraries` and `resources`, the results in `results`, and three variables.
+- The profile `staging` runs the tests against the staging shop. `extend-variables` changes `BASE_URL` and keeps the other variables.
+- The profile `ci` is meant for the CI server. It inherits everything from `staging`, writes its results to `results/ci` and runs the browser without a window.
+
+One developer prefers Firefox and keeps that in a `.robot.toml` next to `robot.toml`, which is not committed:
+
+```toml title=".robot.toml"
+[extend-variables]
+BROWSER = "firefox"
+```
+
+With these files:
+
+| Command | Runs the tests |
+| --- | --- |
+| `robotcode run` | Against `http://localhost:8080` in Firefox, results in `results` |
+| `robotcode -p staging run` | Against the staging shop in Firefox |
+| `robotcode -p ci run` on the CI server, without `.robot.toml` | Against the staging shop in Chromium without a window, results in `results/ci` |
+
+## In the editors
+
+- **The analysis** takes `python-path`, `variables`, `variable-files`, `env` and `languages` from the configuration, so that imports and variables resolve as they do in a run.
+- **The test discovery and runs** use all settings, as `robotcode run` does.
+- **Profiles:** VS Code and PyCharm use the profiles you select there, and without a selection the [default profiles](/guides/robot-toml/profiles/#default-profiles). In VS Code, **RobotCode: Select Configuration Profiles** selects them, and the Test Explorer offers a run profile for each profile, named after the profile and its description, such as "Run ci - CI server"; see [Configuration profiles](/guides/vscode/configuration/#configuration-profiles). In PyCharm, **Tools | RobotCode | Select Configuration Profiles...** selects them, and **Run with Profile...** runs once with another one; see [Configuration profiles](/guides/pycharm/configuration/#configuration-profiles).
+- **Changes** apply at once: the editors restart RobotCode's language server when you create, change or delete `robot.toml`, `.robot.toml` or `pyproject.toml`.
+- **Writing the file:** in VS Code, the extension Even Better TOML completes the settings of `robot.toml` and `.robot.toml` and shows their documentation; see [Editing `robot.toml`](/guides/vscode/configuration/#editing-robottoml). Other editors with a TOML language server can use RobotCode's JSON schema at `https://www.robotcode.io/schemas/robot.toml.json`.
+
+## Pages of this guide
+
+<AreaOverview area="guides/robot-toml" />
