@@ -62,6 +62,20 @@ class _NameSpaceError(Exception):
 
 
 @dataclass(frozen=True, slots=True)
+class FailedImport:
+    """An import whose resolution raised or whose library or variables documentation has errors.
+
+    `base_dir` and `variables` are what its file or module was looked up with.
+    `found` tells whether that lookup succeeded, so that only loading failed.
+    """
+
+    imp: Import
+    base_dir: str
+    variables: Dict[str, Any]
+    found: bool
+
+
+@dataclass(frozen=True, slots=True)
 class ResolvedImports:
     """Result of import resolution (Phase 2).
 
@@ -81,6 +95,9 @@ class ResolvedImports:
     # A None value means the dependency was resolved but no trustworthy meta
     # exists — namespaces built from it must not be persisted.
     dependency_metas: Dict[str, Optional[Any]] = field(default_factory=dict)
+
+    # The imports that failed, also those of imported resource files.
+    failed_imports: List[FailedImport] = field(default_factory=list)
 
 
 class ImportResolver:
@@ -103,6 +120,7 @@ class ImportResolver:
         "_base_dir",
         "_dependency_metas",
         "_diagnostics",
+        "_failed_imports",
         "_import_entries",
         "_imports_manager",
         "_libraries",
@@ -143,6 +161,7 @@ class ImportResolver:
         self._variables_dirty = True
         self._source_hints: Dict[str, str] = {}
         self._dependency_metas: Dict[str, Optional[Any]] = {}
+        self._failed_imports: List[FailedImport] = []
 
     def resolve(self, imports: Iterable[Import], *, source_hints: Optional[Dict[str, str]] = None) -> ResolvedImports:
         """Resolve all imports and return the result."""
@@ -158,6 +177,7 @@ class ImportResolver:
             import_entries=self._import_entries,
             diagnostics=self._diagnostics,
             dependency_metas=self._dependency_metas,
+            failed_imports=self._failed_imports,
         )
 
     # ------------------------------------------------------------------
@@ -168,6 +188,11 @@ class ImportResolver:
         if self._variables_dirty:
             self._variables = self._scope.as_robot_variables()
             self._variables_dirty = False
+
+    def _record_failed_import(self, imp: Import, base_dir: str) -> None:
+        # _refresh_variables replaces the dict, so the import keeps the variables it was resolved with
+        found = self._imports_manager.find_import_source(imp, base_dir, self._variables) is not None
+        self._failed_imports.append(FailedImport(imp, base_dir, self._variables, found))
 
     def _append_diagnostics(
         self,
@@ -317,6 +342,8 @@ class ImportResolver:
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
+            self._record_failed_import(imp, base_dir)
+
             effective_source = parent_source if parent_source else source
             if top_level:
                 self._append_diagnostics(
@@ -369,6 +396,8 @@ class ImportResolver:
             variables=self._variables,
         )
         self._record_dependency_meta(_dependency_key("lib", meta, imp.name), meta)
+        if library_doc.errors:
+            self._record_failed_import(imp, base_dir)
         entry = LibraryEntry(
             name=library_doc.name,
             import_name=imp.name,
@@ -665,6 +694,8 @@ class ImportResolver:
             variables=self._variables,
         )
         self._record_dependency_meta(_dependency_key("var", meta, imp.name), meta)
+        if library_doc.errors:
+            self._record_failed_import(imp, base_dir)
         entry = VariablesEntry(
             name=library_doc.name,
             import_name=imp.name,

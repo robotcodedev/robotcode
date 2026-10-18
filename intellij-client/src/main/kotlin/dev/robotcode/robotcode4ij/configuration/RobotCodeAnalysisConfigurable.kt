@@ -58,6 +58,17 @@ class RobotCodeAnalysisConfigurable(private val project: Project) : BoundSearcha
                 checkBox(RobotCodeBundle.message("settings.analysis.referencesCodeLens"))
                     .bindSelected(settings::analysisReferencesCodeLens)
             }.rowComment(RobotCodeBundle.message("settings.analysis.referencesCodeLens.comment"))
+            row(RobotCodeBundle.message("settings.analysis.fileCheckInterval")) {
+                textField()
+                    .columns(6)
+                    .bindText(
+                        { settings.analysisFileCheckInterval.toString() },
+                        { text -> parseFileCheckInterval(text)?.let { settings.analysisFileCheckInterval = it } }
+                    )
+                    .validationOnInput { checkFileCheckInterval(it.text) }
+                    .validationOnApply { checkFileCheckInterval(it.text) }
+                label(RobotCodeBundle.message("settings.analysis.fileCheckInterval.minutes"))
+            }.rowComment(RobotCodeBundle.message("settings.analysis.fileCheckInterval.comment"))
             group(RobotCodeBundle.message("settings.analysis.cache")) {
                 row(RobotCodeBundle.message("settings.analysis.cache.saveLocation")) {
                     comboBox(CacheSaveLocation.entries, textListCellRenderer<CacheSaveLocation?> { it?.let(::label) })
@@ -141,6 +152,14 @@ class RobotCodeAnalysisConfigurable(private val project: Project) : BoundSearcha
         project.publishRobotCodeSettingsChanged()
     }
 
+    private fun ValidationInfoBuilder.checkFileCheckInterval(text: String): ValidationInfo? {
+        return if (parseFileCheckInterval(text) == null) {
+            error(RobotCodeBundle.message("settings.analysis.fileCheckInterval.invalid"))
+        } else {
+            null
+        }
+    }
+
     private fun ValidationInfoBuilder.checkLoadLibraryTimeout(text: String): ValidationInfo? {
         return if (parseLoadLibraryTimeout(text) == null) {
             error(RobotCodeBundle.message("settings.analysis.robot.loadLibraryTimeout.invalid"))
@@ -173,6 +192,14 @@ class RobotCodeAnalysisConfigurable(private val project: Project) : BoundSearcha
                 RobotCodeBundle.message("settings.analysis.cache.saveLocation.workspaceFolder")
         }
     }
+}
+
+/**
+ * The stored file check interval for the text of its field, or null for a text that is not a whole number of minutes
+ * from 1 to 1440.
+ */
+internal fun parseFileCheckInterval(text: String): Int? {
+    return text.trim().toIntOrNull()?.takeIf { it in 1..1440 }
 }
 
 /**

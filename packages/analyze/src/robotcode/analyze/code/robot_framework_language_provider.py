@@ -58,6 +58,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         self.diagnostics_context.diagnostics.folder_analyzers.add(self.analyze_folder)
         self.diagnostics_context.diagnostics.document_analyzers.add(self.analyze_document)
         self.diagnostics_context.diagnostics.document_collectors.add(self.collect_diagnostics)
+        self.diagnostics_context.diagnostics.folder_finishers.add(self.finish_folder)
         if self.diagnostics_context.collect_unused:
             self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_keywords)
             self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_variables)
@@ -123,6 +124,10 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         namespace.analyze()
 
         return None
+
+    def finish_folder(self, sender: Any, folder: WorkspaceFolder) -> None:
+        # the cache is shared with the language server and other runs, so only files that do not exist lose entries
+        self._document_cache.remove_cached_analyses_of_missing_files(folder)
 
     def collect_diagnostics(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
         namespace = self._document_cache.get_namespace(document)

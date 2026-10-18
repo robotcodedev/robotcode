@@ -136,6 +136,8 @@ class CodeAnalyzer(DiagnosticsContext):
                     # Always yield, even when empty: the result collector uses this to count analyzed files.
                     yield DocumentDiagnosticReport(document, diagnostics)
 
+            self.diagnostics.finish_folder(folder)
+
     def collect_documents(
         self, folder: WorkspaceFolder, paths: Iterable[Path] = (), filter_patterns: Iterable[str] = ()
     ) -> List[TextDocument]:

@@ -41,7 +41,8 @@
       "findUnusedReferences": false,
       "diagnosticMode": "openFilesOnly",
       "progressMode": "off",
-      "referencesCodeLens": false
+      "referencesCodeLens": false,
+      "fileCheckInterval": 5
     },
     "robocop": {
       "enabled": true,

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Generic, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from robotcode.core.utils.logging import LoggingDescriptor
 
@@ -494,6 +494,17 @@ class SqliteDataCache:
             )
             for r in rows
         ]
+
+    def remove_entries(self, section: CacheSection, entry_names: Iterable[str]) -> int:
+        """Remove the entries with these names from a section, and return how many of them there were."""
+        rows = [(name,) for name in entry_names]
+
+        def op() -> int:
+            cursor = self._conn.executemany(f"DELETE FROM {section.value} WHERE entry_name = ?", rows)
+            self._conn.commit()
+            return cursor.rowcount
+
+        return self._run(op)
 
     def clear_section(self, section: CacheSection) -> int:
         def op() -> int:

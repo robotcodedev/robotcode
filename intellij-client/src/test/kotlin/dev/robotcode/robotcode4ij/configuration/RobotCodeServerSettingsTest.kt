@@ -147,7 +147,8 @@ class RobotCodeServerSettingsTest {
                   "findUnusedReferences": true,
                   "diagnosticMode": "workspace",
                   "progressMode": "detailed",
-                  "referencesCodeLens": true
+                  "referencesCodeLens": true,
+                  "fileCheckInterval": 2
                 }
                 """
             ),
@@ -345,6 +346,7 @@ class RobotCodeServerSettingsTest {
             analysisProgressMode = RobotCodeServerSettings.ProgressMode.DETAILED.value
             analysisFindUnusedReferences = true
             analysisReferencesCodeLens = true
+            analysisFileCheckInterval = 2
             analysisDiagnosticModifiersIgnore = mutableListOf("KeywordNotFound")
             analysisDiagnosticModifiersError = mutableListOf("MultipleKeywords")
             analysisDiagnosticModifiersWarning = mutableListOf("VariableNotFound")

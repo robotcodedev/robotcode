@@ -120,11 +120,9 @@ def open_temp_document(
 ) -> Iterator[Callable[[Path], TextDocument]]:
     """Callable: `(path) -> TextDocument` for files outside the test workspace.
 
-    A document is opened without a version. The workspace diagnostics analyze a
-    document with a version in the background; when that analysis comes after
-    the document is closed again, it puts the closed document back into the
-    reference index. The namespace disk cache is off during the test, so the
-    namespace of a document is still analyzed fresh.
+    A document is opened without a version, like a file that is not open in the
+    editor. The namespace disk cache is off during the test, so the namespace
+    of a document is still analyzed fresh.
 
     The protocol is shared by the whole test session, so every document opened
     from the file's directory (the file itself and what it imports) is closed
@@ -143,8 +141,6 @@ def open_temp_document(
     finally:
         for document in list(protocol.documents.documents):
             if any(directory in document.uri.to_path().parents for directory in directories):
-                # an analyzed document stays in the reference index, also after it is closed
-                protocol.documents_cache.get_project_index(document).remove_file(str(document.uri.to_path()))
                 protocol.documents.close_document(document, real_close=True)
 
 

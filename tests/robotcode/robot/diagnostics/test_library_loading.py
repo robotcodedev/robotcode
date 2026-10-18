@@ -349,6 +349,8 @@ class TestTimedOutImportInTheAnalysis:
 
         namespace = mocker.MagicMock()
         namespace.dependency_metas = resolved.dependency_metas
+        # only the meta of the timed out library keeps the namespace out of the cache here
+        namespace.failed_imports = []
         assert imports_manager.build_namespace_meta(str(suite), namespace, DiskInfo(100, 17)) is None
 
         namespace.dependency_metas = {

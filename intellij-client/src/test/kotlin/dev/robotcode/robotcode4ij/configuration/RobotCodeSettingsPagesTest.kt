@@ -20,6 +20,17 @@ class RobotCodeSettingsPagesTest {
     }
 
     @Test
+    fun fileCheckIntervalAcceptsOneTo1440Minutes() {
+        assertEquals(1, parseFileCheckInterval("1"))
+        assertEquals(5, parseFileCheckInterval(" 5 "))
+        assertEquals(1440, parseFileCheckInterval("1440"))
+
+        for (text in listOf("0", "-5", "1441", "1.5", "five", "", "  ")) {
+            assertNull(text, parseFileCheckInterval(text))
+        }
+    }
+
+    @Test
     fun listEntriesAreTrimmedWithoutBlankOnes() {
         assertEquals(
             listOf("KeywordNotFound", "VariableNotFound"),

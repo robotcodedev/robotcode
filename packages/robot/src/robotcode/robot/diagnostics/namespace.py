@@ -46,7 +46,7 @@ from .entities import (
     VariablesImport,
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME
-from .import_resolver import ImportResolver
+from .import_resolver import FailedImport, ImportResolver
 from .imports_manager import ImportsManager, RobotFileMeta
 from .keyword_finder import KeywordFinder
 from .library_doc import (
@@ -205,6 +205,7 @@ class Namespace:
         sentinel: object,
         semantic_model: Optional["SemanticModel"] = None,
         dependency_metas: Optional[Dict[str, Optional[Any]]] = None,
+        failed_imports: Optional[List[FailedImport]] = None,
     ) -> None:
         self.imports_manager = imports_manager
         self.source = source
@@ -234,6 +235,7 @@ class Namespace:
         self._sentinel = sentinel  # prevent GC — ref-counted by imports_manager
         self._semantic_model = semantic_model
         self._dependency_metas = dependency_metas
+        self._failed_imports = failed_imports or []
 
         # Lazy-computed caches
         self._namespaces: Optional[Dict[KeywordMatcher, List[LibraryEntry]]] = None
@@ -253,6 +255,11 @@ class Namespace:
         them — such a namespace must never be persisted to the disk cache.
         """
         return self._dependency_metas
+
+    @property
+    def failed_imports(self) -> List[FailedImport]:
+        """The imports whose resolution raised or whose library or variables documentation has errors."""
+        return self._failed_imports
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -450,7 +457,9 @@ class Namespace:
     def invalidated(sender) -> None: ...
 
     def _on_imports_changed(self, sender: Any, uri: Any) -> None:
-        self.invalidated(self)
+        # a created file can only resolve an import that failed
+        if self._failed_imports:
+            self.invalidated(self)
 
     def _on_libraries_changed(self, sender: Any, libraries: Any) -> None:
         for p in libraries:
@@ -747,6 +756,7 @@ class Namespace:
             sentinel=sentinel,
             semantic_model=semantic_model,
             dependency_metas=resolved.dependency_metas,
+            failed_imports=resolved.failed_imports,
         )
 
 
@@ -894,4 +904,5 @@ class NamespaceBuilder:
                 sentinel=sentinel,
                 semantic_model=analyzer_result.semantic_model,
                 dependency_metas=resolved.dependency_metas,
+                failed_imports=resolved.failed_imports,
             )

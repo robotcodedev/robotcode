@@ -138,7 +138,13 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
         if document is not None:
             document.opened_in_editor = False
 
-            self.close_document(document)
+            if document.uri.scheme == "file" and not document.uri.to_path().exists():
+                # deleted while it was open in the editor: handled like a deleted file, which drops the document
+                self.parent.workspace.did_change_watched_files(
+                    self.parent.workspace, [FileEvent(str(document.uri), FileChangeType.DELETED)]
+                )
+            else:
+                self.close_document(document)
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @__logger.call

@@ -260,6 +260,29 @@ class TestSqliteDataCache:
         assert cache.read_entry(CacheSection.LIBRARY, "a", str, str) is None
         assert cache.read_entry(CacheSection.RESOURCE, "b", str, str) is not None
 
+    def test_remove_entries_removes_only_those_namespace_entries(self, tmp_path: Path) -> None:
+        cache = SqliteDataCache(tmp_path / "cache")
+        cache.save_entry(CacheSection.NAMESPACE, "/p/a.robot\ngeneral", None, "x")
+        cache.save_entry(CacheSection.NAMESPACE, "/p/a.robot\nresource", None, "x")
+        cache.save_entry(CacheSection.NAMESPACE, "/p/b.robot\ngeneral", None, "y")
+        cache.save_entry(CacheSection.RESOURCE, "/p/a.robot", None, "z")
+
+        removed = cache.remove_entries(
+            CacheSection.NAMESPACE, ["/p/a.robot\ngeneral", "/p/a.robot\nresource", "/p/missing.robot\ngeneral"]
+        )
+
+        assert removed == 2
+        assert [e.entry_name for e in cache.list_entries(CacheSection.NAMESPACE)] == ["/p/b.robot\ngeneral"]
+        assert cache.read_entry(CacheSection.RESOURCE, "/p/a.robot", str, str) is not None
+
+    def test_remove_entries_removes_only_those_resource_entries(self, tmp_path: Path) -> None:
+        cache = SqliteDataCache(tmp_path / "cache")
+        cache.save_entry(CacheSection.RESOURCE, "/p/a.resource", None, "x")
+        cache.save_entry(CacheSection.RESOURCE, "/p/b.resource", None, "y")
+
+        assert cache.remove_entries(CacheSection.RESOURCE, ["/p/a.resource"]) == 1
+        assert [e.entry_name for e in cache.list_entries(CacheSection.RESOURCE)] == ["/p/b.resource"]
+
 
 class TestCorruptionRecovery:
     """A corrupt cache.db must be detected and rebuilt, never propagated to callers (issue #614)."""

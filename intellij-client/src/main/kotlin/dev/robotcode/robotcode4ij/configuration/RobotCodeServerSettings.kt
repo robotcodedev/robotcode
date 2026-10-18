@@ -58,7 +58,8 @@ data class RobotCodeServerSettings(
         val findUnusedReferences: Boolean = false,
         val diagnosticMode: String = DiagnosticMode.OPEN_FILES_ONLY.value,
         val progressMode: String = ProgressMode.OFF.value,
-        val referencesCodeLens: Boolean = false
+        val referencesCodeLens: Boolean = false,
+        val fileCheckInterval: Int = 5
     )
 
     data class AnalysisCache(
@@ -224,7 +225,8 @@ object RobotCodeServerSettingsMapper {
                         state.analysisDiagnosticMode
                     ).value,
                     progressMode = choiceOf<RobotCodeServerSettings.ProgressMode>(state.analysisProgressMode).value,
-                    referencesCodeLens = state.analysisReferencesCodeLens
+                    referencesCodeLens = state.analysisReferencesCodeLens,
+                    fileCheckInterval = state.analysisFileCheckInterval
                 ),
                 robocop = RobotCodeServerSettings.Robocop(
                     enabled = state.robocopEnabled,

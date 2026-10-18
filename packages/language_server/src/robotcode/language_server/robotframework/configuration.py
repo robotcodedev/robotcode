@@ -63,6 +63,7 @@ class AnalysisConfig(ConfigBase):
     progress_mode: AnalysisProgressMode = AnalysisProgressMode.OFF
     references_code_lens: bool = False
     find_unused_references: bool = False
+    file_check_interval: int = 5
     cache: CacheConfig = field(default_factory=CacheConfig)
     robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)
     modifiers: AnalysisDiagnosticModifiersConfig = field(default_factory=AnalysisDiagnosticModifiersConfig)

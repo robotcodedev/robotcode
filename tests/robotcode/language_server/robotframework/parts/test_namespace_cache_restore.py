@@ -132,7 +132,6 @@ def _references_to_imports(protocol: RobotLanguageServerProtocol, document: Text
 def _close_project(protocol: RobotLanguageServerProtocol, project: Path) -> None:
     for document in list(protocol.documents.documents):
         if project in document.uri.to_path().parents:
-            protocol.documents_cache.get_project_index(document).remove_file(str(document.uri.to_path()))
             protocol.documents.close_document(document, real_close=True)
 
 

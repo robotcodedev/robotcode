@@ -332,6 +332,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         with self.get_diagnostics_data(document) as data:
             return data.force or document.version != data.version or data.skipped_entries
 
+    def _is_current_document(self, document: TextDocument) -> bool:
+        """Whether the documents manager still holds `document` for its URI; a document closed for good is gone."""
+        return self.parent.documents.get(document.uri) is document
+
     @_logger.call
     def run_workspace_diagnostics(self) -> None:
         self._logger.debug("start workspace diagnostics loop")
@@ -387,6 +391,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 breaked = True
                                 self.on_workspace_diagnostics_break(self)
                                 break
+
+                            if not self._is_current_document(document):
+                                continue
 
                             done_something = True
 
@@ -472,6 +479,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 )
                                 self.on_workspace_diagnostics_break(self)
                                 break
+
+                            if not self._is_current_document(document):
+                                continue
 
                             mode = self.get_diagnostics_mode(document.uri)
                             if mode == DiagnosticsMode.OFF:

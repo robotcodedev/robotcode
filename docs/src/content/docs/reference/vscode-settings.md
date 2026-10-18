@@ -526,6 +526,16 @@ Enable/disable references CodeLens for RobotFramework files.
 - **Default:** `false`
 - **Can be set in:** user, remote and workspace settings
 
+### `robotcode.analysis.fileCheckInterval` {#robotcode.analysis.fileCheckInterval}
+
+Specifies the interval in minutes at which the language server checks the files of the workspace, also for changes the editor did not report: created, changed and deleted Robot Framework files, changed library and variable files, and missing files of failed imports that exist now.
+
+- **Type:** `integer`
+- **Default:** `5`
+- **Minimum:** `1`
+- **Maximum:** `1440`
+- **Can be set in:** user, remote, workspace and folder settings
+
 ## Linting and Formatting - Robocop
 
 ### `robotcode.robocop.enabled` {#robotcode.robocop.enabled}

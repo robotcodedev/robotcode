@@ -20,6 +20,11 @@ Find References SHALL return, for every workspace file the language server knows
 - **WHEN** Find References is run on a call of `Log` while the language server is still analyzing the workspace
 - **THEN** the result is returned at once and lists the calls in the files analyzed so far
 
+#### Scenario: Find References before and after an analysis
+
+- **WHEN** Find References is run on a call of `Log` before a created suite that calls `Log` is analyzed, and again after that analysis
+- **THEN** the second result lists the call in the created suite
+
 ### Requirement: References stay while an analysis is renewed
 
 When the analysis of a file becomes invalid, because the file changed or because a file it imports changed, Find References SHALL keep returning the references of that file's previous analysis until its new analysis replaces them.

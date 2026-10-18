@@ -18,6 +18,7 @@ Find References, Rename, the references code lens and the hints on unused keywor
 - **Index follows the files.** The index holds, for every file, the references of the latest analysis of that file:
   - When a file's analysis becomes invalid, its references stay until the new analysis replaces them. The server already does this when a file itself changes in the editor.
   - Only files the server still knows count. Deleted files, and analyses that end after a file was closed, leave nothing behind.
+  - A result of Find References is not kept past the next analysis, so it does not miss a file analyzed after it.
 - **Created files:**
   - A created Robot Framework file that the workspace includes is analyzed like the files found at startup.
   - A created file invalidates only the analyses of files whose imports failed, and these files are analyzed again. Today it invalidates every analysis.
@@ -57,6 +58,7 @@ Not in this change: dropping the result cache of Find References, what Rename do
 - **`packages/language_server`:**
   - the workspace diagnostics loop and the handler from `9a8bb97c`;
   - the handling of file events and of closing a document;
+  - the result cache of Find References;
   - opening created Robot Framework files (`robot_workspace.py`);
   - the periodic check;
   - the new setting in `AnalysisConfig`.

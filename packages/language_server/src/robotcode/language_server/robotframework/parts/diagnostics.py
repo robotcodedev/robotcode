@@ -51,6 +51,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     def _on_initialized(self, sender: Any) -> None:
         self.parent.diagnostics.analyze.add(self.analyze)
         self.parent.documents_cache.namespace_initialized.add(self._on_namespace_initialized)
+        self.parent.documents_cache.namespace_invalidated.add(self._on_namespace_invalidated)
         self.parent.documents_cache.libraries_changed.add(self._on_libraries_changed)
         self.parent.documents_cache.resources_changed.add(self._on_resources_changed)
         self.parent.documents_cache.variables_changed.add(self._on_variables_changed)
@@ -85,9 +86,18 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     def _on_namespace_initialized(self, sender: Any, namespace: Namespace) -> None:
-        if namespace.document is not None:
+        # only a document open in the editor: a closed one gets its diagnostics renewed through the invalidation
+        # that started the rebuild or through its own changes, marking it again would analyze it once more
+        if namespace.document is not None and namespace.document.opened_in_editor:
             # the namespace is initialized under the lock of the document's cache entry, while the diagnostics
             # loop holds the diagnostics lock when it waits for a task that may wait for that entry
+            run_as_task(self.parent.diagnostics.force_refresh_document, namespace.document)
+
+    @language_id("robotframework")
+    def _on_namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        if namespace.document is not None:
+            # also a closed document: the workspace diagnostics loop renews its analysis, which refreshes its
+            # references and diagnostics
             run_as_task(self.parent.diagnostics.force_refresh_document, namespace.document)
 
     @language_id("robotframework")

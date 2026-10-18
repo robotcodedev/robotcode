@@ -13,42 +13,9 @@ from typing import Dict, List, NamedTuple, Set
 
 from pytest_mock import MockerFixture
 
-from robotcode.core.lsp.types import (
-    ClientCapabilities,
-    InitializedParams,
-    InitializeParamsClientInfoType,
-    WorkspaceFolder,
-)
-from robotcode.core.utils.dataclasses import as_dict
-from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
-from robotcode.language_server.robotframework.configuration import AnalysisConfig, RobotCodeConfig
-from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
-from robotcode.language_server.robotframework.server import RobotLanguageServer
 from robotcode.robot.diagnostics.errors import Error
 from robotcode.robot.diagnostics.namespace import Namespace
-from tests.robotcode.language_server.robotframework.tools import write_project
-
-
-def _start(root: Path) -> RobotLanguageServerProtocol:
-    """A language server for the workspace `root`, after its workspace analysis."""
-    protocol = RobotLanguageServerProtocol(RobotLanguageServer())
-    protocol._initialize(
-        ClientCapabilities(),
-        root_path=str(root),
-        root_uri=root.as_uri(),
-        workspace_folders=[WorkspaceFolder(name="workspace", uri=root.as_uri())],
-        client_info=InitializeParamsClientInfoType(name="TestClient", version="1.0.0"),
-        initialization_options={},
-    )
-    protocol.workspace.settings = {
-        RobotCodeConfig.__config_section__: as_dict(
-            RobotCodeConfig(analysis=AnalysisConfig(diagnostic_mode=DiagnosticsMode.OFF)), encode=False
-        )
-    }
-
-    protocol._initialized(InitializedParams())
-    assert protocol.diagnostics.workspace_analyzed_event.wait(300), "the workspace analysis did not end"
-    return protocol
+from tests.robotcode.language_server.robotframework.tools import start_language_server, write_project
 
 
 class _Session(NamedTuple):
@@ -61,7 +28,7 @@ def _session(project: Path, mocker: MockerFixture) -> _Session:
     """Run a session and return what it gives for the suite."""
     suite = project / "suite.robot"
     from_data = mocker.spy(Namespace, "from_data")
-    protocol = _start(project)
+    protocol = start_language_server(project)
     try:
         namespace = protocol.documents_cache.get_namespace(protocol.documents.get_or_open_document(suite))
         not_found = sorted(
@@ -136,3 +103,21 @@ def test_an_unchanged_namespace_is_restored(tmp_path: Path, mocker: MockerFixtur
 
     second = _session(tmp_path, mocker)
     assert (second.restored, second.not_found) == (True, [])
+
+
+def test_a_resource_created_between_two_sessions_is_found(tmp_path: Path, mocker: MockerFixture) -> None:
+    write_project(
+        tmp_path,
+        {
+            "suite.robot": "*** Settings ***\nResource    later.resource\n\n"
+            "*** Test Cases ***\nFirst\n    Later Keyword\n"
+        },
+    )
+    first = _session(tmp_path, mocker)
+    assert [m for m in first.not_found if "'Later Keyword'" in m]
+
+    write_project(tmp_path, {"later.resource": "*** Keywords ***\nLater Keyword\n    No Operation\n"})
+
+    # a namespace with a failed import is not cached, so it cannot keep the import's old error
+    second = _session(tmp_path, mocker)
+    assert (second.restored, second.not_found) == (False, [])

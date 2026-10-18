@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Callable, Dict, Set, Tuple
 
 from pytest_mock import MockerFixture
 
@@ -453,3 +453,87 @@ class TestProjectIndexClearAndReuse:
         idx.update_file("/b.robot", _ns(mocker, keyword_references={kw: {loc2}}))
 
         assert idx.find_keyword_references(kw) == {loc2}
+
+
+class TestProjectIndexKnownSources:
+    def test_unknown_file_is_neither_returned_nor_kept(self, mocker: MockerFixture) -> None:
+        known = {"/a.robot": True, "/b.robot": False}
+        idx = ProjectIndex(lambda source: known[source])
+        kw = _kw("Login")
+        loc_a = _loc("file:///a.robot", 10)
+        loc_b = _loc("file:///b.robot", 20)
+        idx.update_file("/a.robot", _ns(mocker, keyword_references={kw: {loc_a}}))
+        idx.update_file("/b.robot", _ns(mocker, keyword_references={kw: {loc_b}}))
+
+        assert idx.find_keyword_references(kw) == {loc_a}
+
+        # the lookup removed the file, so it stays away when it counts again
+        known["/b.robot"] = True
+        assert idx.find_keyword_references(kw) == {loc_a}
+
+    def test_known_file_is_returned_and_kept(self, mocker: MockerFixture) -> None:
+        idx = ProjectIndex(lambda source: True)
+        kw = _kw("Login")
+        loc_a = _loc("file:///a.robot", 10)
+        loc_b = _loc("file:///b.robot", 20)
+        idx.update_file("/a.robot", _ns(mocker, keyword_references={kw: {loc_a}}))
+        idx.update_file("/b.robot", _ns(mocker, keyword_references={kw: {loc_b}}))
+
+        assert idx.find_keyword_references(kw) == {loc_a, loc_b}
+        assert idx.find_keyword_references(kw) == {loc_a, loc_b}
+
+    def test_removed_unknown_file_loses_all_its_references(self, mocker: MockerFixture) -> None:
+        known = {"/a.robot": False}
+        idx = ProjectIndex(lambda source: known[source])
+        kw = _kw("Login")
+        var = _var("${HOST}")
+        idx.update_file(
+            "/a.robot",
+            _ns(
+                mocker,
+                keyword_references={kw: {_loc("file:///a.robot", 1)}},
+                variable_references={var: {_loc("file:///a.robot", 2)}},
+            ),
+        )
+
+        assert idx.find_keyword_references(kw) == set()
+
+        known["/a.robot"] = True
+        assert idx.find_variable_references(var) == set()
+
+    def test_every_lookup_leaves_out_unknown_files(self, mocker: MockerFixture) -> None:
+        kw = _kw("Login")
+        var = _var("${HOST}")
+        entry = _lib_entry("Browser")
+        lookups: Dict[str, Tuple[object, Callable[[ProjectIndex], Set[Location]]]] = {
+            "keyword_references": (kw, lambda idx: idx.find_keyword_references(kw)),
+            "variable_references": (var, lambda idx: idx.find_variable_references(var)),
+            "namespace_references": (entry, lambda idx: idx.find_namespace_references(entry)),
+            "keyword_tag_references": ("smoke", lambda idx: idx.find_keyword_tag_references("smoke")),
+            "testcase_tag_references": ("smoke", lambda idx: idx.find_testcase_tag_references("smoke")),
+            "metadata_references": ("author", lambda idx: idx.find_metadata_references("Author")),
+            "testcase_metadata_references": ("issue", lambda idx: idx.find_testcase_metadata_references("Issue")),
+        }
+        for references, (key, find) in lookups.items():
+            idx = ProjectIndex(lambda source: source == "/a.robot")
+            loc_a = _loc("file:///a.robot", 1)
+            ns_a = _ns(mocker)
+            setattr(ns_a, references, {key: {loc_a}})
+            ns_b = _ns(mocker)
+            setattr(ns_b, references, {key: {_loc("file:///b.robot", 1)}})
+            idx.update_file("/a.robot", ns_a)
+            idx.update_file("/b.robot", ns_b)
+
+            assert find(idx) == {loc_a}, references
+
+    def test_each_file_is_checked_once_per_lookup(self, mocker: MockerFixture) -> None:
+        check = mocker.Mock(return_value=True)
+        idx = ProjectIndex(check)
+        kw = _kw("Login")
+        locations = {_loc("file:///a.robot", line) for line in range(3)}
+        idx.update_file("/a.robot", _ns(mocker, keyword_references={kw: locations}))
+        idx.update_file("/b.robot", _ns(mocker, keyword_references={kw: {_loc("file:///b.robot", 1)}}))
+
+        idx.find_keyword_references(kw)
+
+        assert sorted(call.args[0] for call in check.call_args_list) == ["/a.robot", "/b.robot"]

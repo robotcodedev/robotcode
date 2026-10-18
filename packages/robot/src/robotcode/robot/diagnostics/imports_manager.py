@@ -20,6 +20,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
     final,
 )
 
@@ -62,7 +63,11 @@ from .data_cache import CACHE_DIR_NAME, CacheSection, build_cache_dir
 from .data_cache import SqliteDataCache as DefaultDataCache
 from .entities import (
     CommandLineVariableDefinition,
+    Import,
+    LibraryImport,
+    ResourceImport,
     VariableDefinition,
+    VariablesImport,
 )
 from .errors import Error as DiagnosticError
 from .library_doc import (
@@ -905,8 +910,15 @@ class ImportsManager:
         or untrusted — such a namespace must not be persisted, because its
         fingerprints could describe newer file states than the analyzed
         content and would validate as fresh forever.
+
+        A namespace with failed imports is not persisted either: the validation
+        cannot tell that a missing file appeared since, and the cached
+        diagnostics would keep reporting it as missing.
         """
         if not disk_info.trusted:
+            return None
+
+        if namespace.failed_imports:
             return None
 
         dependency_metas = namespace.dependency_metas
@@ -1267,6 +1279,23 @@ class ImportsManager:
 
         if resource_changed:
             self.resources_changed(self, resource_changed)
+
+    def changed_import_files(self) -> List[str]:
+        """The files of the loaded libraries and variable files that changed since they were loaded."""
+        with self._libaries_lock:
+            entries: List[Union[_LibrariesEntry, _VariablesEntry]] = list(self._libaries.values())
+        with self._variables_lock:
+            entries.extend(self._variables.values())
+
+        result: List[str] = []
+        for entry in entries:
+            meta = entry.meta
+            if meta is None or not meta.file_infos:
+                continue
+            for path, info in meta.file_infos.items():
+                if path not in result and probe_disk_info(path) != info:
+                    result.append(path)
+        return result
 
     @_logger.call
     def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
@@ -1662,6 +1691,41 @@ class ImportsManager:
             return find_file_ex(name, base_dir, "Variables")
 
         return name
+
+    def find_import_source(
+        self, imp: Import, base_dir: str, variables: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """The file an import refers to, or `None` when its file or module is not found. Nothing is loaded."""
+        if imp.name is None:
+            return None
+
+        try:
+            if isinstance(imp, ResourceImport):
+                return self.find_resource(imp.name, base_dir, variables=variables)
+
+            if isinstance(imp, LibraryImport):
+                name = self.find_library(imp.name, base_dir, variables)
+                by_path = is_library_by_path(name)
+            elif isinstance(imp, VariablesImport):
+                name = self.find_variables(imp.name, base_dir, variables)
+                by_path = is_variables_by_path(name)
+            else:
+                return None
+
+            # a file imported by path is looked up with its name, and the lookup fails when it is missing
+            if by_path:
+                return name
+
+            module_spec = self._get_module_spec_cached(name)
+            if module_spec is None:
+                return None
+            if module_spec.origin is not None:
+                return module_spec.origin
+            return module_spec.submodule_search_locations[0] if module_spec.submodule_search_locations else None
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            return None
 
     @property
     def executor(self) -> ProcessPoolExecutor:

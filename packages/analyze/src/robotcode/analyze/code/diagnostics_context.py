@@ -19,6 +19,9 @@ class DiagnosticHandlers:
     @event
     def document_collectors(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
 
+    @event
+    def folder_finishers(sender, folder: WorkspaceFolder) -> None: ...
+
     def analyze_folder(self, folder: WorkspaceFolder) -> List[Union[List[Diagnostic], BaseException, None]]:
         return self.folder_analyzers(
             self,
@@ -41,6 +44,10 @@ class DiagnosticHandlers:
             callback_filter=language_id_filter(document),
             return_exceptions=False,
         )
+
+    def finish_folder(self, folder: WorkspaceFolder) -> None:
+        """After the documents of a folder were analyzed and their diagnostics collected."""
+        self.folder_finishers(self, folder, return_exceptions=False)
 
 
 class DiagnosticsContext(ABC):

@@ -81,6 +81,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
             WatchKind.CREATE | WatchKind.DELETE,
         )
         self.parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
+        self.parent.documents_cache.namespace_initialized.add(self.namespace_initialized)
 
     def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
         self.clear_cache()
@@ -91,6 +92,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        self.clear_cache()
+
+    @language_id("robotframework")
+    def namespace_initialized(self, sender: Any, namespace: Namespace) -> None:
+        # the new analysis changed the index, so a result found before it can miss its references
         self.clear_cache()
 
     def on_workspace_diagnostics_break(self, sender: Any) -> None:

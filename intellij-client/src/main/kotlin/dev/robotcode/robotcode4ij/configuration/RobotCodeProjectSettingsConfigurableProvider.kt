@@ -67,6 +67,9 @@ class RobotCodeProjectConfiguration(private val project: Project) :
         var analysisProgressMode by string(RobotCodeServerSettings.ProgressMode.OFF.value)
         var analysisFindUnusedReferences by property(defaultValue = false)
         var analysisReferencesCodeLens by property(defaultValue = false)
+
+        // minutes, from 1 to 1440
+        var analysisFileCheckInterval by property(defaultValue = 5)
         var analysisDiagnosticModifiersIgnore by list<String>()
         var analysisDiagnosticModifiersError by list<String>()
         var analysisDiagnosticModifiersWarning by list<String>()
@@ -141,6 +144,7 @@ class RobotCodeProjectConfiguration(private val project: Project) :
     var analysisProgressMode by stringDelegate(ProjectState::analysisProgressMode)
     var analysisFindUnusedReferences by delegate(ProjectState::analysisFindUnusedReferences)
     var analysisReferencesCodeLens by delegate(ProjectState::analysisReferencesCodeLens)
+    var analysisFileCheckInterval by delegate(ProjectState::analysisFileCheckInterval)
     var analysisDiagnosticModifiersIgnore by delegate(ProjectState::analysisDiagnosticModifiersIgnore)
     var analysisDiagnosticModifiersError by delegate(ProjectState::analysisDiagnosticModifiersError)
     var analysisDiagnosticModifiersWarning by delegate(ProjectState::analysisDiagnosticModifiersWarning)

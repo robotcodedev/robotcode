@@ -376,3 +376,38 @@ def _iter_files(
             )
         elif p.is_file():
             yield p
+
+
+def iter_files_includes(
+    path: Path,
+    root: Path,
+    ignore_files: Iterable[str] = [GIT_IGNORE_FILE],
+    include_hidden: bool = True,
+    parent_spec: Optional[IgnoreSpec] = None,
+) -> bool:
+    """Whether `iter_files(root, ...)` with these arguments yields the file `path`, without walking other files.
+
+    It applies the ignore files of the folders on the way from `root` to `path` as `iter_files` does.
+    """
+    path = Path(os.path.abspath(path))
+    root = Path(os.path.abspath(root))
+    if not path_is_relative_to(path, root) or not path.is_file():
+        return False
+
+    spec = parent_spec if parent_spec is not None else IgnoreSpec.from_list(DEFAULT_SPEC_RULES, root)
+    folder = root
+    for name in path.relative_to(root).parts:
+        ignore_file = next((folder / f for f in ignore_files if (folder / f).is_file()), None)
+        if ignore_file is not None:
+            spec = spec + IgnoreSpec.from_gitignore(ignore_file)
+            ignore_files = [ignore_file.name]
+
+        entry = folder / name
+        if not include_hidden and _is_hidden(entry):
+            return False
+        if spec.matches(entry):
+            return False
+
+        folder = entry
+
+    return True

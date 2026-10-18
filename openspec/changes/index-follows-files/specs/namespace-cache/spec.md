@@ -20,3 +20,12 @@ The analysis cache SHALL NOT keep the entries of a Robot Framework file after th
 
 - **WHEN** `robotcode analyze code` runs on `tests/area_a` only
 - **THEN** the entries of existing files in `tests/area_b` stay in the cache
+
+### Requirement: The cache keeps no analysis with failed imports
+
+The analysis cache SHALL NOT store the analysis of a file with an import that failed, so that a file created after that analysis is found when the file is analyzed again.
+
+#### Scenario: Resource file created between two sessions
+
+- **WHEN** a suite imports `later.resource`, which does not exist yet, and `later.resource` is created before the language server starts again
+- **THEN** after the restart the suite no longer reports the missing resource file

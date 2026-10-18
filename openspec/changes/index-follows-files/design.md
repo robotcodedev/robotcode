@@ -39,7 +39,7 @@ See proposal.md for the motivation and the specs for the required behavior. The 
 
 **Non-Goals:**
 
-- The result cache of Find References, Rename while the analysis runs, and filling the index from the analysis cache at startup: a later change on Find References and Rename.
+- Dropping the result cache of Find References, Rename while the analysis runs, and filling the index from the analysis cache at startup: a later change on Find References and Rename.
 - Watching files in the server itself, with inotify, FSEvents or a polling library.
 - Removing cache entries of deleted library or variable files. They are keyed by their import and are checked against the files when they are used.
 - Detecting a created file that shadows an import that already resolves, such as a resource file of the same name earlier in the search path.
@@ -87,6 +87,8 @@ A new function in `ignore_spec.py` tells this for one path, the way `iter_files`
 - the library or variables documentation it gets has `errors`.
 
 It records the import with the folder and the variables it was resolved with, so that the periodic check can look it up again (D4). The namespace exposes these imports, and `_on_imports_changed` invalidates a namespace only when it has any.
+
+A namespace with failed imports is not stored in the analysis cache. A namespace restored from there keeps its cached diagnostics, so a missing file created between two sessions would still be reported as missing.
 
 The robot diagnostics part marks the document of an invalidated namespace for the next workspace diagnostics pass, closed documents too. The loop then renews its analysis, which refreshes its index entries and diagnostics. The handlers for changed libraries, resources and variables already do this for the files that import them; marking twice changes nothing.
 
@@ -144,7 +146,15 @@ Both phases of the loop skip a document that the documents manager no longer hol
   - the VS Code settings reference is regenerated with `hatch run create-vscode-settings-docs`;
   - the PyCharm configuration guide lists the setting with the other settings of the Analysis page.
 
-### D10: Tests
+### D10: A new analysis clears the result cache of Find References
+
+The references part clears its result cache whenever a namespace is built, as it already does when one is invalidated. The build changed the index, so a result found before it can miss the new references.
+
+The references code lens refreshes when the cache is cleared. Its refresh waits a second after the last request, so the clears of a workspace analysis lead to one refresh.
+
+- *Alternative: clear the cache at the end of each analysis round of the workspace diagnostics loop.* Rejected: a lookup during a long analysis would keep its result until the round ends, without the files analyzed after it, and a namespace built outside the loop would not clear it.
+
+### D11: Tests
 
 - **Unit tests:**
   - the index check and its cleanup;
@@ -157,6 +167,8 @@ Both phases of the loop skip a document that the documents manager no longer hol
   - a deleted file;
   - a document analyzed after it was closed for good;
   - a created suite, a created suite in an excluded folder, and an unrelated and a missing created file;
+  - a resource file created between two sessions;
+  - a lookup before an analysis and one after it;
   - a document deleted while open;
   - the periodic check, also on an unchanged workspace. The test calls the check directly instead of waiting for the timer.
 - **Analyzer:** tests for the cleanup after a run, also on a subset of the paths.
@@ -164,11 +176,11 @@ Both phases of the loop skip a document that the documents manager no longer hol
 
 ## Risks / Trade-offs
 
-- **[A lookup checks every file in its result]** → One documents manager lookup per file, not per location, and files that fail are removed once. The cost is measured on the synthetic 990-file project.
+- **[A lookup checks every file in its result]** → One documents manager lookup per file, not per location, and files that fail are removed once. The URI of each file is converted only once. On the synthetic project with 990 files, Find References on `Log`, with 11,200 references in all of them, takes 11 ms with the check and 0.4 ms without it.
 - **[A lookup asks the documents manager under the index lock]** → The documents manager holds its own lock only for its lookups and while it notifies `didOpen`. The only listener of `didOpen` marks the document for diagnostics, so nothing waits there for the index lock.
 - **[The function for one path and `iter_files` disagree]** → A unit test runs both on the same tree with ignore files, exclude patterns and hidden folders.
 - **[A file changed on disk shows its old positions until it is analyzed again]** → Accepted, as for changes in the editor today. With file events this lasts seconds, without them up to one check interval.
-- **[The scan takes long in very large workspaces]** → It runs in the background, delivers one batch per interval, and the interval is configurable. Its duration is measured on the synthetic project.
+- **[The scan takes long in very large workspaces]** → It runs in the background, delivers one batch per interval, and the interval is configurable. One check of the synthetic project without changes takes about 90 ms.
 - **[The client and the check report the same change]** → The check reports only files whose size or modification time differs from the document's snapshot. After the client's event the document was read again, so the two match.
 - **[A document without a disk snapshot]** → Some documents have none, for example after a save in the editor. The next check reports them as changed once, and reading them again restores the snapshot.
 - **[The language server and `robotcode analyze code` share the cache]** → Removals are single-row deletes in SQLite transactions, and entries of existing files are never removed.

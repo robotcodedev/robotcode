@@ -107,6 +107,7 @@ def _mock_namespace(
     ns = mocker.MagicMock()
     ns.source = source
     ns.dependency_metas = dependency_metas if dependency_metas is not None else {}
+    ns.failed_imports = []
     return ns
 
 
@@ -258,6 +259,16 @@ class TestBuildNamespaceMeta:
 
         untrusted = replace(_trusted_info(source), trusted=False)
         assert ImportsManager.build_namespace_meta(im, str(source), ns, untrusted) is None
+
+    def test_failed_imports_yield_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        ns = _mock_namespace(mocker, source=str(source))
+        ns.failed_imports = [mocker.MagicMock()]
+        im = _mock_imports_manager(mocker)
+
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source)) is None
 
     def test_missing_dependency_metas_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
