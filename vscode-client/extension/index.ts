@@ -49,8 +49,10 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
 
   const currentVersion = context.extension.packageJSON.version as string;
   const previousVersion = context.globalState.get<string>("robotcode.lastVersion");
+  // dev builds have a patch number of 100000 or more, see VSCODE_DEV_BUILD_BLOCK in scripts/tools.py
+  const isDevBuild = Number(currentVersion.split(".")[2]) >= 100000;
 
-  if (previousVersion !== currentVersion) {
+  if (previousVersion !== currentVersion && !isDevBuild) {
     const showNotification = vscode.workspace.getConfiguration("robotcode").get<boolean>("showWhatsNewOnUpdate", true);
     if (showNotification) {
       vscode.window

@@ -35,9 +35,33 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
 
-      - name: publish the latest successful build of main to the channel dev
-        run: hatch -q run build:publish-dev
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
+
+      - name: install node modules
+        run: npm install --include=dev
+
+      - name: publish the JetBrains plugin of the latest successful build of main to the channel dev
+        run: hatch -q run build:publish-dev jetbrains
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+
+      - name: publish the VS Code extension of the latest successful build of main as pre-release
+        # also when the JetBrains upload failed
+        if: ${{ !cancelled() }}
+        run: hatch -q run build:publish-dev vscode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

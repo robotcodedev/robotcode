@@ -17,7 +17,7 @@ if __name__ == "__main__" and not __package__:
     __package__ = "scripts"
 
 
-from scripts.tools import get_version
+from scripts.tools import get_version, get_vscode_dev_version
 
 
 def main() -> None:
@@ -52,8 +52,15 @@ def main() -> None:
         check=False,
     ).check_returncode()
 
+    vscode_dev_version = get_vscode_dev_version()
+    if vscode_dev_version is not None:
+        # the extension's version only, the bundled Python packages keep theirs
+        vsce_options = f"{vscode_dev_version} --no-update-package-json --pre-release"
+    else:
+        vsce_options = "--pre-release" if get_version().prerelease else ""
+
     run(
-        f"npx vsce package {'--pre-release' if get_version().prerelease else ''} -o ./dist",
+        f"npx vsce package {vsce_options} -o ./dist",
         shell=True,
         check=False,
     ).check_returncode()

@@ -5,6 +5,10 @@ from pathlib import Path
 from git.repo import Repo
 from semantic_version import Version
 
+# Dev builds of the VS Code extension get the patch number (C + 1) * VSCODE_DEV_BUILD_BLOCK + N,
+# vscode-client/extension/index.ts recognizes them by it.
+VSCODE_DEV_BUILD_BLOCK = 100000
+
 
 def _run_commitizen(repo_path: Path, *args: str) -> str:
     result = subprocess.run(
@@ -17,7 +21,8 @@ def _run_commitizen(repo_path: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
-def get_current_version_from_git() -> Version:
+def _get_last_tag() -> tuple[Path, Version, int]:
+    """Returns the repository path, the version of the last tag and the first-parent commits since that tag."""
     repo = Repo(Path.cwd())
     if repo.bare or repo.working_tree_dir is None:
         raise ValueError("Not a valid Git repository with a working tree.")
@@ -31,8 +36,14 @@ def get_current_version_from_git() -> Version:
         f"{current_tag}..HEAD",
     )
 
-    if commit_count == "0":
-        return Version(current_version)
+    return repo_path, Version(current_version), int(commit_count)
+
+
+def get_current_version_from_git() -> Version:
+    repo_path, current_version, commit_count = _get_last_tag()
+
+    if commit_count == 0:
+        return current_version
 
     next_version = _run_commitizen(
         repo_path,
@@ -41,15 +52,31 @@ def get_current_version_from_git() -> Version:
         "bump",
         "--get-next",
         "--devrelease",
-        commit_count,
+        str(commit_count),
         "--yes",
     )
     if next_version:
         return Version(next_version)
 
-    version = Version(current_version)
-    version.prerelease = ("dev", commit_count)
-    return version
+    current_version.prerelease = ("dev", str(commit_count))
+    return current_version
+
+
+def get_vscode_dev_version() -> Version | None:
+    """Returns the version of the VS Code extension for a commit after the last tag, None for a tagged commit.
+
+    The VS Code Marketplace accepts only major.minor.patch, so the dev number goes into the patch number.
+    """
+    _, current_version, commit_count = _get_last_tag()
+
+    if commit_count == 0:
+        return None
+
+    return Version(
+        major=current_version.major,
+        minor=current_version.minor,
+        patch=(current_version.patch + 1) * VSCODE_DEV_BUILD_BLOCK + commit_count,
+    )
 
 
 def get_version() -> Version:
