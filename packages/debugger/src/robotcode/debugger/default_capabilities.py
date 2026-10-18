@@ -28,15 +28,15 @@ DFEAULT_CAPABILITIES = Capabilities(
         ),
         ExceptionBreakpointsFilter(
             filter="failed_test",
-            label="Failed Test",
+            label="Failed Tests",
             description="Breaks on failed tests",
             default=False,
             supports_condition=True,
         ),
         ExceptionBreakpointsFilter(
             filter="failed_suite",
-            label="Failed Suite",
-            description="Breaks on failed suite",
+            label="Failed Suites",
+            description="Breaks on failed suites",
             default=False,
             supports_condition=True,
         ),

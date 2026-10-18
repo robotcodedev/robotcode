@@ -48,3 +48,11 @@ The two sentences of the VS Code guide use "**Failed Tests**" and "**Failed Suit
 
 - [Who switched "Failed Test" or "Failed Suite" on in VS Code finds "Failed Tests" or "Failed Suites" off once after the update] → accepted, not breaking (the user's decision); switching it on again restores the stop.
 - [A debug client that tells filters apart by their names] → DAP clients enable filters by id, as VS Code and the IntelliJ plugin do; the ids stay.
+
+## Verification
+
+Harness run of 2026-10-18 (VS Code 1.142.0, the RobotCode extension of the working tree, `tests/fail.robot` of the folder `repl-test`, whose tests `Failing Test` and `Python Failure` fail):
+
+- With the debugger before the rename, the Breakpoints view listed "Failed Keywords", "Uncaught Failed Keywords", switched on, "Failed Test" and "Failed Suite"; "Failed Test" was then switched on.
+- After the rename, the next debug session in the same window listed "Failed Keywords", "Uncaught Failed Keywords", switched on, "Failed Tests" and "Failed Suites", with "Failed Tests" off; the run stopped only at the three keyword failures, not at the ends of the failing tests.
+- With "Failed Tests" switched on again, the run also stopped at the end of `Failing Test` and of `Python Failure`, both stops described as "Test failed.".
