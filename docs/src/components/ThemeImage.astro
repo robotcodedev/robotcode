@@ -1,13 +1,15 @@
 ---
-// A screenshot taken in VS Code's light and in its dark theme: the page shows the variant of the site's current theme,
+// A screenshot taken in the light and in the dark theme of VS Code or PyCharm: the page shows the variant of the site's current theme,
 // also after the reader switches it. Starlight's utility classes hide the other variant; the images load lazily, so a
 // hidden variant is not fetched. The captures are made at device scale 2, so a variant is shown at half its pixel size.
 import type { ImageMetadata } from "astro";
 import { Image } from "astro:assets";
 
 interface Props {
-  /** The pair `<name>-light.png` and `<name>-dark.png` in `src/assets/screenshots/vscode/`. */
+  /** The pair `<name>-light.png` and `<name>-dark.png` in `src/assets/screenshots/<folder>/`. */
   name: string;
+  /** The editor the screenshots come from, the folder below `src/assets/screenshots/`. */
+  folder?: "vscode" | "pycharm";
   alt: string;
   /** Numbered markers in percent of the image's width and height; the list below the picture explains them. */
   markers?: { x: number; y: number }[];
@@ -15,12 +17,14 @@ interface Props {
   full?: boolean;
 }
 
-const screenshots = import.meta.glob<{ default: ImageMetadata }>("../assets/screenshots/vscode/*.png", { eager: true });
+const screenshots = import.meta.glob<{ default: ImageMetadata }>("../assets/screenshots/{vscode,pycharm}/*.png", {
+  eager: true,
+});
 
-const { name, alt, markers, full = false } = Astro.props;
+const { name, folder = "vscode", alt, markers, full = false } = Astro.props;
 const variants = (["light", "dark"] as const).map((theme) => {
-  const image = screenshots[`../assets/screenshots/vscode/${name}-${theme}.png`]?.default;
-  if (!image) throw new Error(`ThemeImage: src/assets/screenshots/vscode/${name}-${theme}.png does not exist`);
+  const image = screenshots[`../assets/screenshots/${folder}/${name}-${theme}.png`]?.default;
+  if (!image) throw new Error(`ThemeImage: src/assets/screenshots/${folder}/${name}-${theme}.png does not exist`);
   return { image, hide: theme === "light" ? "dark:sl-hidden" : "light:sl-hidden" };
 });
 ---

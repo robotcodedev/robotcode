@@ -1,0 +1,47 @@
+---
+title: RobotCode in PyCharm and VS Code
+description: 'What RobotCode offers in PyCharm compared with VS Code: the same language features, but no Test Explorer, Documentation Viewer or REPL command yet, and what PyCharm does differently.'
+sidebar:
+  label: PyCharm and VS Code
+  order: 9.9
+---
+
+PyCharm and VS Code use the same RobotCode language server, so the language features are the same in both: completion, documentation, navigation, quick fixes and diagnostics. Around them, each IDE does things its own way, and some tools of the VS Code extension do not exist in PyCharm yet.
+
+## Feature by feature
+
+| Area | VS Code | PyCharm |
+| --- | --- | --- |
+| Completion, signature help, hover, quick fixes, rename, formatting | Yes | Yes |
+| Go to definition, references, outline, workspace symbols, references code lens | Yes | Yes |
+| Highlighting by meaning | Colors from the theme, changeable in `settings.json` | **Settings \| Editor \| Color Scheme \| Robot Framework** |
+| Inlay hints | On, shown while <kbd>Ctrl+Alt</kbd> (<kbd>Ctrl+Option</kbd> on macOS) is held | Off by default, shown all the time when switched on |
+| Keywords view | In the Explorer | Not available |
+| Documentation Viewer | Yes | Not available; the documentation shows on hover and with **Quick Documentation** |
+| Test Explorer | A tree of all suites, tests and tasks of the workspace, with run and debug buttons, filters and run profiles | Not available; run markers in the editor, context menus, run configurations and the results tree of a run |
+| Running with a profile | Run profiles of the Test Explorer, **Execute Using Profile...** | **Run with Profile...**, **Debug with Profile...**, the option **Configuration profiles** of a run configuration |
+| Launch configurations | `launch.json` | Run configurations of the type Robot Framework |
+| Results of a run | In the Test Explorer, with failure messages at the failing lines in the editor | In the results tree of the **Run** or **Debug** tool window, with the log messages and failures of each test |
+| Report and log after a run | In VS Code's built-in browser or an external browser | In RobotCode's built-in preview or a browser |
+| Breakpoints, conditions, hit counts, logpoints | Yes | Yes; a logpoint is a breakpoint with **Evaluate and log** and without **Suspend** |
+| Stopping at failures | Exception breakpoints | Exception breakpoints |
+| Evaluating while paused | **Debug Console** | **Robot Debug Console** and **Evaluate Expression...**; PyCharm's tab **Debug Console** shows the results tree |
+| Variable values at the end of the lines while debugging | Yes | Not available |
+| Debugging the Python code of libraries in the same session | Yes | Not available |
+| Attaching to a run started elsewhere | **Remote-Attach** | Not available |
+| REPL and notebooks | **Start Terminal REPL**, Robot Framework notebooks | Not available; `robotcode repl` works in PyCharm's terminal when RobotCode's command line tools are installed in the project's environment |
+| The `robotcode` command in the terminal | The extension's own `robotcode` is on the `PATH` of the integrated terminal | Install RobotCode's command line tools into the project's environment |
+| Plugin for AI agents in the chat | Bundled for GitHub Copilot Chat | Not available, see [Working with AI Agents](/guides/ai-agents/) |
+| Status | Language status in the status bar | Status bar widget |
+| Python environment | From the Python extension; RobotCode notices a new environment and a later install of Robot Framework | The Python interpreter of the project; after an install, **Retry** in the banner checks it again |
+| Several projects in one window | Workspace folders, each with its own language server | Attached projects are modules of one project, which has one language server with the interpreter of the first module that has one |
+| Settings | User, workspace and folder settings | Shared project settings and personal settings |
+| Switching Robocop, workspace diagnostics and debug logging on and off | Commands in the RobotCode menu | Robocop and workspace diagnostics on the settings pages, debug logging with **Extra args** on the page **Language Server** |
+| Reporting an issue | **RobotCode: Report Issue...** | On [GitHub](https://github.com/robotcodedev/robotcode/issues) |
+| New files | Suite file, resource file, `__init__.robot` | Suite file, resource file, your own file templates |
+| Problems while finding the tests | In the Problems view | In the tooltip of the run marker on the first line of the file, or as an error marker there |
+
+## Only in PyCharm
+
+- **Run configurations in a form**, with PyCharm's Python options, for example `.env` files for the environment variables of a run.
+- **Run configurations that follow your files:** a run configuration with a **Files and folders** target changes with the files you rename or move.

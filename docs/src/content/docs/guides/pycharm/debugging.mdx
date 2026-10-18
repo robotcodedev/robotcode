@@ -1,0 +1,64 @@
+---
+title: Debugging in PyCharm
+description: 'Debug Robot Framework tests in PyCharm: breakpoints with conditions and logging, stopping at failures, stepping, variables, Evaluate, watches and the Robot Debug Console.'
+sidebar:
+  label: Debugging
+  order: 9.5
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+
+You debug tests from the same places you run them: **Debug** at a run marker or in a context menu, **Debug with Profile...**, or a run configuration started with **Debug**, see [Running Tests](/guides/pycharm/running-tests/). The run opens in the **Debug** tool window, which shows the debugger next to the tabs of a run: **Terminal** with the output of the process, **Debug Console** with the results tree, and **Robot Debug Console**, where you evaluate; unlike VS Code, PyCharm's tab **Debug Console** does not evaluate.
+
+<ThemeImage
+  folder="pycharm"
+  name="debugging-session"
+  alt="A debug run of the test Order Coffee paused at the breakpoint on the line Order Status Should Be, with the frames of the Robot Framework Execution Stack and the variables ${order}, ${TEST_DOCUMENTATION}, ${TEST_NAME}, &{TEST_METADATA} and @{TEST_TAGS} in the Debug tool window."
+  full
+/>
+
+## Breakpoints
+
+A click in the gutter of a `.robot` or `.resource` file, or **Run | Toggle Breakpoint | Line Breakpoint** (<kbd>Ctrl+F8</kbd>, <kbd>Cmd+F8</kbd> on macOS), sets a breakpoint on the line. A right-click on the breakpoint edits its condition, and **More** there, or **Run | View Breakpoints...**, shows all its options:
+
+- **Condition:** a Python expression in which Robot Framework variables such as `${count}` are replaced by their values, for example `${count} > 2`. The run stops only when it is true.
+- **Hit count:** stops only at certain hits: `3` at the third, `>= 3` from the third on, `% 3` at every third.
+- **Evaluate and log:** with **Suspend** switched off, a text with Robot Framework variables, such as `count is ${count}`, that is written to the **Debug Console** tab at every hit while the run goes on. With **Suspend** on, it is evaluated like a watch when the run stops there, so enter a variable, an expression such as `${count} * 2`, or `! ` and a keyword.
+
+PyCharm's breakpoint options apply too, for example **Remove once hit** and breakpoints that are enabled only after another one was hit; they do not react to a breakpoint that only logs, without **Suspend**.
+
+## Stopping at failures
+
+**Run | View Breakpoints...** (<kbd>Ctrl+Shift+F8</kbd>, <kbd>Cmd+Shift+F8</kbd> on macOS) lists the group **Robot Framework Exception Breakpoints**. **Uncaught Failed Keywords** is on by default: the run stops at the first keyword that fails without being caught by `TRY`/`EXCEPT` or a keyword such as `Run Keyword And Expect Error`, before the failure ends the test. The add button of the group adds **Failed Keywords**, which stops at every failing keyword, also caught ones, **Failed Tests** and **Failed Suites**. When a run stops there, the debugger shows the failure message.
+
+## Stepping
+
+While the run is paused, **Resume Program** (<kbd>F9</kbd>, <kbd>Cmd+Option+R</kbd> on macOS), **Step Over** (<kbd>F8</kbd>), **Step Into** (<kbd>F7</kbd>) and **Step Out** (<kbd>Shift+F8</kbd>) move through the keywords, and **Run to Cursor** (<kbd>Alt+F9</kbd> on Windows, <kbd>Shift+Alt+9</kbd> on Linux, <kbd>Option+F9</kbd> on macOS) runs to the line of the cursor. **Stop** ends the run and lets Robot Framework write its output files.
+
+The option **Stop on entry** of a run configuration pauses the run at the start of its top-level suite.
+
+## Frames and variables
+
+The frames show the keywords, tests and suites that run, with their file and line where they have one. The variables of the selected frame are grouped: the local variables first, then those of the test, the suite and the global ones. Each variable shows the name of its Python type, and lists and dictionaries can be expanded.
+
+**Set Value...** changes a local variable of the innermost frame. The new value is a Python expression in which Robot Framework variables are replaced, so a string needs quotes: `'shipped'`, not `shipped`.
+
+While the run is paused, hovering over a variable in the editor shows its value.
+
+## Evaluate and watches
+
+**Run | Debugging Actions | Evaluate Expression...** (<kbd>Alt+F8</kbd> on Windows, <kbd>Option+F8</kbd> on macOS) evaluates in the selected frame: a single variable such as `${order}` shows its value, anything else runs as a keyword call, such as `Log    ${order}`. A watch is a variable or a Python expression in which Robot Framework variables are replaced, such as `${count} + 1`; to run a keyword in a watch, start it with `! `. An unknown variable shows `<undefined>`.
+
+While the run is paused, completion in these fields, in the fields of a breakpoint and in the Robot Debug Console offers the keywords, libraries, resource files and variables of the selected frame; it opens by itself after `${`, `@{`, `&{` and `%{`.
+
+## The Robot Debug Console
+
+The tab **Robot Debug Console** evaluates the lines you type in the selected frame the same way, and keeps their history. While the run is not paused, it answers "The run is not paused."
+
+<ThemeImage
+  folder="pycharm"
+  name="debugging-console"
+  alt="The Robot Debug Console while paused, with the variable ${order} evaluated to 'order-4711' and the keyword call Order Status ${order} to 'placed'."
+/>
+
+RobotCode in PyCharm does not show variable values at the end of the lines while paused, cannot debug the Python code of libraries in the same session and cannot attach to a run started outside the IDE; see [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/). On the command line, [`robotcode robot-debug`](/guides/robot-debug/) debugs a run in the terminal.

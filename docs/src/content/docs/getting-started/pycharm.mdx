@@ -1,0 +1,78 @@
+---
+title: Get Started with PyCharm
+description: 'Install the RobotCode plugin in PyCharm or IntelliJ IDEA, set up a Python interpreter with Robot Framework and run your first test.'
+sidebar:
+  label: PyCharm
+  order: 20
+---
+
+import { Steps } from "@astrojs/starlight/components";
+import ThemeImage from "../../../components/ThemeImage.astro";
+
+RobotCode is available as a plugin for PyCharm and IntelliJ IDEA 2026.1 or newer; IntelliJ IDEA needs its Python plugin. This page installs it, sets up a Python interpreter with Robot Framework and runs a first test.
+
+:::note[Not everything from VS Code]
+RobotCode in PyCharm does not yet offer everything that RobotCode in VS Code does. There is no Test Explorer, for example: you run tests from the run markers in the editor, from the context menus and from run configurations, and see their results in the **Run** or **Debug** tool window. There is also no Documentation Viewer, no Keywords view and no command that starts the REPL. [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/) compares both.
+:::
+
+## Installing RobotCode
+
+<Steps>
+
+1. Open **Settings | Plugins** (<kbd>Ctrl+Alt+S</kbd>, <kbd>Cmd+,</kbd> on macOS) and select the **Marketplace** tab.
+2. Search for **RobotCode** and install [RobotCode - Robot Framework Support](https://plugins.jetbrains.com/plugin/26216).
+3. RobotCode needs the plugin **LSP4IJ**, through which PyCharm talks to RobotCode's language server. If PyCharm does not install it along with RobotCode, install it from the Marketplace too.
+
+</Steps>
+
+RobotCode does not work together with other Robot Framework plugins, such as IntelliBot; disable them.
+
+## Setting up the Python interpreter
+
+RobotCode uses the Python interpreter of your project. It needs Python 3.10 or newer with Robot Framework 5.0 or newer; RobotCode brings its own tools along.
+
+<Steps>
+
+1. Open your project folder with **File | Open...**.
+2. Choose or create a Python interpreter for the project under **Settings | Python | Interpreter**, for example a new virtual environment in the folder `.venv`. PyCharm's [documentation on Python interpreters](https://www.jetbrains.com/help/pycharm/configuring-python-interpreter.html) explains the ways to set one up.
+3. Install Robot Framework into that environment with the tool your project uses for its dependencies, for example `pip install robotframework` in PyCharm's terminal.
+
+</Steps>
+
+When you open a project with `.robot` or `.resource` files, a `robot.toml` or a `.robot.toml`, or open a Robot Framework file in another project, RobotCode checks the interpreter and starts. Its widget in the status bar then shows the Robot Framework version, for example `RF 7.5`. If the interpreter does not fit, every Robot Framework file shows a banner that says why:
+
+<ThemeImage
+  folder="pycharm"
+  name="getting-started-banner"
+  alt="The banner above orders.robot: Robot Framework is not installed in the Python interpreter of the project. RobotCode needs Python 3.10 or newer with Robot Framework 5.0 or newer. With the actions Configure Python Interpreter..., Retry and Disable RobotCode for This Project."
+/>
+
+Choose another interpreter with **Configure Python Interpreter...**, or install Robot Framework and choose **Retry**. See [The Python interpreter](/guides/pycharm/configuration/#the-python-interpreter) for details.
+
+## Creating and running your first test
+
+<Steps>
+
+1. Choose **File | New... | Robot Framework File**, select **Suite file** and name it `first`.
+2. The file opens with a sample test; replace it with:
+
+   ```robot title="first.robot"
+   *** Test Cases ***
+   First Test Case
+       Log    Hello world
+   ```
+
+3. Click the run marker beside `First Test Case` and choose **Run**.
+
+</Steps>
+
+The run opens in the **Run** tool window: the tab **Terminal** shows the output of Robot Framework, the tab **Debug Console** the results tree; select the test there to see its log message "Hello world". **Open Report** and **Open Log** in the toolbar open the report and the log of the run.
+
+:::tip
+**Find Action** (<kbd>Ctrl+Shift+A</kbd>, <kbd>Cmd+Shift+A</kbd> on macOS) finds RobotCode's actions and settings by name, for example when you type `RobotCode` or `Robot Framework`.
+:::
+
+## Next steps
+
+- Configure your project with a `robot.toml`, see [Configuration](/getting-started/configuration/).
+- Learn how to work with RobotCode in PyCharm in the [PyCharm guide](/guides/pycharm/).

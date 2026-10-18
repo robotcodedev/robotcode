@@ -1,0 +1,82 @@
+---
+title: Writing Robot Framework Code in PyCharm
+description: 'Completion, parameter info, documentation, inlay hints, highlighting, quick fixes, rename, formatting and new files while you write Robot Framework code in PyCharm.'
+sidebar:
+  label: Writing Code
+  order: 9.2
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+
+RobotCode analyzes your files the way Robot Framework reads them: it knows the libraries, resource files and variable files a file imports, and with them every keyword and variable the file can use. While you type, it uses that knowledge to complete, explain and check your code. RobotCode's language server does this work; PyCharm talks to it through the LSP4IJ plugin.
+
+## Completion
+
+Completion appears as you type, or with <kbd>Ctrl+Space</kbd>. It offers what fits at the cursor:
+
+- **Keywords** of the file itself and of everything it imports, with the library or resource file each comes from.
+- **Arguments** of the keyword being called, such as named arguments.
+- **Variables** after `${`, `@{` and `&{`, and environment variables after `%{`.
+- **Imports:** library names, the paths of resource and variable files, and the arguments of a library.
+- **Section headers, settings and reserved tags** such as `robot:skip`.
+- **Control structures** as templates: `FOR`, `IF`, `WHILE`, `TRY` with `EXCEPT` or `EXCEPT ... AS`, `VAR` (Robot Framework 7 or newer) and `GROUP` (Robot Framework 7.2 or newer).
+
+<ThemeImage
+  folder="pycharm"
+  name="writing-completion"
+  alt="The completion list for Cart typed in a test, with keywords such as Cart Items, Cart Should Contain, Cart Total Should Be and Add To Cart from the library ShopLibrary and the resource file cart."
+/>
+
+Keywords that are tagged `robot:private` and defined in another file are not offered. The group **Completion** of the settings page **Editing** changes that and more, see [Configuration](/guides/pycharm/configuration/#the-settings-pages).
+
+## Parameter info
+
+While you type the arguments of a keyword call, **View | Parameter Info** (<kbd>Ctrl+P</kbd>, <kbd>Cmd+P</kbd> on macOS) shows the keyword's arguments and highlights the one at the cursor.
+
+## Documentation
+
+Hover over a keyword call to see the keyword's arguments and documentation, over a variable to see what kind of variable it is, and over the name of a library or resource file to see its documentation. **View | Quick Documentation** (<kbd>Ctrl+Q</kbd>, <kbd>F1</kbd> on macOS) shows the same for the element at the cursor.
+
+<ThemeImage
+  folder="pycharm"
+  name="writing-hover"
+  alt="The Quick Documentation of the keyword Create Order, with its arguments product, quantity = 1 and express = ${False} and its documentation."
+/>
+
+## Inlay hints
+
+Inlay hints show the names of the arguments of a keyword call and the library or resource file a keyword comes from. PyCharm shows inlay hints all the time, so RobotCode sends none by default: switch on **Parameter names** and **Namespaces** in the group **Inlay Hints** of the settings page **Editing**. You can also hide inlay hints again under **Settings | Editor | Inlay Hints**.
+
+## Semantic highlighting
+
+RobotCode highlights the code by its meaning, also where the plain syntax cannot tell the elements apart. **Settings | Editor | Color Scheme | Robot Framework** has an entry for each kind of element, such as keyword calls, arguments, variables, settings and control structures, and sets their colors and font styles. By default they follow the language defaults of your color scheme.
+
+## Quick fixes and refactorings
+
+A problem with a fix, such as a keyword that does not exist yet, offers its fixes with **Show Context Actions** (<kbd>Alt+Enter</kbd>, <kbd>Option+Enter</kbd> on macOS) at the problem:
+
+- **Create Keyword** adds the keyword with the body `Fail    Not Implemented` to the file, or to the resource file the call names, and selects that line.
+- **Create local variable** and **Create suite variable** define a variable that is not found.
+- **Add argument** adds a variable that is not found to the `[Arguments]` of the keyword.
+
+<ThemeImage
+  folder="pycharm"
+  name="writing-quick-fix"
+  alt="The context actions at the call of the unknown keyword Send Confirmation, with Create Keyword Send Confirmation and Assign keyword result to variable."
+/>
+
+At a selection or a keyword call, <kbd>Alt+Enter</kbd> (<kbd>Option+Enter</kbd> on macOS) offers refactorings: **Surround with TRY...EXCEPT** and its variants, **Assign keyword result to variable** and **Extract keyword**, which moves the selected steps into a new keyword and starts **Rename...** on its name.
+
+## Rename
+
+**Refactor | Rename...** (<kbd>Shift+F6</kbd>) renames the keyword or variable at the cursor, at its definition and at every use RobotCode finds in the project. Keywords with embedded arguments cannot be renamed. For a keyword of a library and for built-in, imported, command-line and environment variables, RobotCode renames only the uses.
+
+## Formatting
+
+**Code | Reformat Code** (<kbd>Ctrl+Alt+L</kbd>, <kbd>Cmd+Option+L</kbd> on macOS) formats a file with Robocop's formatter. This needs Robocop 6 or newer in the Python interpreter of the project.
+
+## New files and indentation
+
+**File | New... | Robot Framework File**, also in the **New** menu of the Project view, opens the dialog **New Robot Framework File**: choose **Suite file**, **Resource file** or one of your own file templates with the extension `robot` or `resource`, and give the file a name. RobotCode's templates are **Robot Suite File** and **Robot Resource File** under **Settings | Editor | File and Code Templates**.
+
+In Robot Framework files, <kbd>Tab</kbd> inserts spaces. With **Use 4 spaces indentation**, which is on by default, under **Settings | Editor | Code Style | Robot Framework**, it inserts as many spaces as the indent of the code style, 4 by default; switched off, it inserts spaces up to the next tab stop. With **Use tab character** on, it inserts a tab. **Code | Comment with Line Comment** (<kbd>Ctrl+/</kbd>, <kbd>Cmd+/</kbd> on macOS) comments lines out with `#`.

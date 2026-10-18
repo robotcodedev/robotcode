@@ -1,0 +1,49 @@
+---
+title: Finding Information in PyCharm
+description: 'Go to declarations, find usages, use the structure view, breadcrumbs and Go to Symbol, and show references above keywords in PyCharm.'
+sidebar:
+  label: Finding Information
+  order: 9.3
+---
+
+import ThemeImage from "../../../../components/ThemeImage.astro";
+
+RobotCode knows where every keyword, variable, library and resource file of your project is defined and where it is used. PyCharm's navigation actions use that knowledge in Robot Framework files.
+
+## Go to declaration
+
+<kbd>Ctrl</kbd>+click (<kbd>Cmd</kbd>+click on macOS) on a keyword call, a variable or an import, or **Navigate | Declaration or Usages** (<kbd>Ctrl+B</kbd>, <kbd>Cmd+B</kbd> on macOS), opens where it is defined: the keyword in its resource file or library, the variable where it gets its value, the imported file.
+
+## Find usages
+
+**Edit | Find Usages | Show Usages** (<kbd>Ctrl+Alt+F7</kbd> on Windows, <kbd>Ctrl+Alt+7</kbd> on Linux, <kbd>Cmd+Option+F7</kbd> on macOS) lists every place that uses a keyword or variable in a popup, **Edit | Find Usages | Find Usages** (<kbd>Alt+F7</kbd> on Windows, <kbd>Option+F7</kbd> on macOS) in the **Find** tool window.
+
+<ThemeImage
+  folder="pycharm"
+  name="finding-usages"
+  alt="The usages of the keyword Open Shop As in a popup: its definition in shop.resource and its calls in cart.robot, login.robot and orders.robot."
+/>
+
+The usages of the element at the cursor are also highlighted in the editor.
+
+### References code lens
+
+With **References code lens** on the settings page **Analysis**, the editor shows above each keyword how often it is used. It is off by default, see [Configuration](/guides/pycharm/configuration/#the-settings-pages).
+
+## Structure and breadcrumbs
+
+The **Structure** tool window (<kbd>Alt+7</kbd>, <kbd>Cmd+7</kbd> on macOS) and **Navigate | File Structure** (<kbd>Ctrl+F12</kbd>, <kbd>Cmd+F12</kbd> on macOS) list the sections, tests, tasks, keywords and variables of the file in the editor; a click goes there. The breadcrumbs below the editor show the section and the test or keyword the cursor is in.
+
+<ThemeImage
+  folder="pycharm"
+  name="finding-structure"
+  alt="The Structure tool window of orders.robot beside the editor, with the sections Settings and Test Cases and the tests Order Coffee and Express Order, each with its variable ${order}, and Sold Out Product Cannot Be Ordered."
+/>
+
+## Go to Symbol
+
+**Navigate | Symbol...** (<kbd>Ctrl+Alt+Shift+N</kbd>, <kbd>Cmd+Option+O</kbd> on macOS) finds keywords, tests and variables of the whole project by name.
+
+## Keyword documentation
+
+The documentation of a keyword or library shows on hover and with **View | Quick Documentation**, see [Writing Code](/guides/pycharm/writing-code/#documentation). RobotCode in PyCharm has no Keywords view and no Documentation Viewer. With RobotCode's command line tools installed in the project's environment, [`robotcode doc`](/guides/browsing-documentation/) shows the documentation of a library in PyCharm's terminal.

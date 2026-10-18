@@ -1,0 +1,91 @@
+---
+title: Working in PyCharm
+description: 'Where RobotCode shows up in PyCharm and IntelliJ IDEA, the actions it adds, what it does not offer there yet, and where to read more about each task.'
+sidebar:
+  label: Overview
+  order: 9.1
+---
+
+import AreaOverview from "../../../../components/AreaOverview.astro";
+import ThemeImage from "../../../../components/ThemeImage.astro";
+
+RobotCode adds Robot Framework support to PyCharm, and to IntelliJ IDEA with its Python plugin: it helps you write and navigate code, runs and debugs your tests and reports problems while you type. This page shows where these things appear in the window and lists the actions RobotCode adds. The pages of this guide explain each task in detail; to install RobotCode and set up a project first, see [Get Started with PyCharm](/getting-started/pycharm/).
+
+:::note[Not everything from VS Code]
+RobotCode in PyCharm does not yet offer everything that RobotCode in VS Code does. There is no Test Explorer, for example: you run tests from the run markers in the editor, from the context menus and from run configurations, and see their results in the **Run** or **Debug** tool window. There is also no Documentation Viewer, no Keywords view and no command that starts the REPL. [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/) compares both.
+:::
+
+<ThemeImage
+  folder="pycharm"
+  name="overview-window"
+  alt="The PyCharm window with login.robot in the editor, a failed run marker beside the test Login Works, the Project view, the Run tool window with the results tree of a run in which Login Works failed, with its log messages and failure details, and RobotCode's widget RF 7.5 in the status bar."
+  markers={[
+    { x: 85, y: 27 },
+    { x: 31.3, y: 18.5 },
+    { x: 21, y: 17 },
+    { x: 25, y: 57 },
+    { x: 59.5, y: 94.5 },
+  ]}
+  full
+/>
+
+1. **The editor.** RobotCode completes keywords, variables and imports, shows the documentation of keywords, highlights the code by its meaning and marks problems while you type. See [Writing Code](/guides/pycharm/writing-code/) and [Finding Information](/guides/pycharm/finding-information/).
+2. **The run markers** beside each test and task, and on the first line of a suite file, run or debug that test, task or suite; their icon shows the last result. See [Running Tests](/guides/pycharm/running-tests/).
+3. **The Project view** runs files and folders from their context menu and creates new Robot Framework files with **New | Robot Framework File**.
+4. **The Run tool window** shows a run: the output of the process in the **Terminal** tab, and the results tree with the log messages of each test in the **Debug Console** tab. See [Running Tests](/guides/pycharm/running-tests/#the-results-of-a-run).
+5. **RobotCode's widget** in the status bar shows the Robot Framework version and the selected configuration profiles, see [below](#the-status-bar-widget).
+
+## The status bar widget
+
+In a project with Robot Framework files, a `robot.toml` or a `.robot.toml`, and in any project once you open a Robot Framework file, the status bar shows RobotCode's widget. It is listed as "Robot Framework" among the status bar widgets.
+
+| Text | Meaning |
+| --- | --- |
+| `RF 7.5` | RobotCode runs with Robot Framework 7.5. Selected configuration profiles follow, as in `RF 7.5 · dev`. |
+| `RobotCode` | RobotCode checks the Python interpreter or waits for the language server. With an error icon, the interpreter cannot be used, and the tooltip says why, see [The Python interpreter](/guides/pycharm/configuration/#the-python-interpreter). |
+| `RobotCode off` | RobotCode is switched off for the project. |
+
+Its tooltip lists the versions of RobotCode, Robot Framework, Robocop (when it is installed) and Python, the path of the interpreter and the profiles. A click opens a menu with RobotCode's actions:
+
+<ThemeImage
+  folder="pycharm"
+  name="overview-status-widget"
+  alt="RobotCode's menu above the status bar widget RF 7.5, with Select Configuration Profiles..., Configure Python Interpreter..., Restart RobotCode Language Server, Clear Cache and Restart RobotCode Language Server, Refresh Robot Framework Tests and Show Language Server Log."
+/>
+
+## Actions
+
+RobotCode's actions are in the menu **Tools | RobotCode** and in the menu of the status bar widget:
+
+| Action | What it does |
+| --- | --- |
+| Enable RobotCode for This Project | Switches RobotCode on again; it is shown only while RobotCode is switched off for the project. |
+| Select Configuration Profiles... | Chooses the `robot.toml` profiles that the language server, the test discovery and runs use, see [Configuration profiles](/guides/pycharm/configuration/#configuration-profiles). |
+| Configure Python Interpreter... | Opens the settings of the Python interpreter of the project. |
+| Restart RobotCode Language Server | Checks the Python interpreter again, restarts the language server and reads the tests again. |
+| Clear Cache and Restart RobotCode Language Server | Also deletes RobotCode's [analysis cache](/guides/pycharm/diagnostics-and-linting/#the-analysis-cache), while the language server runs. |
+| Refresh Robot Framework Tests | Reads the tests again, from which the run markers come. |
+| Show Language Server Log | Opens the **Language Servers** tool window with the log of the language server, see [Troubleshooting](/guides/pycharm/troubleshooting/#output-and-logs). |
+
+More actions appear where they fit:
+
+- **File | New... | Robot Framework File**, also in the **New** menu of the Project view, creates a suite file, a resource file or a file from one of your own file templates with the extension `robot` or `resource`.
+- **Run with Profile...** and **Debug with Profile...** in the context menus of the editor, the editor tab, the Project view and the run markers run once with a profile you choose, see [Running Tests](/guides/pycharm/running-tests/#running-with-a-profile).
+
+**Find Action** (<kbd>Ctrl+Shift+A</kbd>, <kbd>Cmd+Shift+A</kbd> on macOS), also under **Help | Find Action...**, runs these actions by name: type `RobotCode` to list the actions of **Tools | RobotCode**. It finds settings as well, for example RobotCode's settings pages when you type `Robot Framework`.
+
+<ThemeImage
+  folder="pycharm"
+  name="overview-find-action"
+  alt="Find Action with RobotCode typed, listing the menu RobotCode, the RobotCode notifications and plugin settings, and the actions of Tools | RobotCode, such as Select Configuration Profiles..., Restart RobotCode Language Server and Show Language Server Log."
+/>
+
+RobotCode defines no keyboard shortcuts of its own; PyCharm's shortcuts work, for example <kbd>Ctrl+Shift+F10</kbd> (<kbd>Ctrl+Shift+R</kbd> on macOS) to run the test or suite at the cursor. The shortcuts in this guide are those of PyCharm's default keymaps for Windows and macOS. On Linux, PyCharm uses a keymap for GNOME, KDE or other desktops, in which some shortcuts differ; **Settings | Keymap** shows yours.
+
+## Output and logs
+
+RobotCode has no tool window of its own. The log of its language server is in the **Language Servers** tool window of the LSP4IJ plugin, which RobotCode uses to talk to its language server; **Tools | RobotCode | Show Language Server Log** opens it. When RobotCode cannot read the tests of the project, a notification "RobotCode could not discover the tests" shows the error, with **Retry** and, if the project folder contains a `robot.toml`, **Open robot.toml**. See [Troubleshooting](/guides/pycharm/troubleshooting/).
+
+## Pages of this guide
+
+<AreaOverview area="guides/pycharm" />
