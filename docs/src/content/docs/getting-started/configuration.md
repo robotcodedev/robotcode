@@ -1,250 +1,86 @@
 ---
-title: Configuration
-description: 'Set up robot.toml for your Robot Framework project: core settings, profiles with inheritance and precedence, running tests and config file loading order.'
+title: Configure Your Project
+description: 'Create a robot.toml for your Robot Framework project: a first configuration, running the tests with it, a profile for another environment and personal settings.'
 sidebar:
   label: Configuration
   order: 90
 ---
 
-## Introduction to the `robot.toml` File
+RobotCode reads the configuration of a Robot Framework project from a `robot.toml` file in the project folder. It holds the options you would otherwise pass to `robot` on the command line or in argument files, such as the paths of the tests, the Python path and variables, and profiles for different environments. The editors and the `robotcode` commands use it alike, so the tests run the same way everywhere. This page creates a first `robot.toml`; [Configuring Projects with robot.toml](/guides/robot-toml/) explains all that it can do.
 
-The `robot.toml` file serves as a centralized configuration system for your Robot Framework projects. Instead of managing multiple argument files, batch scripts, or command-line parameters, you can define all your project settings in one structured file.
+## A first `robot.toml`
 
-Similar to how `pyproject.toml` has become the standard for Python project configuration, `robot.toml` aims to provide the same benefits for Robot Framework projects by:
+Create a file named `robot.toml` in the root folder of your project, and commit it:
 
-- Centralizing all configuration in one location
-- Making settings easily shareable through version control
-- Supporting different environments through profiles
-- Providing a clear, readable format for configuration
-
-While fully compatible with development environments like VS Code, the `robot.toml` file is primarily designed to simplify Robot Framework project setup and maintenance.
-
-## About TOML Files
-
-TOML (Tom's Obvious, Minimal Language) is a configuration file format designed to be easy to read and write. It uses simple key-value pairs organized into sections, making it more human-friendly than formats like JSON or XML.
-
-Example of TOML syntax:
-```toml
-# This is a comment
-key = "value"
-
-[section]
-nested_key = "nested value"
-```
-
-For full details on TOML syntax, visit the [official TOML documentation](https://toml.io/en/).
-
-## Basic Configuration
-
-### Core Settings
-
-Every command-line option available in Robot Framework can be configured in your `robot.toml` file:
-
-```toml
-# Basic settings
-output-dir = "output"
-log-level = "INFO"
-languages = ["en", "fi"]
-
-# Global variables
-[variables]
-BROWSER = "Chrome"
-LOGIN_URL = "https://example.com/login"
-TIMEOUT = "20s"
-```
-
-Multi-word options use hyphens in `robot.toml` (e.g., `--outputdir` becomes `output-dir`).
-
-To see all available options:
-- Run `robot --help` for standard Robot Framework options
-- Run `robotcode config info list` to list every `robot.toml` setting, and `robotcode config info desc <setting>` to describe one
-- Check the [Configuration Reference](/reference/config/) documentation
-
-## Working with Profiles
-
-Profiles allow you to define multiple configurations for different environments or testing scenarios.
-
-### Creating Basic Profiles
-
-```toml
-# Default settings (applies to all profiles)
+```toml title="robot.toml"
+paths = ["tests"]
+python-path = ["libraries", "resources"]
 output-dir = "results"
-log-level = "INFO"
 
-# Development environment profile
-[profiles.dev]
-output-dir = "results/dev"
-variables = { ENVIRONMENT = "development", API_URL = "http://dev-api.example.com" }
-
-# Production testing profile
-[profiles.prod]
-output-dir = "results/prod"
-variables = { ENVIRONMENT = "production", API_URL = "https://api.example.com" }
+[variables]
+BROWSER = "chrome"
+BASE_URL = "http://localhost:8080"
 ```
 
-### Profile Inheritance
+- **`paths`**: the folders or files with your tests.
+- **`python-path`**: folders in which Robot Framework looks for your libraries and resource files.
+- **`output-dir`**: the folder for `output.xml`, the log and the report.
+- **`[variables]`**: variables for all tests, as `--variable` sets them on the command line.
 
-Profiles can inherit settings from other profiles to avoid duplication:
+Each setting is a command line option of Robot Framework, written with its long name in words separated by hyphens: `--outputdir` becomes `output-dir`, and `--pythonpath` becomes `python-path`. Relative paths count from the project folder.
 
-```toml
-# Base profile with common settings
-[profiles.base]
-log-level = "INFO"
-variables = { TIMEOUT = "20s" }
+In VS Code, the extension Even Better TOML completes the settings and shows their documentation, see [Editing `robot.toml`](/guides/vscode/configuration/#editing-robottoml).
 
-# Development profile builds on base settings
-[profiles.dev]
-inherits = ["base"]
-extend-variables = { ENVIRONMENT = "development", API_URL = "http://dev-api.example.com" }
+## Running the tests
 
-# Testing profile also builds on base settings
-[profiles.test]
-inherits = ["base"]
-extend-variables = { ENVIRONMENT = "testing", API_URL = "http://test-api.example.com" }
-```
+VS Code, PyCharm and IntelliJ IDEA use the configuration for the analysis, the test discovery and runs, and pick up a change of `robot.toml` at once.
 
-`extend-variables` adds to the variables of `base`; `variables` would replace them (see [Extending vs. Replacing Settings](#extending-vs-replacing-settings)).
-
-### Conditional Profiles
-
-Profiles can be hidden or enabled based on conditions:
-
-```toml
-# Hidden profile (not shown in listings)
-[profiles.internal]
-hidden = true
-
-# Conditionally enabled profiles
-[profiles.windows]
-enabled.if = "platform.system() == 'Windows'"
-variables = { DRIVER_PATH = "C:\\drivers" }
-
-[profiles.linux]
-enabled.if = "platform.system() == 'Linux'"
-variables = { DRIVER_PATH = "/usr/local/bin" }
-```
-
-### Profile Precedence
-
-When multiple profiles are used together, you can control which settings take priority:
-
-```toml
-# Base settings (low precedence)
-[profiles.base]
-variables = { LOG_LEVEL = "INFO", BROWSER = "chrome" }
-
-# Override with higher precedence
-[profiles.debug]
-precedence = 100
-extend-variables = { LOG_LEVEL = "DEBUG" }
-
-# Highest priority settings
-[profiles.critical]
-precedence = 200
-extend-variables = { RETRIES = "3" }
-```
-
-With `-p base -p debug -p critical`, the variables are `LOG_LEVEL = "DEBUG"`, `BROWSER = "chrome"` and `RETRIES = "3"`.
-
-## Test Execution
-
-### Running Tests with RobotCode
-
-To execute tests, install the `robotcode-runner` package:
+On the command line, run the tests with `robotcode run`; Robot Framework's own `robot` command does not read `robot.toml`. `robotcode run` needs RobotCode's runner in the environment of your project:
 
 ```bash
 pip install "robotcode[runner]"
 ```
 
-Common test execution commands:
-
 ```bash
-# Run all tests in a directory
-robotcode robot tests/
-
-# Run with a specific profile
-robotcode -p dev robot tests/
-
-# Combine multiple profiles
-robotcode -p base -p windows robot tests/
-
-# Override variables on command line
-robotcode -p dev robot -v BROWSER:firefox tests/
-
-# Run tests by tag
-robotcode robot -i smoke -i regression tests/
-```
-
-You can also define paths directly in the configuration:
-
-```toml
-paths = ["tests"]
-
-```
-
-then it is not needed to give specific paths at the command line, just type:
-
-```bash
-# run all tests
+# run the tests in paths
 robotcode run
 
-# run tests and only include/exclude tests with specific tags
-robotcode run -i regression -e wip
+# options and paths on the command line come on top
+robotcode run -i smoke
+robotcode run tests/login.robot
 ```
 
-## Advanced Configuration
+An option with a single value on the command line, such as `-d`, replaces the one in `robot.toml`; a repeated option such as `-i` adds to its list, and paths on the command line replace `paths`.
 
-### Extending vs. Replacing Settings
+## A profile for another environment
 
-By default, when merging profiles, list and dictionary settings are completely replaced. To add to these settings instead, use the `extend-` prefix:
+A profile holds the settings for another environment. Add one to `robot.toml`:
 
-```toml
-# Default settings
-variables = { BROWSER = "chrome", TIMEOUT = "20s" }
-includes = ["smoke"]
-
-[profiles.api]
-# Completely replaces the default variables
-variables = { API_KEY = "123456" }  # BROWSER and TIMEOUT are removed
-
-[profiles.extended]
-# Adds to the default variables
-extend-variables = { API_KEY = "123456" }  # Results in {BROWSER = "chrome", TIMEOUT = "20s", API_KEY = "123456"}
-extend-includes = ["api"]  # Results in ["smoke", "api"]
+```toml title="robot.toml"
+[profiles.staging]
+description = "Staging server"
+extend-variables = { BASE_URL = "https://staging.example.com" }
 ```
 
-Settings that support the `extend-` prefix include:
-- `variables`
-- `includes` / `excludes`
-- `python-path`
-- `metadata`
+`robotcode -p staging run` runs with it. `extend-variables` adds to the variables outside of the profile, here changing `BASE_URL` and keeping `BROWSER`; `variables` would replace them all. In VS Code, **RobotCode: Select Configuration Profiles** selects the profiles, and in PyCharm **Tools | RobotCode | Select Configuration Profiles...**.
 
-and many more, see the [`robot.toml` reference](/reference/config/) for all possibilities.
+## Personal settings
 
-## Configuration Loading Order
+Settings that only you need go into a file named `.robot.toml` next to `robot.toml`. Add it to `.gitignore`:
 
-RobotCode loads configuration files in a specific sequence, with each file potentially overriding settings from previous ones:
+```toml title=".robot.toml"
+[extend-variables]
+BROWSER = "firefox"
+```
 
-1. **Global user configuration**
-   - Located in the platform-specific user configuration directory as a `robot.toml` file:
-     - Linux: `~/.config/robotcode/robot.toml` (or `$XDG_CONFIG_HOME/robotcode/robot.toml`)
-     - macOS: `~/Library/Application Support/robotcode/robot.toml`
-     - Windows: `%LOCALAPPDATA%\robotcode\robot.toml`
-   - Sets per-user defaults for all projects; if the file is missing, RobotCode creates it with `output-dir = "results"` and `python-path = ["./lib", "./resources"]`
+RobotCode reads `.robot.toml` after `robot.toml`. Its settings replace those of `robot.toml`, and with `extend-` they add to them: `[variables]` here would drop `BASE_URL`.
 
-2. **Project `pyproject.toml`**
-   - Located in the project root
-   - Robot settings stored in the `[tool.robot]` section
+## Checking the configuration
 
-3. **Project `robot.toml`**
-   - Located in the project root
-   - Main project configuration (should be in version control)
+`robotcode profiles show` prints the settings that a run gets, and `robotcode -p staging profiles show` those with the profile `staging`. `robotcode config files` lists the files that RobotCode reads.
 
-4. **Personal `.robot.toml`**
-   - Located in the project root
-   - User-specific overrides (should be added to `.gitignore`)
+## Next steps
 
-When multiple profiles are specified, they're applied in this order:
-1. Default settings (top-level settings not in any profile)
-2. Profiles ordered by precedence (lowest to highest)
-3. For equal precedence, the order specified on the command line
+- [Configuring Projects with robot.toml](/guides/robot-toml/) explains all files, profiles in detail, expressions and the project root.
+- The [`robot.toml` reference](/reference/config/) lists every setting.
+- RobotCode's other settings are explained for [VS Code](/guides/vscode/configuration/) and [PyCharm](/guides/pycharm/configuration/).
