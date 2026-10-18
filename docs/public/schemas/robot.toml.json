@@ -3211,12 +3211,12 @@
             }
           ],
           "default": null,
-          "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault-profiles = \"default\"\n```\n\n```toml\ndefault-profiles = [\"default\", \"Firefox\"]\n```\n",
+          "description": "The profiles to use when no profile is selected, for example with\n`-p` on the command line or in the editor.\n\nExamples:\n```toml\ndefault-profiles = \"default\"\n```\n\n```toml\ndefault-profiles = [\"default\", \"Firefox\"]\n```\n",
           "examples": [
             "default-profiles = \"default\"",
             "default-profiles = [\"default\", \"Firefox\"]"
           ],
-          "markdownDescription": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault-profiles = \"default\"\n```\n\n```toml\ndefault-profiles = [\"default\", \"Firefox\"]\n```\n",
+          "markdownDescription": "The profiles to use when no profile is selected, for example with\n`-p` on the command line or in the editor.\n\nExamples:\n```toml\ndefault-profiles = \"default\"\n```\n\n```toml\ndefault-profiles = [\"default\", \"Firefox\"]\n```\n",
           "title": "Default Profiles",
           "x-taplo": {
             "links": {
@@ -3965,8 +3965,11 @@
             }
           ],
           "default": null,
-          "description": "Extra execution profiles.",
-          "markdownDescription": "Extra execution profiles.",
+          "description": "Adds profiles to those of the earlier configuration files, for\nexample in `.robot.toml` to those of `robot.toml`. For a profile\nthat exists already, it changes the settings given here.\n\nExamples:\n```toml\n[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }\n```\n",
+          "examples": [
+            "[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }"
+          ],
+          "markdownDescription": "Adds profiles to those of the earlier configuration files, for\nexample in `.robot.toml` to those of `robot.toml`. For a profile\nthat exists already, it changes the settings given here.\n\nExamples:\n```toml\n[extend-profiles.local]\ndescription = \"My local settings\"\nextend-variables = { BROWSER = \"firefox\" }\n```\n",
           "title": "Extend Profiles",
           "x-taplo": {
             "links": {
@@ -5186,8 +5189,11 @@
             }
           ],
           "default": null,
-          "description": "Execution profiles.",
-          "markdownDescription": "Execution profiles.",
+          "description": "Execution profiles: named sets of settings that are applied on top\nof the other settings when the profile is selected, for example\nwith `robotcode -p ci`. In a later configuration file, such as\n`.robot.toml`, `profiles` replaces all profiles of the earlier\nfiles; `extend-profiles` adds to them.\n\nExamples:\n```toml\n[profiles.ci]\ndescription = \"CI server\"\noutput-dir = \"results/ci\"\n```\n",
+          "examples": [
+            "[profiles.ci]\ndescription = \"CI server\"\noutput-dir = \"results/ci\""
+          ],
+          "markdownDescription": "Execution profiles: named sets of settings that are applied on top\nof the other settings when the profile is selected, for example\nwith `robotcode -p ci`. In a later configuration file, such as\n`.robot.toml`, `profiles` replaces all profiles of the earlier\nfiles; `extend-profiles` adds to them.\n\nExamples:\n```toml\n[profiles.ci]\ndescription = \"CI server\"\noutput-dir = \"results/ci\"\n```\n",
           "title": "Profiles",
           "x-taplo": {
             "links": {
@@ -6394,8 +6400,11 @@
             }
           ],
           "default": null,
-          "description": "The profile should be detached.\nDetached means it is not inherited from the main profile.\n",
-          "markdownDescription": "The profile should be detached.\nDetached means it is not inherited from the main profile.\n",
+          "description": "Starts the profile from scratch: the settings outside of profiles,\nfrom all configuration files, and the profiles applied before it\nare not used.\n\nExamples:\n```toml\n[profiles.clean]\ndetached = true\npaths = [\"tests\"]\n```\n",
+          "examples": [
+            "[profiles.clean]\ndetached = true\npaths = [\"tests\"]"
+          ],
+          "markdownDescription": "Starts the profile from scratch: the settings outside of profiles,\nfrom all configuration files, and the profiles applied before it\nare not used.\n\nExamples:\n```toml\n[profiles.clean]\ndetached = true\npaths = [\"tests\"]\n```\n",
           "title": "Detached",
           "x-taplo": {
             "links": {
@@ -6500,12 +6509,12 @@
             }
           ],
           "default": null,
-          "description": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# always disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
+          "description": "Whether the profile is used when it is selected; a disabled profile\nis skipped. An `if` condition computes the value.\n\nExamples:\n```toml\n# always disabled\nenabled = false\n```\n\n```toml\n# enabled if the environment variable CI is \"true\"\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
           "examples": [
             "# always disabled\nenabled = false",
-            "# enabled if TEST_VAR is set\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }"
+            "# enabled if the environment variable CI is \"true\"\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }"
           ],
-          "markdownDescription": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# always disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
+          "markdownDescription": "Whether the profile is used when it is selected; a disabled profile\nis skipped. An `if` condition computes the value.\n\nExamples:\n```toml\n# always disabled\nenabled = false\n```\n\n```toml\n# enabled if the environment variable CI is \"true\"\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
           "title": "Enabled",
           "x-taplo": {
             "links": {
@@ -7774,12 +7783,12 @@
             }
           ],
           "default": null,
-          "description": "The profile should be hidden.\nHidden means it is not shown in the list of available profiles.\n\nExamples:\n```toml\nhidden = true\n```\n\n```toml\nhidden = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
+          "description": "Hides the profile from `robotcode profiles list` and from the\nprofile lists of the editors; it can still be selected by name.\nProfiles whose names start with `_` are hidden too.\n\nExamples:\n```toml\nhidden = true\n```\n\n```toml\nhidden = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
           "examples": [
             "hidden = true",
             "hidden = { if = 'environ.get(\"CI\") == \"true\"' }"
           ],
-          "markdownDescription": "The profile should be hidden.\nHidden means it is not shown in the list of available profiles.\n\nExamples:\n```toml\nhidden = true\n```\n\n```toml\nhidden = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
+          "markdownDescription": "Hides the profile from `robotcode profiles list` and from the\nprofile lists of the editors; it can still be selected by name.\nProfiles whose names start with `_` are hidden too.\n\nExamples:\n```toml\nhidden = true\n```\n\n```toml\nhidden = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
           "title": "Hidden",
           "x-taplo": {
             "links": {
@@ -7846,11 +7855,11 @@
             }
           ],
           "default": null,
-          "description": "Profiles to inherit from.\n\nExamples:\n```toml\ninherits = [\"default\", \"Firefox\"]\n```\n",
+          "description": "Profiles to inherit from. Selecting this profile selects them too;\nthey are applied before it unless they have a higher `precedence`.\n\nExamples:\n```toml\ninherits = [\"default\", \"Firefox\"]\n```\n",
           "examples": [
             "inherits = [\"default\", \"Firefox\"]"
           ],
-          "markdownDescription": "Profiles to inherit from.\n\nExamples:\n```toml\ninherits = [\"default\", \"Firefox\"]\n```\n",
+          "markdownDescription": "Profiles to inherit from. Selecting this profile selects them too;\nthey are applied before it unless they have a higher `precedence`.\n\nExamples:\n```toml\ninherits = [\"default\", \"Firefox\"]\n```\n",
           "title": "Inherits",
           "x-taplo": {
             "links": {

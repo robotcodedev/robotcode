@@ -3090,15 +3090,23 @@ class RobotProfile(RobotExtendBaseProfile):
 
     detached: Optional[bool] = field(
         description="""\
-            The profile should be detached.
-            Detached means it is not inherited from the main profile.
+            Starts the profile from scratch: the settings outside of profiles,
+            from all configuration files, and the profiles applied before it
+            are not used.
+
+            Examples:
+            ```toml
+            [profiles.clean]
+            detached = true
+            paths = ["tests"]
+            ```
             """
     )
 
     enabled: Union[bool, Condition, None] = field(
         description="""\
-            If enabled the profile is used. You can also use and `if` condition
-            to calculate the enabled state.
+            Whether the profile is used when it is selected; a disabled profile
+            is skipped. An `if` condition computes the value.
 
             Examples:
             ```toml
@@ -3107,7 +3115,7 @@ class RobotProfile(RobotExtendBaseProfile):
             ```
 
             ```toml
-            # enabled if TEST_VAR is set
+            # enabled if the environment variable CI is "true"
             enabled = { if = 'environ.get("CI") == "true"' }
             ```
             """
@@ -3118,8 +3126,9 @@ class RobotProfile(RobotExtendBaseProfile):
 
     hidden: Union[bool, Condition, None] = field(
         description="""\
-            The profile should be hidden.
-            Hidden means it is not shown in the list of available profiles.
+            Hides the profile from `robotcode profiles list` and from the
+            profile lists of the editors; it can still be selected by name.
+            Profiles whose names start with `_` are hidden too.
 
             Examples:
             ```toml
@@ -3141,7 +3150,8 @@ class RobotProfile(RobotExtendBaseProfile):
 
     inherits: Union[str, StringExpression, List[Union[str, StringExpression]], None] = field(
         description="""\
-            Profiles to inherit from.
+            Profiles to inherit from. Selecting this profile selects them too;
+            they are applied before it unless they have a higher `precedence`.
 
             Examples:
             ```toml
@@ -3157,7 +3167,8 @@ class RobotConfig(RobotExtendBaseProfile):
 
     default_profiles: Union[str, List[str], None] = field(
         description="""\
-            Selects the Default profile if no profile is given at command line.
+            The profiles to use when no profile is selected, for example with
+            `-p` on the command line or in the editor.
 
             Examples:
             ```toml
@@ -3170,13 +3181,45 @@ class RobotConfig(RobotExtendBaseProfile):
             """,
         alias="default-profiles",
     )
-    profiles: Optional[Dict[str, RobotProfile]] = field(description="Execution profiles.")
+    profiles: Optional[Dict[str, RobotProfile]] = field(
+        description="""\
+            Execution profiles: named sets of settings that are applied on top
+            of the other settings when the profile is selected, for example
+            with `robotcode -p ci`. In a later configuration file, such as
+            `.robot.toml`, `profiles` replaces all profiles of the earlier
+            files; `extend-profiles` adds to them.
 
-    extend_profiles: Optional[Dict[str, RobotProfile]] = field(
-        description="Extra execution profiles.", alias="extend-profiles"
+            Examples:
+            ```toml
+            [profiles.ci]
+            description = "CI server"
+            output-dir = "results/ci"
+            ```
+            """
     )
 
-    tool: Optional[Dict[str, Any]] = field(description="Tool configurations.")
+    extend_profiles: Optional[Dict[str, RobotProfile]] = field(
+        description="""\
+            Adds profiles to those of the earlier configuration files, for
+            example in `.robot.toml` to those of `robot.toml`. For a profile
+            that exists already, it changes the settings given here.
+
+            Examples:
+            ```toml
+            [extend-profiles.local]
+            description = "My local settings"
+            extend-variables = { BROWSER = "firefox" }
+            ```
+            """,
+        alias="extend-profiles",
+    )
+
+    tool: Optional[Dict[str, Any]] = field(
+        description="""\
+            Settings of other tools, for example `[tool.robotcode-analyze]`
+            for RobotCode's analysis.
+            """
+    )
 
     def _select_profiles(
         self,
