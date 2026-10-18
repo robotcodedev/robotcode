@@ -1120,6 +1120,24 @@ class SetExceptionBreakpointsResponse(Response):
 
 
 @dataclass
+class ExceptionInfoArguments(Model):
+    thread_id: int
+
+
+@dataclass
+class ExceptionDetails(Model):
+    stack_trace: Optional[str] = None
+
+
+@dataclass
+class ExceptionInfoResponseBody(Model):
+    exception_id: str
+    break_mode: ExceptionBreakMode
+    description: Optional[str] = None
+    details: Optional[ExceptionDetails] = None
+
+
+@dataclass
 class _CompletionsRequest:
     arguments: CompletionsArguments
 

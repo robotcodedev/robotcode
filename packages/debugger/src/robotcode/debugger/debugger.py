@@ -54,7 +54,10 @@ from .dap_types import (
     ContinuedEventBody,
     EvaluateArgumentContext,
     Event,
+    ExceptionBreakMode,
+    ExceptionDetails,
     ExceptionFilterOptions,
+    ExceptionInfoResponseBody,
     ExceptionOptions,
     OutputCategory,
     OutputEvent,
@@ -325,6 +328,21 @@ class PathMapping(NamedTuple):
 class DebugLoggerBase:
     def __init__(self) -> None:
         self.steps: List[Any] = []
+        self.last_fail_message: Optional[str] = None
+        self.last_fail_traceback: Optional[str] = None
+
+    def log_message(self, message: Any) -> None:
+        # Robot Framework logs a failure's Python traceback at DEBUG right after its message; unlike a listener, a
+        # registered logger gets it whatever the log level
+        if message.level == "FAIL":
+            self.last_fail_message = message.message
+            self.last_fail_traceback = None
+        elif (
+            message.level == "DEBUG"
+            and message.message.startswith("Traceback (most recent call last):")
+            and message.message.splitlines()[1:2] != ["  None"]
+        ):
+            self.last_fail_traceback = message.message
 
 
 if RF_VERSION < (7, 0):
@@ -463,6 +481,7 @@ class Debugger:
         self._variables_cache: Dict[int, Any] = {}
         self._variables_object_cache: List[Any] = []
         self._current_exception: Optional[ExceptionInformation] = None
+        self._current_exception_info: Optional[ExceptionInfoResponseBody] = None
 
     @property
     def state(self) -> State:
@@ -858,27 +877,39 @@ class Debugger:
         filter_id: Set[str],
         description: str,
         text: Optional[str],
+        name: str,
+        message: Optional[str],
     ) -> None:
         if self.state == State.CallKeyword:
             return
         if self.state == State.Stopped:
             return
 
-        if (
-            not self.terminated
-            and status == "FAIL"
-            and any(
-                v
-                for v in self.exception_breakpoints
-                if v.filter_options and any(o for o in v.filter_options if o.filter_id in filter_id)
-            )
-        ):
+        matched_filter_ids = {
+            o.filter_id
+            for v in self.exception_breakpoints
+            if v.filter_options
+            for o in v.filter_options
+            if o.filter_id in filter_id
+        }
+
+        if not self.terminated and status == "FAIL" and matched_filter_ids:
             reason = StoppedReason.EXCEPTION
 
             self.requested_state = RequestedState.Nothing
             self.state = State.Paused
 
             self._current_exception = {"text": text, "description": description, "status": status}
+            self._current_exception_info = ExceptionInfoResponseBody(
+                exception_id=name,
+                break_mode=(
+                    ExceptionBreakMode.UNHANDLED
+                    if "uncaught_failed_keyword" in matched_filter_ids
+                    else ExceptionBreakMode.ALWAYS
+                ),
+                description=message,
+                details=self._create_exception_details(message),
+            )
 
             self.send_event(
                 self,
@@ -944,6 +975,7 @@ class Debugger:
 
                 break
             self._current_exception = None
+            self._current_exception_info = None
 
     def start_output_group(self, name: str, attributes: AttributeDict, type: Optional[str] = None) -> None:
         if self.group_output:
@@ -1125,6 +1157,8 @@ class Debugger:
                     {"failed_suite"},
                     "Suite failed.",
                     f"Suite failed{f': {v}' if (v := attributes.get('message')) else ''}",
+                    name,
+                    attributes.get("message"),
                 )
                 self.wait_for_running()
 
@@ -1174,6 +1208,8 @@ class Debugger:
                     {"failed_test"},
                     "Test failed.",
                     f"Test failed{f': {v}' if (v := attributes.get('message')) else ''}",
+                    name,
+                    attributes.get("message"),
                 )
 
                 self.wait_for_running()
@@ -1368,6 +1404,8 @@ class Debugger:
                     },
                     "Keyword failed.",
                     f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
+                    name,
+                    self.last_fail_message,
                 )
 
                 self.wait_for_running()
@@ -2225,6 +2263,37 @@ class Debugger:
                     result.append(Breakpoint(verified=False))
 
         return result or None
+
+    def _create_exception_details(self, message: Optional[str]) -> Optional[ExceptionDetails]:
+        rows: List[Tuple[str, Optional[str]]] = []
+        for entry in self.stack_frames:
+            if entry.type == "SUITE":
+                continue
+            position = entry.stack_frames[0] if entry.stack_frames else None if entry.top_hidden else entry
+            if position is None:
+                continue
+            source = self.source_from_entry(position)
+            location = None
+            if source is not None and source.path:
+                location = source.path if position.line is None else f"{source.path}:{position.line}"
+            rows.append((entry.longname or entry.kwname or entry.name or entry.type, location))
+
+        width = max((len(name) for name, _ in rows), default=0)
+        stack_trace = "\n".join(f"{name.ljust(width)}  {location}" if location else name for name, location in rows)
+
+        logger = self.debug_logger
+        if message and logger is not None and logger.last_fail_message == message and logger.last_fail_traceback:
+            stack_trace = "\n\n".join(part for part in (stack_trace, logger.last_fail_traceback) if part)
+
+        return ExceptionDetails(stack_trace=stack_trace) if stack_trace else None
+
+    def get_exception_info(self, thread_id: int) -> ExceptionInfoResponseBody:
+        self.check_thread_id(thread_id)
+
+        if self._current_exception_info is None:
+            raise RuntimeError("The run is not stopped at a failure.")
+
+        return self._current_exception_info
 
     if RF_VERSION >= (7, 0):
 

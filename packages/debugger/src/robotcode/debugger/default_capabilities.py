@@ -43,6 +43,7 @@ DFEAULT_CAPABILITIES = Capabilities(
     ],
     supports_exception_options=True,
     supports_exception_filter_options=True,
+    supports_exception_info_request=True,
     supports_completions_request=True,
     supports_a_n_s_i_styling=True,
 )

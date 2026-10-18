@@ -54,6 +54,8 @@ Click left of the line numbers to set a breakpoint in a test, a keyword or a res
 
 The **Breakpoints** section of the Run and Debug view also stops at failures: **Uncaught Failed Keywords** is on by default and stops where a keyword fails unless the failure is handled, by a matching `EXCEPT` branch of a surrounding `TRY` or by a BuiltIn keyword that handles failures, such as `Run Keyword And Expect Error`, `Run Keyword And Ignore Error` or `Wait Until Keyword Succeeds`. **Failed Keywords**, **Failed Test** and **Failed Suite** stop at every failed keyword, test or suite. Each of them takes a condition, with **Edit Condition** in its context menu.
 
+When the run stops at a failure, the editor shows the failed keyword and its message below the line; for **Failed Test** and **Failed Suite**, it names the test or suite instead. Under the message, it lists the calls that led there, each with a link to its file and line, and for an error from the Python code of a library, its Python traceback, at every log level, even though Robot Framework writes it to the log only at the level `DEBUG`. The links open with <kbd>Ctrl</kbd>+click (<kbd>Cmd</kbd>+click on macOS); a plain click does nothing.
+
 <ThemeVideo
   name="running-stop-at-failure"
   label="Debug Test in the context menu of the icon beside Login Works, without a breakpoint: the run stops at Should Be Equal in shop.resource, where the test fails, with the message Welcome back, alice! != Welcome back, Alice! and the values of the variables at the end of the lines."

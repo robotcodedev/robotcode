@@ -23,6 +23,8 @@ from .dap_types import (
     EvaluateArguments,
     EvaluateResponseBody,
     Event,
+    ExceptionInfoArguments,
+    ExceptionInfoResponseBody,
     ExitedEvent,
     ExitedEventBody,
     InitializedEvent,
@@ -383,6 +385,15 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             arguments.exception_options,
         )
         return SetExceptionBreakpointsResponseBody(breakpoints=result) if result else None
+
+    @rpc_method(name="exceptionInfo", param_type=ExceptionInfoArguments)
+    async def _exception_info(
+        self,
+        arguments: ExceptionInfoArguments,
+        *args: Any,
+        **kwargs: Any,
+    ) -> ExceptionInfoResponseBody:
+        return Debugger.instance.get_exception_info(arguments.thread_id)
 
     @rpc_method(name="completions", param_type=CompletionsArguments)
     async def _completions(
