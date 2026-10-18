@@ -162,7 +162,7 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
             val editor = FileEditorManager.getInstance(project).openFile(file, false).first()
             val panel = provider.collectNotificationData(project, file)!!.apply(editor) as EditorNotificationPanel
 
-            assertEquals(bannerText(state, noInterpreter.homePath), panel.text)
+            assertEquals(bannerText(state), panel.text)
         }
         assertEmpty(checksStarted)
     }
