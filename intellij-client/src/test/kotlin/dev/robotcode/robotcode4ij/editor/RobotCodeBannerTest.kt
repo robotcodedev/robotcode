@@ -35,21 +35,12 @@ class RobotCodeBannerTest : BasePlatformTestCase() {
         return EditorNotificationProvider().collectNotificationData(project, file)?.apply(editor) as EditorNotificationPanel?
     }
 
-    fun testPipCommandForTheInterpreter() {
+    fun testTextNamesTheProblemButNotHowToInstall() {
         val tooOld = EnvironmentState.Checked(EnvironmentResult.RobotTooOld("4.1"))
 
-        assertEquals("\"/opt/py/bin/python3\" -m pip install robotframework", pipCommand(notInstalled, "/opt/py/bin/python3"))
-        assertEquals("\"/opt/py/bin/python3\" -m pip install -U robotframework", pipCommand(tooOld, "/opt/py/bin/python3"))
-        assertNull(pipCommand(EnvironmentState.Checked(EnvironmentResult.PythonTooOld("3.9")), "/opt/py/bin/python3"))
-        assertNull(pipCommand(notInstalled, null))
-    }
-
-    fun testTextShowsThePipCommandOnALineOfItsOwn() {
-        val text = bannerText(notInstalled, "/opt/py/bin/python3")
-
-        assertTrue(text, text.startsWith("<html>" + notInstalled.message + "<br>"))
-        assertTrue(text, text.endsWith("<code>&quot;/opt/py/bin/python3&quot; -m pip install robotframework</code></html>"))
-        assertEquals("<html>" + notInstalled.message + "</html>", bannerText(notInstalled, null))
+        for (state in listOf(notInstalled, tooOld)) {
+            assertEquals("<html>" + state.message + "</html>", bannerText(state))
+        }
     }
 
     fun testPanelOffersTheNextSteps() {
@@ -58,7 +49,8 @@ class RobotCodeBannerTest : BasePlatformTestCase() {
         for (label in listOf("Configure Python Interpreter...", "Retry", "Disable RobotCode for This Project")) {
             assertNotNull(label, panel.findLabelByName(label))
         }
-        assertEquals(bannerText(notInstalled, environment.projectInterpreter.homePath), panel.text)
+        assertEquals(bannerText(notInstalled), panel.text)
+        assertFalse(panel.text, panel.text.contains("pip"))
     }
 
     fun testClosedBannerStaysHidden() {

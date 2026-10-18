@@ -8,7 +8,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.EditorNotificationProvider
 import com.intellij.ui.EditorNotifications
-import dev.robotcode.robotcode4ij.EnvironmentResult
 import dev.robotcode.robotcode4ij.EnvironmentState
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotResourceFileType
@@ -24,31 +23,10 @@ import java.util.function.Function
 import javax.swing.JComponent
 
 /**
- * The pip command that installs or upgrades Robot Framework for the project's interpreter, for a missing or old Robot
- * Framework.
+ * The text of the banner for an interpreter that RobotCode cannot use: the result of the check. It names what is
+ * missing, not how to install it; which tool and which version a project uses for that is the project's decision.
  */
-internal fun pipCommand(state: EnvironmentState, interpreterPath: String?): String? {
-    val result = (state as? EnvironmentState.Checked)?.result
-    return when {
-        interpreterPath == null -> null
-        result == EnvironmentResult.RobotNotInstalled -> "\"$interpreterPath\" -m pip install robotframework"
-        result is EnvironmentResult.RobotTooOld -> "\"$interpreterPath\" -m pip install -U robotframework"
-        else -> null
-    }
-}
-
-/**
- * The text of the banner for an interpreter that RobotCode cannot use: the result of the check, and the pip command on a
- * line of its own, so that a narrow editor does not cut it off.
- */
-internal fun bannerText(state: EnvironmentState, interpreterPath: String?): String {
-    val result = (state as? EnvironmentState.Checked)?.result
-    val pip = pipCommand(state, interpreterPath)?.let {
-        val key = if (result is EnvironmentResult.RobotTooOld) "python.banner.upgrade" else "python.banner.install"
-        "<br>" + RobotCodeBundle.message(key, "<code>" + StringUtil.escapeXmlEntities(it) + "</code>")
-    }
-    return "<html>" + StringUtil.escapeXmlEntities(state.message) + (pip ?: "") + "</html>"
-}
+internal fun bannerText(state: EnvironmentState): String = "<html>" + StringUtil.escapeXmlEntities(state.message) + "</html>"
 
 @Suppress("DialogTitleCapitalization")
 class EditorNotificationProvider : EditorNotificationProvider, DumbAware {
@@ -84,7 +62,7 @@ class EditorNotificationProvider : EditorNotificationProvider, DumbAware {
 
         return Function { editor ->
             val panel = EditorNotificationPanel(editor, EditorNotificationPanel.Status.Warning)
-            panel.text = bannerText(state, interpreter.homePath)
+            panel.text = bannerText(state)
             panel.createActionLabel(RobotCodeBundle.message("python.banner.configure")) {
                 RobotCodeConfigurePythonInterpreterAction.showPythonInterpreterSettings(project)
             }

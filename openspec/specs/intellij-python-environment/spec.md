@@ -206,7 +206,7 @@ The banner that a Robot file shows for an interpreter RobotCode cannot use SHALL
 
 #### Scenario: Retry after installing
 
-- **WHEN** the user installs Robot Framework with the pip command from the banner in a terminal and clicks "Retry"
+- **WHEN** the user installs Robot Framework into the interpreter in a terminal and clicks "Retry"
 - **THEN** the banner disappears and the language server starts
 
 #### Scenario: Disable from the banner
@@ -223,11 +223,11 @@ The banner for an interpreter RobotCode cannot use SHALL offer a close button, w
 - **WHEN** the user clicks the banner's close button
 - **THEN** no Robot file of the project shows the banner again until the IDE is restarted
 
-### Requirement: The banner shows how to install Robot Framework
+### Requirement: The banner does not say how to install Robot Framework
 
-When Robot Framework is missing or older than 5.0, the banner SHALL show the pip command that installs or upgrades it for the project's interpreter. The plugin SHALL NOT install packages itself.
+When Robot Framework is missing or older than 5.0, the banner SHALL name the problem and the requirement, but SHALL NOT show a command or a tool that installs or upgrades it: which tool and which version a project uses is the project's decision. The plugin SHALL NOT install packages itself.
 
 #### Scenario: Old Robot Framework in the banner
 
 - **WHEN** the project's interpreter has Robot Framework 4.1
-- **THEN** the banner shows the pip command that upgrades Robot Framework for that interpreter
+- **THEN** the banner says that Robot Framework is older than 5.0 and names the requirement, without a command that upgrades it
