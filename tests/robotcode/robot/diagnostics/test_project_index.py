@@ -1,4 +1,5 @@
-from typing import Callable, Dict, Set, Tuple
+import threading
+from typing import Callable, Dict, List, Set, Tuple
 
 from pytest_mock import MockerFixture
 
@@ -537,3 +538,46 @@ class TestProjectIndexKnownSources:
         idx.find_keyword_references(kw)
 
         assert sorted(call.args[0] for call in check.call_args_list) == ["/a.robot", "/b.robot"]
+
+    def test_the_check_runs_without_the_lock(self, mocker: MockerFixture) -> None:
+        kw = _kw("Login")
+        updated: List[bool] = []
+
+        # another thread analyzes a file while the lookup checks one
+        def check(source: str) -> bool:
+            def update() -> None:
+                idx.update_file("/c.robot", _ns(mocker, keyword_references={kw: {_loc("file:///c.robot", 1)}}))
+                updated.append(True)
+
+            worker = threading.Thread(target=update)
+            worker.start()
+            worker.join(5)
+            return True
+
+        idx = ProjectIndex(check)
+        idx.update_file("/a.robot", _ns(mocker, keyword_references={kw: {_loc("file:///a.robot", 1)}}))
+
+        idx.find_keyword_references(kw)
+
+        assert updated == [True]
+
+    def test_a_file_analyzed_again_during_the_check_keeps_its_new_references(self, mocker: MockerFixture) -> None:
+        kw = _kw("Login")
+        loc_a = _loc("file:///a.robot", 10)
+        new_b = _loc("file:///b.robot", 30)
+        checked: List[str] = []
+
+        # b.robot is opened and analyzed again while the lookup checks it
+        def check(source: str) -> bool:
+            if source == "/b.robot" and not checked:
+                checked.append(source)
+                idx.update_file("/b.robot", _ns(mocker, keyword_references={kw: {new_b}}))
+                return False
+            return True
+
+        idx = ProjectIndex(check)
+        idx.update_file("/a.robot", _ns(mocker, keyword_references={kw: {loc_a}}))
+        idx.update_file("/b.robot", _ns(mocker, keyword_references={kw: {_loc("file:///b.robot", 20)}}))
+
+        assert idx.find_keyword_references(kw) == {loc_a}
+        assert idx.find_keyword_references(kw) == {loc_a, new_b}

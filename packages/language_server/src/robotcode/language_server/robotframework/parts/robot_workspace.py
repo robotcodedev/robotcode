@@ -275,29 +275,36 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         run_as_task(self._schedule_file_checks)
 
     def _schedule_file_checks(self) -> None:
-        with self._file_check_lock:
-            if self._file_checks_stopped or not self.parent.diagnostics.workspace_loaded_event.is_set():
-                return
+        if self._file_checks_stopped or not self.parent.diagnostics.workspace_loaded_event.is_set():
+            return
 
-            for folder in self.parent.workspace.workspace_folders:
-                self._schedule_file_check(folder)
+        for folder in self.parent.workspace.workspace_folders:
+            self._schedule_file_check(folder)
+
+    def _file_check_interval(self, folder: WorkspaceFolder) -> int:
+        try:
+            interval = self.parent.workspace.get_configuration(AnalysisConfig, folder.uri).file_check_interval
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            # without a timer the folder would not be checked again
+            self._logger.exception(e)
+            interval = AnalysisConfig().file_check_interval
+        return min(max(interval, 1), 1440)
 
     def _schedule_file_check(self, folder: WorkspaceFolder) -> None:
+        # reading the configuration can wait for the client, so it happens without the lock that the shutdown takes
+        interval = self._file_check_interval(folder)
+
         with self._file_check_lock:
+            if self._file_checks_stopped:
+                return
+
             timer = self._file_check_timers.pop(str(folder.uri), None)
             if timer is not None:
                 timer.cancel()
 
-            try:
-                interval = self.parent.workspace.get_configuration(AnalysisConfig, folder.uri).file_check_interval
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                # without a timer the folder would not be checked again
-                self._logger.exception(e)
-                interval = AnalysisConfig().file_check_interval
-
-            timer = threading.Timer(min(max(interval, 1), 1440) * 60, self._run_file_check, (folder,))
+            timer = threading.Timer(interval * 60, self._run_file_check, (folder,))
             timer.daemon = True
             self._file_check_timers[str(folder.uri)] = timer
             timer.start()
@@ -310,9 +317,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         except BaseException as e:
             self._logger.exception(e)
         finally:
-            with self._file_check_lock:
-                if not self._file_checks_stopped:
-                    self._schedule_file_check(folder)
+            self._schedule_file_check(folder)
 
     def _stop_file_checks(self, sender: Any) -> None:
         with self._file_check_lock:

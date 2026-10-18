@@ -377,7 +377,7 @@ The cache lives in a `.robotcode_cache` folder in the project root. [`cache-dir`
 
 Clearing the cache is the usual fix after changing cache-affecting settings such as `ignore-arguments-for-library`.
 
-After each run, `analyze code` removes the entries of Robot Framework files that no longer exist, also of files outside the paths it analyzed. The language server removes them as soon as it notices that a file was deleted.
+After each run, `analyze code` removes the entries of Robot Framework files that no longer exist, also of files outside the paths it analyzed. The language server removes them as soon as it notices that a file was deleted. The analysis of a file with a failed import is not cached, so a missing file or package is found once it is there.
 
 ## Configuration via `robot.toml`
 

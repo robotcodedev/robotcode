@@ -912,8 +912,9 @@ class ImportsManager:
         content and would validate as fresh forever.
 
         A namespace with failed imports is not persisted either: the validation
-        cannot tell that a missing file appeared since, and the cached
-        diagnostics would keep reporting it as missing.
+        cannot tell that a missing file appeared since, or that a library that
+        failed to load would load now, and the cached diagnostics would keep
+        reporting the old error.
         """
         if not disk_info.trusted:
             return None

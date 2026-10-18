@@ -7,9 +7,10 @@ from typing import (
     TYPE_CHECKING,
     Callable,
     Dict,
-    Iterable,
+    List,
     Optional,
     Set,
+    Tuple,
     TypeVar,
 )
 
@@ -49,7 +50,8 @@ class ProjectIndex:
     Lookups count only the files that `is_known_source` accepts. They leave
     out the locations of the other files and remove these files, so that a
     file that is gone leaves nothing behind, also when its analysis ended
-    after it went away.
+    after it went away. The check runs without the lock, and a file that is
+    analyzed again meanwhile keeps its new references.
 
     Thread-safety: An RLock protects all mutation operations (update_file,
     remove_file). Reads use the same lock — since writes are rare (only on
@@ -174,61 +176,67 @@ class ProjectIndex:
                 if not bucket:
                     del global_refs[key]
 
-    def _known(self, locations: Iterable[Location]) -> Set[Location]:
-        """The locations in files that still count; removes the files that do not. Called under the lock."""
-        if self._is_known_source is None:
-            return set(locations)
+    def _find(self, refs: Dict[_K, Set[Location]], key: _K) -> Set[Location]:
+        """The locations of `key` in the files that still count; removes the files that do not."""
+        with self._lock:
+            locations = set(refs.get(key, ()))
+            if self._is_known_source is None:
+                return locations
 
-        result: Set[Location] = set()
-        known_sources: Dict[str, bool] = {}
-        for location in locations:
-            source = self._source_by_uri.get(location.uri)
-            if source is not None:
-                known = known_sources.get(source)
-                if known is None:
-                    known = known_sources[source] = self._is_known_source(source)
-                if not known:
+            result: Set[Location] = set()
+            # the locations of each file, with the entries the file had at the lookup
+            files: Dict[str, Tuple[_FileRefs, List[Location]]] = {}
+            for location in locations:
+                source = self._source_by_uri.get(location.uri)
+                file_refs = self._refs_by_file.get(source) if source is not None else None
+                if source is None or file_refs is None:
+                    result.add(location)
                     continue
-            result.add(location)
+                files.setdefault(source, (file_refs, []))[1].append(location)
 
-        for source, known in known_sources.items():
-            if not known:
-                self._remove_file_unlocked(source)
+        # without the lock: the documents manager notifies didOpen under its own lock, and the diagnostics of a
+        # document that waits there can wait for a lookup
+        unknown: List[Tuple[str, _FileRefs]] = []
+        for source, (file_refs, file_locations) in files.items():
+            if self._is_known_source(source):
+                result.update(file_locations)
+            else:
+                unknown.append((source, file_refs))
+
+        if unknown:
+            with self._lock:
+                for source, file_refs in unknown:
+                    # a file that was analyzed again since the lookup keeps its new references
+                    if self._refs_by_file.get(source) is file_refs:
+                        self._remove_file_unlocked(source)
 
         return result
 
     def find_keyword_references(self, kw: KeywordDoc) -> Set[Location]:
         """O(1) lookup instead of O(N) workspace scan."""
-        with self._lock:
-            return self._known(self._keyword_references.get(kw, ()))
+        return self._find(self._keyword_references, kw)
 
     def find_variable_references(self, var: VariableDefinition) -> Set[Location]:
         """O(1) lookup instead of O(N) workspace scan."""
-        with self._lock:
-            return self._known(self._variable_references.get(var, ()))
+        return self._find(self._variable_references, var)
 
     def find_namespace_references(self, entry: LibraryEntry) -> Set[Location]:
         """O(1) lookup instead of O(N) workspace scan."""
-        with self._lock:
-            return self._known(self._namespace_references.get(entry, ()))
+        return self._find(self._namespace_references, entry)
 
     def find_keyword_tag_references(self, tag: str) -> Set[Location]:
-        with self._lock:
-            return self._known(self._keyword_tag_references.get(tag, ()))
+        return self._find(self._keyword_tag_references, tag)
 
     def find_testcase_tag_references(self, tag: str) -> Set[Location]:
-        with self._lock:
-            return self._known(self._testcase_tag_references.get(tag, ()))
+        return self._find(self._testcase_tag_references, tag)
 
     def find_metadata_references(self, key: str) -> Set[Location]:
         """References to a suite metadata name, in any spelling Robot Framework treats as the same name."""
-        with self._lock:
-            return self._known(self._metadata_references.get(normalize_metadata_name(key), ()))
+        return self._find(self._metadata_references, normalize_metadata_name(key))
 
     def find_testcase_metadata_references(self, key: str) -> Set[Location]:
         """References to a test metadata name, in any spelling Robot Framework treats as the same name."""
-        with self._lock:
-            return self._known(self._testcase_metadata_references.get(normalize_metadata_name(key), ()))
+        return self._find(self._testcase_metadata_references, normalize_metadata_name(key))
 
     @property
     def keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
