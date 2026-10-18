@@ -121,7 +121,8 @@ The Robot Framework settings node SHALL have an "Analysis" sub-page with these s
 - diagnostic mode: "Open files only", the default, or "Workspace";
 - progress mode: "Off", the default, "Simple" or "Detailed";
 - find unused references, off by default;
-- references code lens, off by default.
+- references code lens, off by default;
+- file check interval in minutes: a whole number from 1 to 1440, 5 by default.
 
 #### Scenario: References code lens
 
@@ -137,6 +138,11 @@ The Robot Framework settings node SHALL have an "Analysis" sub-page with these s
 
 - **WHEN** the diagnostic mode is "Workspace" and a Robot Framework file that is not open in an editor contains an error
 - **THEN** the server reports the problems of that file, and IntelliJ marks the file as a problem file
+
+#### Scenario: File check interval
+
+- **WHEN** the user sets the file check interval to 2 and applies
+- **THEN** the server receives `robotcode.analysis.fileCheckInterval` with the value 2 and checks the workspace files every 2 minutes
 
 ### Requirement: Cache and library settings of the Analysis page
 
@@ -177,7 +183,7 @@ The "Analysis" sub-page SHALL have the exclude patterns, by default VS Code's se
 
 ### Requirement: Values of the Analysis page
 
-An empty load library timeout SHALL NOT be sent to the server. The "Analysis" sub-page SHALL reject a timeout outside 1 to 3600 and SHALL NOT send list entries that are blank.
+An empty load library timeout SHALL NOT be sent to the server. The "Analysis" sub-page SHALL reject a timeout outside 1 to 3600 and a file check interval outside 1 to 1440, and SHALL NOT send list entries that are blank.
 
 #### Scenario: Empty load library timeout
 
@@ -193,6 +199,11 @@ An empty load library timeout SHALL NOT be sent to the server. The "Analysis" su
 
 - **WHEN** the user adds a blank entry to the ignore list and applies
 - **THEN** the server receives the ignore list without the blank entry
+
+#### Scenario: Invalid file check interval
+
+- **WHEN** the user enters `0` as file check interval
+- **THEN** the page shows an error and the value is not stored
 
 ### Requirement: Texts of the Analysis page
 

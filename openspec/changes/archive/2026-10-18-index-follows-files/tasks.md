@@ -2,7 +2,7 @@
 
 ## 1. The index follows the analyses (D1, D2, D8, D10)
 
-- [x] 1.1 Give the project index the document cache helper's check for known sources: lookups skip the locations of unknown files and remove those files under the index lock, checking each file once per lookup (D1). Verify with new unit tests in `tests/robotcode/robot/diagnostics/test_project_index.py`: a file that the check reports as unknown is neither returned nor kept, and a known one is both.
+- [x] 1.1 Give the project index the document cache helper's check for known sources: lookups skip the locations of unknown files and remove those files under the index lock, checking each file once per lookup (D1). Verify with new unit tests in `tests/robotcode/robot/diagnostics/test_project_index.py`: a file that the check reports as unknown is neither returned nor kept, and a known one is both; the check runs without the index lock, and a file analyzed again during the check keeps its new references.
 - [x] 1.2 Let `_invalidate_namespace` keep a file's index entries until the next analysis replaces them (D2). Verify with a language server test with its own session on a `tmp_path` project: after a resource file that two suites import changes, Find References on a keyword they call lists the calls in both suites before and after their analysis is renewed.
 - [x] 1.3 Let both phases of the workspace diagnostics loop skip a document that the documents manager no longer holds for its URI (D8). Verify with a language server test: a document closed for good before its turn is not analyzed, and no diagnostics are published for it.
 - [x] 1.4 Verify the spec scenarios on files that are gone with language server tests:
@@ -76,7 +76,7 @@
   - delay the background analysis of documents in pytest's temporary folders (`pytest-of-*`) by 0.8 s, as on 2026-10-14, with a small pytest plugin loaded through `-p`; that plugin is gone and has to be written again;
   - run `hatch run test.rf75:test tests/robotcode/language_server/robotframework/parts`;
   - check that `test_references.py` passes and that no closed temporary document shows up in the index.
-- [ ] 7.3 Verify that the CI run after the push is green on Linux, Windows and macOS.
+- [x] 7.3 Verify that the CI run after the push is green on Linux, Windows and macOS.
 
 ## Workflow follow-up
 

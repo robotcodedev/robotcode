@@ -55,7 +55,8 @@ The index gets a check from the document cache helper that tells whether the doc
 
 - They skip the locations of files that fail the check.
 - They remove such files from the index under the index lock.
-- They check each file once per lookup.
+- They check each file once per lookup, without the index lock. The documents manager notifies `didOpen` under its own lock, and the diagnostics of a document that waits there can wait for a lookup.
+- A file that was analyzed again between the check and its removal keeps its new references, because the removal compares the file's entries with those the lookup saw.
 
 To avoid converting a path for every location, the index keeps the URI-to-source mapping that `update_file` sees.
 
@@ -88,7 +89,7 @@ A new function in `ignore_spec.py` tells this for one path, the way `iter_files`
 
 It records the import with the folder and the variables it was resolved with, so that the periodic check can look it up again (D4). The namespace exposes these imports, and `_on_imports_changed` invalidates a namespace only when it has any.
 
-A namespace with failed imports is not stored in the analysis cache. A namespace restored from there keeps its cached diagnostics, so a missing file created between two sessions would still be reported as missing.
+A namespace with failed imports is not stored in the analysis cache. A namespace restored from there keeps its cached diagnostics, so a missing file created between two sessions would still be reported as missing. This includes libraries and variable files that are found but fail to load: their files do not change when a package they need is installed.
 
 The robot diagnostics part marks the document of an invalidated namespace for the next workspace diagnostics pass, closed documents too. The loop then renews its analysis, which refreshes its index entries and diagnostics. The handlers for changed libraries, resources and variables already do this for the files that import them; marking twice changes nothing.
 
@@ -157,7 +158,7 @@ The references code lens refreshes when the cache is cleared. Its refresh waits 
 ### D11: Tests
 
 - **Unit tests:**
-  - the index check and its cleanup;
+  - the index check and its cleanup, also with a file that is analyzed again during the check;
   - removing single cache entries;
   - recording failed imports, both raised ones and ones reported through `errors`;
   - `_on_imports_changed` with and without failed imports;
@@ -176,11 +177,10 @@ The references code lens refreshes when the cache is cleared. Its refresh waits 
 
 ## Risks / Trade-offs
 
-- **[A lookup checks every file in its result]** → One documents manager lookup per file, not per location, and files that fail are removed once. The URI of each file is converted only once. On the synthetic project with 990 files, Find References on `Log`, with 11,200 references in all of them, takes 11 ms with the check and 0.4 ms without it.
-- **[A lookup asks the documents manager under the index lock]** → The documents manager holds its own lock only for its lookups and while it notifies `didOpen`. The only listener of `didOpen` marks the document for diagnostics, so nothing waits there for the index lock.
+- **[A lookup checks every file in its result]** → One documents manager lookup per file, not per location, and files that fail are removed once. The URI of each file is converted only once. On the synthetic project with 990 files, Find References on `Log`, with 11,200 references in all of them, takes about 10 ms with the check and 0.3 ms without it.
 - **[The function for one path and `iter_files` disagree]** → A unit test runs both on the same tree with ignore files, exclude patterns and hidden folders.
 - **[A file changed on disk shows its old positions until it is analyzed again]** → Accepted, as for changes in the editor today. With file events this lasts seconds, without them up to one check interval.
-- **[The scan takes long in very large workspaces]** → It runs in the background, delivers one batch per interval, and the interval is configurable. One check of the synthetic project without changes takes about 90 ms.
+- **[The scan takes long in very large workspaces]** → It runs in the background, delivers one batch per interval, and the interval is configurable. One check of the synthetic project without changes takes 60 to 90 ms.
 - **[The client and the check report the same change]** → The check reports only files whose size or modification time differs from the document's snapshot. After the client's event the document was read again, so the two match.
 - **[A document without a disk snapshot]** → Some documents have none, for example after a save in the editor. The next check reports them as changed once, and reading them again restores the snapshot.
 - **[The language server and `robotcode analyze code` share the cache]** → Removals are single-row deletes in SQLite transactions, and entries of existing files are never removed.
