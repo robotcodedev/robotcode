@@ -168,6 +168,8 @@
 				  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
 		<listener class="dev.robotcode.robotcode4ij.RobotCodeSettingsRestartListener"
 				  topic="dev.robotcode.robotcode4ij.RobotCodeSettingsListener"/>
+		<listener class="dev.robotcode.robotcode4ij.RobotCodeRootsListener"
+				  topic="com.intellij.openapi.roots.ModuleRootListener"/>
 	</projectListeners>
 
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">

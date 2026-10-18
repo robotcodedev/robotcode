@@ -56,4 +56,23 @@ class RobotCodeRobotArgumentsTest {
 
         assertEquals(listOf<String>(), discoveryRobotArguments(state))
     }
+
+    @Test
+    fun discoveryPassesTheRootsAfterThePythonPath() {
+        val state = settings {
+            robotArgs = "--exclude wip"
+            robotLanguages = mutableListOf("de")
+            robotPythonPath = mutableListOf("libs")
+            robotMode = "rpa"
+        }
+
+        // without roots, as with both switches off
+        assertEquals(
+            listOf("--rpa", "-P", "libs", "--language", "de", "--exclude", "wip"), discoveryRobotArguments(state)
+        )
+        assertEquals(
+            listOf("--rpa", "-P", "libs", "-P", "/p", "-P", "/p/src", "--language", "de", "--exclude", "wip"),
+            discoveryRobotArguments(state, listOf("/p", "/p/src"))
+        )
+    }
 }

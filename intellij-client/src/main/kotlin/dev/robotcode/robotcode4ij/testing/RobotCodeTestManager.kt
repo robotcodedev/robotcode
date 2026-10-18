@@ -56,6 +56,7 @@ import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.recordDiscoverySnapshot
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.robotSettings
+import dev.robotcode.robotcode4ij.rootPythonPath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -327,7 +328,10 @@ class RobotCodeTestManager(private val project: Project, private val scope: Coro
         val suite = findTestItem(uri) ?: return
         val commandLine = try {
             project.buildRobotCodeCommandLine(
-                fileDiscoveryArguments(suite.longname, suite.relSource, supportsParseInclude, project.robotSettings),
+                fileDiscoveryArguments(
+                    suite.longname, suite.relSource, supportsParseInclude, project.robotSettings,
+                    project.rootPythonPath()
+                ),
                 format = "json"
             ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
         } catch (_: CantRunException) {

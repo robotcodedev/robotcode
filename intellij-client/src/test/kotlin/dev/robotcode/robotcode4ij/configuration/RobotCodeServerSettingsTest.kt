@@ -441,4 +441,17 @@ class RobotCodeServerSettingsTest {
                 assertTrue("$path is not an integer: $element", element.asString.matches(Regex("-?\\d+")))
         }
     }
+
+    @Test
+    fun rootsFollowThePythonPathEntries() {
+        val state = RobotCodeProjectConfiguration.ProjectState().apply { robotPythonPath = mutableListOf("libs") }
+
+        val withRoots = RobotCodeServerSettingsMapper.toJsonTree(state, listOf("/p", "/p/src"))
+        assertEquals(
+            JsonParser.parseString("""["libs", "/p", "/p/src"]"""),
+            withRoots["robotcode"].asJsonObject["robot"].asJsonObject["pythonPath"]
+        )
+        // without roots, as with both switches off
+        assertEquals(JsonParser.parseString("""["libs"]"""), robotcodeOf(state)["robot"].asJsonObject["pythonPath"])
+    }
 }

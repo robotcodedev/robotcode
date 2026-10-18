@@ -120,4 +120,16 @@ class RobotCodeRobotOptionsMergeTest {
         assertEquals(mapOf("NAME" to "2"), own.variables)
         assertEquals(RobotRunMode.INHERIT, own.mode)
     }
+
+    @Test
+    fun rootsComeBetweenThePageAndTheConfiguration() {
+        val merged = mergeRobotOptions(
+            project { robotPythonPath = mutableListOf("libs") },
+            configuration { pythonPath = mutableListOf("more_libs") },
+            listOf("/p", "/p/src")
+        )
+
+        assertEquals(listOf("libs", "/p", "/p/src", "more_libs"), merged.pythonPath)
+        assertTrue(optionArguments(merged).joinToString(" ").contains("-P libs -P /p -P /p/src -P more_libs"))
+    }
 }

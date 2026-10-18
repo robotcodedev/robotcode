@@ -76,6 +76,11 @@ A project-level listener on `ModuleRootListener.TOPIC`, registered in `plugin.xm
 
 Alternative: a listener on the workspace model. It is the newer API with more detailed events, but the snapshot comparison makes event details unnecessary, and `ModuleRootListener` covers content roots, source roots and dependencies.
 
+### The restart flag ends with its restart
+
+- **Found while implementing:** The platform's light test project counts as disposed between two tests. The new heavy tests can run between two light tests. A restart that the end of a light test requested, for example by deleting its `robot.toml`, then ended its debounce while the light project counted as disposed. The restart manager left `restartPending` set, and the next light test found it set.
+- **Change:** The restart manager sets the flag back through the language server manager it took with the request, without asking whether the project is disposed. For a project that is really closed, the write changes nothing.
+
 ### PyCharm's options in Robot Framework run configurations stay as they are
 
 The roots reach every run as `-P` through the page's Python path, so `applyRobotCodeDefaults()` keeps both PyCharm options off. A user who turns them on gets the roots on `PYTHONPATH` as well, which does no harm.

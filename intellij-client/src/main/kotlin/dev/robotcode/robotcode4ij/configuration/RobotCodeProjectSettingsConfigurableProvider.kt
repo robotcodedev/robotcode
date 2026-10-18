@@ -98,6 +98,10 @@ class RobotCodeProjectConfiguration(private val project: Project) :
         var robotPaths by list<String>()
         var robotPythonPath by list<String>()
 
+        // on, like the options of PyCharm's Python run configurations
+        var robotAddContentRoots by property(defaultValue = true)
+        var robotAddSourceRoots by property(defaultValue = true)
+
         // ordered maps keep their order only with XMap
         @get:XMap(
             propertyElementName = "robotEnv", entryTagName = "variable", keyAttributeName = "name",
@@ -157,6 +161,8 @@ class RobotCodeProjectConfiguration(private val project: Project) :
     var robotArgs by stringDelegate(ProjectState::robotArgs)
     var robotPaths by delegate(ProjectState::robotPaths)
     var robotPythonPath by delegate(ProjectState::robotPythonPath)
+    var robotAddContentRoots by delegate(ProjectState::robotAddContentRoots)
+    var robotAddSourceRoots by delegate(ProjectState::robotAddSourceRoots)
     var robotEnv by delegate(ProjectState::robotEnv)
     var robotLanguages by delegate(ProjectState::robotLanguages)
     var robotVariables by delegate(ProjectState::robotVariables)

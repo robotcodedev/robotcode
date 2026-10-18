@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.getProjectDataPath
 import com.intellij.util.execution.ParametersListUtil
+import dev.robotcode.robotcode4ij.rootPythonPath
 
 /**
  * The settings below the `robotcode` key that the language server reads with `workspace/configuration`.
@@ -163,19 +164,23 @@ object RobotCodeServerSettingsMapper {
     private val gson = Gson()
 
     fun toJsonTree(project: Project): JsonObject {
-        return toJsonTree(RobotCodeProjectConfiguration.getInstance(project).state)
+        val state = RobotCodeProjectConfiguration.getInstance(project).state
+        return toJsonTree(state, project.rootPythonPath(state))
     }
 
     /**
-     * The settings from the settings pages; every setting without a control keeps its default.
+     * The settings from the settings pages; every setting without a control keeps its default. The [roots], the entries
+     * that the switches of the "Robot" page add, follow the entries of "Python path".
      */
-    fun toJsonTree(state: RobotCodeProjectConfiguration.ProjectState): JsonObject {
+    fun toJsonTree(
+        state: RobotCodeProjectConfiguration.ProjectState, roots: List<String> = emptyList()
+    ): JsonObject {
         return toJsonTree(
             RobotCodeServerSettings(
                 robot = RobotCodeServerSettings.Robot(
                     args = entries(ParametersListUtil.parse(state.robotArgs.orEmpty())),
                     paths = entries(state.robotPaths),
-                    pythonPath = entries(state.robotPythonPath),
+                    pythonPath = entries(state.robotPythonPath) + roots,
                     env = namedEntries(state.robotEnv),
                     languages = entries(state.robotLanguages),
                     variables = namedEntries(state.robotVariables),

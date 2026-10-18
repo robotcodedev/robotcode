@@ -10,6 +10,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.fields.ExtendableTextField
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
@@ -55,6 +56,14 @@ class RobotCodeRobotConfigurable(private val project: Project) : BoundSearchable
                     RobotCodeBundle.message("run.target.paths.browse")
                 )
             }.rowComment(RobotCodeBundle.message("settings.robot.pythonPath.comment"))
+            row {
+                checkBox(RobotCodeBundle.message("settings.robot.addContentRoots"))
+                    .bindSelected(settings::robotAddContentRoots)
+            }.rowComment(RobotCodeBundle.message("settings.robot.addContentRoots.comment"))
+            row {
+                checkBox(RobotCodeBundle.message("settings.robot.addSourceRoots"))
+                    .bindSelected(settings::robotAddSourceRoots)
+            }.rowComment(RobotCodeBundle.message("settings.robot.addSourceRoots.comment"))
             row(RobotCodeBundle.message("settings.robot.env")) {
                 nameValueTable(settings::robotEnv)
             }.rowComment(RobotCodeBundle.message("settings.robot.env.comment"))

@@ -21,10 +21,13 @@ internal fun defaultPathArguments(paths: List<String>): List<String> {
 
 /**
  * The arguments that test discovery passes after its subcommand for the settings of the "Robot" page, in the order of
- * VS Code: the mode unless it is the default, `-P` for each Python path entry, `--language` for each language, then the
- * args. Variables, variable files and the environment are not passed, as in VS Code.
+ * VS Code: the mode unless it is the default, `-P` for each Python path entry and then for each of the [roots] that the
+ * switches of the page add, `--language` for each language, then the args. Variables, variable files and the
+ * environment are not passed, as in VS Code.
  */
-internal fun discoveryRobotArguments(settings: RobotCodeProjectConfiguration.ProjectState): List<String> {
+internal fun discoveryRobotArguments(
+    settings: RobotCodeProjectConfiguration.ProjectState, roots: List<String> = emptyList()
+): List<String> {
     fun List<String>.entries() = map { it.trim() }.filter { it.isNotEmpty() }
 
     return buildList {
@@ -34,6 +37,7 @@ internal fun discoveryRobotArguments(settings: RobotCodeProjectConfiguration.Pro
             RobotMode.DEFAULT -> {}
         }
         settings.robotPythonPath.entries().forEach { addAll(listOf("-P", it)) }
+        roots.forEach { addAll(listOf("-P", it)) }
         settings.robotLanguages.entries().forEach { addAll(listOf("--language", it)) }
         addAll(ParametersListUtil.parse(settings.robotArgs.orEmpty()).filter { it.isNotBlank() })
     }

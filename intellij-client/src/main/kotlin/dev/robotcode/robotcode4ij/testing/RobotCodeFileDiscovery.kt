@@ -7,23 +7,27 @@ import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import dev.robotcode.robotcode4ij.defaultPathArguments
 import dev.robotcode.robotcode4ij.discoveryRobotArguments
 import dev.robotcode.robotcode4ij.robotSettings
+import dev.robotcode.robotcode4ij.rootPythonPath
 import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
 
 /**
  * The command line of the full discovery of the project.
  */
 internal fun Project.fullDiscoveryCommandLine(): GeneralCommandLine {
-    return buildRobotCodeCommandLine(fullDiscoveryArguments(robotSettings).toTypedArray(), format = "json")
+    val arguments = fullDiscoveryArguments(robotSettings, rootPythonPath())
+    return buildRobotCodeCommandLine(arguments.toTypedArray(), format = "json")
         .withCharset(Charsets.UTF_8).withWorkDirectory(basePath)
 }
 
 /**
  * The arguments of the full discovery: the default paths of the settings of the "Robot" page before `discover`, and
- * their other discovery arguments after it.
+ * their other discovery arguments after it, with the [roots] that the switches of the page add.
  */
-internal fun fullDiscoveryArguments(settings: RobotCodeProjectConfiguration.ProjectState): List<String> {
+internal fun fullDiscoveryArguments(
+    settings: RobotCodeProjectConfiguration.ProjectState, roots: List<String> = emptyList()
+): List<String> {
     return defaultPathArguments(settings.robotPaths) + listOf("discover", "--read-from-stdin", "all") +
-        discoveryRobotArguments(settings)
+        discoveryRobotArguments(settings, roots)
 }
 
 /**
@@ -33,10 +37,10 @@ internal fun fullDiscoveryArguments(settings: RobotCodeProjectConfiguration.Proj
  */
 internal fun fileDiscoveryArguments(
     longname: String, relSource: String?, supportsParseInclude: Boolean,
-    settings: RobotCodeProjectConfiguration.ProjectState
+    settings: RobotCodeProjectConfiguration.ProjectState, roots: List<String> = emptyList()
 ): Array<String> {
     return buildList {
-        addAll(fullDiscoveryArguments(settings))
+        addAll(fullDiscoveryArguments(settings, roots))
         if (supportsParseInclude && relSource != null) {
             addAll(listOf("-I", escapeRobotGlob(relSource)))
         }

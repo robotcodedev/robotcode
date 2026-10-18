@@ -120,4 +120,12 @@ class RobotCodeFileDiscoveryTest {
             result.diagnostics!!["file:///project/template.robot"]!!.map { it.message }
         )
     }
+
+    @Test
+    fun fileDiscoveryPassesTheRoots() {
+        assertEquals(
+            listOf("-dp", ".", "discover", "--read-from-stdin", "all", "-P", "/p/src", "--suite", "Project.Rpa"),
+            fileDiscoveryArguments("Project.Rpa", null, true, defaults, listOf("/p/src")).toList()
+        )
+    }
 }

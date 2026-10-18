@@ -192,7 +192,8 @@ private class RobotCodeRestartManager(private val project: Project, private val 
         val runDiscovery = discovery || (refreshJob?.isActive == true && discoveryRequested)
         refreshJob?.cancel()
         discoveryRequested = runDiscovery
-        project.langServerManager.restartPending = true
+        val manager = project.langServerManager
+        manager.restartPending = true
         
         // a restart that a newer one replaced leaves the pending state to the newer one
         val job = scope.launch(restartDispatcher, start = CoroutineStart.LAZY) {
@@ -204,10 +205,9 @@ private class RobotCodeRestartManager(private val project: Project, private val 
             } finally {
                 if (refreshJob === coroutineContext[Job]) {
                     refreshJob = null
-                    // the scope also ends when the project closes
-                    if (!project.isDisposed) {
-                        project.langServerManager.restartPending = false
-                    }
+                    // through the manager taken at the request: a project can count as disposed and be used again,
+                    // as the light project of the platform's tests between two tests
+                    manager.restartPending = false
                 }
             }
         }

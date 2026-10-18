@@ -40,6 +40,7 @@ import dev.robotcode.robotcode4ij.defaultPathArguments
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
 import dev.robotcode.robotcode4ij.robotCodeArguments
 import dev.robotcode.robotcode4ij.robotSettings
+import dev.robotcode.robotcode4ij.rootPythonPath
 import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -319,7 +320,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val configurator = ProgramParametersConfigurator()
         val settings = project.robotSettings
         val robotArguments = robotFrameworkArguments(
-            mergeRobotOptions(settings, config.options), testManager.testItems, testManager.supportsParseInclude,
+            mergeRobotOptions(settings, config.options, project.rootPythonPath(settings)), testManager.testItems,
+            testManager.supportsParseInclude,
             expandPath = { configurator.expandPathAndMacros(it, config.module, project) ?: it },
             parseArguments = { ProgramParametersConfigurator.expandMacrosAndParseParameters(it) }
         )

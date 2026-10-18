@@ -240,4 +240,12 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
         assertNotNull(interpreterRefusal(PythonInterpreter(InterpreterKind.REMOTE, "WSL", "/usr/bin/python3")))
         assertNull(interpreterRefusal(PythonInterpreter(InterpreterKind.LOCAL, "venv", "/work/.venv/bin/python")))
     }
+
+    // the switches of the Robot page bring the roots as -P, so PyCharm's own options stay off
+    fun testPyCharmsRootOptionsStayOffInANewConfiguration() {
+        val configuration = newConfiguration()
+
+        assertFalse(configuration.shouldAddContentRoots())
+        assertFalse(configuration.shouldAddSourceRoots())
+    }
 }
