@@ -87,6 +87,12 @@ class DiagnosticsCollectType(Enum):
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
+    # Seconds of the delays that gather changes before the analysis reacts to them.
+    _break_diagnostics_loop_delay: float = 1
+    _diagnostics_loop_idle_interval: float = 1
+    _document_diagnostics_debounce: float = 0.75
+    _refresh_delay: float = 1
+
     def __init__(self, protocol: "LanguageServerProtocol") -> None:
         super().__init__(protocol)
 
@@ -120,12 +126,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._current_diagnostics_task_lock = RLock()
         self._current_diagnostics_task: Optional[Task[Any]] = None
         self._diagnostics_task_timeout = 300
-
-        # Seconds of the delays that gather changes before the analysis reacts to them.
-        self._break_diagnostics_loop_delay: float = 1
-        self._diagnostics_loop_idle_interval: float = 1
-        self._document_diagnostics_debounce: float = 0.75
-        self._refresh_delay: float = 1
 
     def server_initialized(self, sender: Any) -> None:
         if not self.client_supports_pull:

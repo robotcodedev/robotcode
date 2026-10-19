@@ -20,8 +20,10 @@ import pytest
 from pytest_mock import MockerFixture
 from robot.api import get_model
 
+from robotcode.language_server.common.parts.diagnostics import DiagnosticsProtocolPart
 from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
 from robotcode.robot.diagnostics.import_resolver import ResolvedImports
+from robotcode.robot.diagnostics.imports_manager import ImportsManager
 from robotcode.robot.diagnostics.keyword_finder import KeywordFinder
 from robotcode.robot.diagnostics.library_doc import KeywordDoc, ResourceDoc
 from robotcode.robot.diagnostics.semantic_analyzer.analyzer import (
@@ -29,6 +31,39 @@ from robotcode.robot.diagnostics.semantic_analyzer.analyzer import (
     _get_builtin_variables,
 )
 from robotcode.robot.diagnostics.variable_scope import VariableScope
+
+# --------------------------------------------------------------------------
+# Language servers of the tests: the delays with which a server gathers
+# changes before it analyzes them are shortened, so that tests don't wait
+# them out after every change.
+# --------------------------------------------------------------------------
+
+# Seconds instead of up to a second.
+TEST_ANALYSIS_DELAY = 0.05
+
+
+@pytest.fixture(scope="session", autouse=True)
+def short_analysis_delays() -> Iterator[None]:
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(DiagnosticsProtocolPart, "_break_diagnostics_loop_delay", TEST_ANALYSIS_DELAY)
+        monkeypatch.setattr(DiagnosticsProtocolPart, "_diagnostics_loop_idle_interval", TEST_ANALYSIS_DELAY)
+        monkeypatch.setattr(DiagnosticsProtocolPart, "_document_diagnostics_debounce", TEST_ANALYSIS_DELAY)
+        monkeypatch.setattr(DiagnosticsProtocolPart, "_refresh_delay", TEST_ANALYSIS_DELAY)
+        monkeypatch.setattr(ImportsManager, "_resource_document_changed_timer_interval", TEST_ANALYSIS_DELAY)
+        yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def no_cache_dir_from_the_environment() -> Iterator[None]:
+    """Keep every test on its own cache, also in a terminal where `ROBOTCODE_CACHE_DIR` is set.
+
+    The VS Code extension sets the variable in its integrated terminals, and with it all
+    tests of a run would share one cache. Tests that need the variable set it themselves.
+    """
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.delenv("ROBOTCODE_CACHE_DIR", raising=False)
+        yield
+
 
 # --------------------------------------------------------------------------
 # Plain factories (no mocks, no fixtures needed — re-exported for

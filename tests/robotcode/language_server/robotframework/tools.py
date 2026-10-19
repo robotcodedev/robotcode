@@ -31,9 +31,6 @@ from robotcode.robot.diagnostics.workspace_config import RobotConfig
 
 TEST_EXPRESSION_LINE = re.compile(r"^\#\s*(?P<todo>TODO)?\s*(?P<position>\^+)\s+(?P<name>.*)")
 
-# Seconds that the language servers of the tests wait to gather changes, instead of up to a second.
-TEST_DELAY = 0.05
-
 
 @dataclasses.dataclass()
 class GeneratedTestData:
@@ -131,15 +128,8 @@ def start_language_server(
     file watchers with it. `analysis` holds the analysis settings of the
     workspace; by default the server reports no diagnostics. `python_path` is
     the setting `robotcode.robot.pythonPath`.
-
-    The delays with which the server gathers changes before it analyzes them
-    are shortened, so that tests do not wait them out.
     """
     protocol = RobotLanguageServerProtocol(RobotLanguageServer())
-    protocol.diagnostics._break_diagnostics_loop_delay = TEST_DELAY
-    protocol.diagnostics._diagnostics_loop_idle_interval = TEST_DELAY
-    protocol.diagnostics._document_diagnostics_debounce = TEST_DELAY
-    protocol.diagnostics._refresh_delay = TEST_DELAY
     protocol._initialize(
         ClientCapabilities(),
         root_path=str(root),
@@ -160,9 +150,6 @@ def start_language_server(
 
     protocol._initialized(InitializedParams())
     assert protocol.diagnostics.workspace_analyzed_event.wait(300), "the workspace analysis did not end"
-    for folder in protocol.workspace.workspace_folders:
-        imports_manager = protocol.documents_cache.get_imports_manager_for_workspace_folder(folder)
-        imports_manager._resource_document_changed_timer_interval = TEST_DELAY
     return protocol
 
 

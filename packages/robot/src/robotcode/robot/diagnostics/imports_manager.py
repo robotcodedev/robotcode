@@ -727,6 +727,9 @@ class NamespaceMetaData:
 class ImportsManager:
     _logger = LoggingDescriptor()
 
+    # Seconds that changes of resource documents are gathered before their importers are analyzed again.
+    _resource_document_changed_timer_interval: float = 1
+
     def __init__(
         self,
         documents_manager: DocumentsManager,
@@ -822,7 +825,6 @@ class ImportsManager:
             default_timeout=120, name="ImportsManager._resource_document_changed_timer_lock"
         )
         self._resource_document_changed_timer: Optional[threading.Timer] = None
-        self._resource_document_changed_timer_interval: float = 1
         self._resource_document_changed_documents: Set[TextDocument] = set()
 
         self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, ResourceDoc]]" = (
