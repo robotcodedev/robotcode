@@ -163,6 +163,9 @@ addopts = "-q --tb=short --force-short-summary -rf --ignore=bundled --ignore=.ha
 filterwarnings = [
   "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning",
   "ignore:cannot collect test class 'TestCaseDefinition'.*:pytest.PytestCollectionWarning",
+  # the XML library of Robot Framework < 6.1 has `'^<\?xml .*\?>'` without a raw string, which Python 3.12+
+  # reports when Robot Framework reads the source of the library for the line numbers of its keywords
+  "ignore:invalid escape sequence '\\\\\\?':SyntaxWarning",
 ]
 testpaths = ["tests"]
 junit_suite_name = "robotcode"
