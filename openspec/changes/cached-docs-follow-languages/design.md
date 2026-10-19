@@ -39,7 +39,7 @@ See proposal.md for the motivation. The current state, in `packages/robot/src/ro
 Alternatives:
 - **A meta type of its own for the doc entries:** rejected. It would only wrap a `RobotFileMeta` and the fingerprint.
 - **A field that every `RobotFileMeta` fills:** rejected. `from_document` and `get_resource_meta` would need the fingerprint, and the namespace cache would compare the language settings a second time.
-- **The fingerprint of each file's own workspace folder:** rejected. An imports manager serves one workspace folder. For a file outside it, a change of the folder's settings only costs one more read.
+- **The fingerprint of each file's own workspace folder:** rejected. Every workspace folder is a project of its own with its own settings, and an imports manager serves one of them. Robot Framework, too, reads a file from another place with the settings of the project it runs in. For a file outside the folder, a change of the folder's settings only costs one more read.
 - **The fingerprint in the name of the entry:** rejected. Entries are named by the file's path, and the removal of the entries of deleted files relies on that.
 - **A cache directory per language setting:** rejected. Library and variable docs would be built again without need.
 

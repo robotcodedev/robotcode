@@ -93,6 +93,7 @@ def _bind_get_libdoc_from_model(mocker: MockerFixture) -> Any:
     im = mocker.MagicMock()
     im._resource_libdoc_cache = {}
     im._model_docs_by_source = {}
+    im._languages_fingerprint = None
     im._logger = mocker.MagicMock()
     im.get_libdoc_from_model = types.MethodType(ImportsManager.get_libdoc_from_model, im)
     im._get_model_doc_cached = types.MethodType(ImportsManager._get_model_doc_cached, im)
@@ -140,7 +141,7 @@ class TestGetLibdocFromModelGating:
         assert result is built
         save_args = im.data_cache.save_entry.call_args[0]
         assert save_args[1] == meta.source
-        assert save_args[2] is meta
+        assert save_args[2] == meta
 
     def test_trusted_meta_returns_cached_doc_on_exact_match(self, mocker: MockerFixture) -> None:
         im = _bind_get_libdoc_from_model(mocker)
@@ -282,3 +283,54 @@ class TestDocsOfUnchangedFiles:
 
         assert im.data_cache.read_entry.call_count == 2
         im.data_cache.remove_entries.assert_called_once_with(CacheSection.RESOURCE, [self.SOURCE])
+
+
+class TestLanguageSettingsOfCachedDocs:
+    """A doc depends on the language settings the file was parsed with, so its entry carries them."""
+
+    SOURCE = "/project/a.resource"
+    GERMAN = ("fingerprint of the German settings",)
+
+    def _cached_entry(self, mocker: MockerFixture, languages: Any) -> Any:
+        entry = mocker.MagicMock()
+        entry.meta = RobotFileMeta(self.SOURCE, DiskInfo(100, 17), languages)
+        return entry
+
+    def test_an_entry_read_with_other_language_settings_is_not_used(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im._languages_fingerprint = self.GERMAN
+        im.data_cache.read_entry.return_value = self._cached_entry(mocker, None)
+
+        assert im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17))) is None
+
+    def test_an_entry_read_with_the_same_language_settings_is_used(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im._languages_fingerprint = self.GERMAN
+        cached_entry = self._cached_entry(mocker, self.GERMAN)
+        im.data_cache.read_entry.return_value = cached_entry
+
+        result = im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        assert result is cached_entry.data
+
+    def test_a_saved_entry_carries_the_language_settings(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im._languages_fingerprint = self.GERMAN
+
+        im._save_model_doc_cache(self.SOURCE, mocker.MagicMock(), RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        saved_meta = im.data_cache.save_entry.call_args[0][2]
+        assert saved_meta == RobotFileMeta(self.SOURCE, DiskInfo(100, 17), self.GERMAN)
+
+    def test_the_metas_of_the_other_uses_carry_no_language_settings(self, tmp_path: Path) -> None:
+        path = tmp_path / "common.resource"
+        path.write_text("*** Keywords ***\n", encoding="utf-8")
+
+        from_document = RobotFileMeta.from_document(_make_document(path, DiskInfo(100, 17)))
+        from_disk = ImportsManager.get_resource_meta(str(path))
+
+        assert from_document is not None
+        assert from_document.languages is None
+        assert from_disk is not None
+        assert from_disk.languages is None
+        assert from_document == RobotFileMeta(str(normalized_path(path)), DiskInfo(100, 17))

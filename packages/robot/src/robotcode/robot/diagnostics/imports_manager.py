@@ -7,7 +7,7 @@ import time
 import weakref
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from multiprocessing.connection import Connection, wait
 from pathlib import Path
 from typing import (
@@ -58,6 +58,7 @@ from robotcode.core.utils.path import (
 from ..__version__ import __version__
 from ..utils import RF_VERSION
 from ..utils.robot_path import find_file_ex
+from ..utils.stubs import Languages
 from ..utils.variables import contains_variable
 from .data_cache import CACHE_DIR_NAME, CacheSection, build_cache_dir
 from .data_cache import SqliteDataCache as DefaultDataCache
@@ -668,6 +669,8 @@ def _matches_any_pattern(
 class RobotFileMeta:
     source: str
     info: DiskInfo
+    # the language settings the file was parsed with; only the cached docs of files carry them
+    languages: Any = None
 
     @property
     def trusted(self) -> bool:
@@ -684,6 +687,19 @@ class RobotFileMeta:
         if info is None:
             return None
         return cls(str(normalized_path(document.uri.to_path())), info)
+
+
+def _languages_fingerprint(languages: Optional[Languages]) -> Any:
+    """What the parsing of a Robot Framework file takes from the language settings, comparable and picklable."""
+    if languages is None:
+        return None
+    return (
+        tuple(sorted(languages.bdd_prefixes)),
+        tuple(sorted(languages.headers.items())),
+        tuple(sorted(languages.settings.items())),
+        tuple(sorted(languages.true_strings)),
+        tuple(sorted(languages.false_strings)),
+    )
 
 
 def _has_cache_key(meta: LibraryMetaData, cache_key: str) -> bool:
@@ -782,24 +798,16 @@ class ImportsManager:
         if environment:
             self._environment.update(environment)
 
-        workspace_langs = self.document_cache_helper.get_languages_for_document(Uri.from_path(self.root_folder))
-        if workspace_langs is not None:
-            languages_fingerprint: Any = (
-                tuple(sorted(workspace_langs.bdd_prefixes)),
-                tuple(sorted(workspace_langs.headers.items())),
-                tuple(sorted(workspace_langs.settings.items())),
-                tuple(sorted(workspace_langs.true_strings)),
-                tuple(sorted(workspace_langs.false_strings)),
-            )
-        else:
-            languages_fingerprint = None
+        self._languages_fingerprint = _languages_fingerprint(
+            self.document_cache_helper.get_languages_for_document(Uri.from_path(self.root_folder))
+        )
 
         self._config_fingerprint: Any = (
             tuple(sorted(self.cmd_variables.items())),
             tuple(self.cmd_variable_files),
             tuple(sorted((k, v) for k, v in self._environment.items() if k not in os.environ)),
             tuple(self.global_library_search_order),
-            languages_fingerprint,
+            self._languages_fingerprint,
         )
 
         self._library_files_cache = SimpleLRUCache(2048)
@@ -2025,7 +2033,8 @@ class ImportsManager:
 
         try:
             entry = self.data_cache.read_entry(CacheSection.RESOURCE, meta.source, RobotFileMeta, ResourceDoc)
-            if entry is not None and entry.meta == meta:
+            # a doc read with other language settings would hold what the file defines under those settings
+            if entry is not None and entry.meta == replace(meta, languages=self._languages_fingerprint):
                 self._model_docs_by_source[meta.source] = (meta, entry.data)
                 return entry.data
         except (SystemExit, KeyboardInterrupt):
@@ -2043,7 +2052,9 @@ class ImportsManager:
         self._model_docs_by_source[meta.source] = (meta, result)
 
         try:
-            self.data_cache.save_entry(CacheSection.RESOURCE, meta.source, meta, result)
+            self.data_cache.save_entry(
+                CacheSection.RESOURCE, meta.source, replace(meta, languages=self._languages_fingerprint), result
+            )
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
