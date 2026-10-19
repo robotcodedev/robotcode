@@ -344,7 +344,11 @@ def test_sigterm_ends_the_prompt_toolkit_prompt_waiting_for_input(pipe_input: Pi
     assert main_thread is not None
     _once_drawn(
         interpreter,
-        lambda app: threading.Thread(target=signal.pthread_kill, args=(main_thread, signal.SIGTERM)).start(),
+        # the test is skipped on Windows, which has no `signal.pthread_kill`
+        lambda app: threading.Thread(
+            target=signal.pthread_kill,  # type: ignore[attr-defined,unused-ignore]
+            args=(main_thread, signal.SIGTERM),
+        ).start(),
     )
 
     with pytest.raises(EOFError):
