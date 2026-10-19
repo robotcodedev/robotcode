@@ -48,7 +48,7 @@
   - it holds `robotcode-2.7.1NNNNN.vsix`, whose manifest and `extension/package.json` carry that version;
   - its manifest has the property `Microsoft.VisualStudio.Code.PreRelease`;
   - its `extension/bundled/libs/robotcode/cli/__version__.py` holds the run's `2.8.0-dev.N`.
-- [ ] 4.2 The maintainer starts "publish dev build" by hand. Check:
+- [x] 4.2 The maintainer starts "publish dev build" by hand. Check:
   - the log shows the answers of the VS Code Marketplace and Open VSX;
   - both stores list the version as a pre-release;
   - the JetBrains step behaves as before;
