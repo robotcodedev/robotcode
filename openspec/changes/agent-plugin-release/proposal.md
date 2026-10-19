@@ -23,7 +23,7 @@ Every RobotCode release now has a matching release of the `robotcode` agent plug
 
 - New scripts in `scripts/`: a readiness check (pre-bump), a release preparation (post-bump) and a publish check (CI). Each has a `build` env script in `hatch.toml`.
 - `pyproject.toml`: `[tool.commitizen]` gets the check as the first `pre_bump_hooks` entry and the preparation as a `post_bump_hooks` entry.
-- `.github/workflows/build-test-package-publish.yml`: one step in the `publish` job, before "create github release".
+- `.github/workflows/publish.yml`: one step in the `release` job, before "create github release".
 - `CONTRIBUTING.md` (Build & Release). The plugin repo's `CONTRIBUTING.md` changes in the separate `robotframework-agent-plugins` repository.
 - No keys, tokens or secrets. Pushing uses the maintainer's own git credentials, and CI only reads the public plugin repo.
 - Maintainer prerequisite at bump time: the plugin repo checked out next to `robotcode` (as `sync_chat_plugin.py` already expects), with a local `next` branch.

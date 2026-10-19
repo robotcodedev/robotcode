@@ -33,7 +33,7 @@ def latest_successful_main_run() -> str:
             "run",
             "list",
             "--workflow",
-            "build-test-package-publish.yml",
+            "build-test-package.yml",
             "--branch",
             "main",
             "--event",
@@ -55,7 +55,7 @@ def latest_successful_main_run() -> str:
     run_id = result.stdout.strip()
 
     if not run_id:
-        raise SystemExit("no successful run of build-test-package-publish.yml for a push to main found")
+        raise SystemExit("no successful run of build-test-package.yml for a push to main found")
 
     return run_id
 

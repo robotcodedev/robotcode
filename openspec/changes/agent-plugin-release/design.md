@@ -3,7 +3,7 @@
 ## Context
 
 - A RobotCode release starts with `hatch run build:bump`, which runs `cz bump` in the `build` hatch env. `[tool.commitizen]` uses `version_provider = "scm"` and already has `pre_bump_hooks` (`update-git-versions`, `update-changelog`, `git add .`). commitizen runs `pre_bump_hooks` before the bump commit and `post_bump_hooks` after the commit and tag. A failing pre-bump hook aborts the bump with `RunHookError`. Hooks get the versions as environment variables: `CZ_PRE_NEW_VERSION`, and `CZ_POST_CURRENT_VERSION` after the bump.
-- Pushing the `vX.Y.Z` tag starts `build-test-package-publish.yml`. Its `publish` job creates the GitHub release and then publishes the packages. It already computes `is_prelease` and `release_version` and has hatch installed.
+- Pushing the `vX.Y.Z` tag starts `build-test-package.yml`. After its build succeeded, the `release` job of `publish.yml` creates the GitHub release and then publishes the packages. It already computes `is_prelease` and `release_version` and has hatch installed.
 - `scripts/sync_chat_plugin.py` mirrors `plugins/robotcode/` of a local plugin checkout (default: the sibling directory `../robotframework-agent-plugins`) into `chat-plugins/robotcode/`. It writes the source `HEAD` into `chat-plugins/.upstream.json` and has a `--check` mode.
 - The plugin repository's release rules (version = RobotCode version, `next` for development, `main` = released, tags `robotcode--vX.Y.Z`) are documented in its CONTRIBUTING.
 

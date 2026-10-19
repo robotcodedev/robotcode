@@ -340,7 +340,7 @@ Run `hatch env show` to list every environment, including the `test.*` and `deve
 
 **Supported Python and Robot Framework versions:**
 
-Each Robot Framework version is supported and tested only with the Python versions (3.10 and newer) that it officially supports itself: the `Programming Language :: Python :: 3.x` classifiers of its newest patch release on PyPI (`https://pypi.org/project/robotframework/<version>/`). The `devel` matrix in `hatch.toml` has one `[[envs.devel.matrix]]` table per range of Python versions, and the `test` job of the CI workflow (`.github/workflows/build-test-package-publish.yml`) runs every Python version with every Robot Framework version except the combinations in its `exclude` list. The README shows the same combinations as a table.
+Each Robot Framework version is supported and tested only with the Python versions (3.10 and newer) that it officially supports itself: the `Programming Language :: Python :: 3.x` classifiers of its newest patch release on PyPI (`https://pypi.org/project/robotframework/<version>/`). The `devel` matrix in `hatch.toml` has one `[[envs.devel.matrix]]` table per range of Python versions, and the `test` job of the CI workflow (`.github/workflows/build-test-package.yml`) runs every Python version with every Robot Framework version except the combinations in its `exclude` list. The README shows the same combinations as a table.
 
 **Adding a new Python version:**
 

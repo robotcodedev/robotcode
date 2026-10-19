@@ -37,5 +37,5 @@ _None._
 - `intellij-client/build.gradle.kts`: the `integrationTest` source set, its dependencies (Starter and Driver through the IntelliJ Platform Gradle Plugin, JUnit 5, Kodein DI, Kotlin coroutines) and task; removal of `runIdeForUiTests`.
 - `intellij-client/gradle/libs.versions.toml`: the new test dependencies.
 - New `intellij-client/src/integrationTest/` with the tests, `@Remote` stubs for the plugin classes the tests query, and the test project.
-- `.github/workflows/build-test-package-publish.yml`: Python with Robot Framework, a virtual display and the integration test step in the JetBrains test job on Linux; upload of logs and screenshots.
+- `.github/workflows/build-test-package.yml`: Python with Robot Framework, a virtual display and the integration test step in the JetBrains test job on Linux; upload of logs and screenshots.
 - No change to the plugin's production code.

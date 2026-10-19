@@ -1,0 +1,175 @@
+name: publish
+
+on:
+  # dev builds, not at the full hour, when GitHub delays scheduled runs under load
+  schedule:
+    - cron: "23 2 * * *"
+
+  workflow_dispatch:
+
+  # releases, after the build of a version tag
+  workflow_run:
+    workflows: ["build test and package"]
+    types: [completed]
+
+# reads the runs and artifacts of the build workflow
+permissions:
+  actions: read
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  dev:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    # at job level, because every build starts a run of this workflow that must not replace a pending nightly run
+    concurrency:
+      group: publish-dev
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: setup python environment
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Hatch
+        uses: pypa/hatch@install
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
+
+      - name: install node modules
+        run: npm install --include=dev
+
+      - name: publish the JetBrains plugin of the latest successful build of main to the channel dev
+        run: hatch -q run build:publish-dev jetbrains
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+
+      - name: publish the VS Code extension of the latest successful build of main as pre-release
+        # also when the JetBrains upload failed
+        if: ${{ !cancelled() }}
+        run: hatch -q run build:publish-dev vscode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+
+  release:
+    # only for a successful build of a version tag pushed to this repository, never for a pull request; the build
+    # runs for pushes only on main and on version tags, so a push run whose branch starts with "v" is a version tag
+    if: >-
+      github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && startsWith(github.event.workflow_run.head_branch, 'v')
+      && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      # downloads the packages of the build run
+      actions: read
+      # creates the GitHub release
+      contents: write
+    concurrency:
+      group: publish-release-${{ github.event.workflow_run.head_branch }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - run: git describe --tag
+
+      - name: setup python environment
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Hatch
+        uses: pypa/hatch@install
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
+
+      - name: install node modules
+        run: npm install --include=dev
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: vscode-package
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-packages
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheel-packages
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: intellij-package
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: get release informations
+        id: get_release_informations
+        run: |
+          hatch -q run build:extract-release-notes > ./auto_relnotes.md
+
+          echo "is_prelease=$(hatch -q run build:is-prerelease)" >> $GITHUB_OUTPUT
+          echo "release_version=$(hatch -q run build:get-release-version)" >> $GITHUB_OUTPUT
+
+      - name: create github release
+        uses: softprops/action-gh-release@v3
+        with:
+          # this run isn't triggered by the tag, so its own ref is the default branch
+          tag_name: ${{ github.event.workflow_run.head_branch }}
+          files: "dist/*"
+          name: "v${{ steps.get_release_informations.outputs.release_version }}"
+          prerelease: ${{ steps.get_release_informations.outputs.is_prelease }}
+          body_path: ./auto_relnotes.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: publish vsix, python packages and jetbrains plugin
+        run: hatch -q run build:publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
