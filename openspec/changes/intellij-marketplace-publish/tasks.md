@@ -48,4 +48,4 @@ Implement this change after `intellij-ci-tests`.
   - a run on `main` without a tag uploaded nothing, because the publish step was skipped.
 
   If the token is rejected, the maintainer replaces the secret and uploads that version by hand from the GitHub release.
-- [ ] 3.2 With the maintainer, after the push: the maintainer starts "publish dev build" by hand. Check that its log shows the Marketplace's answer, that the channel `dev` then lists the version of the most recent successful run on `main`, and that a second start uploads nothing. Check the first scheduled run the next day.
+- [x] 3.2 With the maintainer, after the push: the maintainer starts "publish dev build" by hand. Check that its log shows the Marketplace's answer, that the channel `dev` then lists the version of the most recent successful run on `main`, and that a second start uploads nothing. Check the first scheduled run the next day.
