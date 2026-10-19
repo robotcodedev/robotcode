@@ -21,7 +21,7 @@ This change builds on the target `python` that `pypi-dev-builds` adds to `script
   - the existing stub tests pass with `--run-id`;
   - `hatch run lint:style` and `hatch run lint:typing` pass.
 
-- [ ] 1.2 Let `latest-run` follow a newer run: while the latest run isn't completed, it lists the newest push run on `main` again every 60 seconds instead of reading the first one with `gh run view`. The two hours count from the start.
+- [x] 1.2 Let `latest-run` follow a newer run: while the latest run isn't completed, it lists the newest push run on `main` again every 60 seconds instead of reading the first one with `gh run view`. The two hours count from the start.
 
   Verify with the stubs of 1.1:
   - a newer run that starts while the first one runs is waited for and handed on, and the result of the first one is ignored;

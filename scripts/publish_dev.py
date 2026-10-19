@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 from xml.etree import ElementTree
 
 if __name__ == "__main__" and not __package__:
@@ -40,12 +40,7 @@ def gh_json(*args: str) -> Any:
     return json.loads(result.stdout)
 
 
-def find_latest_run() -> None:
-    """Hands on the id of the latest build of main through GITHUB_OUTPUT, if that build succeeded.
-
-    An older successful build is never taken: during work on a feature, the latest build is often broken and the
-    one before it an unfinished state.
-    """
+def newest_main_run() -> Optional[Dict[str, Any]]:
     runs = gh_json(
         "run",
         "list",
@@ -60,22 +55,31 @@ def find_latest_run() -> None:
         "--json",
         "databaseId,status,conclusion",
     )
-    if not runs:
+    return runs[0] if runs else None
+
+
+def find_latest_run() -> None:
+    """Hands on the id of the latest build of main through GITHUB_OUTPUT, if that build succeeded.
+
+    An older successful build is never taken: during work on a feature, the latest build is often broken and the
+    one before it an unfinished state. While the latest build runs, a newer one that a push starts takes its place.
+    """
+    deadline = time.monotonic() + LATEST_RUN_WAIT_SECONDS
+    run = newest_main_run()
+
+    while run is not None and run["status"] != "completed":
+        if time.monotonic() >= deadline:
+            print(f"the latest run {run['databaseId']} on main isn't done in time, so there is no dev build")
+            return
+        print(f"waiting for the latest run {run['databaseId']} on main, which is {run['status']}")
+        time.sleep(LATEST_RUN_POLL_SECONDS)
+        run = newest_main_run()
+
+    if run is None:
         print("no run of build-test-package.yml for a push to main, so there is no dev build")
         return
 
-    run = runs[0]
     run_id = str(run["databaseId"])
-    deadline = time.monotonic() + LATEST_RUN_WAIT_SECONDS
-
-    while run["status"] != "completed":
-        if time.monotonic() >= deadline:
-            print(f"the latest run {run_id} on main isn't done in time, so there is no dev build")
-            return
-        print(f"waiting for the latest run {run_id} on main, which is {run['status']}")
-        time.sleep(LATEST_RUN_POLL_SECONDS)
-        run = gh_json("run", "view", run_id, "--json", "status,conclusion")
-
     if run["conclusion"] != "success":
         print(f"the latest run {run_id} on main ended with '{run['conclusion']}', so there is no dev build")
         return
@@ -216,7 +220,7 @@ def publish_python(run_id: str, dist_path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Publish the latest successful build of main as a dev build.")
+    parser = argparse.ArgumentParser(description="Publish the latest build of main as a dev build, if it succeeded.")
     parser.add_argument(
         "target",
         choices=["latest-run", "jetbrains", "vscode", "python"],
