@@ -11,7 +11,7 @@ See proposal.md for the motivation. What the change builds on:
   - The extension activates only in workspaces with Robot Framework files or a `robot.toml` (`activationEvents` in `package.json`), so the notification appears in such workspaces.
 - **IntelliJ plugin** (`intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/`):
   - `RobotCodePostStartupActivity` calls `RobotCodeEnvironment.markRobotProject()` when the project contains Robot Framework files or a `robot.toml`, and `RobotCodeFileOpenedListener` calls it when such a file is opened. `markRobotProject()` acts once per project.
-  - The plugin is dynamic (`require-restart="false"`). When the IDE loads a new version without a restart, the platform runs the plugin's `ProjectActivity` extensions for every open project (`StartupManagerImpl.addActivityEpListener` in intellij-community), and the plugin's services start anew.
+  - An update takes effect after a restart of the IDE. The plugin declares `require-restart="false"`, but the IDE can't unload it: "not unload-safe because class loader cannot be unloaded", at HEAD as well (harness, 2026-10-19).
   - The General page (`configuration/RobotCodeGeneralConfigurable.kt`) binds to `RobotCodePersonalConfiguration`, stored in `.idea/workspace.xml`. The plugin has no application-level settings yet.
   - The application-level `PropertiesComponent` keeps its values in a non-roamable file (`StoragePathMacros.NON_ROAMABLE_FILE`, `propertyService.kt` in intellij-community).
   - The balloon notification group "RobotCode" exists (`plugin.xml`).
@@ -22,30 +22,31 @@ See proposal.md for the motivation. What the change builds on:
 
 **Goals:**
 
-- The same text, link, setting, command and fresh-install behavior as VS Code, adapted to the IDE's projects and its plugin updates without restart.
+- The same text, link, setting, command and fresh-install behavior as VS Code, adapted to the IDE's projects.
 - One notification per version for the whole IDE, however many projects are open or open at the same time.
 
 **Non-Goals:**
 
 - Announcing in projects that aren't Robot Framework projects.
 - Synchronizing the noted version between machines.
-- Testing an update without restart end to end; the platform behavior it relies on is described above, and the once-per-version step covers its several calls.
 
 ## Decisions
 
 ### The check runs when a project becomes a Robot Framework project
 
-`markRobotProject()` calls the check when it marks a project. Like VS Code's activation, this limits the notification to Robot Framework projects. It also covers an update without restart: the platform runs `RobotCodePostStartupActivity` again for every open project, and the new environment service marks each Robot Framework project once more.
+`markRobotProject()` calls the check when it marks a project. Like VS Code's activation, this limits the notification to Robot Framework projects.
 
 Alternatives:
 - An own `ProjectActivity` that checks in every project: the notification would also appear in a Java or web project that has nothing to do with Robot Framework.
-- `AppLifecycleListener.appStarted`: there is no project frame to show the balloon in, and it doesn't run after an update without restart.
+- `AppLifecycleListener.appStarted`: there is no project frame to show the balloon in.
 
 ### One application service notes the version and decides in one step
 
 An application-level service compares the noted version with the plugin's own version, from the plugin descriptor, and notes the own version in one synchronized step. Only the call that changes the noted version may show the notification, so activities of several projects that run at the same time show it once. It notes the version in every case, also for a dev build and with the setting off, as VS Code does. Any difference counts, also a downgrade, as in VS Code.
 
 The noted version is kept in the application-level `PropertiesComponent` under `robotcode.lastVersion`, the key VS Code uses. Its file doesn't roam, like VS Code's global state.
+
+The plugin's version comes from the descriptor that the platform hands to `RobotCodePostStartupActivity` through the public interface `PluginAware`. `PluginManagerCore.getPlugin` is internal API since 2026.2, and its successor `PluginDetailsService` doesn't exist in 2026.1. A Robot Framework file can be opened before the activity runs, so the activity also checks at the end of its run when the project is a Robot Framework project; checking a noted version again announces nothing.
 
 Alternative: keep the noted version in the new application settings. Settings Sync would carry it to another machine, which would then miss the notification after its own update.
 

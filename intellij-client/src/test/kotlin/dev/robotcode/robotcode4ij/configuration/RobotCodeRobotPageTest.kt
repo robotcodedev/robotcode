@@ -16,7 +16,7 @@ class RobotCodeRobotPageTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         configurable = RobotCodeRobotConfigurable(project)
-        val panel = configurable.createComponent()!!
+        val panel = configurable.createComponent()
         configurable.reset()
         components = UIUtil.uiTraverser(panel).toList()
     }

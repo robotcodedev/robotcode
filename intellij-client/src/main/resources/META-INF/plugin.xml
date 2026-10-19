@@ -216,6 +216,9 @@
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeRefreshTestsAction"/>
 			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"
 					id="dev.robotcode.robotcode4ij.actions.RobotCodeShowLanguageServerLogAction"/>
+			<separator/>
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeShowWhatsNewAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeShowWhatsNewAction"/>
 		</group>
 
 		<!-- after the Run and Debug actions of the editor and Project view context menus; the gutter adds them itself -->

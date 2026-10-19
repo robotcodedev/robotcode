@@ -20,11 +20,6 @@ When a project becomes a Robot Framework project, because it contains Robot Fram
 - **WHEN** RobotCode 2.8.0 was installed in an IDE that never ran RobotCode, and a project with Robot Framework files opens
 - **THEN** the notification for v2.8.0 appears
 
-#### Scenario: Update without restarting the IDE
-
-- **WHEN** the IDE updates RobotCode to 2.8.0 without a restart while a project with Robot Framework files is open
-- **THEN** the notification for v2.8.0 appears
-
 #### Scenario: Project without Robot Framework files
 
 - **WHEN** the IDE updated RobotCode to 2.8.0, and a project without Robot Framework files and without a `robot.toml` opens

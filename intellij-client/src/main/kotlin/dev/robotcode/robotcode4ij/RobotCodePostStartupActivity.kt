@@ -2,6 +2,8 @@ package dev.robotcode.robotcode4ij
 
 import com.intellij.ide.lightEdit.LightEdit
 import com.intellij.openapi.application.smartReadAction
+import com.intellij.openapi.extensions.PluginAware
+import com.intellij.openapi.extensions.PluginDescriptor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
@@ -14,7 +16,12 @@ import com.intellij.psi.search.GlobalSearchScope
 import dev.robotcode.robotcode4ij.listeners.RobotCodeVirtualFileListener
 import dev.robotcode.robotcode4ij.testing.testManger
 
-class RobotCodePostStartupActivity : ProjectActivity {
+class RobotCodePostStartupActivity : ProjectActivity, PluginAware {
+    // the platform hands over the descriptor when it creates the activity
+    override fun setPluginDescriptor(pluginDescriptor: PluginDescriptor) {
+        RobotCodeUpdateAnnouncer.getInstance().pluginVersion = pluginDescriptor.version
+    }
+
     override suspend fun execute(project: Project) {
         if (project.isDefault || LightEdit.owns(project)) {
             return
@@ -28,6 +35,10 @@ class RobotCodePostStartupActivity : ProjectActivity {
         // in any other project, RobotCode starts when the first Robot Framework file is opened
         if (smartReadAction(project) { containsRobotFrameworkFiles(project) }) {
             environment.markRobotProject()
+        }
+        // a Robot Framework file that was opened before this activity ran marked the project without a known version
+        if (environment.isRobotProject) {
+            project.announceNewVersion()
         }
     }
 }

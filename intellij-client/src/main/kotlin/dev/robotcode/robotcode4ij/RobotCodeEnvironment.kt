@@ -344,6 +344,8 @@ class RobotCodeEnvironment(private val project: Project, private val scope: Coro
         }
         isRobotProject = true
         project.updateRobotCodeStatusBar()
+        // like VS Code, which activates RobotCode only in workspaces with Robot Framework files
+        project.announceNewVersion()
         val interpreter = projectInterpreter
         when {
             checks.state(interpreter) == EnvironmentState.Unknown -> checks.request(interpreter)

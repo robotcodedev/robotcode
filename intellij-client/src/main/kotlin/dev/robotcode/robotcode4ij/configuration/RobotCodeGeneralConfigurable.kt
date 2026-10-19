@@ -12,7 +12,8 @@ import dev.robotcode.robotcode4ij.robotCodeSwitchChanged
 import javax.swing.JLabel
 
 /**
- * The "General" page below the "Robot Framework" node. Its values are personal, so new projects do not get it.
+ * The "General" page below the "Robot Framework" node. Its values are personal, so new projects do not get it; "Show
+ * whats new on update" applies to all projects.
  */
 class RobotCodeGeneralConfigurable(private val project: Project) : BoundSearchableConfigurable(
     RobotCodeBundle.message("settings.general.displayName"),
@@ -21,6 +22,7 @@ class RobotCodeGeneralConfigurable(private val project: Project) : BoundSearchab
 ) {
 
     private val personalSettings = RobotCodePersonalConfiguration.getInstance(project)
+    private val applicationSettings = RobotCodeApplicationConfiguration.getInstance()
 
     // the profile selection of the page, which Apply stores
     private var profiles: List<String> = personalSettings.profiles.toList()
@@ -51,6 +53,10 @@ class RobotCodeGeneralConfigurable(private val project: Project) : BoundSearchab
                     showProfiles()
                 }
             }.rowComment(RobotCodeBundle.message("settings.general.profiles.comment"))
+            row {
+                checkBox(RobotCodeBundle.message("settings.general.showWhatsNewOnUpdate"))
+                    .bindSelected(applicationSettings::showWhatsNewOnUpdate)
+            }.rowComment(RobotCodeBundle.message("settings.general.showWhatsNewOnUpdate.comment"))
 
             onIsModified { profiles != personalSettings.profiles }
             onReset {
