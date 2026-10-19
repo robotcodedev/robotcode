@@ -235,7 +235,8 @@
 						  relative-to-action="dev.robotcode.robotcode4ij.actions.RobotCodeRunWithProfileAction"/>
 		</action>
 
-		<!-- the client command of RobotCode's code actions, which LSP4IJ runs as the action with the command's id -->
+		<!-- the client command of RobotCode's code actions, which LSP4IJ runs as the action with the command's id; it has no
+			 text, so that Find Action leaves it out -->
 		<action id="_robotcode.codeActionShowDocumentSelectAndRename"
 				class="dev.robotcode.robotcode4ij.lsp.RobotCodeShowDocumentSelectAndRenameAction"/>
 	</actions>

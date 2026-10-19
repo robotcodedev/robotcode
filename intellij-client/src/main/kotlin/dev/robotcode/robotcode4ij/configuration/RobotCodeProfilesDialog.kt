@@ -7,9 +7,16 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.CheckBoxList
 import com.intellij.ui.dsl.builder.Align
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.util.ui.JBUI
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import javax.swing.Action
+import javax.swing.BorderFactory
+import javax.swing.JCheckBox
 import javax.swing.JComponent
+import javax.swing.JLabel
+
+// between a profile's name and its description, which the list puts right after the name in its widest row
+private const val DESCRIPTION_GAP = 12
 
 /**
  * The profile list: the profiles of a [choice] to check, with their descriptions, and one line for the removed
@@ -25,6 +32,20 @@ internal class RobotCodeProfilesDialog(
 
     private val list = object : CheckBoxList<String>() {
         override fun getSecondaryText(index: Int): String? = profiles.getOrNull(index)?.description?.ifBlank { null }
+
+        // the description is the row's label, which has a margin on its right only
+        override fun adjustRendering(
+            rootComponent: JComponent,
+            checkBox: JCheckBox,
+            index: Int,
+            selected: Boolean,
+            hasFocus: Boolean
+        ): JComponent {
+            rootComponent.components.filterIsInstance<JLabel>().firstOrNull()?.let { label ->
+                label.border = BorderFactory.createCompoundBorder(label.border, JBUI.Borders.emptyLeft(DESCRIPTION_GAP))
+            }
+            return rootComponent
+        }
     }
 
     val checkedNames: List<String>
