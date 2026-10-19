@@ -387,10 +387,12 @@ def _name_linker(
 def convert_from_rest(text: str) -> str:
     try:
         from docutils.core import publish_parts
+        from docutils.writers.html5_polyglot import Writer
 
         parts = publish_parts(
             text,
-            writer_name="html5",
+            # an instance, which every Docutils version takes; Docutils deprecates `writer_name`
+            writer=Writer(),
             settings_overrides={"syntax_highlight": "none"},
         )
 
