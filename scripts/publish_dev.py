@@ -1,12 +1,15 @@
 import argparse
 import contextlib
+import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
+from typing import Any
 from xml.etree import ElementTree
 
 if __name__ == "__main__" and not __package__:
@@ -27,39 +30,61 @@ from semantic_version import Version
 
 from scripts.publish import jetbrains_channel_versions, publish_jetbrains_plugin
 
+# how long and how often the latest build of main is waited for, builds took up to 110 minutes
+LATEST_RUN_WAIT_SECONDS = 2 * 60 * 60
+LATEST_RUN_POLL_SECONDS = 60
 
-def latest_successful_main_run() -> str:
-    result = subprocess.run(
-        [
-            "gh",
-            "run",
-            "list",
-            "--workflow",
-            "build-test-package.yml",
-            "--branch",
-            "main",
-            "--event",
-            "push",
-            "--status",
-            "success",
-            "--limit",
-            "1",
-            "--json",
-            "databaseId",
-            "--jq",
-            ".[].databaseId",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=120,
+
+def gh_json(*args: str) -> Any:
+    result = subprocess.run(["gh", *args], check=True, capture_output=True, text=True, timeout=120)
+    return json.loads(result.stdout)
+
+
+def find_latest_run() -> None:
+    """Hands on the id of the latest build of main through GITHUB_OUTPUT, if that build succeeded.
+
+    An older successful build is never taken: during work on a feature, the latest build is often broken and the
+    one before it an unfinished state.
+    """
+    runs = gh_json(
+        "run",
+        "list",
+        "--workflow",
+        "build-test-package.yml",
+        "--branch",
+        "main",
+        "--event",
+        "push",
+        "--limit",
+        "1",
+        "--json",
+        "databaseId,status,conclusion",
     )
-    run_id = result.stdout.strip()
+    if not runs:
+        print("no run of build-test-package.yml for a push to main, so there is no dev build")
+        return
 
-    if not run_id:
-        raise SystemExit("no successful run of build-test-package.yml for a push to main found")
+    run = runs[0]
+    run_id = str(run["databaseId"])
+    deadline = time.monotonic() + LATEST_RUN_WAIT_SECONDS
 
-    return run_id
+    while run["status"] != "completed":
+        if time.monotonic() >= deadline:
+            print(f"the latest run {run_id} on main isn't done in time, so there is no dev build")
+            return
+        print(f"waiting for the latest run {run_id} on main, which is {run['status']}")
+        time.sleep(LATEST_RUN_POLL_SECONDS)
+        run = gh_json("run", "view", run_id, "--json", "status,conclusion")
+
+    if run["conclusion"] != "success":
+        print(f"the latest run {run_id} on main ended with '{run['conclusion']}', so there is no dev build")
+        return
+
+    print(f"the latest run {run_id} on main succeeded")
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as f:
+            f.write(f"run-id={run_id}\n")
 
 
 def download_artifact(run_id: str, name: str, dist_path: Path) -> None:
@@ -70,8 +95,7 @@ def download_artifact(run_id: str, name: str, dist_path: Path) -> None:
     )
 
 
-def publish_jetbrains(dist_path: Path) -> None:
-    run_id = latest_successful_main_run()
+def publish_jetbrains(run_id: str, dist_path: Path) -> None:
     print(f"downloading the JetBrains plugin of run {run_id}")
     download_artifact(run_id, "intellij-package", dist_path)
 
@@ -102,8 +126,7 @@ def is_pre_release_package(vsix_path: Path) -> bool:
     )
 
 
-def publish_vscode(dist_path: Path) -> None:
-    run_id = latest_successful_main_run()
+def publish_vscode(run_id: str, dist_path: Path) -> None:
     print(f"downloading the VS Code extension of run {run_id}")
     download_artifact(run_id, "vscode-package", dist_path)
 
@@ -147,8 +170,7 @@ def pypi_has_version(project: str, version: str) -> bool:
         raise
 
 
-def publish_python(dist_path: Path) -> None:
-    run_id = latest_successful_main_run()
+def publish_python(run_id: str, dist_path: Path) -> None:
     print(f"downloading the Python packages of run {run_id}")
     download_artifact(run_id, "python-packages", dist_path)
     download_artifact(run_id, "wheel-packages", dist_path)
@@ -195,17 +217,29 @@ def publish_python(dist_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Publish the latest successful build of main as a dev build.")
-    parser.add_argument("target", choices=["jetbrains", "vscode", "python"], help="the packages to publish")
+    parser.add_argument(
+        "target",
+        choices=["latest-run", "jetbrains", "vscode", "python"],
+        help="latest-run finds the build to publish, the others publish its packages",
+    )
+    parser.add_argument("--run-id", help="the build whose packages to publish, as latest-run hands it on")
     args = parser.parse_args()
+
+    if args.target == "latest-run":
+        find_latest_run()
+        return
+
+    if not args.run_id:
+        parser.error(f"the target {args.target} needs --run-id")
 
     dist_path = Path("./dist").absolute()
 
     if args.target == "jetbrains":
-        publish_jetbrains(dist_path)
+        publish_jetbrains(args.run_id, dist_path)
     elif args.target == "vscode":
-        publish_vscode(dist_path)
+        publish_vscode(args.run_id, dist_path)
     else:
-        publish_python(dist_path)
+        publish_python(args.run_id, dist_path)
 
 
 if __name__ == "__main__":

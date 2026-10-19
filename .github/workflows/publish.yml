@@ -55,27 +55,36 @@ jobs:
       - name: install node modules
         run: npm install --include=dev
 
-      - name: publish the JetBrains plugin of the latest successful build of main to the channel dev
-        run: hatch -q run build:publish-dev jetbrains
+      - name: find the latest build of main
+        id: build
+        # waits while it runs, and hands its id on only when it succeeded; all stores get the dev build of this run
+        run: hatch -q run build:publish-dev latest-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+      - name: publish the JetBrains plugin of the latest build of main to the channel dev
+        if: ${{ !cancelled() && steps.build.outputs.run-id != '' }}
+        run: hatch -q run build:publish-dev jetbrains --run-id ${{ steps.build.outputs.run-id }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
 
-      - name: publish the VS Code extension of the latest successful build of main as pre-release
-        # also when the JetBrains upload failed
-        if: ${{ !cancelled() }}
-        run: hatch -q run build:publish-dev vscode
+      - name: publish the VS Code extension of the latest build of main as pre-release
+        # also when an earlier upload failed
+        if: ${{ !cancelled() && steps.build.outputs.run-id != '' }}
+        run: hatch -q run build:publish-dev vscode --run-id ${{ steps.build.outputs.run-id }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
 
-      - name: publish the Python packages of the latest successful build of main to PyPI
+      - name: publish the Python packages of the latest build of main to PyPI
         # also when an earlier upload failed
-        if: ${{ !cancelled() }}
-        run: hatch -q run build:publish-dev python
+        if: ${{ !cancelled() && steps.build.outputs.run-id != '' }}
+        run: hatch -q run build:publish-dev python --run-id ${{ steps.build.outputs.run-id }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

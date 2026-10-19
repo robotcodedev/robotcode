@@ -1,10 +1,10 @@
 # Tasks
 
-Implement this change after `pypi-dev-builds`.
+This change builds on the target `python` that `pypi-dev-builds` adds to `scripts/publish_dev.py`. That target is implemented; only the archiving has to wait, see below.
 
 ## 1. Run lookup
 
-- [ ] 1.1 In `scripts/publish_dev.py`, add the target `latest-run`, as described in design.md:
+- [x] 1.1 In `scripts/publish_dev.py`, add the target `latest-run`, as described in design.md:
   - it lists the newest push run of `build-test-package.yml` on `main`;
   - while that run isn't completed, it polls it with `gh run view` every 60 seconds for at most two hours;
   - if the run succeeded, it writes `run-id=<id>` into the file of `GITHUB_OUTPUT`, when set, and prints the id; otherwise it prints why there is no dev build;
@@ -23,7 +23,7 @@ Implement this change after `pypi-dev-builds`.
 
 ## 2. Publish workflow
 
-- [ ] 2.1 In the job `dev` of `.github/workflows/publish.yml`, add after the setup the step with `id: build` that runs `hatch -q run build:publish-dev latest-run` with `GH_TOKEN` and `GH_REPO`. Pass `--run-id ${{ steps.build.outputs.run-id }}` to the three upload steps, and give each of them `if: ${{ !cancelled() && steps.build.outputs.run-id != '' }}`. Verify that the file parses as YAML, that every upload step has the condition and the option, and that the secrets of each step are unchanged.
+- [x] 2.1 In the job `dev` of `.github/workflows/publish.yml`, add after the setup the step with `id: build` that runs `hatch -q run build:publish-dev latest-run` with `GH_TOKEN` and `GH_REPO`. Pass `--run-id ${{ steps.build.outputs.run-id }}` to the three upload steps, and give each of them `if: ${{ !cancelled() && steps.build.outputs.run-id != '' }}`. Verify that the file parses as YAML, that every upload step has the condition and the option, and that the secrets of each step are unchanged.
 
 ## 3. Verification with the maintainer
 
