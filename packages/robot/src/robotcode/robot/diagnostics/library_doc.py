@@ -697,17 +697,18 @@ class ArgumentInfo:
                 return None
 
             values: List[str] = []
-
-            def _collect(ti: Any) -> None:
-                if ti.type is Literal and ti.nested:
-                    for nested in ti.nested:
-                        values.append(nested.name.strip("'"))
-                elif ti.is_union and ti.nested:
-                    for nested in ti.nested:
-                        _collect(nested)
-
-            _collect(type_info)
+            ArgumentInfo._collect_literal_values(type_info, values)
             return values or None
+
+        # a static method rather than an inner function: an inner function that calls itself is a reference cycle
+        @staticmethod
+        def _collect_literal_values(type_info: Any, values: List[str]) -> None:
+            if type_info.type is Literal and type_info.nested:
+                for nested in type_info.nested:
+                    values.append(nested.name.strip("'"))
+            elif type_info.is_union and type_info.nested:
+                for nested in type_info.nested:
+                    ArgumentInfo._collect_literal_values(nested, values)
 
     else:
 

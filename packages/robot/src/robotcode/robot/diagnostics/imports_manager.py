@@ -820,6 +820,9 @@ class ImportsManager:
         self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, ResourceDoc]]" = (
             weakref.WeakKeyDictionary()
         )
+        # the doc of each file with the disk state it was read at: while the file keeps that state, analyzing it
+        # again gets the same doc instead of a new copy from the disk cache
+        self._model_docs_by_source: Dict[str, Tuple[RobotFileMeta, ResourceDoc]] = {}
 
         self._diagnostics: List[Diagnostic] = []
 
@@ -1089,8 +1092,18 @@ class ImportsManager:
         return self.get_libdoc_from_model(model, source, meta)
 
     def clear_cache(self) -> None:
+        self._model_docs_by_source.clear()
         count = self.data_cache.clear_all()
         self._logger.debug(lambda: f"Cleared {count} cache entries from {self.cache_path}")
+
+    def remove_cached_resource_docs(self, sources: List[str]) -> None:
+        """Remove the docs of deleted files from the analysis cache and from memory.
+
+        ``sources`` are normalized paths, as the entries of the cache name them.
+        """
+        for source in sources:
+            self._model_docs_by_source.pop(source, None)
+        self.data_cache.remove_entries(CacheSection.RESOURCE, sources)
 
     @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:
@@ -2006,9 +2019,14 @@ class ImportsManager:
         return RobotFileMeta(normalized, info)
 
     def _get_model_doc_cached(self, source: str, meta: RobotFileMeta) -> Optional[ResourceDoc]:
+        known = self._model_docs_by_source.get(meta.source)
+        if known is not None and known[0] == meta:
+            return known[1]
+
         try:
             entry = self.data_cache.read_entry(CacheSection.RESOURCE, meta.source, RobotFileMeta, ResourceDoc)
             if entry is not None and entry.meta == meta:
+                self._model_docs_by_source[meta.source] = (meta, entry.data)
                 return entry.data
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -2022,6 +2040,7 @@ class ImportsManager:
         return None
 
     def _save_model_doc_cache(self, source: str, result: ResourceDoc, meta: "RobotFileMeta") -> None:
+        self._model_docs_by_source[meta.source] = (meta, result)
 
         try:
             self.data_cache.save_entry(CacheSection.RESOURCE, meta.source, meta, result)

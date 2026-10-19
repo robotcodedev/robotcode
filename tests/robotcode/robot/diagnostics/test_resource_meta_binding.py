@@ -10,11 +10,13 @@ import types
 from pathlib import Path
 from typing import Any, Optional
 
+import pytest
 from pytest_mock import MockerFixture
 
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.path import DiskInfo, normalized_path
+from robotcode.robot.diagnostics.data_cache import CacheSection
 from robotcode.robot.diagnostics.imports_manager import ImportsManager, RobotFileMeta, _ResourcesEntry
 
 
@@ -90,10 +92,13 @@ def _bind_get_libdoc_from_model(mocker: MockerFixture) -> Any:
     """MagicMock ImportsManager with the real libdoc-from-model methods bound."""
     im = mocker.MagicMock()
     im._resource_libdoc_cache = {}
+    im._model_docs_by_source = {}
     im._logger = mocker.MagicMock()
     im.get_libdoc_from_model = types.MethodType(ImportsManager.get_libdoc_from_model, im)
     im._get_model_doc_cached = types.MethodType(ImportsManager._get_model_doc_cached, im)
     im._save_model_doc_cache = types.MethodType(ImportsManager._save_model_doc_cache, im)
+    im.clear_cache = types.MethodType(ImportsManager.clear_cache, im)
+    im.remove_cached_resource_docs = types.MethodType(ImportsManager.remove_cached_resource_docs, im)
     return im
 
 
@@ -199,3 +204,81 @@ class TestGetResourceDocFromDocumentDoubleCapture:
         passed_meta = im.get_libdoc_from_model.call_args[0][2]
         assert passed_meta is not None
         assert passed_meta.info == info
+
+
+class TestDocsOfUnchangedFiles:
+    """The doc of a file is kept with the disk state it was read at, so an unchanged file gets the same doc again."""
+
+    SOURCE = "/project/a.resource"
+
+    def _cached_entry(self, mocker: MockerFixture, info: DiskInfo) -> Any:
+        entry = mocker.MagicMock()
+        entry.meta = RobotFileMeta(self.SOURCE, info)
+        return entry
+
+    def test_two_models_of_an_unchanged_file_get_the_same_doc(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im.data_cache.read_entry.return_value = self._cached_entry(mocker, DiskInfo(100, 17))
+        get_model_doc = mocker.patch("robotcode.robot.diagnostics.imports_manager.get_model_doc")
+
+        first = im.get_libdoc_from_model(ast.parse(""), self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+        second = im.get_libdoc_from_model(ast.parse(""), self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        assert second is first
+        im.data_cache.read_entry.assert_called_once()
+        get_model_doc.assert_not_called()
+
+    def test_a_second_lookup_with_an_equal_meta_does_not_read_the_disk_cache(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        cached_entry = self._cached_entry(mocker, DiskInfo(100, 17))
+        im.data_cache.read_entry.return_value = cached_entry
+
+        first = im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+        second = im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        assert first is cached_entry.data
+        assert second is first
+        im.data_cache.read_entry.assert_called_once()
+
+    @pytest.mark.parametrize("info", [DiskInfo(200, 17), DiskInfo(100, 18)], ids=["mtime", "size"])
+    def test_a_lookup_with_another_disk_state_reads_the_disk_cache(self, mocker: MockerFixture, info: DiskInfo) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im.data_cache.read_entry.return_value = self._cached_entry(mocker, DiskInfo(100, 17))
+        im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+        im.data_cache.read_entry.return_value = self._cached_entry(mocker, info)
+
+        result = im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, info))
+
+        assert im.data_cache.read_entry.call_count == 2
+        assert result is im.data_cache.read_entry.return_value.data
+
+    def test_a_saved_doc_is_returned_by_the_next_lookup(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        doc = mocker.MagicMock()
+        im._save_model_doc_cache(self.SOURCE, doc, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        result = im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        assert result is doc
+        im.data_cache.read_entry.assert_not_called()
+
+    def test_after_clear_cache_a_lookup_reads_the_disk_cache_again(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im.data_cache.read_entry.return_value = self._cached_entry(mocker, DiskInfo(100, 17))
+        im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        im.clear_cache()
+        im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        assert im.data_cache.read_entry.call_count == 2
+
+    def test_after_removing_the_doc_of_a_file_a_lookup_reads_the_disk_cache_again(self, mocker: MockerFixture) -> None:
+        im = _bind_get_libdoc_from_model(mocker)
+        im.data_cache.read_entry.return_value = self._cached_entry(mocker, DiskInfo(100, 17))
+        im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        im.remove_cached_resource_docs([self.SOURCE])
+        im._get_model_doc_cached(self.SOURCE, RobotFileMeta(self.SOURCE, DiskInfo(100, 17)))
+
+        assert im.data_cache.read_entry.call_count == 2
+        im.data_cache.remove_entries.assert_called_once_with(CacheSection.RESOURCE, [self.SOURCE])

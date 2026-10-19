@@ -13,7 +13,16 @@ from typing import Any, List, Set
 import pytest
 from pytest_mock import MockerFixture
 
-from robotcode.core.lsp.types import Diagnostic, FileChangeType, Position, TextDocumentEdit
+from robotcode.core.lsp.types import (
+    Diagnostic,
+    FileChangeType,
+    Position,
+    Range,
+    TextDocumentContentChangeEventType1,
+    TextDocumentEdit,
+    TextDocumentItem,
+    VersionedTextDocumentIdentifier,
+)
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
@@ -33,6 +42,10 @@ from tests.robotcode.language_server.robotframework.tools import (
 
 SUITE = "*** Test Cases ***\nFirst\n    Log    {}\n"
 SUITE_WITH_RESOURCE = "*** Settings ***\nResource    common.resource\n\n*** Test Cases ***\nFirst\n    {}\n"
+WITHOUT_NEW_KEYWORD = "*** Keywords ***\nShared\n    No Operation\n"
+WITH_NEW_KEYWORD = WITHOUT_NEW_KEYWORD + "\nNew Keyword\n    No Operation\n"
+SUITE_CALLING_NEW_KEYWORD = SUITE_WITH_RESOURCE.format("New Keyword")
+SUITES_CALLING_NEW_KEYWORD = [f"suite{i}.robot" for i in range(1, 9)]
 
 
 def test_references_stay_until_the_renewed_analysis_replaces_them(tmp_path: Path) -> None:
@@ -284,3 +297,50 @@ def test_a_lookup_sees_an_analysis_made_after_it(tmp_path: Path) -> None:
         protocol.documents_cache.get_namespace(later)
 
         assert files_with_calls(protocol, a, log) == ["a.robot", "later.robot"]
+
+
+def _project_calling_new_keyword(root: Path) -> Path:
+    suites = {name: SUITE_CALLING_NEW_KEYWORD for name in SUITES_CALLING_NEW_KEYWORD}
+    return write_project(root, {"common.resource": WITHOUT_NEW_KEYWORD, **suites})
+
+
+def _files_with_calls_of_new_keyword(protocol: Any, resource: Path) -> List[str]:
+    document = document_of(protocol, resource)
+    keyword = protocol.documents_cache.get_namespace(document).find_keyword("New Keyword")
+    return [] if keyword is None else files_with_calls(protocol, document, keyword)
+
+
+def test_every_suite_that_imports_a_resource_changed_in_the_editor_is_analyzed_again(tmp_path: Path) -> None:
+    project = _project_calling_new_keyword(tmp_path)
+    with language_server(project) as protocol:
+        resource = project / "common.resource"
+        protocol.documents._text_document_did_open(
+            TextDocumentItem(resource.as_uri(), "robotframework", 1, WITHOUT_NEW_KEYWORD)
+        )
+        end = Position(WITHOUT_NEW_KEYWORD.count("\n"), 0)
+        added = TextDocumentContentChangeEventType1(
+            range=Range(end, end), text=WITH_NEW_KEYWORD[len(WITHOUT_NEW_KEYWORD) :]
+        )
+        protocol.documents._text_document_did_change(
+            VersionedTextDocumentIdentifier(uri=resource.as_uri(), version=2), [added]
+        )
+
+        wait_until(
+            lambda: _files_with_calls_of_new_keyword(protocol, resource) == SUITES_CALLING_NEW_KEYWORD,
+            "not every suite was analyzed again after the change in the editor",
+        )
+
+
+def test_every_suite_that_imports_a_resource_changed_on_disk_is_analyzed_again(tmp_path: Path) -> None:
+    project = _project_calling_new_keyword(tmp_path)
+    with language_server(project) as protocol:
+        resource = project / "common.resource"
+        assert _files_with_calls_of_new_keyword(protocol, resource) == []
+
+        resource.write_text(WITH_NEW_KEYWORD, encoding="utf-8")
+        report_file_event(protocol, resource, FileChangeType.CHANGED)
+
+        wait_until(
+            lambda: _files_with_calls_of_new_keyword(protocol, resource) == SUITES_CALLING_NEW_KEYWORD,
+            "not every suite was analyzed again after the change on disk",
+        )

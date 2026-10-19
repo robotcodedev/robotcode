@@ -80,6 +80,8 @@ Alternatives:
 
 `get_model_doc` gets only the model and the path. What depends on imported files is in the namespace: which keyword a call resolves to, which variables apply, the diagnostics and the references. When an imported file changes, the importer's namespace is invalidated and rebuilt as today. The rebuild gets the importer's unchanged doc and the imported file's new one. The disk cache relies on the same fact today: it validates a stored doc only against the file's own meta.
 
+**The language settings.** The model, and with it the doc, also depends on the language settings it was parsed with, `languages` in robot.toml. The server reads them once per workspace folder and keeps them while it runs (`DocumentsCacheHelper._workspace_languages`), so the dict needs no more than the file's disk state. The disk cache keeps its docs across sessions and does not check the language settings, so a change of `languages` between two sessions gives the docs of the old settings. That is a bug of the current code; the change `cached-docs-follow-languages` covers it.
+
 **Why sharing the doc is safe.** Nothing changes a doc after it is built; only the builders set its keywords and their `parent`. Open files already share their doc across the namespace builds of one version.
 
 Alternatives:
@@ -164,3 +166,28 @@ For the same work, the fix and B need a little less CPU time and about 15 % less
 | suites without the current doc at the end | 44 / 0 | 0 / 0 | 0 | 0 |
 
 At about the same CPU time, the fix and B build the namespaces of the suites two to three times as often while the edits come, and every suite ends with the current doc. The number of collections grows with the namespaces built: every variant has 1.1 to 1.3 collections per namespace built.
+
+## Measurement of the implementation
+
+Series of 2026-10-19 for task 4.1, in two worktrees of e1c18768: one with the change, one without. The runs alternate.
+
+| Each edit analyzed to the end | current code (5 runs) | this change (5 runs) |
+|---|---|---|
+| runs that waited in vain for a suite | 4 | 0 |
+| cyclic garbage of the 20 edits | 186,780 objects | 22,487 to 26,012 objects |
+| suite docs and `_collect` functions in it | 1,800 and 660 | none |
+| collections, their time | 1,826, 5.01 s | 1,824 to 1,827, 4.32 to 5.43 s |
+| CPU time of all threads | 25.9 s | 24.9 to 31.8 s |
+| resident set size after the edits | 460,084 kB, peak 501,964 kB | 411,664 to 414,004 kB |
+
+The figures of the current code come from the one run that finished. In the other four, after the first edit, 1 or 2 suites did not use the current doc and were neither marked nor analyzed again.
+
+| An edit every 0.2 s | current code (5 runs) | this change (5 runs) |
+|---|---|---|
+| suites without the current doc at the end | 20, 0, 49, 0, 0 | 0 in every run |
+| cyclic garbage | 27,380 to 47,197 objects | 17,094 to 18,855 objects |
+| namespaces of the 90 suites built | 104 to 309 | 219 to 440 |
+| CPU time of all threads | 5.2 to 7.0 s | 6.2 to 7.5 s |
+| resident set size after the edits | 407,484 to 423,664 kB | 406,252 to 410,376 kB |
+
+The change keeps every suite current, and its figures are in the range of the prototype. While the edits come, it builds more namespaces of the suites; part of that is the analysis that the current code loses. The resident set size after the edits is lower than with the current code.

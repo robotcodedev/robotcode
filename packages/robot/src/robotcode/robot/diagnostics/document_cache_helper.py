@@ -658,11 +658,11 @@ class DocumentsCacheHelper:
         uri = Uri.from_path(path).normalized()
         source = str(uri.to_path())
         try:
-            data_cache = self.get_imports_manager_for_uri(uri).data_cache
-            data_cache.remove_entries(
+            imports_manager = self.get_imports_manager_for_uri(uri)
+            imports_manager.data_cache.remove_entries(
                 CacheSection.NAMESPACE, [_namespace_cache_key(source, document_type) for document_type in DocumentType]
             )
-            data_cache.remove_entries(CacheSection.RESOURCE, [str(normalized_path(source))])
+            imports_manager.remove_cached_resource_docs([str(normalized_path(source))])
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -674,7 +674,8 @@ class DocumentsCacheHelper:
 
     def remove_cached_analyses_of_missing_files(self, folder: WorkspaceFolder) -> None:
         """Remove the entries of the files that do not exist from the analysis cache of a workspace folder."""
-        data_cache = self.get_imports_manager_for_workspace_folder(folder).data_cache
+        imports_manager = self.get_imports_manager_for_workspace_folder(folder)
+        data_cache = imports_manager.data_cache
         try:
             for section, source_of in (
                 (CacheSection.NAMESPACE, _namespace_cache_source),
@@ -685,7 +686,11 @@ class DocumentsCacheHelper:
                     for entry in data_cache.list_entries(section)
                     if not Path(source_of(entry.entry_name)).exists()
                 ]
-                if missing:
+                if not missing:
+                    continue
+                if section == CacheSection.RESOURCE:
+                    imports_manager.remove_cached_resource_docs(missing)
+                else:
                     data_cache.remove_entries(section, missing)
         except (SystemExit, KeyboardInterrupt):
             raise

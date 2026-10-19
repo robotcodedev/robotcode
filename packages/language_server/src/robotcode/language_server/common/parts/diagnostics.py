@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from threading import Event, Timer
-from typing import TYPE_CHECKING, Any, Dict, Final, Iterator, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Iterator, List, Optional, Tuple, Union, cast
 
 from robotcode.core.concurrent import Lock, RLock, Task, check_current_task_canceled, run_as_task
 from robotcode.core.event import event
@@ -75,6 +75,8 @@ class DiagnosticsData:
     force: bool = False
     single: bool = False
     skipped_entries: bool = False
+    # counts every mark, also one that finds `force` already set
+    marks: int = 0
 
 
 class DiagnosticsCollectType(Enum):
@@ -238,6 +240,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 needs_break = needs_break or doc.opened_in_editor
                 doc.set_data(DiagnosticsProtocolPart, None)
                 with self.get_diagnostics_data(doc) as data:
+                    data.marks += 1
                     if data.force:
                         continue
                     needs_break = True
@@ -264,12 +267,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         for doc in self.parent.documents.documents:
             with self.get_diagnostics_data(doc) as data:
                 data.force = True
+                data.marks += 1
 
         if refresh:
             self.refresh()
 
     def force_refresh_document(self, document: TextDocument, refresh: bool = True, single: bool = False) -> None:
         with self.get_diagnostics_data(document) as data:
+            data.marks += 1
             if data.force:
                 return
             data.force = True
@@ -354,6 +359,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     [doc for doc in self.parent.documents.documents if self._doc_need_update(doc)],
                     key=lambda d: not d.opened_in_editor,
                 )
+                noted_marks: Dict[TextDocument, Tuple[DiagnosticsData, int]] = {}
 
                 if len(documents) == 0:
                     self.workspace_analyzed_event.set()
@@ -411,6 +417,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 progress.report(f"Analyze {i + 1}/{len(documents)}", current=i + 1)
 
                             try:
+                                noted_marks[document] = self._note_marks(document)
                                 with self._current_diagnostics_task_lock:
                                     self._current_diagnostics_task = run_as_task(self._analyse_document, document)
                                 self._current_diagnostics_task.result(self._diagnostics_task_timeout)
@@ -461,7 +468,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             self.on_workspace_diagnostics_break(self)
                             break
 
-                        self.reset_document_diagnostics_data(document)
+                        self.reset_document_diagnostics_data(document, noted_marks.get(document))
 
                     with self.parent.window.progress(
                         "Collect Diagnostics",
@@ -485,7 +492,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
                             mode = self.get_diagnostics_mode(document.uri)
                             if mode == DiagnosticsMode.OFF:
-                                self.reset_document_diagnostics_data(document)
+                                self.reset_document_diagnostics_data(document, noted_marks.get(document))
                                 continue
 
                             done_something = True
@@ -543,9 +550,18 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 if not done_something:
                     check_current_task_canceled(1)
 
-    def reset_document_diagnostics_data(self, document: TextDocument) -> None:
+    def _note_marks(self, document: TextDocument) -> Tuple[DiagnosticsData, int]:
+        """The diagnostics data of `document` and its count of marks, as the loop notes them when it analyzes it."""
         with self.get_diagnostics_data(document) as data:
-            data.force = False
+            return data, data.marks
+
+    def reset_document_diagnostics_data(
+        self, document: TextDocument, noted_marks: Optional[Tuple[DiagnosticsData, int]] = None
+    ) -> None:
+        with self.get_diagnostics_data(document) as data:
+            # a mark since the analysis noted in `noted_marks` keeps the document for the next pass
+            if noted_marks is None or (noted_marks[0] is data and noted_marks[1] == data.marks):
+                data.force = False
             data.version = document.version
             data.skipped_entries = False
             data.single = False

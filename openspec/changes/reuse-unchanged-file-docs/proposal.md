@@ -46,6 +46,6 @@ The reuse of the docs and the literal values change no requirement. The analysis
 - **`packages/robot/src/robotcode/robot/diagnostics/imports_manager.py`:** `_get_model_doc_cached`, `_save_model_doc_cache` and `clear_cache`, and a new method that removes the docs of deleted files.
 - **`packages/robot/src/robotcode/robot/diagnostics/document_cache_helper.py`:** `remove_cached_analysis` and `remove_cached_analyses_of_missing_files` use that method.
 - **`packages/robot/src/robotcode/robot/diagnostics/library_doc.py`:** `ArgumentInfo._extract_literal_values`.
-- **Memory:** about the same as today. The kept doc of a file is the doc its current namespace holds anyway.
+- **Memory:** not more than today. The kept doc of a file is the doc its current namespace holds anyway, and in the measurement of the implementation the resident set size after the edits was lower (design.md).
 - **Effect, measured with a prototype in the measurement script:** see design.md, "Prototype measurement".
 - No new dependency, no new setting.
