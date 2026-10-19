@@ -11,8 +11,10 @@ mocks, or analyzer bootstrapping.
 """
 
 import io
+import os
+import sys
 from ast import AST
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterator, Optional, TextIO
 
 import pytest
 from pytest_mock import MockerFixture
@@ -142,3 +144,48 @@ def make_library_doc_mock(mocker: MockerFixture) -> Callable[..., Any]:
         return doc
 
     return factory
+
+
+# --------------------------------------------------------------------------
+# The original standard streams in a Windows console.
+# --------------------------------------------------------------------------
+
+_WINDOWS_CONSOLE_IO: Any = getattr(io, "_WindowsConsoleIO", None)
+
+
+def _writes_to_the_console(stream: Optional[TextIO]) -> bool:
+    raw = getattr(getattr(stream, "buffer", None), "raw", None)
+    return _WINDOWS_CONSOLE_IO is not None and isinstance(raw, _WINDOWS_CONSOLE_IO)
+
+
+@pytest.fixture(autouse=True)
+def _original_streams_follow_the_fd_capture(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Let `sys.__stdout__` and `sys.__stderr__` write to what pytest captures, also in a Windows console.
+
+    The REPL and Robot Framework write to them on purpose, past their own capture of `sys.stdout`. In a
+    Windows console they write with `WriteConsoleW` to the handle of file descriptor 1 or 2, but pytest's
+    fd capture, also that of `capfd`, points these descriptors to a file, so that every write fails with
+    `OSError: [WinError 6]`; pytest reopens only `sys.stdout` and `sys.stderr`. Through a pipe, as in the
+    CI, they write to the descriptors already, and this is what they do here for the time of a test.
+    """
+    captures_fds = "capfd" in request.fixturenames or "capfdbinary" in request.fixturenames
+    replaced: list[tuple[str, TextIO, TextIO]] = []
+    for name, fd in (("__stdout__", 1), ("__stderr__", 2)):
+        stream = getattr(sys, name)
+        if _writes_to_the_console(stream) and (captures_fds or not os.isatty(fd)):
+            # `FileIO`, as `open` would make a console stream again while the descriptor is still the console;
+            # line buffered like the console stream, so that the capture sees every line at once
+            follower = io.TextIOWrapper(
+                io.BufferedWriter(io.FileIO(fd, "w", closefd=False)),
+                encoding=stream.encoding,
+                errors=stream.errors,
+                line_buffering=True,
+            )
+            replaced.append((name, stream, follower))
+            setattr(sys, name, follower)
+    try:
+        yield
+    finally:
+        for name, original, replacement in replaced:
+            setattr(sys, name, original)
+            replacement.close()
