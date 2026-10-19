@@ -49,8 +49,6 @@ The auto-reload of `./gradlew runIde` and of the harness's `runIdeForUiTests` st
 ## Risks / Trade-offs
 
 - [Users have to restart the IDE after installing or updating RobotCode] → The IDE asks for it itself, and the guide's installation steps mention it.
-- [The update from a version that still declares `false` to the first version with `true` may still be tried without a restart, depending on which descriptor the IDE checks] → The harness check installs the new build over a running build of HEAD and records what the IDE does.
-
-## Open Questions
-
-- Which descriptor decides when the installed version doesn't require a restart and the new one does? The harness check answers it. If the IDE tries the update without a restart, the release that introduces the change could tell users to restart after the update. The release notes are written elsewhere.
+- [The update from a version that still declares `false` to the first version with `true` might be tried without a restart] → The new version's descriptor decides:
+  - "Install Plugin from Disk" (`PluginInstaller.installFromDisk`) and the Marketplace update (`PluginDownloader.installDynamically`) both call `DynamicPlugins.allowLoadUnloadWithoutRestart` on the descriptor of the version being installed.
+  - In the harness on 2026-10-19, a build of HEAD as 2.6.2 (`false`) was running. That check returned `false` for the new build's zip (`true`), so the IDE asks for a restart. For the installed version alone it returned `true`.
