@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Set, Union, cast
 
 from robot import result, running
 from robot.model import Message
@@ -14,6 +14,14 @@ from .mixins import SyncedEventBody
 
 
 @dataclass
+class RobotFailure(Model):
+    # indices into failed_keywords: the failed keyword whose message and caught mark are the failure's, and the failed
+    # keywords from the innermost call out to the test
+    keyword: int
+    calls: List[int]
+
+
+@dataclass
 class RobotExecutionEventBody(Model, SyncedEventBody):
     type: str
     id: str
@@ -21,6 +29,8 @@ class RobotExecutionEventBody(Model, SyncedEventBody):
     parent_id: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
+    # in the order their keywords ended
+    failures: Optional[List[RobotFailure]] = None
     source: Optional[str] = None
     lineno: Optional[int] = None
     synced: bool = True
@@ -64,6 +74,12 @@ class ListenerV2:
         # the number of failed keywords when each running keyword or control structure started; per depth, the failed
         # keywords of the last TRY branch there, and those of them that its EXCEPT branch caught
         self.failed_keyword_marks: List[int] = []
+        # by the id of a failed keyword, the nearest failed keyword it ran in
+        self.failed_keyword_parents: Dict[int, Dict[str, Any]] = {}
+        # per running keyword or control structure, whether it logged a failure itself, as Robot Framework does for the
+        # keyword whose error it is; and the ids of the failed keywords that did
+        self.failure_logged: List[bool] = []
+        self.failed_keywords_with_own_failure: Set[int] = set()
         self.try_failures: Dict[int, List[Dict[str, Any]]] = {}
         self.caught_by_except: Dict[int, List[Dict[str, Any]]] = {}
         self.last_fail_message: Optional[str] = None
@@ -110,16 +126,17 @@ class ListenerV2:
                     id=id,
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     failed_keywords=self.failed_keywords,
+                    failures=self._failures(),
                     source=source_from_attributes(attributes) or None,
                     lineno=attributes.get("lineno", None),
                 ),
             ),
         )
         self.suite_id_stack.pop()
-        self.failed_keywords = None
+        self._forget_failed_keywords()
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
-        self.failed_keywords = None
+        self._forget_failed_keywords()
 
         Debugger.instance.send_event(
             self,
@@ -159,16 +176,84 @@ class ListenerV2:
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
                     failed_keywords=self.failed_keywords,
+                    failures=self._failures(),
                     source=source_from_attributes(attributes) or None,
                     lineno=attributes.get("lineno", None),
                 ),
             ),
         )
 
+        self._forget_failed_keywords()
+
+    def _forget_failed_keywords(self) -> None:
         self.failed_keywords = None
+        self.failed_keyword_parents = {}
+        self.failed_keywords_with_own_failure = set()
+
+    def _failures(self) -> Optional[List[RobotFailure]]:
+        keywords = self.failed_keywords
+        if not keywords:
+            return None
+
+        index = {id(keyword): i for i, keyword in enumerate(keywords)}
+        parents = self.failed_keyword_parents
+
+        # the failed keywords inside a keyword are those it is the parent of that are caught, or not caught, like it; a
+        # caught one inside a keyword that is not caught was caught within it and stays a failure of its own
+        def is_inside(keyword: Dict[str, Any], parent: Optional[Dict[str, Any]]) -> bool:
+            return parent is not None and bool(parent.get("caught")) == bool(keyword.get("caught"))
+
+        inside: Dict[int, List[Dict[str, Any]]] = {}
+        for keyword in keywords:
+            parent = parents.get(id(keyword))
+            if parent is not None and is_inside(keyword, parent):
+                inside.setdefault(id(parent), []).append(keyword)
+
+        # a keyword that logged a failure of its own after failures inside it turned theirs into its own, as Wait Until
+        # Keyword Succeeds does after its last attempt; one that passes them on or collects them logs none
+        def turns_into_own(keyword: Dict[str, Any]) -> bool:
+            return bool(inside.get(id(keyword))) and id(keyword) in self.failed_keywords_with_own_failure
+
+        def within(keyword: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
+            current, parent = keyword, parents.get(id(keyword))
+            while parent is not None and is_inside(current, parent):
+                yield parent
+                current, parent = parent, parents.get(id(parent))
+
+        def outwards(keyword: Dict[str, Any]) -> List[int]:
+            calls = []
+            current: Optional[Dict[str, Any]] = keyword
+            while current is not None:
+                calls.append(index[id(current)])
+                current = parents.get(id(current))
+            return calls
+
+        # the calls of the newest failure inside the keyword, up to it
+        def last_inside(keyword: Dict[str, Any]) -> List[int]:
+            for candidate in keywords:
+                if inside.get(id(candidate)):
+                    continue
+                calls = [index[id(candidate)]]
+                for outer in within(candidate):
+                    if outer is keyword:
+                        return calls
+                    calls.append(index[id(outer)])
+            return []
+
+        failures = []
+        for keyword in reversed(keywords):
+            if any(turns_into_own(outer) for outer in within(keyword)):
+                continue
+            if turns_into_own(keyword):
+                failures.append(RobotFailure(index[id(keyword)], last_inside(keyword) + outwards(keyword)))
+            elif not inside.get(id(keyword)):
+                failures.append(RobotFailure(index[id(keyword)], outwards(keyword)))
+
+        return failures
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         self.failed_keyword_marks.append(len(self.failed_keywords or []))
+        self.failure_logged.append(False)
 
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
             Debugger.instance.start_output_group(
@@ -199,6 +284,7 @@ class ListenerV2:
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance.end_keyword(name, attributes)
         mark = self.failed_keyword_marks.pop() if self.failed_keyword_marks else 0
+        failure_logged = self.failure_logged.pop() if self.failure_logged else False
 
         # if Debugger.instance.state != State.CallKeyword:
         #     Debugger.instance.send_event(
@@ -224,7 +310,13 @@ class ListenerV2:
                 if self.failed_keywords is None:
                     self.failed_keywords = []
 
-                self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
+                keyword = {"message": self.last_fail_message, **attributes}
+                # it is the nearest failed keyword around those that ended since it started and have none yet
+                for inner in self.failed_keywords[: max(0, len(self.failed_keywords) - mark)]:
+                    self.failed_keyword_parents.setdefault(id(inner), keyword)
+                self.failed_keywords.insert(0, keyword)
+                if failure_logged:
+                    self.failed_keywords_with_own_failure.add(id(keyword))
 
         self._mark_caught_failures(attributes, mark, len(self.failed_keyword_marks))
 
@@ -260,6 +352,8 @@ class ListenerV2:
             if message["level"] == "FAIL":
                 self.last_fail_message = message["message"]
                 Debugger.instance.last_fail_message = self.last_fail_message
+                if self.failure_logged:
+                    self.failure_logged[-1] = True
 
             source = current_frame.source if current_frame else None
             line = current_frame.line if current_frame else None

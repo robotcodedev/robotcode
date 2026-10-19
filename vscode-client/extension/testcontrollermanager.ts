@@ -99,15 +99,27 @@ interface RobotExecutionAttributes {
   starttime: string | undefined;
   endtime: string | undefined;
   tags: string[] | undefined;
+  kwname: string | undefined;
+  libname: string | undefined;
+  caught: boolean | undefined;
 }
 
 type RobotEventType = "suite" | "test" | "keyword";
+
+interface RobotFailure {
+  // indices into failedKeywords: the failed keyword whose message and caught mark are the failure's, and the failed
+  // keywords from the innermost call out to the test
+  keyword: number;
+  calls: number[];
+}
 
 interface RobotExecutionEvent {
   type: RobotEventType;
   id: string;
   attributes: RobotExecutionAttributes | undefined;
   failedKeywords: RobotExecutionAttributes[] | undefined;
+  // in the order their keywords ended
+  failures: RobotFailure[] | undefined;
   source: string | undefined;
   lineno: number | undefined;
 }
@@ -124,6 +136,69 @@ interface RobotLogMessageEvent {
   level: RobotLogLevel;
   timestamp: string;
   html: string;
+}
+
+function lineLocation(source: string, lineno: number | undefined): vscode.Location {
+  return new vscode.Location(
+    vscode.Uri.file(source),
+    new vscode.Range(new vscode.Position((lineno ?? 1) - 1, 0), new vscode.Position(lineno ?? 1, 0)),
+  );
+}
+
+function failureText(keyword: RobotExecutionAttributes): string {
+  return ((keyword.caught ? "Caught: " : "") + (keyword.message ?? "")).replaceAll("\n", "\r\n");
+}
+
+// A failure, given by its calls innermost first, sits at the outermost one, the call in the test, and lists the others
+// as Python does, from the outside in, so the call that failed comes last; VS Code would show the outermost one again
+// in the list. A call on the line of the call it ran in, as a keyword that a Run Keyword variant runs, is left out, so
+// that the list does not show the same code twice.
+function failureMessage(keyword: RobotExecutionAttributes, calls: RobotExecutionAttributes[]): vscode.TestMessage {
+  const message = new vscode.TestMessage(failureText(keyword));
+  const outermost = calls[calls.length - 1];
+  if (outermost.source) {
+    message.location = lineLocation(outermost.source, outermost.lineno);
+  }
+  const listed = calls
+    .slice(0, -1)
+    .filter((call, i) => call.source !== calls[i + 1].source || call.lineno !== calls[i + 1].lineno)
+    .reverse();
+  if (listed.length > 0) {
+    message.stackTrace = listed.map(
+      (call) =>
+        new vscode.TestMessageStackFrame(
+          [call.libname, call.kwname].filter((name) => name).join("."),
+          call.source ? vscode.Uri.file(call.source) : undefined,
+          new vscode.Position((call.lineno ?? 1) - 1, 0),
+        ),
+    );
+  }
+  return message;
+}
+
+// VS Code marks the message of a failure once in each file: at its location, and in every other file at the first
+// frame of its stack trace there, the outermost call. These are the other lines of its calls, once each.
+function unmarkedCallLocations(calls: RobotExecutionAttributes[]): vscode.Location[] {
+  const locations = calls.flatMap((call) => (call.source ? [lineLocation(call.source, call.lineno)] : []));
+  if (locations.length === 0) return [];
+
+  const lineOf = (location: vscode.Location) => `${location.uri.toString()}:${location.range.start.line}`;
+  const outermost = locations[locations.length - 1];
+  const markedFiles = new Set([outermost.uri.toString()]);
+  const seenLines = new Set([lineOf(outermost)]);
+  const result: vscode.Location[] = [];
+
+  for (const location of locations.slice(0, -1).reverse()) {
+    const file = location.uri.toString();
+    if (!markedFiles.has(file)) {
+      markedFiles.add(file);
+      seenLines.add(lineOf(location));
+    } else if (!seenLines.has(lineOf(location))) {
+      seenLines.add(lineOf(location));
+      result.push(location);
+    }
+  }
+  return result;
 }
 
 function robotItemsEqual(a: RobotTestItem | undefined, b: RobotTestItem | undefined): boolean {
@@ -2059,41 +2134,35 @@ export class TestControllerManager {
             break;
           default:
             {
+              const keywords = event.failedKeywords ?? [];
+              const failures = (event.failures ?? []).map((failure) => ({
+                keyword: keywords[failure.keyword],
+                calls: failure.calls.map((index) => keywords[index]),
+              }));
+              // the failures that made the test fail first, then the caught ones
+              const ordered = [
+                ...failures.filter((failure) => !failure.keyword.caught),
+                ...failures.filter((failure) => failure.keyword.caught),
+              ];
+
               const messages: vscode.TestMessage[] = [];
 
-              if (
-                !event.attributes?.message ||
-                !event.failedKeywords?.find((v) => v.message === event.attributes?.message)
-              ) {
+              // without a failure in one of its keywords, the test's own message tells why it failed
+              if (ordered.length === 0 || ordered[0].keyword.caught) {
                 const message = new vscode.TestMessage((event.attributes.message ?? "").replaceAll("\n", "\r\n"));
 
                 if (event.attributes.source) {
-                  message.location = new vscode.Location(
-                    vscode.Uri.file(event.attributes.source),
-                    new vscode.Range(
-                      new vscode.Position((event.attributes.lineno ?? 1) - 1, 0),
-                      new vscode.Position(event.attributes.lineno ?? 1, 0),
-                    ),
-                  );
+                  message.location = lineLocation(event.attributes.source, event.attributes.lineno);
                 }
                 messages.push(message);
               }
 
-              if (event.failedKeywords) {
-                for (const keyword of event.failedKeywords.reverse()) {
-                  const message = new vscode.TestMessage((keyword.message ?? "").replaceAll("\n", "\r\n"));
+              for (const failure of ordered) {
+                messages.push(failureMessage(failure.keyword, failure.calls));
 
-                  if (keyword.source) {
-                    message.location = new vscode.Location(
-                      vscode.Uri.file(keyword.source),
-                      new vscode.Range(
-                        new vscode.Position((keyword.lineno ?? 1) - 1, 0),
-                        new vscode.Position(keyword.lineno ?? 1, 0),
-                      ),
-                    );
-                  }
-
-                  messages.push(message);
+                // the calls without a marker show the failure as inline output
+                for (const location of unmarkedCallLocations(failure.calls)) {
+                  run.appendOutput(`${failureText(failure.keyword)}\r\n`, location, item);
                 }
               }
 

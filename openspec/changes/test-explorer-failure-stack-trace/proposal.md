@@ -8,8 +8,9 @@ When a test fails inside keywords, VS Code's Test Explorer shows one failure ent
 
 - A failed test or task gets one entry per failure instead of one per failed keyword. The entry carries the failure's message and sits at the call in the test that led to it: a step of the test, or its `[Setup]` or `[Teardown]`. Below the message, VS Code's view of the entry lists the deeper calls down to the keyword that failed, each with its file, a few lines of its code and a button that opens it. A click on one of the entry's markers in the editor opens this view at the call in the test, and **Go to Error** at the entry in Test Results goes to that call as well.
 - Several failures of one test each get their own entry, in the order they occurred: failures collected with Run Keyword And Continue On Failure or `robot:continue-on-failure`, a failure in the body and one in the teardown, or a failure in a `TRY` branch and one in its `EXCEPT` branch.
+- A keyword that ends with an error of its own after failures inside it, such as Wait Until Keyword Succeeds after its last attempt or Run Keyword And Expect Error after another error, is one failure: its entry carries that keyword's message, the message the test failed with, and lists the calls of the last failure inside it. The failures inside it get no entries of their own. Today they each get one, and the keyword's own message gets one more.
 - A failure that the test caught, with `TRY`/`EXCEPT` or with a BuiltIn keyword such as Run Keyword And Ignore Error, gets its own entry after the real failures, with its text starting with `Caught: `. Today such a failure looks like a real one.
-- VS Code marks an entry once per file: at the call in the test, and in every other file at the innermost call there. Each call of the entry that VS Code does not mark shows the entry's text as inline output at its line, while VS Code's **Show Inline Test Output** is on, which is the default; the test's output gets one line for each of them.
+- VS Code marks an entry once per file: at the call in the test, and in every other file at the innermost call there. Each other line of the entry's calls shows the entry's text as inline output, while VS Code shows inline test output, which is the default and which **Test: Toggle Inline Test Output** switches off and on; the test's output gets one line for each of these lines. A call on the same line as the call it ran in, as a keyword that a Run Keyword variant runs, is not listed again.
 - A failed test without a failed keyword, for example after its suite setup failed, keeps its message at its own line, as today.
 - The debugger sends, next to `failedKeywords`, which failed keywords make up each failure. The IntelliJ plugin ignores the new field and keeps its failure details.
 
@@ -23,12 +24,12 @@ _None._
 
 ### Modified Capabilities
 
-- `vscode-test-explorer`: added requirements for one entry per failure with the calls that led to it, for caught failures, for the inline output of calls without a marker, and for failed tests without a failed keyword. The existing requirements are unchanged.
+- `vscode-test-explorer`: added requirements for one entry per failure with the calls that led to it, for keywords that turn failures into their own, for caught failures, for the inline output of calls without a marker, and for failed tests without a failed keyword. The existing requirements are unchanged.
 
 ## Impact
 
-- `packages/debugger/src/robotcode/debugger/listeners.py`: `ListenerV2` remembers for each failed keyword the failed keyword it ran in and sends the failures with `robotEnded` in a new field of `RobotExecutionEventBody`; tests in `tests/robotcode/debugger/test_listeners.py`.
+- `packages/debugger/src/robotcode/debugger/listeners.py`: `ListenerV2` remembers for each failed keyword the failed keyword it ran in, works out the failures and sends them with `robotEnded` in a new field of `RobotExecutionEventBody`; tests in `tests/robotcode/debugger/test_listeners.py`.
 - `vscode-client/extension/testcontrollermanager.ts`: `testItemEnded` builds the entries from the failures, with `TestMessage.stackTrace`, and appends the inline output.
-- `docs/src/content/docs/guides/vscode/test-explorer.mdx`: the section "Running and debugging" describes the entries.
-- The screenshot `test-explorer-window` and the video `test-explorer-run` of the VS Code guide show the failure of Login Works as it looks today.
+- `docs/src/content/docs/guides/vscode/test-explorer.mdx`: the section "Running and debugging" describes the entries; `running-and-debugging.mdx` points to it from the section "Running from the editor".
+- The screenshot `test-explorer-window` and the video `test-explorer-run` of the VS Code guide are taken again, as they show the failure of Login Works.
 - No change to the IntelliJ plugin, the language server or `robotcode discover`.

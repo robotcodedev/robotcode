@@ -1,6 +1,6 @@
 import io
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Dict, List, Tuple, TypeVar
 
 import robot
 from robot import result, running
@@ -10,6 +10,8 @@ from robotcode.debugger.dap_types import Event
 from robotcode.debugger.debugger import Debugger
 from robotcode.debugger.listeners import ListenerV3, RobotExecutionEventBody
 from robotcode.robot.utils import get_robot_version
+
+T = TypeVar("T")
 
 
 def test_set_failed_ids_use_the_normalized_source(tmp_path: Path) -> None:
@@ -95,9 +97,10 @@ Flaky
 """
 
 
-def test_failed_keywords_mark_the_failures_that_were_caught(tmp_path: Path) -> None:
-    suite = tmp_path / "suite.robot"
-    suite.write_text(CAUGHT_SUITE, encoding="utf-8")
+def _ended(tmp_path: Path, files: Dict[str, str]) -> List[RobotExecutionEventBody]:
+    """Runs `suite.robot` of `files`, written to `tmp_path`, and returns the bodies of its `robotEnded` events."""
+    for name, text in files.items():
+        (tmp_path / name).write_text(text, encoding="utf-8")
     events: List[Event] = []
 
     def collect(sender: Any, event: Event) -> None:
@@ -108,7 +111,7 @@ def test_failed_keywords_mark_the_failures_that_were_caught(tmp_path: Path) -> N
     debugger.start()
     try:
         robot.run(
-            str(suite),
+            str(tmp_path / "suite.robot"),
             listener=["robotcode.debugger.listeners.ListenerV3", "robotcode.debugger.listeners.ListenerV2"],
             output="NONE",
             log="NONE",
@@ -120,6 +123,12 @@ def test_failed_keywords_mark_the_failures_that_were_caught(tmp_path: Path) -> N
         debugger.stop()
         debugger.send_event.remove(collect)
 
+    return [e.body for e in events if e.event == "robotEnded" and isinstance(e.body, RobotExecutionEventBody)]
+
+
+def test_failed_keywords_mark_the_failures_that_were_caught(tmp_path: Path) -> None:
+    ended = _ended(tmp_path, {"suite.robot": CAUGHT_SUITE})
+
     # a keyword that a Run Keyword variant runs has no source before Robot Framework 6.1, so the listener, which keeps
     # failed keywords with a source only, does not have it
     def wrapped(name: str, line: int) -> List[Any]:
@@ -128,9 +137,9 @@ def test_failed_keywords_mark_the_failures_that_were_caught(tmp_path: Path) -> N
     # newest first, as the listener sends them; marked are the failures that Robot Framework's log keeps collapsed,
     # also the TRY branch's after a failing EXCEPT or FINALLY branch is not, as the log expands it then
     failed = {
-        e.body.name: [(k["kwname"], k["lineno"], k.get("caught", False)) for k in e.body.failed_keywords or []]
-        for e in events
-        if e.event == "robotEnded" and isinstance(e.body, RobotExecutionEventBody) and e.body.type == "test"
+        body.name: [(k["kwname"], k["lineno"], k.get("caught", False)) for k in body.failed_keywords or []]
+        for body in ended
+        if body.type == "test"
     }
     assert failed == {
         "Caught By Try": [("Check Value", 8, False), ("Should Be Equal", 41, False), ("Should Be Equal", 4, True)],
@@ -153,5 +162,266 @@ def test_failed_keywords_mark_the_failures_that_were_caught(tmp_path: Path) -> N
             ("Should Be Equal", 41, False),
             *wrapped("Flaky", 35),
             ("Should Be True", 46, True),
+        ],
+    }
+
+
+# failures nested in a resource file, collected in different ways, in a TRY and its EXCEPT branch, caught, with the
+# same text, and collected by one keyword; the suite teardown fails as well
+FAILURES_SUITE = """\
+*** Settings ***
+Resource    shop.resource
+Suite Teardown    Check Value    10
+
+*** Test Cases ***
+Nested
+    Outer In Resource
+
+Continue On Failure
+    Run Keyword And Continue On Failure    Check Value    1
+    Run Keyword And Continue On Failure    Check Value    2
+
+Tagged Continue
+    [Tags]    robot:continue-on-failure
+    Check Value    3
+    Check Value    4
+
+Body And Teardown
+    Check Value    5
+    [Teardown]    Check Value    6
+
+Failing Except
+    TRY
+        Should Be Equal    a    b
+    EXCEPT
+        Check Value    7
+    END
+
+Caught Then Failed
+    Run Keyword And Ignore Error    Check Value    8
+    Check Value    9
+
+Same Text Twice
+    Run Keyword And Continue On Failure    Should Be Equal    x    y
+    Run Keyword And Continue On Failure    Should Be Equal    x    y
+
+Keyword Collects Two
+    Collect Two
+
+*** Keywords ***
+Collect Two
+    [Tags]    robot:continue-on-failure
+    Should Be Equal    c    d
+    Should Be Equal    e    f
+"""
+
+SHOP_RESOURCE = """\
+*** Keywords ***
+Outer In Resource
+    Inner In Resource
+
+Inner In Resource
+    Check Value    0
+
+Check Value
+    [Arguments]    ${v}
+    Should Be Equal    ${v}    ok
+
+Retry Check
+    Wait Until Keyword Succeeds    2x    10ms    Check Value    1
+"""
+
+
+def _describe(keyword: Dict[str, Any]) -> str:
+    return f"{keyword['kwname']} {Path(keyword['source']).name}:{keyword['lineno']}" + (
+        " caught" if keyword.get("caught") else ""
+    )
+
+
+def _failures(body: RobotExecutionEventBody) -> List[Tuple[str, List[str]]]:
+    """Each failure of `body` as the failed keyword whose message is the failure's, and its calls, innermost first."""
+    keywords = body.failed_keywords or []
+    return [(_describe(keywords[f.keyword]), [_describe(keywords[i]) for i in f.calls]) for f in body.failures or []]
+
+
+def _since_rf61(*items: T) -> List[T]:
+    """Calls of keywords that a Run Keyword variant runs: before Robot Framework 6.1 they have no source, so the
+    listener, which keeps failed keywords with a source only, does not have them."""
+    return list(items) if get_robot_version() >= (6, 1) else []
+
+
+def test_each_failure_lists_its_failed_keywords_innermost_first(tmp_path: Path) -> None:
+    ended = _ended(tmp_path, {"suite.robot": FAILURES_SUITE, "shop.resource": SHOP_RESOURCE})
+    failures = {body.name: _failures(body) for body in ended}
+
+    # none of these keywords turns the failures inside it into its own, so each failure is its innermost call
+    assert all(keyword == calls[0] for name in failures for keyword, calls in failures[name])
+    # the call of Should Be Equal in Check Value
+    comparison = "Should Be Equal shop.resource:10"
+    continued = "Run Keyword And Continue On Failure"
+    # in the order the failures occurred; a keyword that collected several failures is in each of them
+    assert {name: [calls for _, calls in f] for name, f in failures.items()} == {
+        "Nested": [
+            [
+                comparison,
+                "Check Value shop.resource:6",
+                "Inner In Resource shop.resource:3",
+                "Outer In Resource suite.robot:7",
+            ]
+        ],
+        "Continue On Failure": [
+            [comparison, *_since_rf61("Check Value suite.robot:10"), f"{continued} suite.robot:10"],
+            [comparison, *_since_rf61("Check Value suite.robot:11"), f"{continued} suite.robot:11"],
+        ],
+        "Tagged Continue": [
+            [comparison, "Check Value suite.robot:15"],
+            [comparison, "Check Value suite.robot:16"],
+        ],
+        "Body And Teardown": [
+            [comparison, "Check Value suite.robot:19"],
+            [comparison, "Check Value suite.robot:20"],
+        ],
+        "Failing Except": [
+            ["Should Be Equal suite.robot:24"],
+            [comparison, "Check Value suite.robot:26"],
+        ],
+        "Caught Then Failed": [
+            [f"{comparison} caught", *_since_rf61("Check Value suite.robot:30 caught")],
+            [comparison, "Check Value suite.robot:31"],
+        ],
+        "Same Text Twice": [
+            [*_since_rf61("Should Be Equal suite.robot:34"), f"{continued} suite.robot:34"],
+            [*_since_rf61("Should Be Equal suite.robot:35"), f"{continued} suite.robot:35"],
+        ],
+        "Keyword Collects Two": [
+            ["Should Be Equal suite.robot:43", "Collect Two suite.robot:38"],
+            ["Should Be Equal suite.robot:44", "Collect Two suite.robot:38"],
+        ],
+        "Suite": [[comparison, "Check Value suite.robot:3"]],
+    }
+
+
+# keywords that turn the failures inside them into their own: after the last attempt, with another error than the one
+# expected, in a keyword of a resource file, and inside a keyword that caught it; and a retried keyword that passed
+# after a failed attempt, in a test that fails later
+WRAPPERS_SUITE = """\
+*** Settings ***
+Resource    shop.resource
+
+*** Test Cases ***
+Retries Fail
+    Wait Until Keyword Succeeds    3x    10ms    Should Be Equal    a    b
+
+Expect Other Error
+    Run Keyword And Expect Error    Wrong*    Should Be Equal    a    b
+
+Retries In Keyword
+    Retry Check
+
+Retried Until Passed
+    Wait Until Keyword Succeeds    3x    10ms    Flaky
+    Should Be Equal    x    y
+
+Ignored Retries
+    Run Keyword And Ignore Error    Wait Until Keyword Succeeds    2x    10ms    Should Be Equal    c    d
+    Fail    later
+
+*** Keywords ***
+Flaky
+    ${n}=    Get Variable Value    ${FLAKY_N}    ${0}
+    Set Suite Variable    ${FLAKY_N}    ${n + 1}
+    Should Be True    ${n} >= 1
+"""
+
+
+def test_a_keyword_that_turns_failures_into_its_own_is_one_failure(tmp_path: Path) -> None:
+    ended = [body for body in _ended(tmp_path, {"suite.robot": WRAPPERS_SUITE, "shop.resource": SHOP_RESOURCE})]
+    tests = {body.name: body for body in ended if body.type == "test"}
+
+    retried = "Wait Until Keyword Succeeds"
+    expected = "Run Keyword And Expect Error"
+    # its calls start with the last attempt
+    assert {name: _failures(body) for name, body in tests.items()} == {
+        "Retries Fail": [
+            (f"{retried} suite.robot:6", [*_since_rf61("Should Be Equal suite.robot:6"), f"{retried} suite.robot:6"])
+        ],
+        "Expect Other Error": [
+            (f"{expected} suite.robot:9", [*_since_rf61("Should Be Equal suite.robot:9"), f"{expected} suite.robot:9"])
+        ],
+        "Retries In Keyword": [
+            (
+                f"{retried} shop.resource:13",
+                [
+                    "Should Be Equal shop.resource:10",
+                    *_since_rf61("Check Value shop.resource:13"),
+                    f"{retried} shop.resource:13",
+                    "Retry Check suite.robot:12",
+                ],
+            )
+        ],
+        "Retried Until Passed": [
+            (
+                "Should Be True suite.robot:26 caught",
+                ["Should Be True suite.robot:26 caught", *_since_rf61("Flaky suite.robot:15 caught")],
+            ),
+            ("Should Be Equal suite.robot:16", ["Should Be Equal suite.robot:16"]),
+        ],
+        "Ignored Retries": [
+            *_since_rf61(
+                (
+                    f"{retried} suite.robot:19 caught",
+                    ["Should Be Equal suite.robot:19 caught", f"{retried} suite.robot:19 caught"],
+                )
+            ),
+            ("Fail suite.robot:20", ["Fail suite.robot:20"]),
+        ],
+    }
+
+    # the failure carries the message the test failed with
+    for name in ["Retries Fail", "Expect Other Error", "Retries In Keyword"]:
+        body = tests[name]
+        assert body.failures is not None
+        assert body.failed_keywords is not None
+        assert body.attributes is not None
+        assert body.failed_keywords[body.failures[0].keyword]["message"] == body.attributes["message"]
+
+
+# keywords that fail and then catch a failure, in their teardown or in a later step under robot:continue-on-failure:
+# the caught failure is logged last, but neither keyword turns the failures before it into one of its own
+CAUGHT_LATER_SUITE = """\
+*** Test Cases ***
+Teardown With Caught Failure
+    Keyword With Cleanup
+
+Collector Then Caught
+    Collect And Ignore
+
+*** Keywords ***
+Keyword With Cleanup
+    Should Be Equal    a    b
+    [Teardown]    Run Keyword And Ignore Error    Fail    cleanup failed
+
+Collect And Ignore
+    [Tags]    robot:continue-on-failure
+    Should Be Equal    c    d
+    Should Be Equal    e    f
+    Run Keyword And Ignore Error    Fail    ignored
+"""
+
+
+def test_a_failure_caught_later_keeps_the_failures_before_it(tmp_path: Path) -> None:
+    ended = _ended(tmp_path, {"suite.robot": CAUGHT_LATER_SUITE})
+
+    cleanup = "Keyword With Cleanup suite.robot:3"
+    collector = "Collect And Ignore suite.robot:6"
+    assert {body.name: _failures(body) for body in ended if body.type == "test"} == {
+        "Teardown With Caught Failure": [
+            ("Should Be Equal suite.robot:10", ["Should Be Equal suite.robot:10", cleanup]),
+            *_since_rf61(("Fail suite.robot:11 caught", ["Fail suite.robot:11 caught", cleanup])),
+        ],
+        "Collector Then Caught": [
+            ("Should Be Equal suite.robot:15", ["Should Be Equal suite.robot:15", collector]),
+            ("Should Be Equal suite.robot:16", ["Should Be Equal suite.robot:16", collector]),
+            *_since_rf61(("Fail suite.robot:17 caught", ["Fail suite.robot:17 caught", collector])),
         ],
     }

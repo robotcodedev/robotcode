@@ -13,7 +13,7 @@ The **Test Explorer** is VS Code's **Testing** view; open it with the flask icon
 
 <ThemeImage
   name="test-explorer-window"
-  alt="The Testing view with the suites and tests of the demo project after a run, all passed except Login Works; in the editor, the failure message of Login Works is shown below the line that failed."
+  alt="The Testing view with the suites and tests of the demo project after a run, all passed except Login Works; in the editor, a peek below the step of Login Works that failed shows the failure message and the call of Should Be Equal in shop.resource."
   full
 />
 
@@ -25,11 +25,15 @@ The tree updates when you change, save, create or delete a Robot Framework file,
 
 ## Running and debugging
 
-Hover over a suite, test or task to run or debug it with the buttons beside it; **Run Tests** and **Debug Tests** in the view's title bar run all of them. A run shows its result at each entry: passed, failed or skipped, with the time it took. For a failed test, the message appears in the editor at the line that failed, also as a peek with the whole message. **Show Output** in the title bar opens the output of the run, with the messages Robot Framework logged.
+Hover over a suite, test or task to run or debug it with the buttons beside it; **Run Tests** and **Debug Tests** in the view's title bar run all of them. A run shows its result at each entry: passed, failed or skipped, with the time it took. **Show Output** in the title bar opens the output of the run, with the messages Robot Framework logged.
+
+For a failed test, each failure appears in the editor with its message: at the step of the test that led to it, at the line that failed, and at the calls in between. A click on a failure's marker opens a peek below the step, with the whole message and the calls that led to the failure, from the step inward to the line that failed, each with a few lines of its code. When a file has more than one of these calls, VS Code marks the first of them; at the others, the message appears as VS Code's inline test output, which **Test: Toggle Inline Test Output** switches off and on.
+
+A keyword such as `Wait Until Keyword Succeeds` or `Run Keyword And Expect Error` that ends with an error of its own after failures inside it is one failure, with its own message, and its peek lists the calls of the last failure inside it. A failed test also shows the failures it caught, with `TRY`/`EXCEPT` or a keyword such as `Run Keyword And Ignore Error`: after the others and with `Caught:` before their message.
 
 <ThemeVideo
   name="test-explorer-run"
-  label="Run Tests in the title bar of the Testing view runs all tests of the demo project: the entries in the tree turn green, 12 of 13 tests pass, and the failure message of Login Works appears in the editor below the line that failed."
+  label="Run Tests in the title bar of the Testing view runs all tests of the demo project: the entries in the tree turn green, 12 of 13 tests pass, and a peek below the step of Login Works that failed shows the failure message and the call of Should Be Equal in shop.resource."
 />
 
 ## Run profiles
