@@ -24,11 +24,12 @@ _None._
 
 ### Modified Capabilities
 
-- `release-publishing`: adds the nightly upload of the Python dev versions to PyPI. The capability is introduced by `intellij-marketplace-publish` and extended by `vscode-dev-builds` and `publish-workflow`, none of them archived yet. This change only adds requirements.
+- `release-publishing`: adds the nightly upload of the Python dev versions to PyPI. The capability is a main spec since `vscode-dev-builds` was archived; `intellij-marketplace-publish` and `publish-workflow`, not archived yet, add to it too. This change only adds requirements.
 
 ## Impact
 
 - `scripts/publish_dev.py`: the target `python`. It downloads the artifacts `python-packages` and `wheel-packages`, looks up the version on PyPI, and uploads with `hatch publish`, the package `robotcode` last.
 - `.github/workflows/publish.yml` (from `publish-workflow`): a third upload step in the job `dev`, with the secrets `PYPI_USERNAME` and `PYPI_PASSWORD`.
+- `hatch.toml`: the build environment declares `packaging`, which `publish_dev.py` now imports, instead of getting it only through another dependency.
 - PyPI gets a dev version of each of the 12 projects on every day with a new build of `main`. In the year up to 2026-10-18, that would have been 116 days.
 - Order: implement after `publish-workflow`, which creates `publish.yml` and its job `dev`.

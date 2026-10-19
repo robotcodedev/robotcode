@@ -1,7 +1,10 @@
 import argparse
 import contextlib
+import os
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
@@ -19,6 +22,7 @@ if __name__ == "__main__" and not __package__:
     __package__ = "scripts"
 
 
+from packaging.version import Version as PackageVersion
 from semantic_version import Version
 
 from scripts.publish import jetbrains_channel_versions, publish_jetbrains_plugin
@@ -133,17 +137,75 @@ def publish_vscode(dist_path: Path) -> None:
         raise SystemExit(f"the upload to {' and '.join(failed)} failed")
 
 
+def pypi_has_version(project: str, version: str) -> bool:
+    try:
+        with urllib.request.urlopen(f"https://pypi.org/pypi/{project}/{version}/json", timeout=60):
+            return True
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return False
+        raise
+
+
+def publish_python(dist_path: Path) -> None:
+    run_id = latest_successful_main_run()
+    print(f"downloading the Python packages of run {run_id}")
+    download_artifact(run_id, "python-packages", dist_path)
+    download_artifact(run_id, "wheel-packages", dist_path)
+
+    root_wheels = list(dist_path.glob("robotcode-*-py3-none-any.whl"))
+    if len(root_wheels) != 1:
+        raise SystemExit(f"expected one wheel of robotcode in '{dist_path}', found {len(root_wheels)}")
+
+    version = PackageVersion(root_wheels[0].name.removeprefix("robotcode-").removesuffix("-py3-none-any.whl"))
+
+    if not version.is_prerelease:
+        print(f"{version} is a release, its tag publishes it")
+        return
+
+    # robotcode is uploaded last, so PyPI has the whole version when it has robotcode
+    if pypi_has_version("robotcode", str(version)):
+        print(f"{version} is already on PyPI")
+        return
+
+    # the packages robotcode requires first, so that PyPI never has a dev version of robotcode without them
+    packages = sorted([*dist_path.glob("robotcode_*.whl"), *dist_path.glob("robotcode_*.tar.gz")])
+    if not packages:
+        # without files, hatch publish would upload all of dist/, robotcode included
+        raise SystemExit(f"found none of the packages that robotcode requires in '{dist_path}'")
+    uploads = [packages, sorted([*dist_path.glob("robotcode-*.whl"), *dist_path.glob("robotcode-*.tar.gz")])]
+    # the credentials come from the environment, so they are not part of a command that an error shows
+    env = {
+        **os.environ,
+        "HATCH_INDEX_USER": os.environ.get("PYPI_USERNAME", ""),
+        "HATCH_INDEX_AUTH": os.environ.get("PYPI_PASSWORD", ""),
+    }
+    try:
+        for files in uploads:
+            print(f"running PyPI upload of {len(files)} files")
+            subprocess.run(
+                ["hatch", "-e", "build", "publish", "--no-prompt", *map(str, files)],
+                check=True,
+                timeout=600,
+                env=env,
+            )
+    except subprocess.SubprocessError as e:
+        raise SystemExit(f"the upload to PyPI failed: {e}") from e
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Publish the latest successful build of main as a dev build.")
-    parser.add_argument("target", choices=["jetbrains", "vscode"], help="the package to publish")
+    parser.add_argument("target", choices=["jetbrains", "vscode", "python"], help="the packages to publish")
     args = parser.parse_args()
 
     dist_path = Path("./dist").absolute()
 
     if args.target == "jetbrains":
         publish_jetbrains(dist_path)
-    else:
+    elif args.target == "vscode":
         publish_vscode(dist_path)
+    else:
+        publish_python(dist_path)
 
 
 if __name__ == "__main__":

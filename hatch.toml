@@ -188,7 +188,7 @@ platform.windows.scripts = [
 skip-install = true
 detached = true
 python = "3.10"
-dependencies = ["GitPython", "semantic-version", "commitizen", "git-cliff"]
+dependencies = ["GitPython", "semantic-version", "packaging", "commitizen", "git-cliff"]
 
 [envs.build.scripts]
 update-changelog = ["python scripts/update_changelog.py"]

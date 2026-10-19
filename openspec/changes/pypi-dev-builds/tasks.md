@@ -4,7 +4,7 @@ Implement this change after `publish-workflow`.
 
 ## 1. Upload script
 
-- [ ] 1.1 Give `scripts/publish_dev.py` the target `python`, as described in design.md:
+- [x] 1.1 Give `scripts/publish_dev.py` the target `python`, as described in design.md:
   - It downloads `python-packages` and `wheel-packages` of the latest successful push run on `main` into `dist/`.
   - It reads the version from the wheel of `robotcode` with `packaging.version.Version`, and skips a release version and a version that PyPI has for `robotcode`, each with a message.
   - Otherwise it uploads the eleven `robotcode_*` packages with `hatch publish`, and after that succeeded, the files of `robotcode`.
@@ -21,7 +21,7 @@ Implement this change after `publish-workflow`.
 
 ## 2. Publish workflow
 
-- [ ] 2.1 In the job `dev` of `.github/workflows/publish.yml`, add after the VS Code step the step `hatch -q run build:publish-dev python`, with `if: ${{ !cancelled() }}` and the environment `GH_TOKEN`, `GH_REPO`, `PYPI_USERNAME` and `PYPI_PASSWORD`. Verify that the file parses as YAML, and that only this step gets the PyPI secrets.
+- [x] 2.1 In the job `dev` of `.github/workflows/publish.yml`, add after the VS Code step the step `hatch -q run build:publish-dev python`, with `if: ${{ !cancelled() }}` and the environment `GH_TOKEN`, `GH_REPO`, `PYPI_USERNAME` and `PYPI_PASSWORD`. Verify that the file parses as YAML, and that only this step gets the PyPI secrets.
 
 ## 3. Verification with the maintainer
 

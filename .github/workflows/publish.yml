@@ -72,6 +72,16 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
 
+      - name: publish the Python packages of the latest successful build of main to PyPI
+        # also when an earlier upload failed
+        if: ${{ !cancelled() }}
+        run: hatch -q run build:publish-dev python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+
   release:
     # only for a successful build of a version tag pushed to this repository, never for a pull request; the build
     # runs for pushes only on main and on version tags, so a push run whose branch starts with "v" is a version tag
