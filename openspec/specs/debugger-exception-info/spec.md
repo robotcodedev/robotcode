@@ -37,12 +37,12 @@ The debugger SHALL advertise `supportsExceptionInfoRequest`. While a run is stop
 
 ### Requirement: Stack trace at a failure stop
 
-The answer to `exceptionInfo` at a failure stop SHALL carry a stack trace in its details: one line per element of the call stack from the stop upward, suites left out, with the element's name as the call stack shows it and the absolute path and line it is at. When Robot Framework logged a Python traceback with the failure the stop shows, the stack trace SHALL end with an empty line and that traceback as Robot Framework logs it, whatever the log level of the run.
+The answer to `exceptionInfo` at a failure stop SHALL carry a stack trace in its details: one line per element of the call stack, outermost first as Python lists calls, suites left out, with the element's name as the call stack shows it and the absolute path and line it is at. When Robot Framework logged a Python traceback with the failure the stop shows, the stack trace SHALL end with an empty line and that traceback as Robot Framework logs it, whatever the log level of the run.
 
 #### Scenario: Calls that led to the failure
 
 - **WHEN** a run stops at the failure of `Should Be Equal    1    2` in line 13 of `fail.robot`, in the user keyword `My Failing Keyword`, which the test `Failing Test` of the suite `Fail` calls in line 6
-- **THEN** the stack trace has the line `My Failing Keyword` with the absolute path of `fail.robot` and `:13`, then the line `Fail.Failing Test` with the same path and `:6`, and no line for the suite `Fail`
+- **THEN** the stack trace has the line `Fail.Failing Test` with the absolute path of `fail.robot` and `:6`, then the line `My Failing Keyword` with the same path and `:13`, and no line for the suite `Fail`
 
 #### Scenario: One keyword level up
 
