@@ -1,8 +1,10 @@
 import contextlib
+import json
 import os
 import shlex
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -29,13 +31,25 @@ def run_upload(store: str, command: List[str], env: Optional[Dict[str, str]] = N
     subprocess.run(command, check=True, timeout=600, env=env)
 
 
+def jetbrains_channel(version: Version) -> str:
+    # an empty channel is the Marketplace's default channel
+    return "dev" if version.prerelease else ""
+
+
+def jetbrains_channel_versions(channel: str) -> set[str]:
+    with urllib.request.urlopen(
+        f"https://plugins.jetbrains.com/api/plugins/26216/updates?channel={channel}&size=100", timeout=60
+    ) as response:
+        return {update["version"] for update in json.load(response)}
+
+
 def publish_jetbrains_plugin(dist_path: Path, version: Version) -> None:
     plugin_path = Path(dist_path, f"robotcode4ij-{version}.zip")
 
     if not plugin_path.exists():
         raise FileNotFoundError(f"JetBrains plugin '{plugin_path}' not found")
 
-    channel = "dev" if version.prerelease else ""
+    channel = jetbrains_channel(version)
 
     print("running JetBrains Marketplace upload")
     # the shell expands the token, so it is not part of the command that an error shows
@@ -47,6 +61,15 @@ def publish_jetbrains_plugin(dist_path: Path, version: Version) -> None:
         check=True,
         timeout=600,
     )
+
+
+def publish_jetbrains_release(dist_path: Path, version: Version) -> None:
+    channel = jetbrains_channel(version)
+    if str(version) in jetbrains_channel_versions(channel):
+        print(f"{version} is already in the JetBrains Marketplace channel {channel or 'default'}")
+        return
+
+    publish_jetbrains_plugin(dist_path, version)
 
 
 def main() -> None:
@@ -71,19 +94,24 @@ def main() -> None:
         uploads.append(
             (
                 "VS Code Marketplace",
-                lambda: run_upload("VS Code Marketplace", ["npx", "vsce", "publish", "-i", str(vsix_path)]),
+                lambda: run_upload(
+                    "VS Code Marketplace", ["npx", "vsce", "publish", "-i", str(vsix_path), "--skip-duplicate"]
+                ),
             )
         )
-    uploads.append(("Open VSX", lambda: run_upload("Open VSX", ["npx", "ovsx", "publish", str(vsix_path)])))
+    uploads.append(
+        ("Open VSX", lambda: run_upload("Open VSX", ["npx", "ovsx", "publish", str(vsix_path), "--skip-duplicate"]))
+    )
     uploads.append(("PyPI", lambda: run_upload("PyPI", ["hatch", "-e", "build", "publish", "--no-prompt"], pypi_env)))
-    uploads.append(("JetBrains Marketplace", lambda: publish_jetbrains_plugin(dist_path, version)))
+    uploads.append(("JetBrains Marketplace", lambda: publish_jetbrains_release(dist_path, version)))
 
-    # a failed upload must not keep the release from the other stores
+    # a failed upload must not keep the release from the other stores, and a store that has the version is skipped,
+    # so that a re-run uploads only what is missing
     failed = []
     for store, upload in uploads:
         try:
             upload()
-        except (subprocess.SubprocessError, OSError) as e:
+        except (subprocess.SubprocessError, OSError, ValueError) as e:
             print(f"{store} upload failed: {e}", file=sys.stderr)
             failed.append(store)
 

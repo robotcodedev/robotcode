@@ -166,6 +166,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: publish vsix, python packages and jetbrains plugin
+        # also when only the GitHub release failed, but not without the packages and the release information
+        if: ${{ !cancelled() && steps.get_release_informations.outcome == 'success' }}
         run: hatch -q run build:publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

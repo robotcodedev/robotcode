@@ -17,7 +17,8 @@ Also, a failed release upload goes unnoticed: `scripts/publish.py` swallows the 
   - after a successful build of a version tag, it creates the GitHub release with the packages of that build and uploads the release to the VS Code Marketplace, Open VSX, PyPI and the JetBrains Marketplace, with the same rules as before.
 - The build workflow `build-test-package-publish.yml` becomes `build-test-package.yml`, named "build test and package", and loses its `publish` job.
 - The publish workflow publishes a release only for a successful build of a version tag pushed to this repository, never for a build of a pull request or of a push to a branch.
-- A failed release upload no longer goes unnoticed. The upload still tries every other store, then fails the job, and the log shows the store's answer.
+- A failed release upload no longer goes unnoticed. The upload still tries every other store, also when creating the GitHub release failed, then fails the job, and the log shows the store's answer.
+- Every release upload skips a version that its store already has, so a re-run of the release job after a failure uploads only what is missing.
 - The README badge, the CI workflow named in `CONTRIBUTING.md`, the run lookup of the dev builds and the open changes `agent-plugin-release` and `intellij-ui-tests` follow the new names.
 
 Not part of this change:
@@ -33,10 +34,10 @@ _None._
 ### Modified Capabilities
 
 - `release-publishing`:
-  - adds when and by which workflow a release is published, that only version tags of this repository publish one, and that a failed release upload fails the run without stopping the other uploads;
+  - adds when and by which workflow a release is published, that only version tags of this repository publish one, that a failed release upload fails the run without stopping the other uploads, and that a re-run uploads only what is missing;
   - changes the JetBrains requirement "A version tag publishes the JetBrains plugin to the Marketplace": the uploaded file is the one the tag's build packaged, not one the uploading run packaged.
 
-  The capability is introduced by the change `intellij-marketplace-publish`, which isn't archived yet.
+  The capability is a main spec since `vscode-dev-builds` was archived. The JetBrains requirement that this change modifies comes with `intellij-marketplace-publish`, which isn't archived yet.
 
 ## Impact
 
@@ -44,8 +45,8 @@ _None._
 - `.github/workflows/publish-dev.yml` → `publish.yml`:
   - the new name;
   - the `workflow_run` trigger;
-  - a release job with the steps of the old `publish` job.
-- `scripts/publish.py`: every upload is tried, and failures fail the script at the end. The PyPI credentials come from environment variables instead of the command line.
+  - a release job with the steps of the old `publish` job, whose upload also runs when only the GitHub release failed.
+- `scripts/publish.py`: every upload is tried and skips a version its store already has, and failures fail the script at the end. The lookup of the JetBrains versions moves here from `scripts/publish_dev.py`. The PyPI credentials come from environment variables instead of the command line.
 - `scripts/publish_dev.py`: looks up the runs of `build-test-package.yml`.
 - `README.md`: the build status badge and its link.
 - `CONTRIBUTING.md`: the file name of the CI workflow.

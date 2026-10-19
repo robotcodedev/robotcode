@@ -14,6 +14,17 @@
   - with a failing `vsce`, the other three still run, and the script exits with an error that names the VS Code Marketplace;
   - no output contains a secret, no command line contains the PyPI credentials, and `hatch` gets them from its environment (the JetBrains token reaches `curl` as an argument that the shell expands, as before);
   - `hatch run lint:style` and `hatch run lint:typing` pass.
+- [x] 2.2 In `scripts/publish.py`, let every release upload skip a version its store has:
+  - `vsce publish` and `ovsx publish` get `--skip-duplicate`;
+  - the lookup of the JetBrains versions moves from `scripts/publish_dev.py` into `scripts/publish.py`, with the channel as parameter (`https://plugins.jetbrains.com/api/plugins/26216/updates?channel=<channel>&size=100`), and both scripts use it;
+  - before the JetBrains upload of a release, a version that the upload's channel lists is skipped with a message.
+
+  Verify with the stubs of 2.1 and the lookup replaced in the test:
+  - `vsce` and `ovsx` get `--skip-duplicate`;
+  - a version that the JetBrains lookup lists isn't uploaded, and the script ends successfully;
+  - the stub test of `publish_dev.py` still passes;
+  - the lookup works against the real API: 2.7.0 in the default channel, 2.8.0-dev.508 in `dev`;
+  - `hatch run lint:style` and `hatch run lint:typing` pass.
 
 ## 3. Publish workflow
 
@@ -33,6 +44,7 @@
   - Steps: checkout of `head_sha` with `fetch-depth: 0`; Python 3.10; Hatch; Node.js 26 with the current npm and the node modules; the four artifacts of the build run (`run-id`, `github-token`) into `dist/`; the release information; the GitHub release with `tag_name: ${{ github.event.workflow_run.head_branch }}`; `hatch -q run build:publish` with the five secrets.
 
   Verify that the file parses as YAML, and that every `if`, the `tag_name` and the `run-id` use `github.event.workflow_run` and never `github.ref`.
+- [x] 3.3 In the job `release` of `publish.yml`, give the step "publish vsix, python packages and jetbrains plugin" the condition `if: ${{ !cancelled() && steps.get_release_informations.outcome == 'success' }}`, so that it also runs when only the GitHub release step failed. Verify that the file parses as YAML, and that the condition names the id `get_release_informations` of the release information step.
 
 ## 4. References
 
@@ -52,9 +64,10 @@
 - [ ] 5.2 At the next version tag, check:
   - the release job creates the GitHub release with the VSIX, the Python packages and the JetBrains plugin;
   - its log shows the answer of every store, and every store has the version;
-  - the runs for untagged builds skipped the release job.
+  - the runs for untagged builds skipped the release job;
+  - a re-run of the release job after the release uploads nothing and ends successfully.
 
 ## Workflow follow-up
 
-- Archive this change after `intellij-marketplace-publish`. The MODIFIED requirement needs the capability `release-publishing` in the main specs.
+- Archive this change after `intellij-marketplace-publish`. The MODIFIED requirement needs the JetBrains requirement of that change in the main spec `release-publishing`.
 - Trusted publishing (OIDC) gets its own change, which registers `publish.yml` with the stores.

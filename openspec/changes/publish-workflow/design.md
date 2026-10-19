@@ -27,7 +27,9 @@ See proposal.md for the motivation. The state that shapes the approach, checked 
   - It starts a workflow when another workflow, named by its `name:`, completes. It uses the triggered workflow's file from the default branch.
   - The run has the repository's secrets, also when the completed run was for a pull request from a fork.
   - Its event carries the completed run's `id`, `conclusion`, `event`, `head_branch`, `head_sha` and `head_repository`. For a tag push, `head_branch` is the tag name: the run of `v2.7.0` lists `v2.7.0` as its branch.
-- **`softprops/action-gh-release`** takes the tag from `tag_name`, which defaults to `github.ref_name`. In a `workflow_run` run, that is the default branch.
+- **`softprops/action-gh-release`** takes the tag from `tag_name`, which defaults to `github.ref_name`. In a `workflow_run` run, that is the default branch. If the tag has a release already, the action updates it, and `overwrite_files`, true by default, replaces files of the same name.
+- **The JetBrains Marketplace** lists the versions of a channel at `https://plugins.jetbrains.com/api/plugins/26216/updates?channel=<channel>`. An empty channel is the default channel (2.7.0, 2.5.1, …), and `dev` the dev channel. `vsce publish` and `ovsx publish` skip a version the store has with `--skip-duplicate`, as the dev builds use them.
+- **A re-run** of a workflow run uses the commit and the workflow file of the original run. A job reads the secrets when it starts, so a replaced token reaches a re-run.
 - **`actions/download-artifact`** downloads the artifacts of another run with `run-id` and `github-token`, which need `actions: read`.
 - **`concurrency`**: a group holds one running and one pending run. A newly queued run replaces the pending one.
 - **Branch protection of `main`** requires checks by job name only. Renaming a workflow file doesn't touch them.
@@ -81,6 +83,14 @@ A `branches` filter on the trigger would save the skipped runs, but it isn't doc
 - **Upload:** `hatch -q run build:publish` with the same five secrets as before, without the tag condition, because the job runs only for tags.
 - **Concurrency:** the group `publish-release-<tag>`, so that two runs for the same tag don't upload at once and runs for different tags don't replace each other.
 
+### The upload also runs when only the GitHub release failed
+
+The upload step gets `if: ${{ !cancelled() && steps.get_release_informations.outcome == 'success' }}`. It runs after a failed GitHub release step, but not after a failed download or release information step, because then it has nothing to upload.
+
+Alternatives:
+- **`!cancelled()` alone.** The step would also run after a failed download.
+- **The uploads before the GitHub release.** Users could then get the version before its release notes are on GitHub.
+
 ### Concurrency of the dev job
 
 The group `publish-dev` moves from the workflow to the job `dev`. At workflow level, every build's `workflow_run` run would queue in it and could replace a pending nightly run.
@@ -91,7 +101,14 @@ The group `publish-dev` moves from the workflow to the job `dev`. At workflow le
 
 `hatch publish` gets the PyPI credentials from `HATCH_INDEX_USER` and `HATCH_INDEX_AUTH`, set from `PYPI_USERNAME` and `PYPI_PASSWORD`. That way they appear neither on its command line nor in an error message that prints the command.
 
-Alternative: one workflow step per store, like the dev job. Each step would see only its own token, but `publish.py` would need targets and the job four steps. The trusted-publishing change can revisit this.
+Every upload skips a version its store has, so that a re-run of the release job uploads only what is missing:
+- `vsce publish` and `ovsx publish` get `--skip-duplicate`;
+- `hatch publish` skips files PyPI has anyway;
+- before the JetBrains upload, the script looks up the versions of the upload's channel and skips a listed version.
+
+The lookup moves from `publish_dev.py` into `publish.py`, with the channel as parameter, and both scripts use it.
+
+Alternative: one job per store. GitHub could then re-run only the failed job, and each job would see only its own token, but every job needs its own checkout, setup and download. The trusted-publishing change can revisit this.
 
 ### The build workflow becomes "build test and package"
 
@@ -105,9 +122,9 @@ Alternative: one workflow step per store, like the dev job. Each step would see 
 
 - **[A release now needs the whole build run to succeed]** → `workflow_run` reports one conclusion for the run. A failure in `publish-test-results` now also stops a release, which the old `publish` job ignored.
 - **[A skipped `publish` run per build]** → The Actions list gets one skipped run for every build. The trigger can't filter more safely, see the decision above.
-- **[The release job runs from the default branch's `publish.yml`]** → Changes to it can only be tried on `main`. The next version tag is the first real run. If an upload fails there, the maintainer uploads the files of the GitHub release by hand, as before `intellij-marketplace-publish`.
+- **[The release job runs from the default branch's `publish.yml`]** → Changes to it can only be tried on `main`. The next version tag is the first real run. If an upload fails there because of a token or a store, the maintainer fixes that and re-runs the release job, which uploads only what is missing. A fix in the workflow or in the scripts doesn't reach a re-run, because it uses the workflow file of the original run and the scripts of the tag's commit. Then the maintainer publishes the missing part by hand, as before `intellij-marketplace-publish`.
 - **[No successful run of `build-test-package.yml` right after the rename]** → The nightly upload fails until the first green build of the new file on `main`. The commit with the rename starts that build.
-- **[The MODIFIED requirement needs the capability in the main specs]** → `release-publishing` comes from `intellij-marketplace-publish`, so that change has to be archived first. `openspec validate` already reports this as information.
+- **[The MODIFIED requirement needs the JetBrains requirement in the main spec]** → `release-publishing` is a main spec since `vscode-dev-builds` was archived, but the JetBrains requirement comes with `intellij-marketplace-publish`. So that change has to be archived first. `openspec validate` already reports this as information.
 
 ## Migration Plan
 
@@ -115,4 +132,4 @@ Alternative: one workflow step per store, like the dev job. Each step would see 
 2. Start "publish" by hand and check that the dev job finds the run of `build-test-package.yml`.
 3. At the next version tag, check the GitHub release and the uploads in the log of the release job.
 
-If the release job fails at a tag, the maintainer publishes what is missing by hand, from the GitHub release or the build's artifacts, as before `intellij-marketplace-publish`, and fixes the job before the next tag. A re-run of the failed `publish` run doesn't help with a fix: GitHub re-runs it with the workflow file of the original run.
+If an upload fails at a tag, the maintainer fixes its cause, for example replaces a token, and re-runs the release job; it uploads only what is missing. If the failure needs a fix in the workflow or in the scripts, the maintainer publishes the missing part by hand, from the GitHub release or the build's artifacts, and fixes the job before the next tag.

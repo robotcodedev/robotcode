@@ -1,9 +1,7 @@
 import argparse
 import contextlib
-import json
 import subprocess
 import sys
-import urllib.request
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
@@ -23,7 +21,7 @@ if __name__ == "__main__" and not __package__:
 
 from semantic_version import Version
 
-from scripts.publish import publish_jetbrains_plugin
+from scripts.publish import jetbrains_channel_versions, publish_jetbrains_plugin
 
 
 def latest_successful_main_run() -> str:
@@ -60,13 +58,6 @@ def latest_successful_main_run() -> str:
     return run_id
 
 
-def dev_channel_versions() -> set[str]:
-    with urllib.request.urlopen(
-        "https://plugins.jetbrains.com/api/plugins/26216/updates?channel=dev&size=100", timeout=60
-    ) as response:
-        return {update["version"] for update in json.load(response)}
-
-
 def download_artifact(run_id: str, name: str, dist_path: Path) -> None:
     subprocess.run(
         ["gh", "run", "download", run_id, "--name", name, "--dir", str(dist_path)],
@@ -90,7 +81,7 @@ def publish_jetbrains(dist_path: Path) -> None:
         print(f"{version} is a release, its tag publishes it")
         return
 
-    if str(version) in dev_channel_versions():
+    if str(version) in jetbrains_channel_versions("dev"):
         print(f"{version} is already in the channel dev")
         return
 

@@ -41,12 +41,31 @@ Every upload of a release or a dev build to a store, and every GitHub release, S
 
 ### Requirement: A failed release upload doesn't stop the other uploads
 
-When a store rejects the upload of a release, the CI SHALL still upload the release to the other stores. Afterwards it SHALL fail the run and show the store's response in the log.
+When a store rejects the upload of a release, or the GitHub release can't be created, the CI SHALL still upload the release to the other stores. Afterwards it SHALL fail the run and show the response in the log.
 
 #### Scenario: Rejected VS Code Marketplace token
 
 - **WHEN** the VS Code Marketplace rejects the token during the upload of release 2.9.0
 - **THEN** Open VSX, PyPI and the JetBrains Marketplace still receive 2.9.0, and the run fails with the Marketplace's error message in its log
+
+#### Scenario: Failed GitHub release
+
+- **WHEN** creating the GitHub release of 2.9.0 fails
+- **THEN** the VS Code Marketplace, Open VSX, PyPI and the JetBrains Marketplace still receive 2.9.0, and the run fails
+
+### Requirement: A re-run of a release uploads only what is missing
+
+When the publishing of a release runs again, the CI SHALL skip every store that already has the version and SHALL update the existing GitHub release, so that a re-run after a failed upload only uploads what is missing.
+
+#### Scenario: Re-run after a failed upload
+
+- **WHEN** the upload of 2.9.0 to PyPI failed, and the maintainer replaced the PyPI token and re-ran the release job
+- **THEN** PyPI receives 2.9.0, the other stores are skipped because they have it, and the run succeeds
+
+#### Scenario: Re-run of a complete release
+
+- **WHEN** every store has 2.9.0, and the release job runs again
+- **THEN** nothing is uploaded, and the run succeeds
 
 ## MODIFIED Requirements
 
