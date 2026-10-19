@@ -1023,7 +1023,7 @@ class ImportsManager:
                     # must fail validation so dependents are rebuilt against
                     # the buffer instead of being served from cached disk
                     # state. Only unopened resources are probed on disk.
-                    res_document = self.documents_manager.get(Uri.from_path(res_source))
+                    res_document = self.documents_manager.get(Uri.from_path(res_source).normalized())
                     if res_document is not None:
                         res_meta = RobotFileMeta.from_document(res_document)
                     else:
