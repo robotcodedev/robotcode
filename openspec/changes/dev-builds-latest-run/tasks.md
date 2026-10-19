@@ -21,6 +21,15 @@ This change builds on the target `python` that `pypi-dev-builds` adds to `script
   - the existing stub tests pass with `--run-id`;
   - `hatch run lint:style` and `hatch run lint:typing` pass.
 
+- [ ] 1.2 Let `latest-run` follow a newer run: while the latest run isn't completed, it lists the newest push run on `main` again every 60 seconds instead of reading the first one with `gh run view`. The two hours count from the start.
+
+  Verify with the stubs of 1.1:
+  - a newer run that starts while the first one runs is waited for and handed on, and the result of the first one is ignored;
+  - a newer run that fails hands nothing on, also when the first one succeeded;
+  - runs that keep replacing each other until the limit hand nothing on;
+  - the other cases of 1.1 still pass;
+  - `hatch run lint:style` and `hatch run lint:typing` pass.
+
 ## 2. Publish workflow
 
 - [x] 2.1 In the job `dev` of `.github/workflows/publish.yml`, add after the setup the step with `id: build` that runs `hatch -q run build:publish-dev latest-run` with `GH_TOKEN` and `GH_REPO`. Pass `--run-id ${{ steps.build.outputs.run-id }}` to the three upload steps, and give each of them `if: ${{ !cancelled() && steps.build.outputs.run-id != '' }}`. Verify that the file parses as YAML, that every upload step has the condition and the option, and that the secrets of each step are unchanged.

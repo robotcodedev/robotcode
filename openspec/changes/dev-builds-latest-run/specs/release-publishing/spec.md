@@ -4,7 +4,7 @@
 
 ### Requirement: A night's dev builds come from the latest run on main
 
-Every night, and when the maintainer starts it by hand, the CI SHALL take the latest CI run for a push to `main`, wait up to two hours if it is still running, and publish the dev builds of all stores from that one run. If that run doesn't succeed, or isn't done in time, no store SHALL get a dev build from this upload.
+Every night, and when the maintainer starts it by hand, the CI SHALL wait up to two hours until the latest CI run for a push to `main` is done, following a newer run that starts meanwhile, and publish the dev builds of all stores from that one run. If that run doesn't succeed, or isn't done in time, no store SHALL get a dev build from this upload.
 
 #### Scenario: Same build in every store
 
@@ -20,6 +20,11 @@ Every night, and when the maintainer starts it by hand, the CI SHALL take the la
 
 - **WHEN** the latest run on `main` is still running when the upload starts, and it succeeds an hour later
 - **THEN** the upload waits for it and then publishes its dev builds
+
+#### Scenario: Newer build while waiting
+
+- **WHEN** the upload waits for the latest run on `main`, and a push to `main` starts a newer run before that one is done
+- **THEN** the upload waits for the newer run and publishes its dev builds if it succeeds, and ignores the result of the run it waited for first
 
 #### Scenario: Build not done in time
 

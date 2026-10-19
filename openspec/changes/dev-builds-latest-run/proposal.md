@@ -7,7 +7,7 @@ The nightly upload publishes the dev builds of the most recent *successful* run 
 ## What Changes
 
 - Every dev build of a night comes from one run: the latest CI run for a push to `main`. This holds for the VS Code Marketplace and Open VSX, the JetBrains channel `dev` and PyPI.
-- If that run is still running, the upload waits for it, at most two hours.
+- If that run is still running, the upload waits for it, at most two hours in all. If a newer push starts a run meanwhile, the upload waits for that one instead.
 - If that run doesn't succeed, or isn't done in time, no store gets a dev build that night. The upload says so in its log and still ends successfully. An older green run is never taken.
 - The release commit on `main` stays as before: its build carries the release version, so the upload publishes nothing and leaves the version to the tag.
 
