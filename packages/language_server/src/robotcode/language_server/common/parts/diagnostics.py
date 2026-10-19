@@ -121,6 +121,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._current_diagnostics_task: Optional[Task[Any]] = None
         self._diagnostics_task_timeout = 300
 
+        # Seconds of the delays that gather changes before the analysis reacts to them.
+        self._break_diagnostics_loop_delay: float = 1
+        self._diagnostics_loop_idle_interval: float = 1
+        self._document_diagnostics_debounce: float = 0.75
+        self._refresh_delay: float = 1
+
     def server_initialized(self, sender: Any) -> None:
         if not self.client_supports_pull:
             self.parent.documents.did_open.add(self.update_document_diagnostics)
@@ -313,7 +319,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 self.break_diagnostics_timer = None
 
             if not now:
-                self.break_diagnostics_timer = Timer(1, self._break_workspace_diagnostics_loop)
+                self.break_diagnostics_timer = Timer(
+                    self._break_diagnostics_loop_delay, self._break_workspace_diagnostics_loop
+                )
                 self.break_diagnostics_timer.start()
                 return
 
@@ -363,7 +371,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
                 if len(documents) == 0:
                     self.workspace_analyzed_event.set()
-                    check_current_task_canceled(1)
+                    check_current_task_canceled(self._diagnostics_loop_idle_interval)
                     continue
 
                 self.workspace_analyzed_event.clear()
@@ -548,7 +556,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 self.on_workspace_diagnostics_end(self)
 
                 if not done_something:
-                    check_current_task_canceled(1)
+                    check_current_task_canceled(self._diagnostics_loop_idle_interval)
 
     def _note_marks(self, document: TextDocument) -> Tuple[DiagnosticsData, int]:
         """The diagnostics data of `document` and its count of marks, as the loop notes them when it analyzes it."""
@@ -618,7 +626,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         collect_slow: bool,
     ) -> None:
         if debounce:
-            check_current_task_canceled(0.75)
+            check_current_task_canceled(self._document_diagnostics_debounce)
 
         data.skipped_entries = False
         collected_keys: List[Any] = []
@@ -770,7 +778,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 self.refresh_timer = None
 
             if not now:
-                self.refresh_timer = Timer(1, self._refresh)
+                self.refresh_timer = Timer(self._refresh_delay, self._refresh)
                 self.refresh_timer.start()
                 return
 
