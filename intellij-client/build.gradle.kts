@@ -3,6 +3,7 @@ import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.Constants.Constraints
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.extensions.IntelliJPlatformTestingExtension
 import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 import org.jetbrains.intellij.platform.gradle.providers.ProductReleasesFilterParameters
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
@@ -223,9 +224,24 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+// the IDE version that the runIde* tasks below start instead of their own, a release such as -PrunIdeVersion=2026.2.3
+// or an EAP build number; the plugin is still built against platformVersion
+val runIdeVersion: String? = providers.gradleProperty("runIdeVersion").orNull
+
+// starts the task's IDE in runIdeVersion, when given, with a sandbox of its own for that version, because the default
+// sandbox belongs to platformVersion
+fun IntelliJPlatformTestingExtension.RunIdeParameters.applyRunIdeVersion() {
+    runIdeVersion?.let {
+        version = it
+        sandboxDirectory = intellijPlatform.sandboxContainer.dir("${project.name}/PY-$it")
+    }
+}
+
 // Configure UI tests plugin
 // Read more: https://github.com/JetBrains/intellij-ui-test-robot
 intellijPlatformTesting.runIde.register("runIdeForUiTests") {
+    applyRunIdeVersion()
+
     task {
         jvmArgumentProviders += CommandLineArgumentProvider {
             listOf(
@@ -244,16 +260,24 @@ intellijPlatformTesting.runIde.register("runIdeForUiTests") {
 
 intellijPlatformTesting.runIde.register("runIdePyCharmProf") {
     type = IntelliJPlatformType.PyCharmProfessional
+    applyRunIdeVersion()
 }
 
 intellijPlatformTesting.runIde.register("runIdePyCharmCommunityEAP") {
     type = IntelliJPlatformType.PyCharmCommunity
     version = "LATEST-EAP-SNAPSHOT"
+    applyRunIdeVersion()
 }
 
 intellijPlatformTesting.runIde.register("runIdeIntellijIdeaC") {
     type = IntelliJPlatformType.IntellijIdeaCommunity
+    applyRunIdeVersion()
     plugins {
-        plugin("PythonCore:261.22158.182")
+        // the fixed Python plugin only fits platformVersion; another IDE version gets the newest compatible one
+        if (runIdeVersion != null) {
+            compatiblePlugin("PythonCore")
+        } else {
+            plugin("PythonCore:261.22158.182")
+        }
     }
 }
