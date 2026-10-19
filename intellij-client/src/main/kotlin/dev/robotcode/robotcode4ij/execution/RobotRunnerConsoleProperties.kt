@@ -38,7 +38,8 @@ class RobotRunnerConsoleProperties(
         return RobotSMTestLocator()
     }
 
-    // a failure that the test caught before is no place to navigate to
+    // IntelliJ opens the first location of the stack trace, the call in the test that led to the first failure; a
+    // failure that the test caught before is no place to navigate to
     override fun getErrorNavigatable(location: Location<*>, stacktrace: String): Navigatable? =
         super.getErrorNavigatable(location, failurePathOf(stacktrace))
     

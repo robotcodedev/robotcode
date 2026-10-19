@@ -11,6 +11,7 @@ class RobotCodeConsoleFilterTest {
         "/home/me/my project/tests/sample.robot",
         "/home/me/copy (2)/tests/sample.robot",
         "C:\\Users\\me\\project\\tests\\sample.robot",
+        "C:\\Users\\me\\my project\\tests\\sample.robot",
         "/project/results/output.xml",
         "C:\\Users\\me\\project\\results\\report.html",
         "tests/sample.robot"
@@ -21,30 +22,47 @@ class RobotCodeConsoleFilterTest {
     }
 
     @Test
+    fun aCallAtTheStartOfALine() {
+        assertEquals(
+            listOf(Triple("/project/resources/common.resource", "/project/resources/common.resource", 4)),
+            links("  File \"/project/resources/common.resource\", line 4, in BuiltIn.Should Be Equal\n")
+        )
+    }
+
+    @Test
     fun aLocationAtTheEndOfALine() {
+        // as a log message in the results tree ends
         assertEquals(
             listOf(Triple("/project/resources/common.resource:4", "/project/resources/common.resource", 4)),
-            links("    at BuiltIn.Should Be Equal (/project/resources/common.resource:4)\n")
+            links("Opened http://localhost:8080 as alice (/project/resources/common.resource:4)\n")
         )
     }
 
     @Test
     fun pathsWithSpacesAndParentheses() {
         assertEquals(
-            listOf(Triple("/home/me/my project/tests/sample.robot:7", "/home/me/my project/tests/sample.robot", 7)),
-            links("    at common.Build Greeting (/home/me/my project/tests/sample.robot:7)")
+            listOf(Triple("/home/me/my project/tests/sample.robot", "/home/me/my project/tests/sample.robot", 7)),
+            links("  File \"/home/me/my project/tests/sample.robot\", line 7, in common.Build Greeting")
         )
-        // the keyword's name and the path both contain parentheses
+        // the path and the keyword's name both contain parentheses
+        assertEquals(
+            listOf(Triple("/home/me/copy (2)/tests/sample.robot", "/home/me/copy (2)/tests/sample.robot", 3)),
+            links("  File \"/home/me/copy (2)/tests/sample.robot\", line 3, in Greet (Twice)")
+        )
+        // the message and the path at its end both contain parentheses
         assertEquals(
             listOf(Triple("/home/me/copy (2)/tests/sample.robot:3", "/home/me/copy (2)/tests/sample.robot", 3)),
-            links("    at Greet (Twice) (/home/me/copy (2)/tests/sample.robot:3)")
+            links("Greeted (twice) (/home/me/copy (2)/tests/sample.robot:3)")
         )
     }
 
     @Test
     fun aWindowsPathWithADriveLetterAndBackslashes() {
         val path = "C:\\Users\\me\\project\\tests\\sample.robot"
-        assertEquals(listOf(Triple("$path:12", path, 12)), links("    at common.Build Greeting ($path:12)"))
+        assertEquals(listOf(Triple(path, path, 12)), links("  File \"$path\", line 12, in common.Build Greeting"))
+        assertEquals(listOf(Triple("$path:12", path, 12)), links("Opened the shop ($path:12)"))
+        val withSpace = "C:\\Users\\me\\my project\\tests\\sample.robot"
+        assertEquals(listOf(Triple(withSpace, withSpace, 5)), links("  File \"$withSpace\", line 5, in Check Value"))
     }
 
     @Test
@@ -61,12 +79,18 @@ class RobotCodeConsoleFilterTest {
     fun noLinkWithoutAnExistingAbsoluteFile() {
         assertEquals(listOf<Any>(), links("Output:  NONE"))
         // a relative path, also when such a file exists relative to somewhere
-        assertEquals(listOf<Any>(), links("    at Keyword (tests/sample.robot:3)"))
+        assertEquals(listOf<Any>(), links("  File \"tests/sample.robot\", line 3, in Keyword"))
+        assertEquals(listOf<Any>(), links("Opened the shop (tests/sample.robot:3)"))
         assertEquals(listOf<Any>(), links("Log:     tests/sample.robot"))
-        // a location that does not end the line, as one inside a message
+        // a call that does not begin the line or a location that does not end it, as one inside a message
+        assertEquals(
+            listOf<Any>(),
+            links("expected File \"/project/resources/common.resource\", line 4 but got something else")
+        )
         assertEquals(listOf<Any>(), links("expected (/project/resources/common.resource:4) but got something else"))
         // a file that is not there
-        assertEquals(listOf<Any>(), links("    at Keyword (/project/missing.robot:3)"))
+        assertEquals(listOf<Any>(), links("  File \"/project/missing.robot\", line 3, in Keyword"))
+        assertEquals(listOf<Any>(), links("Opened the shop (/project/missing.robot:3)"))
         assertEquals(listOf<Any>(), links("Report:  /project/results/report.html"))
     }
 }

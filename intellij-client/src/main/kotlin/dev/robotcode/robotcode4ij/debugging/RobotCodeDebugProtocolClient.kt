@@ -103,6 +103,10 @@ data class RobotExecutionAttributes(
     }
 }
 
+// indices into failedKeywords: the failed keyword whose message and caught mark are the failure's, and the failed
+// keywords from the innermost call out to the test
+data class RobotFailure(var keyword: Int = 0, var calls: List<Int> = emptyList())
+
 data class RobotExecutionEventArguments(
     var type: String,
     var id: String,
@@ -110,13 +114,15 @@ data class RobotExecutionEventArguments(
     var parentId: String? = null,
     var attributes: RobotExecutionAttributes,
     var failedKeywords: Array<RobotExecutionAttributes>? = null,
+    // in the order their keywords ended
+    var failures: Array<RobotFailure>? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-        
+
         other as RobotExecutionEventArguments
-        
+
         if (type != other.type) return false
         if (id != other.id) return false
         if (attributes != other.attributes) return false
@@ -124,15 +130,20 @@ data class RobotExecutionEventArguments(
             if (other.failedKeywords == null) return false
             if (!failedKeywords.contentEquals(other.failedKeywords)) return false
         } else if (other.failedKeywords != null) return false
-        
+        if (failures != null) {
+            if (other.failures == null) return false
+            if (!failures.contentEquals(other.failures)) return false
+        } else if (other.failures != null) return false
+
         return true
     }
-    
+
     override fun hashCode(): Int {
         var result = type.hashCode()
         result = 31 * result + id.hashCode()
         result = 31 * result + attributes.hashCode()
         result = 31 * result + (failedKeywords?.contentHashCode() ?: 0)
+        result = 31 * result + (failures?.contentHashCode() ?: 0)
         return result
     }
 }

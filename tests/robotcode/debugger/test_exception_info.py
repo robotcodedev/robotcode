@@ -206,7 +206,7 @@ def test_the_stopped_event_keeps_its_description_and_text(tmp_path: Path) -> Non
 
 
 def test_the_stack_trace_lists_the_calls_that_led_to_the_failure(tmp_path: Path) -> None:
-    """Newest first, one line per element with its absolute path and line, without the suite.
+    """Outermost first as Python lists calls, one line per element with its absolute path and line, without the suite.
 
     There is no traceback, since Robot Framework leaves its own code out of tracebacks and logs `None` for
     `Should Be Equal`.
@@ -215,7 +215,7 @@ def test_the_stack_trace_lists_the_calls_that_led_to_the_failure(tmp_path: Path)
 
     stack_trace = _stack_trace(stops[0])
     path = _suite_path(tmp_path, stack_trace)
-    assert stack_trace == f"My Failing Keyword  {path}:13\nSuite.Compare       {path}:6"
+    assert stack_trace == f"Suite.Compare       {path}:6\nMy Failing Keyword  {path}:13"
 
 
 def test_one_keyword_level_up_the_stack_trace_starts_at_the_test(tmp_path: Path) -> None:

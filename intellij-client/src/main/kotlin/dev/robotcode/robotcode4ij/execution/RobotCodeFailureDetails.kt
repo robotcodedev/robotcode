@@ -1,42 +1,68 @@
 package dev.robotcode.robotcode4ij.execution
 
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionAttributes
+import dev.robotcode.robotcode4ij.debugging.RobotFailure
 
 // the line above a failure that the test caught before, which Robot Framework's log keeps collapsed
 private const val CAUGHT = "Caught"
 
+// the start of the line of a call, as Python starts the lines of a traceback
+private const val CALL_PREFIX = "  File \""
+
 /**
- * The stack trace of a test that failed in the keywords [failedKeywords], which the listener reports newest first:
- * one line per keyword, innermost first, with the keyword's library or resource and the file and line of its call;
- * then the keywords whose failure was caught, each failure under a line with its message. Null for a test that did not
- * fail in a keyword.
+ * The stack trace of a test that failed in the keywords [failedKeywords], which the listener groups into [failures]:
+ * each failure with its calls as Python lists them, from the call in the test inward, one line per call with its file
+ * and line and the keyword with its library or resource. The failures that made the test fail come first, several of
+ * them after an empty line and each under a line with its message; then those the test caught before, each under a
+ * line with its message. Null for a test without failures, for example one that failed in its suite setup.
  */
-internal fun failureStackTrace(failedKeywords: Array<RobotExecutionAttributes>?): String? {
-    if (failedKeywords.isNullOrEmpty()) return null
-    val (caught, failure) = failedKeywords.reversed().partition { it.caught == true }
-    val lines = failure.map(::stackTraceLine).toMutableList()
-    caught.forEachIndexed { index, keyword ->
-        // the keywords of one caught failure share its message
-        if (index == 0 || keyword.message != caught[index - 1].message) lines.add(caughtLine(keyword.message))
-        lines.add(stackTraceLine(keyword))
+internal fun failureStackTrace(
+    failedKeywords: Array<RobotExecutionAttributes>?,
+    failures: Array<RobotFailure>?,
+): String? {
+    if (failedKeywords == null || failures.isNullOrEmpty()) return null
+    val (caught, failed) = failures.partition { failedKeywords[it.keyword].caught == true }
+    val lines = mutableListOf<String>()
+    // IntelliJ prints the stack trace right below the test's failure message, so the empty line keeps the message line
+    // of the first failure apart from it; a single failure needs no line with its message, that message stands above
+    if (failed.size > 1) lines.add("")
+    for (failure in failed) {
+        if (failed.size > 1) lines.add(firstLine(failedKeywords[failure.keyword].message).orEmpty())
+        lines.addAll(callLines(failure.calls.map { failedKeywords[it] }))
+    }
+    for (failure in caught) {
+        lines.add(caughtLine(failedKeywords[failure.keyword].message))
+        lines.addAll(callLines(failure.calls.map { failedKeywords[it] }))
     }
     return lines.joinToString("\n")
 }
 
-private fun caughtLine(message: String?): String {
-    val first = message?.lineSequence()?.first()?.takeIf { it.isNotBlank() }
-    return if (first == null) CAUGHT else "$CAUGHT: $first"
-}
+private fun firstLine(message: String?): String? = message?.lineSequence()?.first()?.takeIf { it.isNotBlank() }
+
+private fun caughtLine(message: String?): String = firstLine(message)?.let { "$CAUGHT: $it" } ?: CAUGHT
+
+// the calls of a failure, given innermost first, from the outside in; a call on the line of the call it ran in, as a
+// keyword that a Run Keyword variant runs, is left out, so that the list does not show the same code twice
+private fun callLines(calls: List<RobotExecutionAttributes>): List<String> =
+    calls.filterIndexed { index, call ->
+        val outer = calls.getOrNull(index + 1)
+        outer == null || call.source != outer.source || call.lineno != outer.lineno
+    }.asReversed().map(::stackTraceLine)
 
 private fun stackTraceLine(keyword: RobotExecutionAttributes): String {
     val name = listOfNotNull(keyword.libname?.takeIf { it.isNotEmpty() }, keyword.kwname).joinToString(".")
-    val line = keyword.lineno?.let { ":$it" } ?: ""
-    return "    at $name (${keyword.source}$line)"
+    val line = keyword.lineno?.let { ", line $it" } ?: ""
+    return "$CALL_PREFIX${keyword.source}\"$line, in $name"
 }
 
-/** The lines of a [stackTrace] before its first caught failure, the only ones that navigating from the test uses. */
-internal fun failurePathOf(stackTrace: String): String =
-    stackTrace.lineSequence().takeWhile { it != CAUGHT && !it.startsWith("$CAUGHT: ") }.joinToString("\n")
+/**
+ * The calls in a [stackTrace] before its first caught failure, the only lines that navigating from the test uses; a
+ * location at the end of a failure's message is no place to navigate to.
+ */
+internal fun failurePathOf(stackTrace: String): String = stackTrace.lineSequence()
+    .takeWhile { it != CAUGHT && !it.startsWith("$CAUGHT: ") }
+    .filter { it.startsWith(CALL_PREFIX) }
+    .joinToString("\n")
 
 /**
  * The number of tests and tasks among the [items] that the listener sends with `robotEnqueued` when the run starts:

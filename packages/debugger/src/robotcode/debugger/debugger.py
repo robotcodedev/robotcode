@@ -2266,7 +2266,8 @@ class Debugger:
 
     def _create_exception_details(self, message: Optional[str]) -> Optional[ExceptionDetails]:
         rows: List[Tuple[str, Optional[str]]] = []
-        for entry in self.stack_frames:
+        # outermost first, as Python lists calls, so that a traceback below continues the list into the library
+        for entry in reversed(self.stack_frames):
             if entry.type == "SUITE":
                 continue
             position = entry.stack_frames[0] if entry.stack_frames else None if entry.top_hidden else entry

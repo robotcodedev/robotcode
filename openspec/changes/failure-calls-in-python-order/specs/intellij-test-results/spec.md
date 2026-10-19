@@ -4,7 +4,7 @@
 
 ### Requirement: Failure details list the failed keywords
 
-When a test fails in its keywords, the plugin SHALL show below the test's failure message each failure with its calls as Python lists them, from the call in the test inward, each as `File "<file>", line <line>, in <keyword>`, the keyword with its library or resource where Robot Framework reports one. Each location SHALL be a link that opens the file at that line. With several failures, each SHALL begin with the first line of its message; caught ones SHALL follow, marked as caught.
+When a test fails in its keywords, the plugin SHALL show below the test's failure message each failure with its calls as Python lists them, from the call in the test inward, each as `File "<file>", line <line>, in <keyword>`, the keyword with its library or resource where reported. Each location SHALL be a link that opens the file at that line. Several uncaught failures SHALL follow an empty line and each begin with the first line of its message; caught ones SHALL follow, marked as caught.
 
 #### Scenario: Failure in a keyword of a resource file
 
@@ -29,7 +29,7 @@ When a test fails in its keywords, the plugin SHALL show below the test's failur
 #### Scenario: Failure in the body and in the teardown
 
 - **WHEN** a step of a test fails, and then its teardown fails as well
-- **THEN** the failure details show two failures, each beginning with the first line of its message and listing its own calls
+- **THEN** an empty line separates the failure details from the test's failure message, and they show two failures, each beginning with the first line of its message and listing its own calls
 
 ### Requirement: Navigating from a failed test
 

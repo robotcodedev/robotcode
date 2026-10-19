@@ -25,6 +25,7 @@ import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
 import dev.robotcode.robotcode4ij.debugging.RobotEnqueuedArguments
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionAttributes
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
+import dev.robotcode.robotcode4ij.debugging.RobotFailure
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import org.eclipse.lsp4j.debug.Source
@@ -186,7 +187,8 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
             failedKeywords = arrayOf(
                 RobotExecutionAttributes(kwname = "Build Greeting", libname = "common", source = source, lineno = 6),
                 RobotExecutionAttributes(kwname = "Should Be Equal", libname = "BuiltIn", source = resource, lineno = 4)
-            )
+            ),
+            failures = arrayOf(RobotFailure(1, listOf(1, 0)))
         )
         converter.startTesting()
         client.onRobotStarted.fire(suite())
@@ -198,7 +200,8 @@ class RobotCodeTestEventsConverterTest : BasePlatformTestCase() {
         assertEquals(
             listOf(
                 "testFailed First t1 Hello, Robot != Hello, World 4 trace " +
-                    "    at BuiltIn.Should Be Equal ($resource:4) |     at common.Build Greeting ($source:6)",
+                    "  File \"$source\", line 6, in common.Build Greeting | " +
+                    "  File \"$resource\", line 4, in BuiltIn.Should Be Equal",
                 "testFailed Second t2 failed in the test itself 1"
             ),
             processor.calls.filter { it.startsWith("testFailed") }

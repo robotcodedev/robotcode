@@ -56,15 +56,15 @@ The run configuration adds to the settings page **Robot**, see [Configuration](/
 A run opens in the **Run** tool window, a debug run in the **Debug** tool window, with two tabs:
 
 - **Terminal** shows the output of the process, as a run in a terminal shows it. The paths of the output files that Robot Framework names are links.
-- **Debug Console** shows the results tree: the suites, tests and tasks as Robot Framework runs them, with their status and duration. A selected test shows its log messages, with a link to the source line of each, and for a failed test the keywords it failed in, innermost first, as `at <Library>.<Keyword> (<file>:<line>)`, followed by failures the test caught before, marked `Caught:`.
+- **Debug Console** shows the results tree: the suites, tests and tasks as Robot Framework runs them, with their status and duration. A selected test shows its log messages, with a link to the source line of each, and for a failed test each of its failures with the calls that led to it, from the call in the test inward, as `File "<file>", line <line>, in <Library>.<Keyword>`, followed by failures the test caught before, marked `Caught:`.
 
 <ThemeImage
   folder="pycharm"
   name="running-results"
-  alt="The Run tool window of the run Suite Login: the Debug Console tab with the results tree, in which Login Works failed, and its log messages and the keywords it failed in, with links to their source lines."
+  alt="The Run tool window of the run Suite Login: the Debug Console tab with the results tree, in which Login Works failed, and its log messages and the calls that led to its failure, with links to their files."
 />
 
-A double-click on a test goes to the test, and for a failed test to the call of the keyword that failed. **Rerun Failed Tests** in the tool window's toolbar runs exactly the failed tests again. **Stop** asks the RobotCode debugger to end the run as Ctrl+C in a terminal does: the running test fails, its teardowns run and Robot Framework writes its output files. Only if the debugger is not connected or does not confirm the request within five seconds does RobotCode interrupt the process. A second **Stop** while the run is ending ends the process at once.
+A double-click on a test goes to the test, and for a failed test to the call in the test that led to its first failure. **Rerun Failed Tests** in the tool window's toolbar runs exactly the failed tests again. **Stop** asks the RobotCode debugger to end the run as Ctrl+C in a terminal does: the running test fails, its teardowns run and Robot Framework writes its output files. Only if the debugger is not connected or does not confirm the request within five seconds does RobotCode interrupt the process. A second **Stop** while the run is ending ends the process at once.
 
 To analyze the results of a run in a terminal, see [`robotcode results`](/guides/analyzing-results/).
 

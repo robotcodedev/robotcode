@@ -149,10 +149,11 @@ class RobotOutputToGeneralTestEventsConverter(
         }
     }
 
-    // the failed keywords as the stack trace, whose first location is where navigating from the test goes
+    // the failures as the stack trace, whose first location, the call in the test that led to the first failure, is
+    // where navigating from the test goes
     private fun failure(args: RobotExecutionEventArguments, message: String, duration: Long) = TestFailedEvent(
-        args.name, args.id, message, failureStackTrace(args.failedKeywords), false, null, null, null, null, false,
-        false, duration
+        args.name, args.id, message, failureStackTrace(args.failedKeywords, args.failures), false, null, null, null,
+        null, false, false, duration
     )
 
     // a failed or skipped suite teardown marks the suite's tests again, also tests that passed

@@ -15,7 +15,11 @@ import java.nio.file.Path
 /** A link in a console line from [start] to [end] that opens [path], at [line] for a location. */
 internal data class ConsoleLink(val start: Int, val end: Int, val path: String, val line: Int? = null)
 
-// the end of a location `(<path>:<line>)`, as each failed keyword in the stack trace of a failure ends
+// a call `File "<path>", line <line>` that begins a line, as Python lists the calls of a traceback and the stack trace
+// of a failure lists them; the quotes delimit the path, which may contain spaces
+private val CALL = Regex("""^\s*File "([^"]+)", line (\d+)""")
+
+// the end of a location `(<path>:<line>)`, as each log message in the results tree ends
 private val LOCATION_END = Regex(""":(\d+)\)\s*$""")
 
 // a line in which Robot Framework names an output file
@@ -25,10 +29,10 @@ private val OUTPUT_FILE = Regex("""^(?:Output|Log|Report|XUnit|Debug):\s+(\S.*?)
 private val ABSOLUTE_PATH = Regex("""^(?:/|[A-Za-z]:[\\/]|\\\\)""")
 
 /**
- * The links in a console [line]: the path and line of a location `(<path>:<line>)` that ends the line, or the path in a
- * line in which Robot Framework names an output file; only for an absolute path of a file that [isFile] confirms, so
- * `NONE` stays text. A path may contain spaces and parentheses, so the location tries each opening parenthesis from
- * the right.
+ * The links in a console [line]: the path of a call `File "<path>", line <line>` that begins the line, with its line;
+ * the path and line of a location `(<path>:<line>)` that ends the line; or the path in a line in which Robot Framework
+ * names an output file; only for an absolute path of a file that [isFile] confirms, so `NONE` stays text. A path at the
+ * end of a line may contain spaces and parentheses, so that location tries each opening parenthesis from the right.
  */
 internal fun consoleLinks(line: String, isFile: (String) -> Boolean): List<ConsoleLink> {
     fun linkable(path: String) = ABSOLUTE_PATH.containsMatchIn(path) && isFile(path)
@@ -37,6 +41,12 @@ internal fun consoleLinks(line: String, isFile: (String) -> Boolean): List<Conso
         val path = match.groups[1] ?: return listOf()
         if (!linkable(path.value)) return listOf()
         return listOf(ConsoleLink(path.range.first, path.range.last + 1, path.value))
+    }
+    CALL.find(line)?.let { call ->
+        val path = call.groups[1] ?: return listOf()
+        val number = call.groupValues[2].toIntOrNull() ?: return listOf()
+        if (!linkable(path.value)) return listOf()
+        return listOf(ConsoleLink(path.range.first, path.range.last + 1, path.value, number))
     }
     val end = LOCATION_END.find(line) ?: return listOf()
     val number = end.groupValues[1].toIntOrNull() ?: return listOf()
