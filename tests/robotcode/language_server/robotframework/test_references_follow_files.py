@@ -8,7 +8,7 @@ references through `find_keyword_references` of the references part.
 
 import threading
 from pathlib import Path
-from typing import Any, List, Set
+from typing import Any, List, Optional, Set
 
 import pytest
 from pytest_mock import MockerFixture
@@ -25,8 +25,9 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
-from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
+from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode, DiagnosticsProtocolPart
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
+from robotcode.robot.diagnostics.library_doc import KeywordDoc
 from robotcode.robot.diagnostics.namespace import Namespace
 from tests.robotcode.language_server.robotframework.tools import (
     document_of,
@@ -310,6 +311,67 @@ def _files_with_calls_of_new_keyword(protocol: Any, resource: Path) -> List[str]
     return [] if keyword is None else files_with_calls(protocol, document, keyword)
 
 
+def _describe_keyword(keyword: Optional[KeywordDoc]) -> str:
+    return "not found" if keyword is None else f"{keyword.longname} at {keyword.source}:{keyword.line_no}"
+
+
+def _state_of_the_analyses(protocol: Any, project: Path) -> str:
+    """What the language server holds for the resource and the suites calling `New Keyword`."""
+    task = protocol.diagnostics._workspace_diagnostics_task
+    loop = "stopped" if task is None or task.done() else "running"
+    analyzed = protocol.diagnostics.workspace_analyzed_event.is_set()
+    lines = [f"workspace diagnostics loop: {loop}, workspace analyzed: {analyzed}"]
+
+    resource = document_of(protocol, project / "common.resource")
+    namespace = protocol.documents_cache.get_only_initialized_namespace(resource)
+    declared = None if namespace is None else namespace.find_keyword("New Keyword", raise_keyword_error=False)
+    lines.append(
+        f"common.resource: {resource.uri}, version {resource.version}, disk info {resource.disk_info}, "
+        f"New Keyword: {'no analysis' if namespace is None else _describe_keyword(declared)}"
+    )
+    for source, (meta, doc) in protocol.documents_cache.get_imports_manager(resource)._model_docs_by_source.items():
+        if Path(source).name == "common.resource":
+            lines.append(f"doc in memory: {meta}, keywords {[k.name for k in doc.keywords.keywords]}")
+
+    for name in SUITES_CALLING_NEW_KEYWORD:
+        suite = protocol.documents.get(Uri.from_path(project / name).normalized())
+        if suite is None:
+            lines.append(f"{name}: no document")
+            continue
+        data = suite.get_data(DiagnosticsProtocolPart, None)
+        marks = "no diagnostics data" if data is None else f"force {data.force}, marks {data.marks}"
+        namespace = protocol.documents_cache.get_only_initialized_namespace(suite)
+        if namespace is None:
+            lines.append(f"{name}: version {suite.version}, {marks}, no analysis")
+            continue
+        called = namespace.find_keyword("New Keyword", raise_keyword_error=False)
+        lines.append(
+            f"{name}: version {suite.version}, {marks}, New Keyword: {_describe_keyword(called)}, "
+            f"the declared one: {called == declared}"
+        )
+
+    for keyword, locations in protocol.documents_cache.get_project_index(resource).keyword_references.items():
+        if keyword.name == "New Keyword":
+            calls = sorted(Uri(location.uri).to_path().name for location in locations)
+            lines.append(f"index: {_describe_keyword(keyword)}, called in {calls}")
+
+    return "\n".join(lines)
+
+
+def _wait_until_every_suite_calls_new_keyword(protocol: Any, resource: Path, message: str) -> None:
+    found: List[str] = []
+
+    def every_suite_calls_it() -> bool:
+        found[:] = _files_with_calls_of_new_keyword(protocol, resource)
+        return found == SUITES_CALLING_NEW_KEYWORD
+
+    try:
+        wait_until(every_suite_calls_it, message)
+    except AssertionError as error:
+        state = _state_of_the_analyses(protocol, resource.parent)
+        raise AssertionError(f"{error}\nFind References: {found}\n{state}") from None
+
+
 def test_every_suite_that_imports_a_resource_changed_in_the_editor_is_analyzed_again(tmp_path: Path) -> None:
     project = _project_calling_new_keyword(tmp_path)
     with language_server(project) as protocol:
@@ -325,9 +387,8 @@ def test_every_suite_that_imports_a_resource_changed_in_the_editor_is_analyzed_a
             VersionedTextDocumentIdentifier(uri=resource.as_uri(), version=2), [added]
         )
 
-        wait_until(
-            lambda: _files_with_calls_of_new_keyword(protocol, resource) == SUITES_CALLING_NEW_KEYWORD,
-            "not every suite was analyzed again after the change in the editor",
+        _wait_until_every_suite_calls_new_keyword(
+            protocol, resource, "not every suite was analyzed again after the change in the editor"
         )
 
 
@@ -340,7 +401,6 @@ def test_every_suite_that_imports_a_resource_changed_on_disk_is_analyzed_again(t
         resource.write_text(WITH_NEW_KEYWORD, encoding="utf-8")
         report_file_event(protocol, resource, FileChangeType.CHANGED)
 
-        wait_until(
-            lambda: _files_with_calls_of_new_keyword(protocol, resource) == SUITES_CALLING_NEW_KEYWORD,
-            "not every suite was analyzed again after the change on disk",
+        _wait_until_every_suite_calls_new_keyword(
+            protocol, resource, "not every suite was analyzed again after the change on disk"
         )
