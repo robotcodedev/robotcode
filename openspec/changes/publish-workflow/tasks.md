@@ -57,7 +57,7 @@
 
 ## 5. Verification with the maintainer
 
-- [ ] 5.1 After the push, check:
+- [x] 5.1 After the push, check:
   - the build runs as "build test and package";
   - the `publish` run it starts skips both jobs;
   - a manual start of "publish" finds the run of `build-test-package.yml` and uploads nothing new.
