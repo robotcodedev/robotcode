@@ -33,7 +33,8 @@ function fogTexture(w: number, h: number, blobs: number): string {
 // the fog of every decorated page: a faint layer over the lower part of the window and a thin one at its bottom edge;
 // it drifts sideways and billows, every texture swelling and sinking, thickening and thinning slowly in its own time.
 // All of it runs as CSS animations of transforms and opacity, which the compositor plays without the script and without
-// painting the masked fog again; the script only sizes the textures.
+// painting the masked fog again, and in small steps, so the browser draws it again only a few times a second instead of
+// at every refresh of the screen; the script only sizes the textures.
 export function fog(): Part {
   const layers: { box: HTMLElement; texture: HTMLElement; w: number; speed: number }[] = [];
   for (const [kind, textures] of [
@@ -59,14 +60,15 @@ export function fog(): Part {
     }
     document.body.appendChild(container);
   }
-  // A texture is a tile wider than the window and slides by one tile and back (`--tile`); a tile is as wide as the
-  // texture at the height of its layer, so the jump back does not show.
+  // A texture is a tile wider than the window and slides by one tile and back (`--tile`), two pixels at a time; a tile
+  // is as wide as the texture at the height of its layer, so the jump back does not show.
   function measure() {
     for (const f of layers) {
       const tile = Math.max(1, (f.w * f.box.clientHeight) / 260);
       f.texture.style.width = `${Math.ceil(innerWidth + tile)}px`;
       f.texture.style.setProperty("--tile", `${tile.toFixed(1)}px`);
       f.texture.style.animationDuration = `${(tile / Math.abs(f.speed)).toFixed(1)}s`;
+      f.texture.style.animationTimingFunction = `steps(${Math.max(1, Math.round(tile / 2))})`;
       f.texture.style.animationDirection = f.speed > 0 ? "normal" : "reverse";
     }
   }

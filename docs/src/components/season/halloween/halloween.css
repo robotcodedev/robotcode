@@ -521,28 +521,62 @@ rc-hero-gallery[data-picture-moon] .rc-hw-moon {
   inset: 0;
   transform-origin: bottom;
   animation-name: rc-hw-fog-swell, rc-hw-fog-thin;
-  animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   animation-direction: alternate;
   will-change: transform, opacity;
 }
 
+/* Both go in small steps, so the browser draws the fog again only now and then instead of at every refresh of the
+   screen; the keyframes follow ease-in-out (0, 12.9 %, 50 %, 87.1 % and all of the way at the quarters), with as many
+   steps in a quarter as it covers. */
 @keyframes rc-hw-fog-swell {
-  from {
+  0% {
     transform: scaleY(0.82);
+    animation-timing-function: steps(5);
   }
 
-  to {
+  25% {
+    transform: scaleY(0.8665);
+    animation-timing-function: steps(15);
+  }
+
+  50% {
+    transform: scaleY(1);
+    animation-timing-function: steps(15);
+  }
+
+  75% {
+    transform: scaleY(1.1335);
+    animation-timing-function: steps(5);
+  }
+
+  100% {
     transform: scaleY(1.18);
   }
 }
 
 @keyframes rc-hw-fog-thin {
-  from {
+  0% {
     opacity: 0.6;
+    animation-timing-function: steps(3);
   }
 
-  to {
+  25% {
+    opacity: 0.6517;
+    animation-timing-function: steps(7);
+  }
+
+  50% {
+    opacity: 0.8;
+    animation-timing-function: steps(7);
+  }
+
+  75% {
+    opacity: 0.9483;
+    animation-timing-function: steps(3);
+  }
+
+  100% {
     opacity: 1;
   }
 }

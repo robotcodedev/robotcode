@@ -163,7 +163,9 @@ const page = path === "/" ? "home" : path === "/news" || path.startsWith("/news/
     display: flex;
     gap: 0.4rem;
     align-items: center;
-    animation: rc-spooky-float 4s ease-in-out infinite;
+    /* it floats up and down a pixel at a time, so the browser draws it again only twice a second instead of at every
+       refresh of the screen */
+    animation: rc-spooky-float 4s steps(4) infinite;
   }
 
   /* the sound switch on the side towards the middle */
