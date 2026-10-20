@@ -95,3 +95,7 @@ AGENTS.md
 results/
 .robocop_cache/
 *.code-workspace
+
+# the tests of the extension and their configuration
+out/test/
+.vscode-test.mjs

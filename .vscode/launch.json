@@ -237,9 +237,10 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
+			// the tests that `npm test` runs, see .vscode-test.mjs
+			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/test/**/*.js"

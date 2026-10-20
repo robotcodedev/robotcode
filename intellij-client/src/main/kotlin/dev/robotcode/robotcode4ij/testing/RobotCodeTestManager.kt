@@ -330,7 +330,9 @@ class RobotCodeTestManager(private val project: Project, private val scope: Coro
             project.buildRobotCodeCommandLine(
                 fileDiscoveryArguments(
                     suite.longname, suite.relSource, supportsParseInclude, project.robotSettings,
-                    project.rootPythonPath()
+                    project.rootPythonPath(),
+                    // the name of the top-level suite, as the runs take it
+                    topLevelSuite = testItems.firstOrNull()?.children?.firstOrNull()?.longname
                 ),
                 format = "json"
             ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)

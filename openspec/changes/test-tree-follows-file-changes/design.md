@@ -18,6 +18,14 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
   4. `refreshUri` returns early for every file open in an editor, so the create event of a file restored under an open tab is lost. Restored with the same content, the file fires no document change.
   5. `refresh()` keeps one cancellation source and cancels it on every call.
   6. `discover tests` returns `[]` for a file with `*** Tasks ***` (CLI), so the per-file read removes the tasks. The fallback discovery of the folder then equals the folder snapshot and is skipped.
+  7. Found in the review on 2026-10-20, in the harness with main and with this change alike. With several paths, the top-level suite has neither `source` nor `uri` in the discovery result. `findWorkspaceFolderForItem` looks the folder up only by `item.uri`, so for this suite it finds none:
+     - the suite gets no `_robotFolder:` tag, which every run profile carries, so it shows no **Run** or **Debug** button;
+     - `mapTestItemsToWorkspaceFolder` drops it, so Run at the workspace item and **Run Tests** start nothing, because both run the workspace item's child, the top-level suite.
+
+     bc488d0d (v2.6.0) removed the fallback that went up to the root item. A project with one path is not affected: its top-level suite is the path's folder.
+  8. Found the same day while checking 7: in a workspace with the folders `robotcode-demo` and `rpa`, **Run Tests** and **Debug Tests** in the title bar start a session only for `robotcode-demo`, without a message; Run at the row `rpa` works.
+     - A build that logged the calls of `runTests` showed one call, with the profile "Run [robotcode-demo]" and `include` undefined, also with the Run profiles of both folders chosen as defaults.
+     - The loop in `runTests` skips every folder whose tag differs from the profile's. That code is unchanged since 8c0e8893 (v0.64.0).
 - **Other trigger behavior in the code:**
   - `refreshDocument` skips `__init__.robot`.
   - It also turns every edit of a `.resource` file into a discovery of the folder, because no TestItem has that URI.
@@ -37,7 +45,7 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
 - Tests of that logic and of the tree build in VS Code's own test stack, run by `npm test`, by F5 and in CI.
 
 **Non-Goals:**
-- No change to `robotcode discover` or its output, to runs, results or run profiles.
+- No change to `robotcode discover` or its output, to runs, results or run profiles, apart from finding the folder of the top-level suite (D7) and running every folder for a request without a list of tests (D8).
 - No workaround for RF bug #656.
 - No change of PyCharm's model or triggers beyond `-N`.
 
@@ -114,13 +122,14 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
   - The fixtures are discovery results recorded with `robotcode discover`, under `vscode-client/test/fixtures/discover/`, with the paths replaced by `/project` as in PyCharm's fixtures.
 - **Layout:**
   - The tests live in `vscode-client/test/**/*.test.ts`, with a `tsconfig.json` of their own for the Mocha and Node types.
-  - `esbuild.mjs` builds them into `out/test/`, with `vscode` external, as part of `npm run compile` but not of `--production`. `.vscodeignore` excludes `out/test/`.
+  - `esbuild.mjs` builds them into `out/test/`, with `vscode` external, as part of `npm run compile` but not of `--production`. `.vscodeignore` excludes `out/test/` and `.vscode-test.mjs`.
+  - ESLint 10 looks for config files from the directory of each file it lints. It therefore loaded the `eslint.config.mjs` of the downloaded Python extension and failed, so `eslint.config.mjs` ignores `.vscode-test/`.
 - **`.vscode-test.mjs`:**
   - `files: "out/test/**/*.test.js"`;
   - `version: "1.127.0"`, the minimum the extension declares. The harness covers the newest VS Code.
   - No `skipExtensionDependencies`. `vscode-test` installs RobotCode's `extensionDependencies`, `ms-python.python` and `ms-python.debugpy`, from the Marketplace into `.vscode-test/extensions/`. Without them RobotCode cannot be activated in the test instance, and later tests of VS Code behavior need that.
   - The tests of this change import RobotCode's modules and do not need the activation.
-  - Further extensions, for example `ms-python.vscode-python-envs` for tests of the environment detection, come with `installExtensions` when a test needs them.
+  - The extensions of the Python extension's pack come along. On 2026-10-19 `vscode-test` installed `ms-python.python` 2026.10.0, `ms-python.debugpy` 2026.6.0, `ms-python.vscode-pylance` 2026.4.1 and `ms-python.vscode-python-envs` 1.40.0. Other extensions come with `installExtensions` when a test needs them.
 - **Running:**
   - `npm test` runs `vscode-test`, after `pretest` has run `npm run compile`. On Linux it needs a display, so the CI uses `xvfb-run -a`.
   - The "Extension Tests" configuration in `.vscode/launch.json` gets `"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"` instead of the `--extensionTestsPath` to the removed runner, as the README of `@vscode/test-cli` describes. F5 then debugs the same tests.
@@ -132,6 +141,54 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
 - **Alternatives:**
   - Node's own test runner or vitest: no real `vscode` API.
   - `@vscode/test-electron` with a runner script of our own, the old `runTest.ts` and `suite/index.ts`: a second place to configure, and no Extension Test Runner.
+
+### D7: The workspace folder of an item comes from the nearest item with a URI (maintainer: in this change)
+
+- `findWorkspaceFolderForItem` takes the URI of the item, or, when the item has none, that of the nearest item above it. For the top-level suite of several paths that is the workspace item, whose URI is the folder.
+- The lookup is a function in `testtree.ts`, so that a test can check it against a real controller. The tree builder adds an item to its parent before it asks for the folder's tag, so the parent is known then.
+- With the folder known, the existing code of `runTests` applies: a run of the top-level suite alone, which Run at the workspace item and **Run Tests** also come down to, starts without a selection and so runs every path, as PyCharm's `resolveSelection` does.
+- **Alternative: give the top-level suite the folder's URI.** The workspace item and its top-level suite would share it, which #624 warns against, and the suite index would take the folder for a suite file.
+- **Alternative: restore the fallback of v2.5,** which went up to the root item and searched the folders' models for it. Same result, more code.
+
+### D8: A run request without a list of tests runs every workspace folder (maintainer: in this change)
+
+- **Why.** VS Code's `TestRunRequest.include` is undefined when all tests are to run; `@types/vscode` says that "the extension should simply run all tests". **Run Tests** and **Debug Tests** send such a request with the profile of one folder (failure 8).
+- **The rule.** For each folder, `runTests` decides from two facts: whether the profile belongs to the folder, and whether the request names its tests.
+  - The profile's folder runs with the profile's settings, its `robot.toml` profiles or its `launch.json` configuration, as today.
+  - Without a list of tests, every other folder runs as its own Run or Debug profile runs it, with the configuration profiles selected for that folder.
+  - With a list of tests, the other folders stay out, as today. VS Code offers an item only the profiles with its tag, so such a request has no items of another folder anyway.
+- The decision is a function in `testdiscovery.ts`, tested there.
+- **Alternative: run the other folders with the profile's settings.** A `robot.toml` profile such as `ci` belongs to its folder and may not exist in another one, and so do the `launch.json` configurations.
+- **Alternative: make every folder's Run profile a default.** VS Code still sent one request with the profiles of both folders chosen as defaults.
+
+## Measurements
+
+**Flicker, task 2.3, 2026-10-20.** The harness counted the DOM mutations of the Testing view's rows, with a `MutationObserver` on `.test-explorer`. The tree was expanded, and five edits changed a keyword argument in the open suite file, each followed by a pause of 3 s, so each edit led to one read of the file.
+
+| Project | Build | Mutation records | of them attributes | Rows added or removed | Reads |
+| --- | --- | --- | --- | --- | --- |
+| one path, `tests/orders.robot` | main | 4330 | 2890 | 0 | 5 |
+| one path, `tests/orders.robot` | this change | 4330 | 2890 | 0 | 5 |
+| `paths = ["electron", "vscode"]`, `vscode/open_vs_code.robot` | main | 9578 | 6338 | 0 | 5 |
+| `paths = ["electron", "vscode"]`, `vscode/open_vs_code.robot` | this change | 9470 | 6290 | 0 | 5 |
+
+- **Two paths without `-N`:** Measured before group 3, this change had 12795 records. Each read then fell back to a discovery of the folder, because the per-file result had other IDs.
+- **What the mutations are:** VS Code renders the `busy` state of the suite while a file is read. Both builds set it the same way; no item property changes.
+
+**Discoveries, task 7.2, 2026-10-20.** The demo project, `robot.toml` with `paths = ["tests"]`, with four more suite files `tests/extra_1.robot` to `tests/extra_4.robot` for the case of eight files. A `python` wrapper logged each call. Each case counted the `discover` calls until 7 s after its last action, 30 s after the reload. "Folder" is `discover --read-from-stdin all` without `--suite`, "file" with it.
+
+| Case | main: folder | main: file | this change: folder | this change: file |
+| --- | --- | --- | --- | --- |
+| `tests/orders.robot` edited and saved at once | 0 | 1 | 0 | 1 |
+| `resources/shop.resource` edited three times with pauses of 1.8 s, then saved | 4 | 0 | 0 | 0 |
+| `tests/__init__.robot` edited, a pause of 1.8 s, then saved | 0 | 0 | 2 | 0 |
+| Three closed suite files changed outside VS Code at once | 0 | 0 | 0 | 3 |
+| Eight closed suite files changed outside VS Code at once | 0 | 1 | 1 | 0 |
+| Refresh Tests | 1 | 0 | 1 | 0 |
+| Window reload | 1 | 0 | 1 | 0 |
+
+- **Eight files, main:** the one read was of `tests/orders.robot`, the file of the first case. The other seven changes were not read (failure 3).
+- **`__init__.robot`, this change:** one discovery after the pause and one after the save, as D3 and the risk on initialization files describe.
 
 ## Risks / Trade-offs
 
@@ -146,3 +203,4 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
 - [The Marketplace is unreachable, or no version of a Python extension accepts VS Code 1.127 any more] → The job fails visibly. A cached set of extensions keeps working, and raising the test version to the extension's minimum is the way out.
 - [The download of VS Code or an update service fails in CI] → The job fails visibly. `download.timeout` in `.vscode-test.mjs` can be raised if that happens often.
 - [The tests import modules that pull in `vscode-languageclient` or the managers] → The tested modules import none of them, and esbuild bundles each test file with only what it imports.
+- [A VS Code version sends a request without `include` once per default profile] → Every folder would run once per request (D8). VS Code 1.142 sent one request, also with the Run profiles of both folders chosen as defaults; the minimum version 1.127 was not checked in the harness.

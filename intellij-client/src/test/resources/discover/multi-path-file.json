@@ -1,0 +1,79 @@
+{
+  "items": [
+    {
+      "type": "workspace",
+      "id": "/multipath",
+      "name": "ij-multipath",
+      "longname": "ij-multipath",
+      "uri": "file:///multipath",
+      "relSource": ".",
+      "source": "/multipath",
+      "children": [
+        {
+          "type": "suite",
+          "id": ";Folder1 & Folder2",
+          "name": "Folder1 & Folder2",
+          "longname": "Folder1 & Folder2",
+          "children": [
+            {
+              "type": "suite",
+              "id": "/multipath/folder2;Folder1 & Folder2.Folder2",
+              "name": "Folder2",
+              "longname": "Folder1 & Folder2.Folder2",
+              "uri": "file:///multipath/folder2",
+              "relSource": "folder2",
+              "source": "/multipath/folder2",
+              "children": [
+                {
+                  "type": "suite",
+                  "id": "/multipath/folder2/b.robot;Folder1 & Folder2.Folder2.B",
+                  "name": "B",
+                  "longname": "Folder1 & Folder2.Folder2.B",
+                  "uri": "file:///multipath/folder2/b.robot",
+                  "relSource": "folder2/b.robot",
+                  "source": "/multipath/folder2/b.robot",
+                  "children": [
+                    {
+                      "type": "test",
+                      "id": "/multipath/folder2/b.robot;Folder1 & Folder2.Folder2.B.My Amazing Testcase;2",
+                      "name": "My Amazing Testcase",
+                      "longname": "Folder1 & Folder2.Folder2.B.My Amazing Testcase",
+                      "lineno": 2,
+                      "uri": "file:///multipath/folder2/b.robot",
+                      "relSource": "folder2/b.robot",
+                      "source": "/multipath/folder2/b.robot",
+                      "range": {
+                        "start": {
+                          "line": 1,
+                          "character": 0
+                        },
+                        "end": {
+                          "line": 1,
+                          "character": 0
+                        }
+                      },
+                      "rpa": false
+                    }
+                  ],
+                  "range": {
+                    "start": {
+                      "line": 0,
+                      "character": 0
+                    },
+                    "end": {
+                      "line": 0,
+                      "character": 0
+                    }
+                  },
+                  "rpa": false
+                }
+              ],
+              "rpa": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "supportsParseInclude": true
+}

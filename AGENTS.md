@@ -54,6 +54,8 @@ Use `hatch run test:test` as the default test command. It runs the full Robot Fr
 	- Ruff fixes and formatting.
 - `npm run lint`
 	- TypeScript/JavaScript linting.
+- `npm test`
+	- VS Code extension tests (`vscode-client/test/`), run in a VS Code that `vscode-test` downloads into `.vscode-test/` with the extension's dependencies. On Linux without a display: `xvfb-run -a npm test`. Debug them with the "Extension Tests" launch configuration or the Extension Test Runner.
 - `npm run compile` / `npm run package`
 	- VS Code extension build commands.
 - `npm run docs:dev` / `npm run docs:build` / `npm run docs:preview`

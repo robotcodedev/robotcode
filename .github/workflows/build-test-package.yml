@@ -127,8 +127,60 @@ jobs:
           name: test-results-jetbrains-${{ matrix.os }}
           path: intellij-client/build/test-results/test
 
+  test-vscode:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
+
+      - name: install node modules
+        run: npm install --include=dev
+
+      - name: Cache VS Code and its extensions for the tests
+        # .vscode-test.mjs names the version of VS Code; the extensions stay at the versions installed first
+        uses: actions/cache@v6
+        with:
+          path: |
+            .vscode-test/vscode-*
+            .vscode-test/extensions
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('.vscode-test.mjs') }}
+
+      - name: Test VS Code Extension
+        # VS Code needs a display on Linux; the xunit reporter writes test-results/vscode/test-results.xml
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a npm test -- --reporter xunit
+          else
+            npm test -- --reporter xunit
+          fi
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-vscode-${{ matrix.os }}
+          path: test-results/vscode
+
   publish-test-results:
-    needs: [test, test-jetbrains]
+    needs: [test, test-jetbrains, test-vscode]
     runs-on: ubuntu-latest
     permissions:
       checks: write
@@ -270,7 +322,7 @@ jobs:
             intellij-client/build/reports/pluginVerifier-eap
 
   package:
-    needs: [test, test-jetbrains]
+    needs: [test, test-jetbrains, test-vscode]
 
     runs-on: ubuntu-latest
 

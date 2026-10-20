@@ -20,7 +20,7 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
 
 ## 1. VS Code: test set-up (D6)
 
-- [ ] 1.1 Set up the tests:
+- [x] 1.1 Set up the tests:
   - add `@vscode/test-cli`, `@vscode/test-electron` and `@types/mocha` as dev dependencies at their newest versions;
   - write `.vscode-test.mjs` with `files`, `version: "1.127.0"` and the `tdd` interface, without `skipExtensionDependencies`, so that `vscode-test` installs `ms-python.python` and `ms-python.debugpy`;
   - give `vscode-client/test/` a `tsconfig.json` of its own;
@@ -46,11 +46,11 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - Mocha's `xunit` reporter writing `test-results.xml`, uploaded as `test-results-vscode-<os>`.
 
   Let `publish-test-results` and `package` also need `test-vscode`. Verify on the CI run of the next push: the job runs on all three systems, its tests appear in the published test results, and `package` waits for it.
-- [ ] 1.4 Name `npm test` in AGENTS.md (Common Commands) and in CONTRIBUTING.md next to `npm run lint`: it runs the extension's tests in a downloaded VS Code and needs a display on Linux (`xvfb-run -a npm test`). Name the "Extension Tests" configuration and the Extension Test Runner for debugging. Verify by reading the rendered Markdown.
+- [x] 1.4 Name `npm test` in AGENTS.md (Common Commands) and in CONTRIBUTING.md (Running Tests): it runs the extension's tests in a downloaded VS Code and needs a display on Linux (`xvfb-run -a npm test`). Name the "Extension Tests" configuration and the Extension Test Runner for debugging. Verify by reading the rendered Markdown.
 
 ## 2. VS Code: one model, one way to the tree (D1, D2)
 
-- [ ] 2.1 Put the model operations into the module without a `vscode` import:
+- [x] 2.1 Put the model operations into the module without a `vscode` import:
   - a per-file read runs `discover --read-from-stdin all` with `-I` and `--suite`;
   - it finds the file's suite by its ID in the result, replaces that suite's children in the folder's model and indexes only those; the folder suites of the result are partial and stay out;
   - when the suite is missing or has no children, the folder is discovered;
@@ -66,7 +66,7 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - after a per-file read of `vscode/open_vs_code.robot`, the other two suites of `vscode/` are still in the tree, and a run of the suite "Vscode" runs all its tests;
   - scenario "Task added";
   - in `multipath`, still without `-N`: a save that changes only a keyword argument shows the per-file read and then a discovery of the folder in the log, and Run Test at "Opens Terminal" runs 1 test.
-- [ ] 2.2 Build the tree from the model with one synchronous function that takes the controller, with the guarded `addOrUpdateTestItem` and `removeNotAddedTestItems`, and set `busy` only on the item that is being discovered. Remove `lastKnownChildren`, `snapshotChildren` and the result compares. Let `resolveHandler(item)` build the item's children from the model, and `refreshHandler` discover every folder and build its tree.
+- [x] 2.2 Build the tree from the model with one synchronous function that takes the controller, with the guarded `addOrUpdateTestItem` and `removeNotAddedTestItems`, and set `busy` only on the item that is being discovered. Remove `lastKnownChildren`, `snapshotChildren` and the result compares. Let `resolveHandler(item)` build the item's children from the model, and `refreshHandler` discover every folder and build its tree.
 
   Unit tests against a `TestController` the test creates:
   - building twice from an equal model changes no item;
@@ -77,19 +77,19 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - expanding a suite whose file is open starts no `discover`;
   - scenario "Refresh Tests after a change the file watcher missed", with `files.watcherExclude` set for `electron/app.robot`;
   - expanded nodes stay expanded after a discovery of the folder.
-- [ ] 2.3 Count the DOM mutations of the Testing view's rows while typing with pauses in an expanded `vscode/open_vs_code.robot` without changing a test, with the build from main and with this build. Verify that this build has no more mutations than main and that no row is replaced. Record both counts in design.md.
-- [ ] 2.4 In `docs/src/content/docs/guides/vscode/test-explorer.mdx`, "Where the tests come from": say that **Refresh Tests** reads the tests again and rebuilds the tree. Verify with `npm run docs:build`.
+- [x] 2.3 Count the DOM mutations of the Testing view's rows while typing with pauses in an expanded `vscode/open_vs_code.robot` without changing a test, with the build from main and with this build. Verify that this build has no more mutations than main and that no row is replaced. Record both counts in design.md.
+- [x] 2.4 In `docs/src/content/docs/guides/vscode/test-explorer.mdx`, "Where the tests come from": say that **Refresh Tests** reads the tests again and rebuilds the tree. Verify with `npm run docs:build`.
 
 ## 3. VS Code: `-N` in the per-file read (D5)
 
-- [ ] 3.1 Pass `-N` with the longname of the first child of the folder's workspace item after `-I`, and no `-N` without a known name. Unit tests of the arguments: the order with a name, no `-N` without one, escaped `-I` and `--suite`. Verify with `npm test`, `npm run lint`, and in the harness:
+- [x] 3.1 Pass `-N` with the longname of the first child of the folder's workspace item after `-I`, and no `-N` without a known name. Unit tests of the arguments: the order with a name, no `-N` without one, escaped `-I` and `--suite`. Verify with `npm test`, `npm run lint`, and in the harness:
   - the per-file `discover` line in `multipath` carries `-N Electron & Vscode`, and no discovery of the folder follows;
   - scenario "Save in a project with several paths";
   - scenario "Test added in a project with several paths".
 
 ## 4. VS Code: one rule for the triggers (D3)
 
-- [ ] 4.1 Implement the table of D3 as a function in the module without a `vscode` import, and route the document events and the watcher through it:
+- [x] 4.1 Implement the table of D3 as a function in the module without a `vscode` import, and route the document events and the watcher through it:
   - a known suite file goes to its per-URI timer;
   - a `.resource` file goes nowhere;
   - another Robot Framework file, `__init__.robot` included, discovers the folder;
@@ -104,11 +104,11 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - scenario "Suite renamed in the initialization file" with `Name    Shop` in `vscode/__init__.robot`;
   - scenarios "Resource file edited" and "Resource file deleted outside VS Code" (no `discover` line);
   - a test appended on disk to the custom parser's suite file of the main-spec scenarios is read (one per-file `discover`).
-- [ ] 4.2 In `test-explorer.mdx`, "Where the tests come from": say that files changed outside VS Code also update the tree, and that changes of resource files start no discovery. Verify with `npm run docs:build`.
+- [x] 4.2 In `test-explorer.mdx`, "Where the tests come from": say that files changed outside VS Code also update the tree, and that changes of resource files start no discovery. Verify with `npm run docs:build`.
 
 ## 5. VS Code: reads queued per file and per folder (D4)
 
-- [ ] 5.1 Give each URI its own cancellation source for its read:
+- [x] 5.1 Give each URI its own cancellation source for its read:
   - a newer request for the same URI cancels the older timer and read;
   - a discovery of a folder cancels that folder's pending timers and reads and its own older discovery;
   - reads wait behind a running discovery instead of cancelling it;
@@ -128,21 +128,21 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
 
 ## 6. PyCharm: `-N` in the per-file read (D5)
 
-- [ ] 6.1 Give `fileDiscoveryArguments` the top-level suite name and pass `-N` after `-I` and before `--suite`. In `RobotCodeTestManager.discoverFile`, pass `testItems.firstOrNull()?.children?.firstOrNull()?.longname`. Verify with tests in `RobotCodeFileDiscoveryTest.kt`:
+- [x] 6.1 Give `fileDiscoveryArguments` the top-level suite name and pass `-N` after `-I` and before `--suite`. In `RobotCodeTestManager.discoverFile`, pass `testItems.firstOrNull()?.children?.firstOrNull()?.longname`. Verify with tests in `RobotCodeFileDiscoveryTest.kt`:
   - the order with a name;
   - no `-N` without a name;
   - `findSuiteChildren` finding the suite in a recorded per-file result of a project with several paths, a new fixture under `src/test/resources/discover` recorded with `-N`.
 
   Run `(cd intellij-client && ./gradlew test)`.
-- [ ] 6.2 Check in the PyCharm headless harness (memory note on the IntelliJ headless harness), with a copy of `multipath` as the project:
+- [x] 6.2 Check in the PyCharm headless harness (memory note on the IntelliJ headless harness), with a copy of `multipath` as the project:
   - an edit of `vscode/open_vs_code.robot` starts one per-file discover with `-N` and no full discovery (process log of the sitecustomize hook);
   - the gutter shows a marker at an added test;
   - a run from that marker runs 1 test.
 
 ## 7. Integration
 
-- [ ] 7.1 Run the main-spec scenarios recorded before group 2 again with this build, and verify that each ends as it did with main.
-- [ ] 7.2 Count the `discover` lines in RobotCode's log on the demo project (`robot.toml` with one path), with main and with this build:
+- [x] 7.1 Run the main-spec scenarios recorded before group 2 again with this build, and verify that each ends as it did with main.
+- [x] 7.2 Count the `discover` lines in RobotCode's log on the demo project (`robot.toml` with one path), with main and with this build:
   - one file saved;
   - a resource file edited with three typing pauses;
   - `__init__.robot` edited;
@@ -152,7 +152,22 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - a window reload.
 
   Record the counts in design.md.
-- [ ] 7.3 Run `npm run lint`, `npm run compile`, `npm test` (isolated), `(cd intellij-client && ./gradlew test)` and `openspec validate test-tree-follows-file-changes --strict`.
+- [x] 7.3 Run `npm run lint`, `npm run compile`, `npm test` (isolated), `(cd intellij-client && ./gradlew test)` and `openspec validate test-tree-follows-file-changes --strict`.
+
+## 8. VS Code: runs of the top-level suite and of every workspace folder (D7, D8)
+
+- [x] 8.1 Put the lookup of the URI that tells an item's folder, its own or that of the nearest item above it, into a function in `testtree.ts`, and let `findWorkspaceFolderForItem` use it. Unit test against a `TestController` the test creates: after building `multipath`, the top-level suite, which has no URI, carries the tag that `folderTagOf` gives for the folder's URI.
+
+  Verify with `npm test`, `npm run lint`, and in the harness, in the workspace folder `multipath`; the build from main shows none of this (2026-10-20):
+  - the row "Electron & Vscode" shows **Run** and **Debug**;
+  - Run at that row, Run at the workspace folder and **Run Tests** each start one run without a selection, which runs the tests of both paths;
+  - in the workspace with `multipath` and `rpa`, **Run Tests** runs all tests of `multipath`. It left out `rpa`, which is failure 8, see 8.2.
+- [x] 8.2 Put the rule of D8 into a function in `testdiscovery.ts`: for a folder, the profile's settings, the folder's own settings or no run, from whether the profile belongs to the folder and whether the request names its tests. Let `runTests` use it. Unit tests: a request without tests runs the profile's folder with the profile's settings and another folder with its own; a request with tests leaves another folder out.
+
+  Verify with `npm test`, `npm run lint`, and in the harness, in the workspace of `robotcode-demo` and `rpa`; before the change, Run Tests and Debug Tests started only `robotcode-demo` (2026-10-20):
+  - **Run Tests** and **Debug Tests** each start a session for both folders;
+  - Run at the row `rpa` runs only `rpa`;
+  - with "Run ci - Staging shop [robotcode-demo]" as the default profile, **Run Tests** runs `robotcode-demo` with the profile `ci` and `rpa` without profiles.
 
 ## Workflow follow-up
 

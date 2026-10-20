@@ -19,6 +19,10 @@ All six have one root: next to the discovery of the folder, VS Code reads single
 
 The PyCharm plugin has one model, one rule for its triggers and per-file jobs, and none of these failures. Like VS Code, it passes no `-N` when it reads a single file. It then falls back to a full discovery, which costs a second process after every edit in a project with several paths.
 
+A seventh failure came up in the review on 2026-10-20, the same on main: with several paths, the top-level suite has no **Run** or **Debug** button, and **Run Tests** in the title bar or at the workspace folder starts nothing; only the suites of the single paths run. Since v2.6.0 (bc488d0d), the extension finds the workspace folder of a tree item only by the item's URI. The top-level suite of several paths has no source and so no URI. It therefore lacks the folder's tag, which every run profile requires, and runs drop it. PyCharm runs the whole project for it.
+
+An eighth came up the same day while checking the seventh: in a workspace with several folders, **Run Tests** and **Debug Tests** in the title bar run only one folder, without a message. VS Code sends them as one request with the profile of one folder and without a list of tests, which by VS Code's API means all tests. RobotCode then skips every folder whose tag that profile does not carry, since 8c0e8893 (v0.64.0).
+
 ## What Changes
 
 - **VS Code reads single files the way PyCharm does.**
@@ -40,6 +44,8 @@ The PyCharm plugin has one model, one rule for its triggers and per-file jobs, a
   - Reads of different files no longer cancel each other.
   - From six files of one folder changed together, one discovery of that folder runs instead, as today. The count no longer drops the pending reads of other workspace folders.
 - **Both clients pass `-N`** with the top-level suite name of the last discovery when they read a single file, as VS Code's runs already do. With several paths, Robot Framework otherwise names the top-level suite after what is left (RF #4289, closed as "won't fix"). This holds on RF 5.0, 6.0 and 7.5, with `-I` and with `--suite` alone.
+- **VS Code finds the workspace folder of a tree item through the nearest item with a URI**, the item itself or one above it. The top-level suite of several paths then carries the tag of the folder's run profiles, and a run of it, of the workspace folder or of **Run Tests** runs the whole project, as in PyCharm.
+- **Run Tests and Debug Tests run every workspace folder.** For a request without a list of tests, the folder of the profile runs with the profile's settings, and every other folder runs as its own Run or Debug profile runs it.
 - **The VS Code extension gets tests, with VS Code's own test stack.**
   - The stack is `@vscode/test-cli` and `@vscode/test-electron` with Mocha. The tests run in a downloaded VS Code with RobotCode's extension dependencies, `ms-python.python` and `ms-python.debugpy`, and can use the real `vscode` API.
   - The logic of this change lives in a module without a `vscode` import, as in PyCharm. Its tests run there, and the tree is built against a real TestController.
@@ -62,13 +68,15 @@ None.
   - a file restored under an open tab comes back;
   - files changed together are all read again;
   - a changed initialization file updates the tree;
-  - resource files start no discovery.
+  - resource files start no discovery;
+  - the top-level suite of several paths can be run, and **Run Tests** runs the whole project;
+  - in a workspace with several folders, **Run Tests** and **Debug Tests** run every folder.
 - `intellij-test-discovery`: the rediscovery of a single suite file works without a full discovery when the project has several paths.
 - `continuous-integration`: the VS Code extension's tests run in CI, and packaging waits for them.
 
 ## Impact
 
-- **VS Code:** `vscode-client/extension/testcontrollermanager.ts`. The parts that keep the tree current are rebuilt: `refresh`, `refreshItem`, `refreshWorkspace`, `refreshDocument`, `refreshUri`, `getTestsFromDocument`, `resolveHandler` and `refreshHandler`. The snapshots (`lastKnownChildren`) go away. Runs, results and run profiles stay as they are.
+- **VS Code:** `vscode-client/extension/testcontrollermanager.ts`. The parts that keep the tree current are rebuilt: `refresh`, `refreshItem`, `refreshWorkspace`, `refreshDocument`, `refreshUri`, `getTestsFromDocument`, `resolveHandler` and `refreshHandler`. The snapshots (`lastKnownChildren`) go away. Runs, results and run profiles stay as they are, apart from `findWorkspaceFolderForItem`, which finds the folder of the top-level suite of several paths again, and `runTests`, which runs every folder for a request without a list of tests.
 - **VS Code, new:** a module with the logic without `vscode` imports, and the tests under `vscode-client/test/` with recorded discovery results.
 - **VS Code test set-up:**
   - `.vscode-test.mjs` and a test build in `esbuild.mjs`;
@@ -77,6 +85,7 @@ None.
   - `.vscode/launch.json` changes its "Extension Tests" configuration;
   - `.vscode/extensions.json` recommends the Extension Test Runner and loses the stray `w` after its closing brace, there since 1422859d.
 - **CI:** a job `test-vscode` in `.github/workflows/build-test-package.yml`, and `publish-test-results` and `package` wait for it.
+- **User docs:** "Where the tests come from" in `docs/src/content/docs/guides/vscode/test-explorer.mdx`.
 - **Contributor docs:** `npm test` in AGENTS.md and CONTRIBUTING.md.
 - **PyCharm:** `intellij-client/.../testing/RobotCodeFileDiscovery.kt` (`fileDiscoveryArguments`) and `RobotCodeTestManager.discoverFile`, plus `RobotCodeFileDiscoveryTest.kt`.
 - **Not touched:** the `robotcode discover` command and its output.

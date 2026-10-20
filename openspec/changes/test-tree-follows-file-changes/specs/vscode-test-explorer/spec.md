@@ -96,3 +96,31 @@ Creating, changing or deleting a resource file, a file with the extension `.reso
 
 - **WHEN** `resources/shop.resource` is deleted outside VS Code
 - **THEN** no discovery of tests starts, and the tree stays as it was
+
+### Requirement: The top-level suite of several paths can be run
+
+When `robot.toml` sets several paths, the Test Explorer SHALL offer **Run** and **Debug** at the top-level suite that Robot Framework creates for them. Running that suite, its workspace folder or **Run Tests** in the view's title bar SHALL run the tests of all paths.
+
+#### Scenario: Run at the top-level suite
+
+- **WHEN** `robot.toml` sets `paths = ["electron", "vscode"]`, and the user runs the suite "Electron & Vscode" from the tree
+- **THEN** one run starts and runs the tests of both paths
+
+#### Scenario: Run Tests in a project with several paths
+
+- **WHEN** in that project the user clicks **Run Tests** in the title bar of the Testing view
+- **THEN** one run starts and runs the tests of both paths
+
+### Requirement: Run Tests runs every workspace folder
+
+In a workspace with several folders, **Run Tests** and **Debug Tests** in the title bar of the Testing view SHALL run the tests and tasks of every folder. A folder that the chosen profile does not belong to SHALL run as its own Run or Debug profile runs it.
+
+#### Scenario: Two workspace folders
+
+- **WHEN** a workspace has the folders `robotcode-demo` with tests and `rpa` with tasks, and the user clicks **Run Tests**
+- **THEN** a run starts for each folder, and the tasks of `rpa` run as well as the tests of `robotcode-demo`
+
+#### Scenario: A profile of robot.toml as the default profile
+
+- **WHEN** in that workspace the user chose "Run ci - Staging shop [robotcode-demo]" as the default profile, and clicks **Run Tests**
+- **THEN** `robotcode-demo` runs with the profile `ci` of its `robot.toml`, and `rpa` runs without it

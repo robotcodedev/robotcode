@@ -54,6 +54,36 @@ class RobotCodeFileDiscoveryTest {
     }
 
     @Test
+    fun argumentsPassTheTopLevelSuiteNameBetweenTheFileAndTheSuite() {
+        assertEquals(
+            listOf("-I", "folder2/b.robot", "-N", "Folder1 & Folder2", "--suite", "Folder1 & Folder2.Folder2.B"),
+            fileDiscoveryArguments(
+                "Folder1 & Folder2.Folder2.B", "folder2/b.robot", true, defaults, topLevelSuite = "Folder1 & Folder2"
+            ).drop(5)
+        )
+    }
+
+    @Test
+    fun argumentsWithoutTopLevelSuiteNamePassNoName() {
+        assertEquals(
+            listOf("-I", "folder2/b.robot", "--suite", "Folder1 & Folder2.Folder2.B"),
+            fileDiscoveryArguments("Folder1 & Folder2.Folder2.B", "folder2/b.robot", true, defaults, topLevelSuite = null)
+                .drop(5)
+        )
+    }
+
+    // with several test paths, the top-level suite keeps its name only with -N (RF #4289)
+    @Test
+    fun fileOfAProjectWithSeveralPathsYieldsItsSuiteWithTheTopLevelSuiteName() {
+        val suiteId = "/multipath/folder2/b.robot;Folder1 & Folder2.Folder2.B"
+
+        val children = findSuiteChildren(recorded("multi-path-file").items, suiteId)!!
+
+        assertEquals(listOf("My Amazing Testcase"), children.map { it.name })
+        assertNull(findSuiteChildren(recorded("multi-path-file-without-name").items, suiteId))
+    }
+
+    @Test
     fun argumentsAreGlobEscaped() {
         assertEquals(
             listOf("-I", "a[*]b.robot", "--suite", "Project.A[*]b [[]x[]]"),

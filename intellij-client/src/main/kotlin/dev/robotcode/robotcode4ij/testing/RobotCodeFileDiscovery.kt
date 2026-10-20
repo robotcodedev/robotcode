@@ -33,16 +33,22 @@ internal fun fullDiscoveryArguments(
 /**
  * The arguments of the discovery of a single suite file. `discover all` returns tests and tasks alike, so the same call
  * works for test suites, task suites and projects with `rpa = true`; `-I` is passed only with parse-include support.
+ * `-N` sets the [topLevelSuite] name of the last full discovery, as the runs do: with several test paths, Robot
+ * Framework names the top-level suite after the suites it keeps, and the file's suite would get another ID (RF #4289).
  * The settings of the "Robot" page come as in the full discovery, before the selection of the file, as in VS Code.
  */
 internal fun fileDiscoveryArguments(
     longname: String, relSource: String?, supportsParseInclude: Boolean,
-    settings: RobotCodeProjectConfiguration.ProjectState, roots: List<String> = emptyList()
+    settings: RobotCodeProjectConfiguration.ProjectState, roots: List<String> = emptyList(),
+    topLevelSuite: String? = null
 ): Array<String> {
     return buildList {
         addAll(fullDiscoveryArguments(settings, roots))
         if (supportsParseInclude && relSource != null) {
             addAll(listOf("-I", escapeRobotGlob(relSource)))
+        }
+        if (topLevelSuite != null) {
+            addAll(listOf("-N", topLevelSuite))
         }
         addAll(listOf("--suite", escapeRobotGlob(longname)))
     }.toTypedArray()

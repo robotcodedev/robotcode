@@ -5,11 +5,24 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
-import { escapeRobotGlobPatterns, filterAsync, Mutex, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
+import { filterAsync, Mutex, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
-import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
+import { Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
+import {
+  FILE_DISCOVERY_COMMAND,
+  FileEventKind,
+  fileDiscoveryArguments,
+  fileEventAction,
+  folderRun,
+  RefreshQueue,
+  RobotCodeDiscoverResult,
+  RobotItemIndex,
+  RobotItemType,
+  RobotTestItem,
+  suiteChildrenIn,
+} from "./testdiscovery";
+import { folderUriOf, TestTreeBuilder } from "./testtree";
 
-const ROOT_TEST_ITEM_KEY = "__root__";
 // Why the Testing view is empty; the manifest's viewsWelcome entries pick their hint by this key.
 const CONTEXT_TEST_EXPLORER_STATE = "robotcode.testExplorer.state";
 
@@ -17,16 +30,20 @@ function setTestExplorerState(state: "noTests" | "noEnvironment" | "disabled" | 
   void vscode.commands.executeCommand("setContext", CONTEXT_TEST_EXPLORER_STATE, state);
 }
 
-function rootSnapshotKey(folder: vscode.WorkspaceFolder): string {
-  return `${ROOT_TEST_ITEM_KEY}:${folder.uri.toString()}`;
+// A cancellation token source that follows an AbortSignal of the refresh queue, for the processes of discoveries.
+function tokenSourceOf(signal: AbortSignal): vscode.CancellationTokenSource {
+  const source = new vscode.CancellationTokenSource();
+  if (signal.aborted) source.cancel();
+  else signal.addEventListener("abort", () => source.cancel(), { once: true });
+  return source;
 }
 
-function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
-  if (a === b) return true;
-  if (a === undefined || b === undefined) return false;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-  return true;
+function signalOf(token: vscode.CancellationToken | undefined): AbortSignal | undefined {
+  if (token === undefined) return undefined;
+  const controller = new AbortController();
+  if (token.isCancellationRequested) controller.abort();
+  else token.onCancellationRequested(() => controller.abort());
+  return controller.signal;
 }
 
 function diagnosticsSeverityToVsCode(severity?: DiagnosticSeverity): vscode.DiagnosticSeverity | undefined {
@@ -42,38 +59,6 @@ function diagnosticsSeverityToVsCode(severity?: DiagnosticSeverity): vscode.Diag
     default:
       return undefined;
   }
-}
-
-enum RobotItemType {
-  WORKSPACE = "workspace",
-  SUITE = "suite",
-  TEST = "test",
-  TASK = "task",
-  ERROR = "error",
-}
-
-interface RobotTestItem {
-  type: RobotItemType;
-  id: string;
-  uri?: string;
-  relSource?: string;
-  source?: string;
-  children: RobotTestItem[] | undefined;
-  name: string;
-  longname: string;
-  description?: string;
-  range?: Range;
-  error?: string;
-  tags?: string[];
-  rpa?: boolean;
-}
-
-interface RobotCodeDiscoverResult {
-  items?: RobotTestItem[];
-  diagnostics?: { [Key: string]: Diagnostic[] };
-  // True when the folder's Robot Framework version supports `--parseinclude` (RF >= 6.1).
-  // A per-folder environment fact, not a property of any single test item.
-  supportsParseInclude?: boolean;
 }
 
 interface RobotCodeProfileInfo {
@@ -201,60 +186,10 @@ function unmarkedCallLocations(calls: RobotExecutionAttributes[]): vscode.Locati
   return result;
 }
 
-function robotItemsEqual(a: RobotTestItem | undefined, b: RobotTestItem | undefined): boolean {
-  if (a === b) return true;
-  if (a === undefined || b === undefined) return false;
-  if (a.id !== b.id) return false;
-  if (a.type !== b.type) return false;
-  if (a.name !== b.name) return false;
-  if (a.longname !== b.longname) return false;
-  if (a.description !== b.description) return false;
-  if (a.error !== b.error) return false;
-  if (!arraysEqual(a.tags, b.tags)) return false;
-  const aRange = a.range;
-  const bRange = b.range;
-  if ((aRange === undefined) !== (bRange === undefined)) return false;
-  if (aRange && bRange) {
-    if (
-      aRange.start.line !== bRange.start.line ||
-      aRange.start.character !== bRange.start.character ||
-      aRange.end.line !== bRange.end.line ||
-      aRange.end.character !== bRange.end.character
-    ) {
-      return false;
-    }
-  }
-  return robotItemListsEqual(a.children, b.children);
-}
-
-function robotItemListsEqual(a: RobotTestItem[] | undefined, b: RobotTestItem[] | undefined): boolean {
-  if (a === b) return true;
-  if (a === undefined || b === undefined) return false;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (!robotItemsEqual(a[i], b[i])) return false;
-  }
-  return true;
-}
-
-class DidChangeEntry {
-  constructor(timerHandle: NodeJS.Timeout, tokenSource: vscode.CancellationTokenSource) {
-    this.timer = timerHandle;
-    this.tokenSource = tokenSource;
-  }
-  public readonly timer: NodeJS.Timeout;
-  public readonly tokenSource: vscode.CancellationTokenSource;
-
-  public cancel() {
-    this.tokenSource.cancel();
-    clearTimeout(this.timer);
-  }
-}
-
+// The model of a workspace folder: the items of its last discovery, with the read single files put in.
 class WorkspaceFolderEntry {
   public constructor(
-    public valid: boolean,
-    public readonly items: RobotTestItem[] | undefined,
+    public readonly items: RobotTestItem[],
     public readonly supportsParseInclude: boolean = false,
   ) {}
 }
@@ -273,29 +208,18 @@ export class TestControllerManager {
   private readonly runProfilesMutex = new Mutex();
   public runProfiles: vscode.TestRunProfile[] = [];
 
-  private readonly refreshMutex = new Mutex();
   private readonly updateEditorsMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
-  private readonly didChangedTimer = new Map<string, DidChangeEntry>();
-  private readonly refreshWorkspaceChangeTimer = new Map<string, DidChangeEntry>();
   private diagnosticCollection = vscode.languages.createDiagnosticCollection("robotCode discovery");
   private activeStepDecorationType: vscode.TextEditorDecorationType;
   showEditorRunDecorations = false;
   private readonly profilesCache = new WeakMap<vscode.WorkspaceFolder, RobotCodeProfilesResult>();
-  // O(1) lookup for RobotTestItem by id — derived from robotTestItems, not source of truth.
-  private readonly robotItemIndex = new Map<string, RobotTestItem>();
-  // O(1) lookup for vscode.TestItem by URI — derived from testItems, not source of truth.
-  private readonly testItemByUri = new Map<string, vscode.TestItem>();
-  // Cache of the last set tag IDs per TestItem ID. Used for tag diffing in addOrUpdateTestItem.
-  private readonly lastSetTags = new Map<string, string[]>();
-  // Snapshot of the last processed children per TestItem id (plus a per-folder
-  // "__root__:<uri>" key) for refreshItem's result compare.
-  private readonly lastKnownChildren = new Map<string, RobotTestItem[] | undefined>();
-  // CTS for the config-change refresh path. Cancelled on the next config change so an
-  // in-flight refresh terminates before the next refreshWorkspace queues behind it on
-  // refreshFromUriMutex. Direct-to-refresh() events don't need this — refresh()'s
-  // single-inflight pattern already cancels predecessors.
-  private configChangeCts: vscode.CancellationTokenSource | undefined;
+  // The items of the folders' models by ID, and their suites by URI; derived from robotTestItems.
+  private readonly itemIndex = new RobotItemIndex((uri) => vscode.Uri.parse(uri).toString());
+  // The one way from the models to the items of the controller.
+  private readonly treeBuilder: TestTreeBuilder;
+  // The reads of single files and the discoveries of folders, keyed by URI string.
+  private readonly refreshQueue: RefreshQueue;
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -305,14 +229,30 @@ export class TestControllerManager {
   ) {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework Tests/Tasks");
 
+    this.treeBuilder = new TestTreeBuilder(this.testController, {
+      tagsOf: (names) => this.convertTags(names) ?? [],
+      folderTagOf: (item) => this.getFolderTag(this.findWorkspaceFolderForItem(item)),
+    });
+    this.refreshQueue = new RefreshQueue({
+      readFile: (folder, uri, signal) => this.readFile(folder, uri, signal),
+      discoverFolder: (folder, signal) => this.discoverFolder(folder, signal),
+    });
+
     this.testController.resolveHandler = async (item) => {
-      // resolveHandler has no token parameter in the VS Code API — refresh() itself
-      // takes care of cancelling older calls via the single-inflight pattern.
-      await this.refresh(item);
+      if (item === undefined) {
+        // At start: the folders without a model yet are discovered.
+        await this.discoverFolders(
+          (vscode.workspace.workspaceFolders ?? []).filter((folder) => this.robotTestItems.get(folder) === undefined),
+        );
+        return;
+      }
+      // An expanded item gets its children from the model; no file is read.
+      const robotItem = this.findRobotItem(item);
+      if (robotItem?.children !== undefined) this.treeBuilder.buildChildren(item, robotItem.children);
     };
 
     this.testController.refreshHandler = async (token) => {
-      await this.refreshWorkspace(undefined, token);
+      await this.discoverFolders(vscode.workspace.workspaceFolders ?? [], token);
     };
 
     this.updateRunProfiles().then(
@@ -324,15 +264,9 @@ export class TestControllerManager {
     // without events for the files in it.
     const fileWatcher = vscode.workspace.createFileSystemWatcher("**");
 
-    fileWatcher.onDidCreate(async (uri) => {
-      if (this.hasRobotFileExtension(uri.path) || (await this.containsRobotFile(uri))) await this.refreshUri(uri);
-    });
-    fileWatcher.onDidDelete(async (uri) => {
-      if (this.hasRobotFileExtension(uri.path) || this.isDiscoveredSuiteOrAbove(uri)) await this.refreshUri(uri);
-    });
-    fileWatcher.onDidChange(async (uri) => {
-      if (this.hasRobotFileExtension(uri.path)) await this.refreshUri(uri);
-    });
+    fileWatcher.onDidCreate((uri) => this.onFileEvent("created", uri));
+    fileWatcher.onDidDelete((uri) => this.onFileEvent("deleted", uri));
+    fileWatcher.onDidChange((uri) => this.onFileEvent("changed", uri));
 
     this.activeStepDecorationType = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
@@ -352,19 +286,19 @@ export class TestControllerManager {
         // A folder that became usable gets its tests when its language server starts; a folder that lost its
         // environment, or was switched off, shows the hint instead of its tests.
         if (event.state.state === "unusable" || this.languageClientsManager.isDisabledForFolder(event.folder)) {
-          await this.refreshWorkspace(event.folder);
+          await this.discoverFolders([event.folder]);
         }
       }),
       this.languageClientsManager.onClientStateChanged(async (event) => {
         const folder = vscode.workspace.getWorkspaceFolder(event.uri);
         switch (event.state) {
           case ClientState.Running: {
-            await this.refreshWorkspace(folder);
+            if (folder) await this.discoverFolders([folder]);
             break;
           }
           case ClientState.Refreshed: {
             if (folder && !this.languageClientsManager.clients.has(folder.uri.toString())) {
-              await this.refreshWorkspace(folder);
+              await this.discoverFolders([folder]);
             }
             if (folder) this.invalidateProfilesCache(folder);
             await this.updateRunProfiles();
@@ -373,28 +307,22 @@ export class TestControllerManager {
         }
       }),
       vscode.workspace.onDidChangeConfiguration(async (event) => {
-        let testExplorerChanged = false;
-        for (const ws of vscode.workspace.workspaceFolders ?? []) {
-          if (event.affectsConfiguration("robotcode.testExplorer", ws)) {
-            testExplorerChanged = true;
-            break;
-          }
-        }
+        const changedFolders = (vscode.workspace.workspaceFolders ?? []).filter((folder) =>
+          event.affectsConfiguration("robotcode.testExplorer", folder),
+        );
 
-        if (testExplorerChanged) {
-          this.configChangeCts?.cancel();
-          this.configChangeCts = new vscode.CancellationTokenSource();
-          await this.refreshWorkspace(undefined, this.configChangeCts.token);
+        if (changedFolders.length > 0) {
+          await this.discoverFolders(vscode.workspace.workspaceFolders ?? []);
           await this.updateRunProfiles();
         } else if (event.affectsConfiguration("launch.configurations")) {
           await this.updateRunProfiles();
         }
       }),
-      vscode.workspace.onDidSaveTextDocument((document) => this.refreshDocument(document)),
+      vscode.workspace.onDidSaveTextDocument((document) => this.onFileEvent("edited", document.uri)),
       vscode.workspace.onDidChangeTextDocument((event) => {
         // Skip events without actual content changes (e.g. dirty marker updates).
         if (event.contentChanges.length === 0) return;
-        this.refreshDocument(event.document);
+        void this.onFileEvent("edited", event.document.uri);
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         await this.updateRunProfiles();
@@ -403,9 +331,9 @@ export class TestControllerManager {
           this.removeWorkspaceFolderItems(r);
         }
         if (event.added.length > 0) {
-          // refresh()'s single-inflight handles cancellation of any predecessor.
-          await this.refresh();
+          await this.discoverFolders(event.added);
         }
+        this.updateTestExplorerState();
       }),
 
       vscode.debug.onDidStartDebugSession((session) => {
@@ -754,56 +682,13 @@ export class TestControllerManager {
       }
     });
 
-    if (this.robotTestItems.has(folder)) {
-      const robotItems = this.robotTestItems.get(folder)?.items;
-
-      this.robotTestItems.delete(folder);
-
-      // Index/cache cleanup for the entire subtree.
-      this.unindexRobotTree(robotItems);
-
-      for (const id of robotItems?.map((i) => i.id) ?? []) {
-        const deleteItem = (itemId: string) => {
-          const item = this.testItems.get(itemId);
-          this.testItems.delete(itemId);
-          if (item?.uri !== undefined) {
-            const uriStr = item.uri.toString();
-            if (this.testItemByUri.get(uriStr) === item) {
-              this.testItemByUri.delete(uriStr);
-            }
-          }
-          item?.children.forEach((v) => deleteItem(v.id));
-        };
-
-        deleteItem(id);
-      }
-
-      for (const item of robotItems || []) {
-        this.testController.items.delete(item.id);
-      }
-    }
-
-    this.lastKnownChildren.delete(rootSnapshotKey(folder));
+    this.removeFolderModel(folder);
   }
 
   dispose(): void {
-    this.didChangedTimer.forEach((entry) => entry.cancel());
-    this.didChangedTimer.clear();
+    this.refreshQueue.dispose();
 
-    this.refreshWorkspaceChangeTimer.forEach((entry) => entry.cancel());
-    this.refreshWorkspaceChangeTimer.clear();
-
-    this.robotItemIndex.clear();
-    this.testItemByUri.clear();
-    this.lastSetTags.clear();
-    this.lastKnownChildren.clear();
-
-    this.currentRefreshCts?.cancel();
-    this.currentRefreshCts?.dispose();
-    this.currentRefreshCts = undefined;
-    this.configChangeCts?.cancel();
-    this.configChangeCts?.dispose();
-    this.configChangeCts = undefined;
+    this.itemIndex.clear();
 
     this._disposables.dispose();
     this.testController.dispose();
@@ -812,187 +697,171 @@ export class TestControllerManager {
   public readonly robotTestItems = new WeakMap<vscode.WorkspaceFolder, WorkspaceFolderEntry | undefined>();
 
   public findRobotItem(item: vscode.TestItem): RobotTestItem | undefined {
-    // The index is kept consistent with robotTestItems (populated in getTestsFromWorkspaceFolder /
-    // getTestsFromDocument, cleaned in removeNotAddedTestItems / removeWorkspaceFolderItems).
-    return this.robotItemIndex.get(item.id);
+    // The index follows the models in robotTestItems (setFolderModel, readFile).
+    return this.itemIndex.get(item.id);
   }
 
   // Resolves the discover `workspace` RobotTestItem for a folder directly from the per-folder
-  // discovery result. Do NOT go via findTestItemByUri here: the workspace item and its root suite
-  // share the folder URI, so the URI index cannot distinguish them (see #624 — a wrong resolution
+  // discovery result. Do NOT go via the URI of an item here: the workspace item and its root suite
+  // share the folder URI, so a lookup by URI cannot distinguish them (see #624 — a wrong resolution
   // dropped `-I`/`-N` from the run command).
   public findWorkspaceRobotItem(folder: vscode.WorkspaceFolder): RobotTestItem | undefined {
     return this.robotTestItems.get(folder)?.items?.find((i) => i.type === RobotItemType.WORKSPACE);
   }
 
-  // Recursively walks a RobotTestItem subtree and calls cb for each item.
-  private walkRobotTree(items: RobotTestItem[] | undefined, cb: (item: RobotTestItem) => void): void {
-    if (!items) return;
-    for (const item of items) {
-      cb(item);
-      this.walkRobotTree(item.children, cb);
-    }
+  public findTestItemById(id: string): vscode.TestItem | undefined {
+    return this.treeBuilder.get(id);
   }
 
-  private indexRobotTree(items: RobotTestItem[] | undefined): void {
-    this.walkRobotTree(items, (i) => this.robotItemIndex.set(i.id, i));
+  private static folderKey(folder: vscode.WorkspaceFolder): string {
+    return folder.uri.toString();
   }
 
-  private unindexRobotTree(items: RobotTestItem[] | undefined): void {
-    this.walkRobotTree(items, (i) => {
-      this.robotItemIndex.delete(i.id);
-      this.lastSetTags.delete(i.id);
-      this.lastKnownChildren.delete(i.id);
+  private static folderOf(key: string): vscode.WorkspaceFolder | undefined {
+    return vscode.workspace.workspaceFolders?.find((folder) => folder.uri.toString() === key);
+  }
+
+  // A file event reads the file again, discovers its folder, or does nothing, see fileEventAction.
+  private async onFileEvent(kind: FileEventKind, uri: vscode.Uri): Promise<void> {
+    if (uri.scheme !== "file") return;
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (folder === undefined || !this.isTestExplorerEnabledForWorkspace(folder)) return;
+
+    const isRobotFile = this.hasRobotFileExtension(uri.path);
+    const action = fileEventAction({
+      kind,
+      isSuiteFile: this.itemIndex.suiteOf(uri.toString()) !== undefined,
+      isResourceFile: uri.path.toLowerCase().endsWith(".resource"),
+      isRobotFile,
+      isFolderWithRobotFiles: kind === "created" && !isRobotFile && (await this.containsRobotFile(uri)),
+      isAtOrAboveSuite: kind === "deleted" && this.isDiscoveredSuiteOrAbove(uri),
     });
+    if (action === "read") this.refreshQueue.requestFile(TestControllerManager.folderKey(folder), uri.toString());
+    else if (action === "discover") this.refreshQueue.requestFolder(TestControllerManager.folderKey(folder));
   }
 
-  // Deep clone of the fields of a RobotTestItem subtree that are relevant for
-  // robotItemsEqual. Stored as a snapshot in lastKnownChildren so the next refresh can
-  // perform a structural comparison without relying on a live reference that may have
-  // been mutated in the meantime.
-  private snapshotChildren(items: RobotTestItem[] | undefined): RobotTestItem[] | undefined {
-    if (!items) return undefined;
-    return items.map((i): RobotTestItem => ({
-      id: i.id,
-      type: i.type,
-      name: i.name,
-      longname: i.longname,
-      description: i.description,
-      error: i.error,
-      tags: i.tags ? [...i.tags] : undefined,
-      range: i.range ? { start: { ...i.range.start }, end: { ...i.range.end } } : undefined,
-      children: this.snapshotChildren(i.children),
-    }));
-  }
-
-  // Threshold for burst coalescing: when this many per-file refreshes are pending at
-  // once, we drop them and fire a single workspace refresh instead — which is no more
-  // expensive than a per-file discover but covers all files.
-  private static readonly BURST_THRESHOLD = 5;
-  // Debounce window for batching rapid file/document changes before triggering discover.
-  private static readonly DEBOUNCE_MS = 1000;
-
-  public refreshDocument(document: vscode.TextDocument): void {
-    if (!this.languageClientsManager.supportedLanguages.includes(document.languageId)) return;
-    if (!this.languageClientsManager.fileExtensions.some((ext) => document.uri.path.toLowerCase().endsWith(`.${ext}`)))
-      return;
-    if (document.uri.path.toLowerCase().endsWith("__init__.robot")) return;
-
-    const uri_str = document.uri.toString();
-    if (this.didChangedTimer.has(uri_str)) {
-      this.didChangedTimer.get(uri_str)?.cancel();
-      this.didChangedTimer.delete(uri_str);
-    }
-
-    const cancelationTokenSource = new vscode.CancellationTokenSource();
-
-    this.didChangedTimer.set(
-      uri_str,
-      new DidChangeEntry(
-        setTimeout(() => {
-          // Remove the entry from the map immediately — it only represents *pending*
-          // refreshes. Without this, didChangedTimer.size would grow monotonically and
-          // burst coalescing would trigger false positives.
-          this.didChangedTimer.delete(uri_str);
-
-          // Burst coalescing: when many per-file timers fire close together (e.g. an
-          // AI agent applies 10+ edits at once), drop the remaining per-file refreshes
-          // and replace them with a single workspace refresh.
-          // Using >=THRESHOLD because we just removed ourselves from the map.
-          if (this.didChangedTimer.size >= TestControllerManager.BURST_THRESHOLD) {
-            for (const [, entry] of this.didChangedTimer) entry.cancel();
-            this.didChangedTimer.clear();
-            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri), cancelationTokenSource.token).then(
-              () => undefined,
-              () => undefined,
-            );
-            return;
-          }
-
-          const item = this.findTestItemForDocument(document);
-          if (item)
-            this.refresh(item, cancelationTokenSource.token).then(
-              () => {
-                if (item?.canResolveChildren && item.children.size === 0) {
-                  this.refreshWorkspace(
-                    vscode.workspace.getWorkspaceFolder(document.uri),
-                    cancelationTokenSource.token,
-                  ).then(
-                    () => undefined,
-                    () => undefined,
-                  );
-                }
-              },
-              () => undefined,
-            );
-          else {
-            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri), cancelationTokenSource.token).then(
-              () => undefined,
-              () => undefined,
-            );
-          }
-        }, TestControllerManager.DEBOUNCE_MS),
-        cancelationTokenSource,
-      ),
+  // Discovers the folders now, one after another in the refresh queue.
+  private async discoverFolders(
+    folders: readonly vscode.WorkspaceFolder[],
+    token?: vscode.CancellationToken,
+  ): Promise<void> {
+    const signal = signalOf(token);
+    await Promise.all(
+      folders.map((folder) => this.refreshQueue.discoverFolder(TestControllerManager.folderKey(folder), signal)),
     );
   }
 
-  public findTestItemForDocument(document: vscode.TextDocument): vscode.TestItem | undefined {
-    return this.findTestItemByUri(document.uri.toString());
-  }
-
-  public findTestItemByUri(documentUri: string): vscode.TestItem | undefined {
-    const indexed = this.testItemByUri.get(documentUri);
-    if (indexed !== undefined) {
-      return indexed;
+  // A job of the refresh queue: reads a suite file again and puts the children of its suite into the folder's model.
+  private async readFile(folderKey: string, uri: string, signal: AbortSignal): Promise<void> {
+    const folder = TestControllerManager.folderOf(folderKey);
+    if (folder === undefined) return;
+    const suite = this.itemIndex.suiteOf(uri);
+    if (suite === undefined) {
+      // queued behind this job; awaiting it here would wait for this job
+      void this.refreshQueue.discoverFolder(folderKey);
+      return;
     }
-    // Fallback: linear scan over the WeakValueMap. Containers only (suite/workspace) —
-    // tests share the URI with their suite and a refresh on a test does nothing useful.
-    for (const item of this.testItems.values()) {
-      if (item.uri?.toString() === documentUri && item.canResolveChildren) {
-        this.testItemByUri.set(documentUri, item);
-        return item;
-      }
-    }
-    return undefined;
-  }
 
-  public findTestItemById(id: string): vscode.TestItem | undefined {
-    return this.testItems.get(id);
-  }
-
-  // Tracks the currently active refresh token — single-inflight + latest-pending pattern.
-  // Every new refresh() call cancels the running one so that the in-flight subprocess
-  // gets killed immediately via the AbortController in pythonmanger.ts:executeRobotCode.
-  // Earlier refreshes still waiting on the mutex abort right after acquiring it because
-  // their CTS is already cancelled — effectively only the newest call really runs.
-  private currentRefreshCts: vscode.CancellationTokenSource | undefined;
-
-  public async refresh(item?: vscode.TestItem, externalToken?: vscode.CancellationToken): Promise<void> {
-    // Cancel any in-flight predecessor.
-    this.currentRefreshCts?.cancel();
-
-    const cts = new vscode.CancellationTokenSource();
-    this.currentRefreshCts = cts;
-
-    // Bridge external cancellation (e.g. from VS Code's refreshHandler) onto our CTS.
-    const externalSub = externalToken?.onCancellationRequested(() => cts.cancel());
-
+    const item = this.treeBuilder.get(suite.id);
+    if (item !== undefined) item.busy = true;
+    const tokenSource = tokenSourceOf(signal);
     try {
-      await this.refreshMutex.dispatch(async () => {
-        if (cts.token.isCancellationRequested) return;
-        await this.refreshItem(item, cts.token);
-      });
-    } finally {
-      externalSub?.dispose();
-      if (this.currentRefreshCts === cts) {
-        this.currentRefreshCts = undefined;
+      const result = await this.getTestsFromFile(folder, vscode.Uri.parse(uri), suite, tokenSource.token);
+      if (result === undefined || signal.aborted) return;
+
+      const children = suiteChildrenIn(result.items, suite.id);
+      if (children === undefined) {
+        void this.refreshQueue.discoverFolder(folderKey);
+        return;
       }
-      cts.dispose();
+      this.itemIndex.replaceChildren(suite, children);
+
+      const suiteItem = this.treeBuilder.get(suite.id);
+      if (suiteItem !== undefined) this.treeBuilder.buildChildren(suiteItem, children);
+      else this.buildFolder(folder, []);
+    } finally {
+      tokenSource.dispose();
+      if (item !== undefined) item.busy = false;
     }
   }
 
-  private testItems = new WeakValueMap<string, vscode.TestItem>();
+  // A job of the refresh queue: discovers a workspace folder and builds its tree from the new model.
+  private async discoverFolder(folderKey: string, signal: AbortSignal): Promise<void> {
+    const folder = TestControllerManager.folderOf(folderKey);
+    if (folder === undefined) return;
+
+    if (
+      !this.isTestExplorerEnabledForWorkspace(folder) ||
+      this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder)
+    ) {
+      // No discovery can run without a valid environment. The cached answer is used so that this does not wait for
+      // the environment dialog; the language client start discovers again once an environment is valid.
+      this.removeFolderModel(folder);
+      this.updateTestExplorerState();
+      return;
+    }
+
+    const workspaceRobotItem = this.findWorkspaceRobotItem(folder);
+    const workspaceItem = workspaceRobotItem ? this.treeBuilder.get(workspaceRobotItem.id) : undefined;
+    if (workspaceItem !== undefined) workspaceItem.busy = true;
+    const tokenSource = tokenSourceOf(signal);
+    try {
+      const result = await this.getTestsFromWorkspaceFolder(folder, tokenSource.token);
+      // An aborted discovery leaves the model as it is; the discovery that replaced it builds the tree.
+      if (result === undefined || signal.aborted) return;
+
+      const oldRootIds = (this.robotTestItems.get(folder)?.items ?? []).map((i) => i.id);
+      this.setFolderModel(folder, result);
+      this.buildFolder(folder, oldRootIds);
+    } finally {
+      tokenSource.dispose();
+      if (workspaceItem !== undefined) workspaceItem.busy = false;
+      this.updateTestExplorerState();
+    }
+  }
+
+  private setFolderModel(folder: vscode.WorkspaceFolder, result: RobotCodeDiscoverResult): void {
+    this.itemIndex.remove(this.robotTestItems.get(folder)?.items);
+    const entry = new WorkspaceFolderEntry(result.items ?? [], result.supportsParseInclude ?? false);
+    this.robotTestItems.set(folder, entry);
+    this.itemIndex.add(entry.items);
+  }
+
+  private removeFolderModel(folder: vscode.WorkspaceFolder): void {
+    const items = this.robotTestItems.get(folder)?.items;
+    this.itemIndex.remove(items);
+    this.robotTestItems.delete(folder);
+    for (const item of items ?? []) this.treeBuilder.remove(undefined, item.id);
+  }
+
+  // Builds the root items of a folder from its model and removes the old root items that it no longer has.
+  private buildFolder(folder: vscode.WorkspaceFolder, oldRootIds: string[]): void {
+    const kept = new Set<string>();
+    for (const robotItem of this.robotTestItems.get(folder)?.items ?? []) {
+      const item = this.treeBuilder.build(undefined, robotItem);
+      if (item !== undefined) kept.add(item.id);
+    }
+    for (const id of oldRootIds) if (!kept.has(id)) this.treeBuilder.remove(undefined, id);
+  }
+
+  // The Testing view shows welcome content only while the tree is empty; the context key says why it is
+  // empty, so the manifest's viewsWelcome entries can pick the right hint. While an enabled folder has no
+  // model yet, its discovery has not ended, and the state stays until it has.
+  private updateTestExplorerState(): void {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const enabled = folders.filter((folder) => this.isTestExplorerEnabledForWorkspace(folder));
+    if (folders.length === 0) {
+      setTestExplorerState(undefined);
+    } else if (enabled.length === 0) {
+      setTestExplorerState("disabled");
+    } else if (this.testController.items.size > 0) {
+      setTestExplorerState("hasTests");
+    } else if (enabled.some((folder) => this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder))) {
+      setTestExplorerState("noEnvironment");
+    } else if (enabled.every((folder) => this.robotTestItems.get(folder) !== undefined)) {
+      setTestExplorerState("noTests");
+    }
+  }
 
   private async discoverTests(
     folder: vscode.WorkspaceFolder,
@@ -1085,132 +954,98 @@ export class TestControllerManager {
     return result;
   }
 
-  private readonly lastDiscoverResults = new WeakMap<vscode.WorkspaceFolder, RobotCodeDiscoverResult>();
+  // The text of the folder's open Robot Framework documents, for the stdin of the discover command.
+  private openDocumentsOf(folder: vscode.WorkspaceFolder): { [key: string]: string } {
+    const documents: { [key: string]: string } = {};
+    for (const document of vscode.workspace.textDocuments) {
+      if (
+        this.languageClientsManager.supportedLanguages.includes(document.languageId) &&
+        vscode.workspace.getWorkspaceFolder(document.uri) === folder
+      ) {
+        documents[document.uri.toString()] = document.getText();
+      }
+    }
+    return documents;
+  }
 
+  // The discovery of a folder, or undefined when it was aborted or could not run. A failed discovery gives the
+  // folder's error item, so that it replaces the suites of the last result.
   public async getTestsFromWorkspaceFolder(
     folder: vscode.WorkspaceFolder,
     token?: vscode.CancellationToken,
-  ): Promise<RobotTestItem[] | undefined> {
+  ): Promise<RobotCodeDiscoverResult | undefined> {
     const robotFiles = await vscode.workspace.findFiles(
       new vscode.RelativePattern(folder, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`),
       undefined,
       1,
       token,
     );
+    // A cancelled search finds nothing; that is no folder without files.
+    if (token?.isCancellationRequested) return undefined;
 
     if (robotFiles.length === 0) {
       // A folder without Robot Framework files is a completed discovery without tests, not an aborted
-      // one (`undefined`); a file created later reaches the tree through the watcher's workspace refresh.
-      return [];
+      // one (`undefined`); a file created later reaches the tree through the watcher.
+      return { items: [] };
     }
 
     try {
-      const o: { [key: string]: string } = {};
-
-      for (const document of vscode.workspace.textDocuments) {
-        if (
-          this.languageClientsManager.supportedLanguages.includes(document.languageId) &&
-          vscode.workspace.getWorkspaceFolder(document.uri) === folder
-        ) {
-          o[document.uri.toString()] = document.getText();
-        }
-      }
-
       const result = await this.discoverTests(
         folder,
         ["discover", "--read-from-stdin", "all"],
         [],
-        JSON.stringify(o),
+        JSON.stringify(this.openDocumentsOf(folder)),
         true,
         token,
       );
-
-      if (result?.items !== undefined) {
-        this.lastDiscoverResults.set(folder, result);
-      }
-      // Index the freshly discovered subtree for O(1) findRobotItem lookups.
-      this.indexRobotTree(result?.items);
-
-      return result?.items;
+      return result.items !== undefined ? result : undefined;
     } catch (e) {
-      if (e instanceof Error) {
-        if (e.name === "AbortError") {
-          if (this.lastDiscoverResults.has(folder)) {
-            return this.lastDiscoverResults.get(folder)?.items;
-          }
-          // Abort without a cached result — return undefined so refreshItem skips this
-          // folder and tries again on the next refresh. Do NOT build an error item into
-          // the tree — otherwise the user sees "AbortError" as a workspace entry.
-          return undefined;
-        }
-      }
+      if (e instanceof Error && e.name === "AbortError") return undefined;
 
-      const errorItems: RobotTestItem[] = [
-        {
-          name: folder.name,
-          type: RobotItemType.WORKSPACE,
-          id: folder.uri.fsPath,
-          uri: folder.uri.toString(),
-          longname: folder.name,
-          error: e?.toString() || "Unknown Error",
-          children: [],
-        },
-      ];
-      // Indexed like a discovery result: findRobotItem would otherwise return the workspace item of the
-      // last successful discovery, and its suites would stay in the tree next to the error.
-      this.indexRobotTree(errorItems);
-      return errorItems;
+      return {
+        items: [
+          {
+            name: folder.name,
+            type: RobotItemType.WORKSPACE,
+            id: folder.uri.fsPath,
+            uri: folder.uri.toString(),
+            longname: folder.name,
+            error: e?.toString() || "Unknown Error",
+            children: [],
+          },
+        ],
+      };
     }
   }
 
-  public async getTestsFromDocument(
-    document: vscode.TextDocument,
-    testItem: RobotTestItem,
+  // Reads a single suite file again, or undefined when the read was aborted or failed.
+  public async getTestsFromFile(
+    folder: vscode.WorkspaceFolder,
+    uri: vscode.Uri,
+    suite: RobotTestItem,
     token?: vscode.CancellationToken,
-  ): Promise<RobotTestItem[] | undefined> {
-    const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-
-    if (!folder) return undefined;
-
-    // Whether to pass `-I` is a per-folder environment fact, taken from the last workspace discover.
+  ): Promise<RobotCodeDiscoverResult | undefined> {
+    // Whether to pass `-I` is a per-folder environment fact, taken from the last discovery of the folder.
     const supportsParseInclude = this.robotTestItems.get(folder)?.supportsParseInclude ?? false;
+    // The name of the top-level suite, as the runs pass it with -N.
+    const topLevelSuite = this.findWorkspaceRobotItem(folder)?.children?.[0]?.longname;
 
     try {
-      const o: { [key: string]: string } = {};
-      for (const document of vscode.workspace.textDocuments) {
-        if (
-          this.languageClientsManager.supportedLanguages.includes(document.languageId) &&
-          vscode.workspace.getWorkspaceFolder(document.uri) === folder
-        ) {
-          o[document.uri.toString()] = document.getText();
-        }
-      }
-
-      if (this.diagnosticCollection.has(document.uri)) {
-        this.diagnosticCollection.delete(document.uri);
+      if (this.diagnosticCollection.has(uri)) {
+        this.diagnosticCollection.delete(uri);
       }
 
       const result = await this.discoverTests(
         folder,
-        ["discover", "--read-from-stdin", "tests"],
-        [
-          ...(supportsParseInclude && testItem.relSource ? ["-I", escapeRobotGlobPatterns(testItem.relSource)] : []),
-          "--suite",
-          escapeRobotGlobPatterns(testItem.longname),
-        ],
-        JSON.stringify(o),
+        FILE_DISCOVERY_COMMAND,
+        fileDiscoveryArguments(suite, topLevelSuite, supportsParseInclude),
+        JSON.stringify(this.openDocumentsOf(folder)),
         false,
         token,
       );
-
-      // Index the freshly discovered items.
-      this.indexRobotTree(result?.items);
-
-      return result?.items;
+      return result.items !== undefined ? result : undefined;
     } catch (e) {
-      if (e instanceof Error) {
-        if (e.name === "AbortError") return undefined;
-      }
+      if (e instanceof Error && e.name === "AbortError") return undefined;
       this.outputChannel.appendLine(`Error while getting tests from document: ${e?.toString() || "Unknown Error"}`);
 
       return undefined;
@@ -1225,284 +1060,6 @@ export class TestControllerManager {
     const result = vscode.workspace.getConfiguration(CONFIG_SECTION, workspace).get<boolean>("testExplorer.enabled");
 
     return result === undefined || result;
-  }
-
-  private async refreshItem(
-    item?: vscode.TestItem,
-    token?: vscode.CancellationToken,
-    skipPerDocumentDiscover: boolean = false,
-  ): Promise<void> {
-    if (token?.isCancellationRequested) return;
-
-    if (item) {
-      item.busy = true;
-      try {
-        const robotItem = this.findRobotItem(item);
-
-        let tests = robotItem?.children;
-
-        // The per-document discover only runs when we refresh a specific TestItem
-        // (resolveHandler, refreshDocument, refreshUri). When the workspace refresh
-        // walks recursively, the workspace discover has already covered every file via
-        // dirty-stdin — a per-document discover would be redundant.
-        if (!skipPerDocumentDiscover && robotItem?.type === RobotItemType.SUITE && item.uri !== undefined) {
-          if (robotItem.children === undefined) robotItem.children = [];
-
-          const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
-
-          if (openDoc !== undefined) {
-            const newTests = await this.getTestsFromDocument(openDoc, robotItem, token);
-            // If newTests is undefined: discovery was aborted or failed. We can NOT be
-            // sure that robotItem.children still reflects the current file state — so
-            // return early without a result compare. Otherwise the compare against the
-            // old snapshot would wrongly say "everything is the same" and the tree
-            // would stay stale. The next refresh trigger will retry.
-            if (newTests === undefined) return;
-            tests = newTests;
-            const freshIds = new Set(newTests.map((t) => t.id));
-            for (const test of newTests) {
-              const index = robotItem.children.findIndex((v) => v.id === test.id);
-              if (index >= 0) {
-                robotItem.children[index] = test;
-              } else {
-                robotItem.children.push(test);
-              }
-            }
-            // Keep only items that exist in the fresh discover result, then sort by line.
-            robotItem.children = robotItem.children
-              .filter((v) => freshIds.has(v.id))
-              .sort((a, b) => (a.range?.start.line || -1) - (b.range?.start.line || -1));
-
-            // Update the index after the mutations.
-            this.indexRobotTree(robotItem.children);
-          }
-        }
-
-        if (token?.isCancellationRequested) return;
-
-        if (robotItem) {
-          // Result compare: if the current children structurally match the last seen
-          // state, there is nothing to update in the tree. The comparison is against the
-          // children that are currently in the TestController tree, represented by the
-          // lastKnownChildren entry for the parent TestItem.
-          const lastKnown = this.lastKnownChildren.get(item.id);
-          if (robotItemListsEqual(lastKnown, tests)) return;
-
-          const addedIds = new Set<string>();
-
-          for (const test of tests ?? []) {
-            addedIds.add(test.id);
-          }
-
-          for (const test of tests ?? []) {
-            if (token?.isCancellationRequested) return;
-            const newItem = this.addOrUpdateTestItem(item, test);
-            await this.refreshItem(newItem, token, skipPerDocumentDiscover);
-            // Don't keep container items that resolved to nothing (no children, no
-            // error) — they'd just sit in the tree as confusing empty nodes.
-            if (newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined) {
-              addedIds.delete(newItem.id);
-            }
-          }
-
-          this.removeNotAddedTestItems(item, addedIds);
-          this.lastKnownChildren.set(item.id, this.snapshotChildren(tests));
-        }
-      } finally {
-        item.busy = false;
-      }
-    } else {
-      const keptIds = new Set<string>();
-      const liveFolderKeys = new Set<string>();
-      const folders = vscode.workspace.workspaceFolders ?? [];
-      let enabledFolders = 0;
-      let discoveryComplete = true;
-      let noEnvironment = false;
-
-      for (const folder of folders) {
-        if (token?.isCancellationRequested) return;
-        if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
-        enabledFolders++;
-
-        if (this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder)) {
-          // No discovery can run without a valid environment. The cached answer is used so that this refresh does
-          // not wait for the environment dialog; the language client start refreshes again once an environment is valid.
-          noEnvironment = true;
-          continue;
-        }
-
-        const folderKey = rootSnapshotKey(folder);
-        liveFolderKeys.add(folderKey);
-
-        if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
-          const items = await this.getTestsFromWorkspaceFolder(folder, token);
-          if (items === undefined) {
-            this.lastKnownChildren.delete(folderKey);
-            // Without a valid Python environment the discovery never ran; that is a state of its own,
-            // everything else here is an aborted discovery.
-            if (this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder)) {
-              noEnvironment = true;
-            } else {
-              discoveryComplete = false;
-            }
-            continue;
-          }
-          const supportsParseInclude = this.lastDiscoverResults.get(folder)?.supportsParseInclude ?? false;
-          this.robotTestItems.set(folder, new WorkspaceFolderEntry(true, items, supportsParseInclude));
-        }
-
-        const folderChildren = this.robotTestItems.get(folder)?.items;
-        if (folderChildren === undefined) {
-          this.lastKnownChildren.delete(folderKey);
-          discoveryComplete = false;
-          continue;
-        }
-
-        if (robotItemListsEqual(this.lastKnownChildren.get(folderKey), folderChildren)) {
-          for (const t of folderChildren) keptIds.add(t.id);
-          continue;
-        }
-
-        for (const test of folderChildren) {
-          if (token?.isCancellationRequested) return;
-          const newItem = this.addOrUpdateTestItem(undefined, test);
-          // Recursion path from the workspace refresh → skip the per-document discover.
-          await this.refreshItem(newItem, token, true);
-          if (!(newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined)) {
-            keptIds.add(test.id);
-          }
-        }
-        this.lastKnownChildren.set(folderKey, this.snapshotChildren(folderChildren));
-      }
-
-      for (const key of [...this.lastKnownChildren.keys()]) {
-        if (key.startsWith(`${ROOT_TEST_ITEM_KEY}:`) && !liveFolderKeys.has(key)) {
-          this.lastKnownChildren.delete(key);
-        }
-      }
-
-      this.removeNotAddedTestItems(undefined, keptIds);
-
-      // The Testing view shows welcome content only while the tree is empty; the context key says why it is
-      // empty, so the manifest's viewsWelcome entries can pick the right hint. An aborted discovery leaves
-      // the previous state, the next refresh sets it again.
-      if (folders.length === 0) {
-        setTestExplorerState(undefined);
-      } else if (enabledFolders === 0) {
-        setTestExplorerState("disabled");
-      } else if (this.testController.items.size > 0) {
-        setTestExplorerState("hasTests");
-      } else if (noEnvironment) {
-        setTestExplorerState("noEnvironment");
-      } else if (discoveryComplete) {
-        setTestExplorerState("noTests");
-      }
-    }
-  }
-
-  private addOrUpdateTestItem(parentTestItem: vscode.TestItem | undefined, robotTestItem: RobotTestItem) {
-    const newCanResolveChildren =
-      robotTestItem.type === RobotItemType.SUITE || robotTestItem.type === RobotItemType.WORKSPACE;
-
-    let testItem = parentTestItem
-      ? parentTestItem.children.get(robotTestItem.id)
-      : this.testController.items.get(robotTestItem.id);
-
-    if (testItem === undefined) {
-      testItem = this.testController.createTestItem(
-        robotTestItem.id,
-        robotTestItem.name,
-        robotTestItem.uri ? vscode.Uri.parse(robotTestItem.uri) : undefined,
-      );
-
-      this.testItems.set(robotTestItem.id, testItem);
-      // testItemByUri only for containers — tests share the URI with their suite and
-      // would overwrite the suite entry. findTestItemForDocument is expected to return
-      // the suite item, not an individual test.
-      if (testItem.uri !== undefined && newCanResolveChildren) {
-        this.testItemByUri.set(testItem.uri.toString(), testItem);
-      }
-
-      if (parentTestItem) {
-        parentTestItem.children.add(testItem);
-      } else {
-        this.testController.items.add(testItem);
-      }
-    }
-
-    if (testItem.canResolveChildren !== newCanResolveChildren) {
-      testItem.canResolveChildren = newCanResolveChildren;
-    }
-
-    if (robotTestItem.range !== undefined) {
-      const newRange = toVsCodeRange(robotTestItem.range);
-      if (testItem.range === undefined || !testItem.range.isEqual(newRange)) {
-        testItem.range = newRange;
-      }
-    }
-
-    if (testItem.label !== robotTestItem.name) {
-      testItem.label = robotTestItem.name;
-    }
-
-    const newDescription =
-      robotTestItem.type == RobotItemType.TEST ||
-      robotTestItem.type == RobotItemType.TASK ||
-      robotTestItem.type == RobotItemType.SUITE
-        ? `${robotTestItem.type} ${robotTestItem.description ? ` - ${robotTestItem.description}` : ""}`
-        : robotTestItem.description;
-    if (testItem.description !== newDescription) {
-      testItem.description = newDescription;
-    }
-
-    if (testItem.error !== robotTestItem.error) {
-      testItem.error = robotTestItem.error;
-    }
-
-    // Tag diff via cache of the last set tag IDs.
-    const folderTag = this.getFolderTag(this.findWorkspaceFolderForItem(testItem));
-    const newTagIds = [...(robotTestItem.tags ?? [])];
-    if (folderTag !== undefined) newTagIds.push(folderTag.id);
-    const previousTagIds = this.lastSetTags.get(robotTestItem.id);
-    if (!arraysEqual(previousTagIds, newTagIds)) {
-      const tags = this.convertTags(robotTestItem.tags) ?? [];
-      if (folderTag !== undefined) tags.push(folderTag);
-      testItem.tags = tags;
-      this.lastSetTags.set(robotTestItem.id, newTagIds);
-    }
-
-    return testItem;
-  }
-
-  private removeNotAddedTestItems(parentTestItem: vscode.TestItem | undefined, addedIds: Set<string>): boolean {
-    const itemsToRemove = new Set<string>();
-
-    const items = parentTestItem ? parentTestItem.children : this.testController.items;
-
-    items.forEach((i) => {
-      if (!addedIds.has(i.id)) {
-        itemsToRemove.add(i.id);
-      }
-    });
-    itemsToRemove.forEach((i) => {
-      const item = this.testItems.get(i);
-      if (item !== undefined && item.canResolveChildren) {
-        this.removeNotAddedTestItems(item, new Set<string>());
-      }
-      items.delete(i);
-      this.testItems.delete(i);
-      if (item?.uri !== undefined) {
-        const uriStr = item.uri.toString();
-        if (this.testItemByUri.get(uriStr) === item) {
-          this.testItemByUri.delete(uriStr);
-        }
-      }
-      this.lastSetTags.delete(i);
-      this.robotItemIndex.delete(i);
-      this.lastKnownChildren.delete(i);
-    });
-
-    return itemsToRemove.size > 0;
   }
 
   private testTags = new WeakValueMap<string, vscode.TestTag>();
@@ -1527,32 +1084,6 @@ export class TestControllerManager {
     }
 
     return result;
-  }
-
-  private readonly refreshFromUriMutex = new Mutex();
-
-  private async refreshWorkspace(workspace?: vscode.WorkspaceFolder, token?: vscode.CancellationToken): Promise<void> {
-    return this.refreshFromUriMutex.dispatch(async () => {
-      // Incremental re-discover: only reset `valid` so refreshItem re-fetches the tests.
-      // removeWorkspaceFolderItems would be a wipe-and-recreate and would destroy the
-      // tree expansion state in VS Code. The result compare in refreshItem instead
-      // ensures that only actual differences are propagated.
-      if (workspace) {
-        const entry = this.robotTestItems.get(workspace);
-        if (entry !== undefined) {
-          entry.valid = false;
-        }
-        // Special case: never discovered → entry === undefined; refreshItem fetches fresh anyway.
-      } else {
-        for (const w of vscode.workspace.workspaceFolders ?? []) {
-          const entry = this.robotTestItems.get(w);
-          if (entry !== undefined) {
-            entry.valid = false;
-          }
-        }
-      }
-      await this.refresh(undefined, token);
-    });
   }
 
   private hasRobotFileExtension(name: string): boolean {
@@ -1647,69 +1178,11 @@ export class TestControllerManager {
     return walk(uri.fsPath);
   }
 
-  private async refreshUri(uri?: vscode.Uri) {
-    if (uri) {
-      if (uri?.scheme !== "file") return;
-
-      const exists = fs.existsSync(uri.fsPath);
-      const isFileAndExists = exists && fs.statSync(uri.fsPath).isFile();
-
-      if (
-        isFileAndExists &&
-        !this.languageClientsManager.fileExtensions.some((ext) => uri?.path.toLowerCase().endsWith(`.${ext}`))
-      )
-        return;
-
-      if (isFileAndExists && vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri?.toString())) return;
-
-      if (exists) {
-        const testItem = this.findTestItemByUri(uri.toString());
-        if (testItem) {
-          await this.refresh(testItem);
-          return;
-        }
-      }
-
-      const workspace = vscode.workspace.getWorkspaceFolder(uri);
-      if (workspace === undefined) return;
-
-      if (this.didChangedTimer.has(uri.toString())) return;
-
-      const workspaceKey = workspace.uri.toString();
-      this.refreshWorkspaceChangeTimer.get(workspaceKey)?.cancel();
-
-      const cancelationTokenSource = new vscode.CancellationTokenSource();
-
-      this.refreshWorkspaceChangeTimer.set(
-        workspaceKey,
-        new DidChangeEntry(
-          setTimeout(() => {
-            this.refreshWorkspaceChangeTimer.delete(workspaceKey);
-            this.refreshWorkspace(workspace, cancelationTokenSource.token).then(
-              () => undefined,
-              () => undefined,
-            );
-          }, TestControllerManager.DEBOUNCE_MS),
-          cancelationTokenSource,
-        ),
-      );
-    } else {
-      this.refreshWorkspaceChangeTimer.forEach((entry) => entry.cancel());
-      this.refreshWorkspaceChangeTimer.clear();
-
-      // refresh()'s single-inflight handles cancellation of any predecessor.
-      this.refresh().then(
-        (_) => undefined,
-        (_) => undefined,
-      );
-    }
-  }
-
   // eslint-disable-next-line class-methods-use-this
   private findWorkspaceFolderForItem(item: vscode.TestItem): vscode.WorkspaceFolder | undefined {
-    // RobotTestItems always have a URI (workspace folder URI, suite file URI, or test
-    // file URI). Resolving via the URI is O(1) and correct in all cases.
-    return item.uri !== undefined ? vscode.workspace.getWorkspaceFolder(item.uri) : undefined;
+    // The top-level suite of several paths has no URI; without its folder it would get no run profile and no run.
+    const uri = folderUriOf(item);
+    return uri !== undefined ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
   }
 
   private readonly testRunInfos = new Map<string, TestRunInfo>();
@@ -1796,12 +1269,13 @@ export class TestControllerManager {
 
     for (const [folder, testItems] of included) {
       if (cancelled) break;
-      if (
-        request.profile !== undefined &&
-        request.profile.tag !== undefined &&
-        request.profile.tag !== this.getFolderTag(folder)
-      )
-        continue;
+      const run = folderRun(
+        request.profile?.tag === undefined || request.profile.tag === this.getFolderTag(folder),
+        request.include !== undefined,
+      );
+      if (run === "none") continue;
+      const folderProfiles = run === "profile" ? profiles : undefined;
+      const folderTestConfiguration = run === "profile" ? testConfiguration : undefined;
 
       const runId = TestControllerManager.nextRunId();
       myRunIds.add(runId);
@@ -1834,8 +1308,8 @@ export class TestControllerManager {
           runId,
           options,
           undefined,
-          profiles,
-          testConfiguration,
+          folderProfiles,
+          folderTestConfiguration,
         );
         if (!started) this.testRunInfos.delete(runId);
         run_started = run_started || started;
@@ -1904,8 +1378,8 @@ export class TestControllerManager {
           runId,
           options,
           suiteName,
-          profiles,
-          testConfiguration,
+          folderProfiles,
+          folderTestConfiguration,
         );
 
         if (!started) this.testRunInfos.delete(runId);

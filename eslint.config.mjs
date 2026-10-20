@@ -25,6 +25,8 @@ export default [
       "**/intellij-client/",
       // The git-ignored scratch space; ESLint does not read .gitignore.
       "**/playground/",
+      // VS Code and its extensions downloaded by `vscode-test` (npm test), with config files of their own.
+      "**/.vscode-test/",
     ],
   },
   { files: ["**/*.{ts,tsx}"] },

@@ -338,6 +338,14 @@ Run `hatch env show` to list every environment, including the `test.*` and `deve
 > [!NOTE]
 > `hatch run test` (without an env prefix) runs only in the `default` environment against the Robot Framework version pinned there — it does **not** cover the RF matrix. Use `hatch run test:test` for the full RF matrix, or `hatch run devel:test` for the full Python × RF matrix (slow).
 
+**VS Code extension tests:**
+
+```bash
+npm test                  # on Linux without a display: xvfb-run -a npm test
+```
+
+`npm test` builds the extension and runs the tests under `vscode-client/test/` in a VS Code that `vscode-test` downloads into `.vscode-test/`, together with the extension's dependencies `ms-python.python` and `ms-python.debugpy`. The version of VS Code is set in `.vscode-test.mjs`. To debug the tests, start the "Extension Tests" launch configuration, or run them from the Test Explorer with the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner).
+
 **Supported Python and Robot Framework versions:**
 
 Each Robot Framework version is supported and tested only with the Python versions (3.10 and newer) that it officially supports itself: the `Programming Language :: Python :: 3.x` classifiers of its newest patch release on PyPI (`https://pypi.org/project/robotframework/<version>/`). The `devel` matrix in `hatch.toml` has one `[[envs.devel.matrix]]` table per range of Python versions, and the `test` job of the CI workflow (`.github/workflows/build-test-package.yml`) runs every Python version with every Robot Framework version except the combinations in its `exclude` list. The README shows the same combinations as a table.

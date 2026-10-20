@@ -54,6 +54,20 @@ const projects = [
   },
 ];
 
+// The tests of the extension, run by `vscode-test` (npm test) in a downloaded VS Code; not part of the package.
+if (!production) {
+  projects.push({
+    entryPoints: ["./vscode-client/test/**/*.test.ts"],
+    tsconfig: "./vscode-client/test/tsconfig.json",
+    format: "cjs",
+    platform: "node",
+    target: "node24",
+    outbase: "./vscode-client/test",
+    outdir: "out/test",
+    external: ["vscode"],
+  });
+}
+
 /**
  *
  * @param {import('esbuild').BuildOptions} project
@@ -71,7 +85,7 @@ async function buildProject(project) {
     ...project,
 
     plugins: [
-      typecheckPlugin({ configFile: project.entryPoints[0] + "/tsconfig.json" }),
+      typecheckPlugin({ configFile: project.tsconfig ?? project.entryPoints[0] + "/tsconfig.json" }),
       /* add to the end of plugins array */
       //esbuildProblemMatcherPlugin,
     ],
