@@ -2,13 +2,23 @@ import * as crypto from "crypto";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CONFIG_SECTION } from "./config";
-import { DocumentationTarget } from "./languageclientsmanger";
+import {
+  describeRobotEnvironmentProblem,
+  DocumentationTarget,
+  LanguageClientsManager,
+  RobotEnvironmentState,
+} from "./languageclientsmanger";
 import { PythonManager } from "./pythonmanger";
 
 const VIEW_TYPE = "robotcode.documentationViewer";
 const DEFAULT_TARGET = "BuiltIn";
 const CACHE_FOLDER = "documentation-viewer";
 const KEPT_PAGES = 50;
+// The file name of a kept page, the sha256 of its key; a page names one to have it shown while it waits.
+const KEPT_PAGE_NAME = /^[0-9a-f]{64}$/;
+// How long a viewer says that it waits for the Python environment of its folder before it shows the problem as an
+// error; the Python side of a large workspace can take a while to select the folder's environment.
+const ENVIRONMENT_ERROR_DELAY = 30000;
 // The id of the viewer pinned with its pin button, so that a reload keeps the pin that was chosen last.
 const PINNED_KEY = "robotcode.documentationViewer.pinned";
 // A window that gets the focus back activates its last active editor for a moment; only a longer activation is use.
@@ -56,7 +66,7 @@ interface ShowMessage {
 
 type ViewerMessage =
   | { type: "ready"; state?: ViewerState }
-  | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean }
+  | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean; keptPage?: string }
   | { type: "pin"; pinned: boolean }
   | { type: "pickFolder" }
   | { type: "openMarkdown"; seq: number };
@@ -90,6 +100,13 @@ class Viewer {
   current: HistoryEntry | undefined;
   // The Markdown of the page sent last, for "Open as Markdown": the page itself only has its HTML.
   lastPage: { seq: number; markdown: string } | undefined;
+  // The interpreter of the last load in a usable environment; `undefined` while a load waits for the environment.
+  python: string | undefined;
+  // The load that waits for the folder's environment, and whether it was a refresh; the environment event loads the
+  // entry again.
+  waiting: { seq: number; refresh: boolean } | undefined;
+  // Turns the note that the load waits into the error when the problem has lasted ENVIRONMENT_ERROR_DELAY.
+  notice: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     readonly panel: vscode.WebviewPanel,
@@ -142,6 +159,20 @@ function generationCommand(folder: vscode.WorkspaceFolder, text: string): Genera
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function waitingNote(folder: vscode.WorkspaceFolder): string {
+  return `Waiting for the Python environment of '${folder.name}' …`;
+}
+
+function environmentError(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): string {
+  return `Cannot generate documentation for '${folder.name}': ${describeRobotEnvironmentProblem(state)}. The documentation loads by itself once the environment is usable.`;
+}
+
+function switchedOffError(folder: vscode.WorkspaceFolder): string {
+  return vscode.workspace.getConfiguration(CONFIG_SECTION, folder).get<boolean>("disableExtension")
+    ? `Cannot generate documentation: RobotCode is switched off for the workspace folder '${folder.name}' by the setting robotcode.disableExtension.`
+    : `Cannot generate documentation: RobotCode is switched off for the workspace folder '${folder.name}' for this session; RobotCode: Restart Language Servers switches it on again.`;
 }
 
 async function exists(uri: vscode.Uri): Promise<boolean> {
@@ -214,6 +245,7 @@ async function sendPage(
   folder: vscode.WorkspaceFolder,
   text: string,
   json: DocumentationJson,
+  key: string,
   busy: boolean,
 ): Promise<void> {
   let html: string | undefined;
@@ -245,6 +277,7 @@ async function sendPage(
     types: (json.types ?? []).map(({ name, anchor }) => ({ name, anchor })),
     ...(renderError === undefined ? { html } : { renderError, markdown: json.markdown }),
     busy,
+    keptPage: key,
   });
 }
 
@@ -286,14 +319,21 @@ export class DocumentationViewerManager implements vscode.Disposable {
   private readonly _viewers = new Set<Viewer>();
   private readonly _generations = new Map<string, Generation>();
   private readonly _generatedThisSession = new Set<string>();
+  // Since when each folder's environment is unusable; a waiting viewer shows the problem as an error once it has
+  // lasted ENVIRONMENT_ERROR_DELAY.
+  private readonly _unusableSince = new Map<string, number>();
   private _pinned: Viewer | undefined;
   private _useCounter = 0;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly pythonManager: PythonManager,
+    private readonly languageClientsManager: LanguageClientsManager,
   ) {
     this._disposables = vscode.Disposable.from(
+      languageClientsManager.onRobotEnvironmentStateChanged((event) =>
+        this.onEnvironmentChanged(event.folder, event.state),
+      ),
       vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
         deserializeWebviewPanel: async (panel: vscode.WebviewPanel, state: unknown) => {
           const viewerState = state as ViewerState | undefined;
@@ -457,6 +497,7 @@ export class DocumentationViewerManager implements vscode.Disposable {
 
     panel.onDidDispose(() => {
       viewer.disposed = true;
+      clearTimeout(viewer.notice);
       // A load that is still on its way to a generation ends at its next check.
       viewer.seq = Number.NaN;
       this._viewers.delete(viewer);
@@ -504,7 +545,15 @@ export class DocumentationViewerManager implements vscode.Disposable {
         break;
       }
       case "load":
-        void this.load(viewer, message.seq, message.folder, message.text, message.refresh, message.typed ?? false);
+        void this.load(
+          viewer,
+          message.seq,
+          message.folder,
+          message.text,
+          message.refresh,
+          message.typed ?? false,
+          message.keptPage,
+        );
         break;
       case "pickFolder":
         void vscode.window
@@ -536,8 +585,11 @@ export class DocumentationViewerManager implements vscode.Disposable {
     text: string,
     refresh: boolean,
     typed: boolean,
+    keptPage: string | undefined,
   ): Promise<void> {
     viewer.seq = seq;
+    viewer.waiting = undefined;
+    clearTimeout(viewer.notice);
     // The page has taken the show into its history before it loads it, with the folder and text of the show.
     const show = viewer.pendingShow;
     if (show !== undefined && show.folder === folderUri && show.text === text) viewer.pendingShow = undefined;
@@ -552,13 +604,14 @@ export class DocumentationViewerManager implements vscode.Disposable {
     viewer.folder = folder;
     viewer.current = { folder: folder.uri.toString(), text };
 
-    const pythonCommand = await this.pythonManager.getPythonCommand(folder);
-    if (viewer.seq !== seq) return;
+    const pythonCommand = await this.usableInterpreter(viewer, seq, folder, text, refresh, keptPage);
+    if (pythonCommand === undefined || viewer.seq !== seq) return;
+    viewer.python = pythonCommand;
 
     const command = generationCommand(folder, text);
     const key = crypto
       .createHash("sha256")
-      .update([folder.uri.toString(), pythonCommand ?? "", JSON.stringify(command)].join("\n"))
+      .update([folder.uri.toString(), pythonCommand, JSON.stringify(command)].join("\n"))
       .digest("hex");
     if (viewer.key !== key) this.stopWaiting(viewer);
     viewer.key = key;
@@ -569,21 +622,21 @@ export class DocumentationViewerManager implements vscode.Disposable {
     const generate = refresh || kept === undefined || !this._generatedThisSession.has(key);
 
     if (kept !== undefined) {
-      await sendPage(viewer, seq, folder, text, kept, generate);
+      await sendPage(viewer, seq, folder, text, kept, key, generate);
     } else {
       if (!viewer.disposed) viewer.panel.title = text;
       viewer.post({ type: "status", seq, busy: true });
     }
     if (!generate || viewer.seq !== seq) return;
 
-    const generation = this.generate(key, folder, command);
+    const generation = this.generate(key, folder, command, pythonCommand);
     generation.waiters.add(viewer);
     try {
       const json = await generation.promise;
       if (viewer.seq !== seq) return;
 
       if (kept === undefined || JSON.stringify(json) !== JSON.stringify(kept)) {
-        await sendPage(viewer, seq, folder, text, json, false);
+        await sendPage(viewer, seq, folder, text, json, key, false);
       } else {
         viewer.post({ type: "status", seq, busy: false });
       }
@@ -600,7 +653,110 @@ export class DocumentationViewerManager implements vscode.Disposable {
     }
   }
 
-  private generate(key: string, folder: vscode.WorkspaceFolder, command: GenerationCommand): Generation {
+  // The interpreter of the folder's Python environment when RobotCode's check has found it usable. Otherwise the load
+  // waits and ends here: the viewer shows the page the entry showed last and that it waits, and the problem as an
+  // error once it has lasted a while; the folder's environment event loads the entry again.
+  private async usableInterpreter(
+    viewer: Viewer,
+    seq: number,
+    folder: vscode.WorkspaceFolder,
+    text: string,
+    refresh: boolean,
+    keptPage: string | undefined,
+  ): Promise<string | undefined> {
+    const manager = this.languageClientsManager;
+    const disabled = manager.isDisabledForFolder(folder);
+    const state = manager.getRobotEnvironmentState(folder);
+    if (!disabled && state.state === "usable" && state.executable !== undefined) return state.executable;
+
+    viewer.python = undefined;
+    viewer.waiting = { seq, refresh };
+    const kept = keptPage !== undefined && KEPT_PAGE_NAME.test(keptPage) ? await this.readKept(keptPage) : undefined;
+    if (viewer.seq !== seq) return undefined;
+    if (kept !== undefined && keptPage !== undefined) {
+      await sendPage(viewer, seq, folder, text, kept, keptPage, true);
+    } else {
+      if (!viewer.disposed) viewer.panel.title = text;
+      viewer.post({ type: "status", seq, busy: true });
+    }
+    if (viewer.seq !== seq) return undefined;
+
+    if (disabled) {
+      viewer.post({ type: "status", seq, busy: false, environmentError: switchedOffError(folder) });
+      return undefined;
+    }
+
+    const failed = (error: unknown) =>
+      this.pythonManager.outputChannel.appendLine(`Documentation Viewer: checking '${folder.name}' failed: ${error}`);
+    if (refresh && state.state === "unusable") {
+      // A refresh checks a known problem again, as the REPL's start does; the viewer waits for that check.
+      viewer.post({ type: "status", seq, busy: true, waiting: waitingNote(folder) });
+      manager
+        .checkRobotEnvironmentAgain(folder)
+        .catch(failed)
+        .finally(() => this.showWaiting(viewer, folder));
+      return undefined;
+    }
+
+    // Starts the check or joins the running one; its result comes as the environment event.
+    manager.isValidRobotEnvironmentInFolder(folder).catch(failed);
+    this.showWaiting(viewer, folder);
+    return undefined;
+  }
+
+  // What a waiting viewer shows besides its page: only the progress bar while RobotCode knows no problem of the
+  // folder, the note that it waits while the problem is younger than ENVIRONMENT_ERROR_DELAY or a check runs, and the
+  // problem as an error after that. A folder without a state gets a check, whose event decides again.
+  private showWaiting(viewer: Viewer, folder: vscode.WorkspaceFolder): void {
+    const waiting = viewer.waiting;
+    if (waiting === undefined || viewer.seq !== waiting.seq) return;
+
+    clearTimeout(viewer.notice);
+    const manager = this.languageClientsManager;
+    const state = manager.getRobotEnvironmentState(folder);
+    if (state.state === "unknown") {
+      void manager.isValidRobotEnvironmentInFolder(folder);
+      return;
+    }
+    if (!manager.isRobotEnvironmentKnownInvalid(folder)) return;
+
+    const since = this._unusableSince.get(folder.uri.toString()) ?? Date.now();
+    const left = since + ENVIRONMENT_ERROR_DELAY - Date.now();
+    if (state.state === "unusable" && left <= 0) {
+      viewer.post({ type: "status", seq: waiting.seq, busy: false, environmentError: environmentError(folder, state) });
+      return;
+    }
+    viewer.post({ type: "status", seq: waiting.seq, busy: true, waiting: waitingNote(folder) });
+    if (left > 0) viewer.notice = setTimeout(() => this.showWaiting(viewer, folder), left);
+  }
+
+  // A folder's environment was checked. When it is usable, its viewers whose load waits, or whose page came from
+  // another interpreter, load their entry again; when it is not, the waiting ones decide again what they show.
+  private onEnvironmentChanged(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): void {
+    const uri = folder.uri.toString();
+    if (state.state === "usable") this._unusableSince.delete(uri);
+    else if (state.state === "unusable" && !this._unusableSince.has(uri)) this._unusableSince.set(uri, Date.now());
+    if (this.languageClientsManager.isDisabledForFolder(folder)) return;
+
+    for (const viewer of this._viewers) {
+      if (!viewer.ready || viewer.folder?.uri.toString() !== uri) continue;
+      const waiting = viewer.waiting?.seq === viewer.seq ? viewer.waiting : undefined;
+      if (state.state === "usable") {
+        if (waiting === undefined && (viewer.python === undefined || viewer.python === state.executable)) continue;
+        viewer.waiting = undefined;
+        viewer.post({ type: "reload", refresh: waiting?.refresh ?? false });
+      } else if (state.state === "unusable" && waiting !== undefined) {
+        this.showWaiting(viewer, folder);
+      }
+    }
+  }
+
+  private generate(
+    key: string,
+    folder: vscode.WorkspaceFolder,
+    command: GenerationCommand,
+    pythonCommand: string,
+  ): Generation {
     const running = this._generations.get(key);
     if (running !== undefined) return running;
 
@@ -623,6 +779,7 @@ export class DocumentationViewerManager implements vscode.Disposable {
           undefined,
           source.token,
           command.env,
+          pythonCommand,
         )) as DocumentationJson;
 
         this._generatedThisSession.add(key);

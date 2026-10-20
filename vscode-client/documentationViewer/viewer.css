@@ -166,6 +166,21 @@ main.markdown-body {
   white-space: pre-wrap;
 }
 
+/* The viewer waits for the Python environment of its folder, while its progress bar runs; above the page. */
+.waiting {
+  padding: 8px 12px;
+  border-left: 4px solid var(--vscode-editorInfo-foreground);
+  background-color: var(--vscode-textBlockQuote-background);
+}
+
+/* The Python environment of the folder has been unusable for a while: an error, in the font of the viewer. */
+.environment-error {
+  padding: 8px 12px;
+  color: var(--vscode-errorForeground);
+  background-color: var(--vscode-inputValidation-errorBackground, transparent);
+  border-bottom: 1px solid var(--vscode-inputValidation-errorBorder, transparent);
+}
+
 .error {
   margin: 0;
   padding: 8px 12px;

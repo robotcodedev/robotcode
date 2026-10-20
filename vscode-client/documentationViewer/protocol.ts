@@ -18,6 +18,8 @@ export interface HistoryEntry {
   dataType?: string;
   fragment?: string;
   position?: ScrollPosition;
+  // The file of the kept page the entry showed last, which the viewer shows until the folder's environment is usable.
+  keptPage?: string;
 }
 
 export interface ViewerState {
@@ -61,6 +63,8 @@ export interface PageMessage {
   markdown?: string;
   error?: string;
   busy: boolean;
+  // The file of the kept page that the page was read from or written to.
+  keptPage: string;
 }
 
 export interface StatusMessage {
@@ -68,6 +72,19 @@ export interface StatusMessage {
   seq: number;
   busy: boolean;
   error?: string;
+  // The load waits for the folder's Python environment instead of generating, with its progress bar running; the
+  // extension asks for a reload when the environment is usable.
+  waiting?: string;
+  // The folder's Python environment has been unusable for a while, or RobotCode is switched off for the folder. The
+  // load still waits: the extension asks for a reload when the environment is usable.
+  environmentError?: string;
+}
+
+// The folder's Python environment became usable, or its interpreter changed: the current entry is loaded again, as a
+// refresh when the load that waited for the environment was one.
+export interface ReloadMessage {
+  type: "reload";
+  refresh?: boolean;
 }
 
 export interface ShowMessage {
@@ -107,12 +124,20 @@ export interface FolderMessage {
 }
 
 export type ExtensionMessage =
-  PageMessage | StatusMessage | ShowMessage | PinMessage | FocusMessage | FoldersMessage | FolderMessage;
+  | PageMessage
+  | StatusMessage
+  | ShowMessage
+  | PinMessage
+  | FocusMessage
+  | FoldersMessage
+  | FolderMessage
+  | ReloadMessage;
 
 export type ViewerMessage =
   | { type: "ready"; state?: ViewerState }
   // `typed`: entered in the target field; only then does an absolute path switch to the folder it lies in.
-  | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean }
+  // `keptPage`: the kept page the entry showed last.
+  | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean; keptPage?: string }
   | PinMessage
   | { type: "pickFolder" }
   // The page of the load `seq`, as a Markdown document.

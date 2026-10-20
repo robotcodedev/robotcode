@@ -542,6 +542,7 @@ export class PythonManager {
     stdioData?: string,
     token?: vscode.CancellationToken,
     env?: { [key: string]: string },
+    interpreter?: string,
   ): Promise<unknown> {
     const { pythonCommand, final_args } = await this.buildRobotCodeCommand(
       folder,
@@ -550,6 +551,7 @@ export class PythonManager {
       format,
       noColor,
       noPager,
+      interpreter,
     );
 
     this.outputChannel.appendLine(`executeRobotCode: ${pythonCommand} ${final_args.join(" ")}`);
@@ -621,11 +623,13 @@ export class PythonManager {
     format?: string,
     noColor?: boolean,
     noPager?: boolean,
+    // The interpreter to run instead of the folder's environment, for example the one a check found usable.
+    interpreter?: string,
   ): Promise<{ pythonCommand: string; final_args: string[] }> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
 
-    const pythonCommand = await this.getPythonCommand(folder);
+    const pythonCommand = interpreter ?? (await this.getPythonCommand(folder));
     if (pythonCommand === undefined) throw new Error("Can't find python executable.");
 
     const final_args = [

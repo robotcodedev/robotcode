@@ -60,6 +60,9 @@ export class Controller {
   sections: OutlineSection[] = [];
   busy = false;
   error: string | undefined;
+  // The load waits for the folder's Python environment: the note that says so, or the error when that takes long.
+  waiting: string | undefined;
+  environmentError: string | undefined;
   // Choosing an entry of an outline without headings only selects it.
   outlineSelection: string | undefined;
   findOpen = false;
@@ -350,7 +353,9 @@ export class Controller {
     const entry = this.entry;
     if (entry === undefined) return;
     // The heading the current entry shows is only shown again.
-    if (entry.anchor !== id || isWaiting(entry)) this.push({ folder: entry.folder, text: entry.text, anchor: id });
+    if (entry.anchor !== id || isWaiting(entry)) {
+      this.push({ folder: entry.folder, text: entry.text, anchor: id, keptPage: entry.keptPage });
+    }
     this.reveal(id);
     this.changed();
   }
@@ -396,6 +401,8 @@ export class Controller {
     this._loading = ++this._seq;
     this.busy = true;
     this.error = undefined;
+    this.waiting = undefined;
+    this.environmentError = undefined;
     if (!sameTarget(entry, this.page)) {
       this.page = undefined;
       this._pageSeq = -1;
@@ -413,6 +420,7 @@ export class Controller {
       text: entry.text,
       refresh,
       ...(typed ? { typed } : {}),
+      ...(entry.keptPage !== undefined ? { keptPage: entry.keptPage } : {}),
     });
     this.changed();
   }
@@ -427,13 +435,22 @@ export class Controller {
         if (message.busy) this._generatedSeq = message.seq;
         this.busy = message.busy;
         this.error = message.error;
-        // The load ended without a page that has the place of its show.
+        this.waiting = message.waiting;
+        this.environmentError = message.environmentError;
+        // The load ended without a page that has the place of its show. A load that waits for the environment has
+        // not ended: the extension asks for a reload when the environment is usable.
         const entry = this.entry;
-        if (!message.busy && entry !== undefined && isWaiting(entry)) {
+        const waitsForEnvironment = message.waiting !== undefined || message.environmentError !== undefined;
+        if (!message.busy && !waitsForEnvironment && entry !== undefined && isWaiting(entry)) {
           stopWaiting(entry);
           this.save();
         }
         this.changed();
+        break;
+      }
+      case "reload": {
+        const entry = this.entry;
+        if (entry !== undefined) this.load(entry, message.refresh ?? false);
         break;
       }
       case "show":
@@ -476,7 +493,10 @@ export class Controller {
 
     const entry = this.entry;
     // A typed absolute path inside another workspace folder switches the folder.
-    if (entry !== undefined && entry.text === page.text) entry.folder = page.folder;
+    if (entry !== undefined && entry.text === page.text) {
+      entry.folder = page.folder;
+      entry.keptPage = page.keptPage;
+    }
 
     const first = this._pageSeq !== page.seq;
     const scrollTop = this._main.scrollTop;
@@ -663,7 +683,7 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
   useFocus(targetField, controller.focusTarget);
   useFocus(findField, controller.focusFind);
 
-  const { page, error, busy, state } = controller;
+  const { page, error, waiting, environmentError, busy, state } = controller;
   const pinLabel = state.pinned
     ? "Unpin: actions use the viewer used last"
     : "Pin: actions from the editor use this viewer";
@@ -781,6 +801,8 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           </div>
         )}
         <div slot="end" class="content">
+          {waiting !== undefined && <div class="waiting">{waiting}</div>}
+          {environmentError !== undefined && <div class="environment-error">{environmentError}</div>}
           {error !== undefined && page !== undefined && <pre class="error">{error}</pre>}
           {error !== undefined && page === undefined && (
             <div class="failure">

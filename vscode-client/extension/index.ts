@@ -111,7 +111,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
     new LanguageModelToolsManager(context, languageClientManger, outputChannel),
     new ChatPluginsManager(context, outputChannel),
     new NotebookManager(context, pythonManager, languageClientManger, outputChannel),
-    new DocumentationViewerManager(context, pythonManager),
+    new DocumentationViewerManager(context, pythonManager, languageClientManger),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
         url = url.replace("%24%7Btheme%7D", getDocTheme());
