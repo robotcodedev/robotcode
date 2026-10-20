@@ -190,12 +190,17 @@ Every documentation page except the home page SHALL link to the file in the GitH
 
 ### Requirement: Home page
 
-The home page SHALL show the product name and tagline, one picture of the RobotCode artwork chosen at random on each load, a subline chosen at random, actions to get started and to install the VS Code and JetBrains extensions, links to the GitHub repository and to sponsoring, the feature overview, the RoboCon 2024 tutorial video, the sponsoring options and the supporters. Previous and next buttons and a horizontal swipe on the picture SHALL switch to the neighbouring picture. Clicking the picture SHALL open an enlarged view that closes on a click or Escape and in which the left and right arrow keys switch pictures. Every feature card that links to a page SHALL link to the page that covers the feature.
+The home page SHALL show the product name and tagline, one picture of the RobotCode artwork chosen at random on each load, a subline chosen at random, actions to get started and to install the VS Code and JetBrains extensions, links to the GitHub repository and to sponsoring, the feature overview, the RoboCon 2024 tutorial video, the sponsoring options and the supporters. While a season of the site is active that has pictures of its own, the gallery SHALL hold only those pictures, the first chosen at random; outside that season they SHALL NOT be part of the gallery. Previous and next buttons and a horizontal swipe on the picture SHALL switch to the neighbouring picture. Clicking the picture SHALL open an enlarged view that closes on a click or Escape and in which the left and right arrow keys switch pictures. Every feature card that links to a page SHALL link to the page that covers the feature.
 
 #### Scenario: Random picture
 - **WHEN** the home page is loaded
 - **THEN** one picture of the RobotCode artwork is shown next to the product name
 - **AND** the actions Get Started, Install VS Code and Install JetBrains are offered
+
+#### Scenario: Season pictures
+- **WHEN** the home page is loaded during the Halloween season and the site has Halloween pictures
+- **THEN** one of the Halloween pictures, chosen at random, is shown next to the product name
+- **AND** the next button switches only between the Halloween pictures
 
 #### Scenario: Browsing the pictures
 - **WHEN** a reader swipes left on the picture, or clicks it and presses the right arrow key
@@ -205,6 +210,30 @@ The home page SHALL show the product name and tagline, one picture of the RobotC
 #### Scenario: Feature card target
 - **WHEN** a reader follows the link of the "REPL & notebooks" feature card
 - **THEN** the REPL guide `/guides/repl/` is shown
+
+### Requirement: Home page gallery moves on by itself
+
+The gallery next to the title of the home page SHALL move on to the next picture by itself every eight seconds, fading over to it. It SHALL NOT move on while the pointer or the keyboard focus is on it, while the enlarged view is open or while the browser tab is hidden, and not at all when the visitor's system asks for reduced motion. After the reader changes the picture, the new picture SHALL be shown for the full eight seconds.
+
+#### Scenario: Moving on by itself
+- **WHEN** a reader looks at the home page for eight seconds without touching the gallery
+- **THEN** the gallery fades over to the next picture
+
+#### Scenario: Pointer on the picture
+- **WHEN** the pointer rests on the picture
+- **THEN** the gallery stays on that picture
+
+#### Scenario: Enlarged view
+- **WHEN** the reader has opened the enlarged view
+- **THEN** the gallery stays on the picture until the view is closed
+
+#### Scenario: Change by hand
+- **WHEN** the reader clicks the next button
+- **THEN** the next picture is shown for the full eight seconds before the gallery moves on
+
+#### Scenario: Reduced motion
+- **WHEN** a visitor whose system asks for reduced motion opens the home page
+- **THEN** the picture changes only when the visitor changes it
 
 ### Requirement: Not-found page
 
