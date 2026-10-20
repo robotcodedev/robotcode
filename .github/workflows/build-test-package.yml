@@ -179,14 +179,15 @@ jobs:
           key: vscode-test-${{ runner.os }}-${{ steps.vscode.outputs.version }}
 
       - name: Test VS Code Extension
-        # VS Code needs a display on Linux; the xunit reporter writes test-results/vscode/test-results.xml
+        # VS Code needs a display on Linux; the reporters of .vscode-test.mjs list the tests in the log and write
+        # test-results/vscode/test-results.xml
         env:
           VSCODE_VERSION: ${{ steps.vscode.outputs.version }}
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a npm test -- --reporter xunit --code-version "$VSCODE_VERSION"
+            xvfb-run -a npm test -- --reporter mocha-multi-reporters --code-version "$VSCODE_VERSION"
           else
-            npm test -- --reporter xunit --code-version "$VSCODE_VERSION"
+            npm test -- --reporter mocha-multi-reporters --code-version "$VSCODE_VERSION"
           fi
 
       - name: Upload Test Results

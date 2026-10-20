@@ -43,9 +43,10 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - `npm install --include=dev`;
   - `.vscode-test/` cached per system and version;
   - `xvfb-run -a npm test` on Linux and `npm test` elsewhere;
-  - Mocha's `xunit` reporter writing `test-results.xml`, uploaded as `test-results-vscode-<os>`.
+  - Mocha's `xunit` reporter writing `test-results.xml`, uploaded as `test-results-vscode-<os>`;
+  - added after the first CI run, whose log listed no test: `mocha-multi-reporters` as a dev dependency, `npm test -- --reporter mocha-multi-reporters` in the job, and in `.vscode-test.mjs` the options for its spec and xunit reporters, but not the reporter itself (D6). Verified locally: without `--reporter` the spec reporter lists the 39 tests; with it, the 39 tests are listed and `test-results.xml` has them; a failing test ends the run with exit code 1 and appears in the file; the Extension Test Runner's `--reporter …/fullJsonStreamReporter.cjs` still gets its JSON stream.
 
-  Let `publish-test-results` and `package` also need `test-vscode`. Verify on the CI run of the next push: the job runs on all three systems with both versions of 1.5, its tests appear in the published test results, which tell the two versions apart, and `package` waits for it.
+  Let `publish-test-results` and `package` also need `test-vscode`. Verify on the CI run of the next push: the job runs on all three systems with both versions of 1.5, its log lists each test, its tests appear in the published test results, which tell the two versions apart, and `package` waits for it.
 - [x] 1.4 Name `npm test` in AGENTS.md (Common Commands) and in CONTRIBUTING.md (Running Tests): it runs the extension's tests in a downloaded VS Code and needs a display on Linux (`xvfb-run -a npm test`). Name the "Extension Tests" configuration and the Extension Test Runner for debugging. Verify by reading the rendered Markdown.
 
 - [x] 1.5 Test with the minimum and the newest VS Code version (D6):

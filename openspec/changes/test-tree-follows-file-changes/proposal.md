@@ -81,7 +81,7 @@ None.
 - **VS Code test set-up:**
   - `.vscode-test.mjs` and a test build in `esbuild.mjs`;
   - `.vscodeignore` keeps the tests out of the VSIX;
-  - `package.json` gets the scripts `test` and `pretest` and the dev dependencies `@vscode/test-cli`, `@vscode/test-electron` and `@types/mocha`;
+  - `package.json` gets the scripts `test` and `pretest` and the dev dependencies `@vscode/test-cli`, `@vscode/test-electron`, `@types/mocha` and `mocha-multi-reporters`;
   - `.vscode/launch.json` changes its "Extension Tests" configuration;
   - `.vscode/extensions.json` recommends the Extension Test Runner and loses the stray `w` after its closing brace, there since 1422859d.
 - **CI:** a job `test-vscode` in `.github/workflows/build-test-package.yml`, and `publish-test-results` and `package` wait for it.

@@ -141,7 +141,9 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
   - A job `test-vscode` runs on Linux, Windows and macOS, as `test-jetbrains` does, each with the minimum VS Code version and with the newest stable one (maintainer: the CI shall show that both work). That is a matrix of `os` and `vscode: [minimum, stable]`, six runs.
   - A step resolves the version of the run: `minimum` from `engines.vscode` in `package.json`, as `.vscode-test.mjs` does, and `stable` from `https://update.code.visualstudio.com/api/releases/stable`, the API that `@vscode/test-electron` asks for the newest version. The tests get it with `--code-version`.
   - The job caches `.vscode-test/vscode-*` and `.vscode-test/extensions` per system and resolved version. A new stable release gives a new key, so its run installs the newest Python extensions that accept it; the minimum keeps its key, and its extensions, until `engines.vscode` changes.
-  - Mocha's `xunit` reporter writes `test-results.xml`, which is uploaded as `test-results-vscode-<os>-<minimum|stable>`.
+  - The job runs `npm test -- --reporter mocha-multi-reporters` (dev dependency `mocha-multi-reporters` 1.5.2, maintainer's choice over a reporter of our own, 2026-10-20). Mocha's spec reporter lists each test in the job log, and its xunit reporter writes `test-results.xml`, which is uploaded as `test-results-vscode-<os>-<minimum|stable>`. With the xunit reporter alone, the log showed only VS Code's start-up messages.
+  - The xunit reporter counts a failed test under `errors` and writes a `<failure>` element for it; the run then ends with exit code 1.
+  - `.vscode-test.mjs` holds only the reporters' options, not the reporter: `@vscode/test-cli` 0.0.15 builds Mocha's options as `{ ...args, ...test.mocha }`, so a reporter there would override the `--reporter` that the Extension Test Runner passes for its JSON stream. Without `--reporter`, `npm test` uses the spec reporter.
   - `publish-test-results` and `package` also need `test-vscode`.
 - **Alternatives:**
   - Node's own test runner or vitest: no real `vscode` API.

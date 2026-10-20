@@ -15,8 +15,13 @@ export default defineConfig({
   version: minimumVersion,
   mocha: {
     ui: "tdd",
-    // Where the xunit reporter of the CI writes the results (npm test -- --reporter xunit). `vscode-test` passes
-    // `--reporter-option` to Mocha unparsed, so the file is set here.
-    reporterOptions: { output: path.join(import.meta.dirname, "test-results", "vscode", "test-results.xml") },
+    // For `npm test -- --reporter mocha-multi-reporters`, as the CI runs it: the spec reporter lists each test in the
+    // log, and the xunit reporter writes the file that the CI publishes. The reporter itself is not set here, since
+    // these options would override `--reporter`, which the Extension Test Runner passes; `vscode-test` also passes
+    // `--reporter-option` to Mocha unparsed.
+    reporterOptions: {
+      reporterEnabled: "spec, xunit",
+      xunitReporterOptions: { output: path.join(import.meta.dirname, "test-results", "vscode", "test-results.xml") },
+    },
   },
 });
