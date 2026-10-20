@@ -2,22 +2,6 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Showing and refreshing a kept page
-
-Showing a target SHALL show its kept page at once, if there is one; while RobotCode has not found the Python environment of the viewer's folder usable, that SHALL be the page that the history entry showed last. It SHALL generate the page again in the background once per session, and update the view when the result differs. The refresh button SHALL generate it again; when the environment is not usable, it SHALL first check the environment again. When a generation fails, the viewer SHALL show the error, above the kept page if there is one.
-
-#### Scenario: Refresh button
-- **WHEN** the user chooses the refresh button of a viewer that shows `Collections`
-- **THEN** the page of `Collections` is generated again
-
-#### Scenario: Restart before the environment is known
-- **WHEN** a viewer showed `Collections`, VS Code is restarted, and the Python side selects the folder's environment only some seconds after the viewer is restored
-- **THEN** the viewer shows the page of `Collections` at once and no error, and generates it again in that environment once RobotCode has checked it
-
-#### Scenario: Refresh while the environment has a problem
-- **WHEN** a viewer shows the error that the selected Python environment of its folder has no Robot Framework, Robot Framework has just been installed into that environment, and the user chooses the refresh button
-- **THEN** RobotCode checks the environment again, and the viewer shows the page
-
 ### Requirement: Targets whose documentation cannot be generated
 
 When the documentation of an entered target cannot be generated, the viewer SHALL show the error. If no page of that target was kept before, it SHALL also show a way to retry. The field SHALL keep the entered text, and back SHALL return to the previous page. A Python environment that cannot run Robot Framework, and a folder for which RobotCode is switched off, SHALL NOT count as such an error (requirement "A viewer says that it waits").
@@ -27,6 +11,18 @@ When the documentation of an entered target cannot be generated, the viewer SHAL
 - **THEN** the viewer shows the error and a way to retry, and the field keeps `StrictLib::bogus`
 
 ## ADDED Requirements
+
+### Requirement: The page while the environment is not usable
+
+While RobotCode has not found the Python environment of a viewer's folder usable, showing a target SHALL show the page that its history entry showed last, if there is one. While the environment is not usable, the refresh button SHALL first check the environment again.
+
+#### Scenario: Restart before the environment is known
+- **WHEN** a viewer showed `Collections`, VS Code is restarted, and the Python side selects the folder's environment only some seconds after the viewer is restored
+- **THEN** the viewer shows the page of `Collections` at once and no error, and generates it again in that environment once RobotCode has checked it
+
+#### Scenario: Refresh while the environment has a problem
+- **WHEN** a viewer shows the error that the selected Python environment of its folder has no Robot Framework, Robot Framework has just been installed into that environment, and the user chooses the refresh button
+- **THEN** RobotCode checks the environment again, and the viewer shows the page
 
 ### Requirement: Generation waits for a usable Python environment
 
