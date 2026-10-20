@@ -37,7 +37,7 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
 - [x] 1.2 Change the "Extension Tests" configuration in `.vscode/launch.json` to `"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"` with `--extensionDevelopmentPath` and the `npm: compile` pre-launch task. Recommend `ms-vscode.extension-test-runner` in `.vscode/extensions.json` and remove the stray `w` after its closing brace. Verify:
   - both files parse as JSONC;
   - the maintainer starts "Extension Tests" once with F5, and the tests run in the Extension Development Host and stop at a breakpoint in a test.
-- [ ] 1.3 Add the job `test-vscode` to `.github/workflows/build-test-package.yml`:
+- [x] 1.3 Add the job `test-vscode` to `.github/workflows/build-test-package.yml`:
   - Linux, Windows and macOS;
   - Node 26 and npm as in the other jobs;
   - `npm install --include=dev`;
@@ -47,6 +47,8 @@ Before group 2, record the main-spec scenarios of `vscode-test-explorer` with th
   - added after the first CI run, whose log listed no test: `mocha-multi-reporters` as a dev dependency, `npm test -- --reporter mocha-multi-reporters` in the job, and in `.vscode-test.mjs` the options for its spec and xunit reporters, but not the reporter itself (D6). Verified locally: without `--reporter` the spec reporter lists the 39 tests; with it, the 39 tests are listed and `test-results.xml` has them; a failing test ends the run with exit code 1 and appears in the file; the Extension Test Runner's `--reporter …/fullJsonStreamReporter.cjs` still gets its JSON stream.
 
   Let `publish-test-results` and `package` also need `test-vscode`. Verify on the CI run of the next push: the job runs on all three systems with both versions of 1.5, its log lists each test, its tests appear in the published test results, which tell the two versions apart, and `package` waits for it.
+
+  Checked 2026-10-20 on two runs. Run 39461593858 (af3229ff): all six combinations passed, with 1.127.0 and 1.142.0, and `package` started only after the last of them. Run 39468104724 (cb5741c8): five combinations passed and their logs list the 39 tests; GitHub never gave `macos-latest, minimum` a runner ("not acquired … after multiple attempts", capacity of macOS arm64), so `package` was skipped. The published "Test Results" list the extension's tests; a failed run would be annotated with its result file, whose artifact path names the system and the version, as the annotations of earlier failures show.
 - [x] 1.4 Name `npm test` in AGENTS.md (Common Commands) and in CONTRIBUTING.md (Running Tests): it runs the extension's tests in a downloaded VS Code and needs a display on Linux (`xvfb-run -a npm test`). Name the "Extension Tests" configuration and the Extension Test Runner for debugging. Verify by reading the rendered Markdown.
 
 - [x] 1.5 Test with the minimum and the newest VS Code version (D6):
