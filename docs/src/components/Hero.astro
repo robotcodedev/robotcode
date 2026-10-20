@@ -601,8 +601,10 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
     border-color: var(--sl-color-accent);
   }
 
+  /* A fresh post pulses a few times after the page loads, enough to catch the eye; an animated shadow is painted again
+     in every frame, so it does not pulse on for as long as the page is open. */
   .rc-news-badge[data-fresh] {
-    animation: rc-news-pulse 2.4s ease-out infinite;
+    animation: rc-news-pulse 2.4s ease-out 5;
   }
 
   @keyframes rc-news-pulse {

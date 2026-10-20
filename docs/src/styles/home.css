@@ -185,13 +185,16 @@
   visibility: visible;
 }
 
+/* The bar grows by a transform, which the compositor plays without layout or painting. */
 .rc-demo-progress {
   position: absolute;
   inset-inline-start: 0;
   inset-block-end: 0;
-  width: 0;
+  width: 100%;
   height: 2px;
   background: var(--sl-color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
 }
 
 /* Steps appear one by one: hidden once the player is armed (so a demo stays complete without it), shown while it
@@ -248,6 +251,6 @@
 
 @keyframes rc-progress {
   to {
-    width: 100%;
+    transform: scaleX(1);
   }
 }
