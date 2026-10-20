@@ -2,7 +2,7 @@
 // with a spider resting in it, and robot spiders walking over the page with legs that step like a spider's. The robot
 // spider's head is the Robot Framework face. Everything is drawn in body units facing +x.
 import { patter, pop, scurry } from "./sound";
-import { clamp, el, rand, RF_FACE, treat, windowLayer, world, type Part } from "./world";
+import { clamp, el, put, rand, RF_FACE, treat, windowLayer, world, type Part } from "./world";
 
 // the face's top points to the rear, so that it reads upright on the spider hanging head down
 const BODY = `
@@ -47,10 +47,12 @@ interface LegParts {
   rim: SVGPathElement;
   upper: SVGPathElement;
   lower: SVGPathElement;
-  kneeDot: SVGCircleElement;
+  knees: SVGPathElement;
+  kneeRadius: number;
 }
 
-// one leg: an outline for dark backgrounds, the thicker upper segment, the thinner lower one and the knee joint
+// the legs of a spider in four shapes, however many legs: an outline for dark backgrounds, the thicker upper segments,
+// the thinner lower ones and the knee joints; a walking spider so changes four shapes in a picture, not 32
 function legParts(parent: Element, scale: number): LegParts {
   const w = LEG_WIDTH * scale;
   const style = { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" };
@@ -58,18 +60,27 @@ function legParts(parent: Element, scale: number): LegParts {
     rim: el("path", { ...style, stroke: "var(--hw-leg-rim)", "stroke-width": w + 1.6 * scale }, parent),
     upper: el("path", { ...style, stroke: "var(--hw-leg)", "stroke-width": w }, parent),
     lower: el("path", { ...style, stroke: "var(--hw-leg)", "stroke-width": w * 0.68 }, parent),
-    kneeDot: el("circle", { r: 1.6 * scale, fill: "var(--hw-knee)" }, parent),
+    knees: el("path", { fill: "var(--hw-knee)" }, parent),
+    kneeRadius: 1.6 * scale,
   };
 }
 
-function drawLeg(p: LegParts, hx: number, hy: number, kx: number, ky: number, fx: number, fy: number) {
-  const h = `${hx.toFixed(1)} ${hy.toFixed(1)}`, k = `${kx.toFixed(1)} ${ky.toFixed(1)}`;
-  const f = `${fx.toFixed(1)} ${fy.toFixed(1)}`;
-  p.rim.setAttribute("d", `M${h} L${k} L${f}`);
-  p.upper.setAttribute("d", `M${h} L${k}`);
-  p.lower.setAttribute("d", `M${k} L${f}`);
-  p.kneeDot.setAttribute("cx", kx.toFixed(1));
-  p.kneeDot.setAttribute("cy", ky.toFixed(1));
+// every leg as [hip x, hip y, knee x, knee y, foot x, foot y]
+function drawLegs(p: LegParts, legs: number[][]) {
+  const r = p.kneeRadius.toFixed(1), d = (p.kneeRadius * 2).toFixed(1);
+  let rim = "", upper = "", lower = "", knees = "";
+  for (const [hx, hy, kx, ky, fx, fy] of legs) {
+    const h = `${hx.toFixed(1)} ${hy.toFixed(1)}`, k = `${kx.toFixed(1)} ${ky.toFixed(1)}`;
+    const f = `${fx.toFixed(1)} ${fy.toFixed(1)}`;
+    rim += `M${h} L${k} L${f}`;
+    upper += `M${h} L${k}`;
+    lower += `M${k} L${f}`;
+    knees += `M${(kx - p.kneeRadius).toFixed(1)} ${ky.toFixed(1)} a${r} ${r} 0 1 0 ${d} 0 a${r} ${r} 0 1 0 -${d} 0`;
+  }
+  put(p.rim, "d", rim);
+  put(p.upper, "d", upper);
+  put(p.lower, "d", lower);
+  put(p.knees, "d", knees);
 }
 
 interface SwingLeg {
@@ -88,7 +99,7 @@ function swingLegs(group: Element, curl: number): SwingLeg[] {
       const hx = HIPS[i][0], hy = HIPS[i][1] * s;
       const fx = hx + (FEET[i][0] - hx) * curl, fy = hy + (FEET[i][1] * s - hy) * curl;
       const [kx, ky, gx, gy] = knee(hx, hy, fx, fy, UPPER, LOWER, 0, s);
-      drawLeg(legParts(g, 1), hx, hy, kx, ky, gx, gy);
+      drawLegs(legParts(g, 1), [[hx, hy, kx, ky, gx, gy]]);
       legs.push({ g, hx, hy, grp: (i + (s > 0 ? 1 : 0)) % 2 });
     }
   }
@@ -98,7 +109,7 @@ function swingLegs(group: Element, curl: number): SwingLeg[] {
 function swing(legs: SwingLeg[], phase: number, amp: number) {
   for (const l of legs) {
     const a = amp * Math.sin(phase + (l.grp ? Math.PI : 0));
-    l.g.setAttribute("transform", `rotate(${a.toFixed(2)} ${l.hx.toFixed(1)} ${l.hy.toFixed(1)})`);
+    put(l.g, "transform", `rotate(${a.toFixed(1)} ${l.hx.toFixed(1)} ${l.hy.toFixed(1)})`);
   }
 }
 
@@ -187,22 +198,23 @@ function hangingSpider(web: Web, origin: [number, number]): Part {
         s.Lt = now - s.nearAt < 1400 ? 34 : 170;
         s.vL += (40 * (s.Lt - s.L) - 7 * s.vL) * dt;
         s.L = clamp(s.L + s.vL * dt, 20, 330);
-        if (Math.random() < dt * 0.35) s.vth += rand(-0.25, 0.25);
+        if (Math.random() < dt * 0.12) s.vth += rand(-0.25, 0.25);
         s.vth += (-(900 / Math.max(s.L, 25)) * Math.sin(s.th) - 0.7 * s.vth + world.wind.v * 2.4) * dt;
         s.th = clamp(s.th + s.vth * dt, -0.9, 0.9);
       }
       const climbing = Math.abs(s.vL) > 25;
       s.phase += dt * (climbing ? 16 : 2.2);
-      swing(spider.legs, s.phase, dt === 0 ? 0 : climbing ? 14 : 3);
+      // the legs move while it climbs or swings, and rest while it hangs quietly
+      swing(spider.legs, s.phase, dt === 0 ? 0 : climbing ? 14 : Math.abs(s.vth) > 0.05 ? 3 : 0);
       const tx = ax + Math.sin(s.th) * s.L, ty = ay + Math.cos(s.th) * s.L;
       const dir = Math.atan2(Math.cos(s.th), Math.sin(s.th));
       const cx = tx + Math.cos(dir) * 28, cy = ty + Math.sin(dir) * 28;
-      thread.setAttribute("x2", tx.toFixed(1));
-      thread.setAttribute("y2", ty.toFixed(1));
-      spider.g.setAttribute("transform", `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${((dir * 180) / Math.PI).toFixed(1)})`);
+      put(thread, "x2", tx.toFixed(1));
+      put(thread, "y2", ty.toFixed(1));
+      put(spider.g, "transform", `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${((dir * 180) / Math.PI).toFixed(1)})`);
       // the gust shakes the web
       const wobble = world.wind.v * Math.sin(now / 105) * 1.5;
-      web.g.setAttribute("transform", `rotate(${wobble.toFixed(2)} ${origin[0]} ${origin[1]})`);
+      put(web.g, "transform", `rotate(${wobble.toFixed(1)} ${origin[0]} ${origin[1]})`);
     },
   };
 }
@@ -243,10 +255,10 @@ function restingSpider(web: Web, origin: [number, number]): Part {
       s.twitch = Math.max(0, s.twitch - dt);
       s.phase += dt * (moving ? 18 : 9);
       swing(spider.legs, s.phase, dt === 0 ? 0 : moving ? 15 : s.twitch > 0 ? 6 : 0);
-      spider.g.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${s.mode === "hide" ? 135 : -45}) scale(${(0.8 - 0.35 * e).toFixed(3)})`);
-      spider.g.style.opacity = String(1 - 0.85 * e);
+      put(spider.g, "transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${s.mode === "hide" ? 135 : -45}) scale(${(0.8 - 0.35 * e).toFixed(3)})`);
+      put(spider.g, "opacity", (1 - 0.85 * e).toFixed(2));
       const wobble = -world.wind.v * Math.sin(now / 105) * 1.2;
-      web.g.setAttribute("transform", `rotate(${wobble.toFixed(2)} ${origin[0]} ${origin[1]})`);
+      put(web.g, "transform", `rotate(${wobble.toFixed(1)} ${origin[0]} ${origin[1]})`);
     },
   };
 }
@@ -259,7 +271,6 @@ interface Leg {
   fy: number;
   lift: number;
   st: { fx: number; fy: number; t: number; d: number } | null;
-  parts: LegParts;
 }
 
 // a robot spider walking over the page: each foot stays planted until the body has moved too far, then four legs step
@@ -286,6 +297,7 @@ class Walker {
   g: SVGGElement;
   body: SVGGElement;
   legs: Leg[] = [];
+  lines: LegParts;
 
   // `hatch`: a hatchling of the egg sac, small, that runs off from where it hatched in the direction `angle`
   constructor(layer: SVGSVGElement, hatch?: { x: number; y: number; angle: number }) {
@@ -307,6 +319,7 @@ class Walker {
     this.h = Math.atan2(this.ty - this.y, this.tx - this.x);
     this.g = el("g", {}, layer);
     const legsG = el("g", {}, this.g);
+    this.lines = legParts(legsG, this.k);
     this.body = el("g", {}, this.g);
     el("g", {}, this.body).innerHTML = BODY;
     const hit = el("circle", { class: "rc-hw-hit", cx: -4, cy: 0, r: 30 }, this.body);
@@ -316,7 +329,7 @@ class Walker {
     });
     for (let i = 0; i < 4; i++) {
       for (const s of [-1, 1]) {
-        const leg: Leg = { i, s, grp: (i + (s > 0 ? 1 : 0)) % 2, fx: 0, fy: 0, lift: 0, st: null, parts: legParts(legsG, this.k) };
+        const leg: Leg = { i, s, grp: (i + (s > 0 ? 1 : 0)) % 2, fx: 0, fy: 0, lift: 0, st: null };
         [leg.fx, leg.fy] = this.ideal(leg, 0);
         this.legs.push(leg);
       }
@@ -427,13 +440,15 @@ class Walker {
   }
 
   render() {
-    this.body.setAttribute("transform", `translate(${this.x.toFixed(1)} ${this.y.toFixed(1)}) rotate(${((this.h * 180) / Math.PI).toFixed(1)}) scale(${this.k})`);
+    put(this.body, "transform", `translate(${this.x.toFixed(1)} ${this.y.toFixed(1)}) rotate(${((this.h * 180) / Math.PI).toFixed(1)}) scale(${this.k})`);
     const sin = Math.sin(this.h), cos = Math.cos(this.h);
-    for (const l of this.legs) {
-      const [hx, hy] = this.toWorld(HIPS[l.i][0], HIPS[l.i][1] * l.s);
-      const [kx, ky, fx, fy] = knee(hx, hy, l.fx, l.fy, UPPER * this.k * (1 + 0.14 * l.lift), LOWER * this.k, -l.s * sin, l.s * cos);
-      drawLeg(l.parts, hx, hy, kx, ky, fx, fy);
-    }
+    drawLegs(
+      this.lines,
+      this.legs.map((l) => {
+        const [hx, hy] = this.toWorld(HIPS[l.i][0], HIPS[l.i][1] * l.s);
+        return [hx, hy, ...knee(hx, hy, l.fx, l.fy, UPPER * this.k * (1 + 0.14 * l.lift), LOWER * this.k, -l.s * sin, l.s * cos)];
+      }),
+    );
   }
 }
 
@@ -538,10 +553,10 @@ function eggSac(web: Web): Part {
       // bursting, it swells and fades; growing again, it starts small and pale below its thread
       const grown = s.grow * s.grow * (3 - 2 * s.grow);
       const scale = s.pop > 0 ? 1 + 0.3 * (1 - s.pop) : 0.2 + 0.8 * grown;
-      const angle = Math.sin(s.t * 1.3) * 3 + Math.sin(s.t * 42) * 7 * s.twitch - world.wind.v * 6;
-      sway.setAttribute("transform", `rotate(${angle.toFixed(2)})`);
-      body.setAttribute("transform", `translate(0 8) scale(${scale.toFixed(3)}) translate(0 -8)`);
-      body.style.opacity = (s.pop > 0 ? s.pop : 0.3 + 0.7 * grown).toFixed(3);
+      const angle = Math.sin(s.t * 42) * 7 * s.twitch - world.wind.v * 6;
+      put(sway, "transform", `rotate(${angle.toFixed(1)})`);
+      put(body, "transform", `translate(0 8) scale(${scale.toFixed(2)}) translate(0 -8)`);
+      put(body, "opacity", (s.pop > 0 ? s.pop : 0.3 + 0.7 * grown).toFixed(2));
     },
     calm() {
       for (const h of hatchlings.splice(0)) h.g.remove();

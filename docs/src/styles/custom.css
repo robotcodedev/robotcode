@@ -53,6 +53,15 @@
   --sl-color-accent-high: #5c2a03;
 }
 
+/* In the season with Spooky mode on, the title of the home page is full of blood, with room below it for the blood that
+   runs down from the letters (season/halloween/blood.ts, which paints its drips with the same gradient). */
+:root[data-season="halloween"]:not([data-spooky="off"]) .rc-hero h1 {
+  margin-bottom: 0.35em;
+  background: linear-gradient(180deg, #ff4b4b 0%, #c8001c 40%, #8c0013 72%, #5a000b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
 /* In the season, a pumpkin before the dates of the news posts and of the news on the home page. */
 :root[data-season="halloween"]:not([data-spooky="off"])
   :is(time.sl-blog-metadata-date, .rc-news-badge time, .rc-news time)::before {

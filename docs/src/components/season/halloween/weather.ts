@@ -31,10 +31,11 @@ function fogTexture(w: number, h: number, blobs: number): string {
 }
 
 // the fog of every decorated page: a faint layer over the lower part of the window and a thin one at its bottom edge;
-// it drifts sideways and billows, every texture swelling and sinking, thickening and thinning slowly in its own time
+// it drifts sideways and billows, every texture swelling and sinking, thickening and thinning slowly in its own time.
+// All of it runs as CSS animations of transforms and opacity, which the compositor plays without the script and without
+// painting the masked fog again; the script only sizes the textures.
 export function fog(): Part {
-  const layers: { el: HTMLElement; speed: number; x: number; period: number; phase: number }[] = [];
-  let t = 0;
+  const layers: { box: HTMLElement; texture: HTMLElement; w: number; speed: number }[] = [];
   for (const [kind, textures] of [
     ["back", [[1500, 9], [1100, -5]]],
     ["front", [[900, 15]]],
@@ -43,29 +44,35 @@ export function fog(): Part {
     container.className = `rc-halloween rc-hw-fog rc-hw-fog-${kind}`;
     container.setAttribute("aria-hidden", "true");
     for (const [w, speed] of textures) {
-      const tex = document.createElement("div");
-      tex.className = "rc-hw-fog-texture";
+      const wave = document.createElement("div");
+      wave.className = "rc-hw-fog-wave";
+      wave.style.animationDuration = `${rand(22, 38).toFixed(1)}s, ${rand(15, 27).toFixed(1)}s`;
+      wave.style.animationDelay = `-${rand(0, 38).toFixed(1)}s, -${rand(0, 27).toFixed(1)}s`;
+      const texture = document.createElement("div");
+      texture.className = "rc-hw-fog-texture";
       const url = fogTexture(w, 260, 48);
-      tex.style.maskImage = url;
-      tex.style.setProperty("-webkit-mask-image", url);
-      container.appendChild(tex);
-      layers.push({ el: tex, speed, x: 0, period: rand(22, 38), phase: rand(0, Math.PI * 2) });
+      texture.style.maskImage = url;
+      texture.style.setProperty("-webkit-mask-image", url);
+      wave.appendChild(texture);
+      container.appendChild(wave);
+      layers.push({ box: container, texture, w, speed });
     }
     document.body.appendChild(container);
   }
-  return {
-    update(dt) {
-      t += dt;
-      for (const f of layers) {
-        f.x += (f.speed + world.wind.v * 70) * dt;
-        f.el.style.maskPosition = `${f.x.toFixed(1)}px 0`;
-        f.el.style.setProperty("-webkit-mask-position", `${f.x.toFixed(1)}px 0`);
-        const a = (t / f.period) * Math.PI * 2 + f.phase;
-        f.el.style.transform = `scaleY(${(1 + 0.18 * Math.sin(a)).toFixed(3)})`;
-        f.el.style.opacity = (0.8 + 0.2 * Math.sin(a * 1.45 + f.phase)).toFixed(3);
-      }
-    },
-  };
+  // A texture is a tile wider than the window and slides by one tile and back (`--tile`); a tile is as wide as the
+  // texture at the height of its layer, so the jump back does not show.
+  function measure() {
+    for (const f of layers) {
+      const tile = Math.max(1, (f.w * f.box.clientHeight) / 260);
+      f.texture.style.width = `${Math.ceil(innerWidth + tile)}px`;
+      f.texture.style.setProperty("--tile", `${tile.toFixed(1)}px`);
+      f.texture.style.animationDuration = `${(tile / Math.abs(f.speed)).toFixed(1)}s`;
+      f.texture.style.animationDirection = f.speed > 0 ? "normal" : "reverse";
+    }
+  }
+  measure();
+  addEventListener("resize", measure);
+  return { update() {} };
 }
 
 // the moon with clouds passing it, and the lightning in the sky around it, in a box at the start of `host`: around the
@@ -91,6 +98,7 @@ function sky(host: HTMLElement, kind: "hero" | "page", moonAt: () => { x: number
   }));
   let next = performance.now() + rand(6000, 10000);
   let nextBolt = performance.now() + rand(20000, 30000);
+  let cloudTime = 0;
   let moonX = 0;
 
   // the sky from the left to the right edge of the window, with the moon in its place and the lightning around it
@@ -172,7 +180,12 @@ function sky(host: HTMLElement, kind: "hero" | "page", moonAt: () => { x: number
         thunder(false, rand(2, 4));
         next = now + rand(15000, 30000);
       }
-      moveClouds(dt);
+      // the clouds drift a few pixels a second, so ten steps a second are enough
+      cloudTime += dt;
+      if (cloudTime >= 0.1) {
+        moveClouds(cloudTime);
+        cloudTime = 0;
+      }
     },
   };
 }

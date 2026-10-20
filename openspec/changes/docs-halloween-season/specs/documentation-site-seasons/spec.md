@@ -49,7 +49,7 @@ During the Halloween season every page with decorations SHALL show a small "Spoo
 #### Scenario: Turning decorations off
 - **WHEN** a visitor turns Spooky mode off on the home page and then opens a news post
 - **THEN** neither page shows spiders, bats, the ghost, the pumpkin or the weather
-- **AND** the home page shows its usual pictures, in their usual size, and its subline
+- **AND** the home page shows its usual pictures, in their usual size, its subline and its usual title
 - **AND** the accent color and the theme stay as they were
 - **AND** the switch is still shown in its corner, turned off
 
@@ -80,12 +80,18 @@ Seasonal decorations SHALL NOT take clicks, taps or keyboard focus away from the
 
 ### Requirement: Halloween look of the home page
 
-During the Halloween season, while Spooky mode is on, the home page SHALL show only the Halloween posters in its gallery, larger than the usual pictures, SHALL leave out the subline under the tagline, because every poster carries one, and SHALL use a pumpkin accent color. Every page of the site SHALL show a pumpkin favicon.
+During the Halloween season, while Spooky mode is on, the home page SHALL show only the Halloween posters in its gallery, larger than the usual pictures, SHALL leave out the subline under the tagline, because every poster carries one, SHALL show its title full of blood that runs down from its letters, and SHALL use a pumpkin accent color. Every page of the site SHALL show a pumpkin favicon.
 
 #### Scenario: Halloween posters
 - **WHEN** a visitor opens the home page during the season
 - **THEN** one of the Halloween posters is shown, larger than the usual pictures, with its slogan such as "I see dead keywords."
 - **AND** no subline is shown under the tagline
+
+#### Scenario: Bloody title
+- **WHEN** a visitor looks at the home page during the season
+- **THEN** the title "RobotCode" is blood red, and blood runs down from where its letters stand on the baseline
+- **AND** drops gather at the end of a trace and fall, and the trace stays and dries darker instead of vanishing
+- **AND** the traces end above the tagline
 
 #### Scenario: Accent and favicon
 - **WHEN** a visitor opens the home page during the season

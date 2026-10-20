@@ -96,15 +96,6 @@
   cursor: pointer;
 }
 
-.rc-hw-led {
-  animation: rc-hw-blink 2.6s ease-in-out infinite;
-}
-
-@keyframes rc-hw-blink {
-  50% {
-    opacity: 0.35;
-  }
-}
 
 /* webs in a corner of their host */
 .rc-hw-web-host {
@@ -203,6 +194,15 @@
 
 .rc-hw-eyes {
   transition: transform 0.35s ease-in-out;
+}
+
+/* the blood that runs down from the title of the home page, over what lies below it */
+.rc-hw-blood {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
 }
 
 /* the pumpkin floats in a lower corner of the window */
@@ -496,6 +496,7 @@ rc-hero-gallery[data-picture-moon] .rc-hw-moon {
   right: 0;
   bottom: 0;
   left: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -513,14 +514,67 @@ rc-hero-gallery[data-picture-moon] .rc-hw-moon {
   mask-image: linear-gradient(to top, #000 0%, transparent 100%);
 }
 
-/* billowing scales the texture from the bottom; above the layer the mask of the layer cuts it off */
-.rc-hw-fog-texture {
+/* a wave swells from the bottom and sinks, and thickens and thins, in its own time (durations and delays set by
+   script); above the layer the mask of the layer cuts it off */
+.rc-hw-fog-wave {
   position: absolute;
   inset: 0;
   transform-origin: bottom;
+  animation-name: rc-hw-fog-swell, rc-hw-fog-thin;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes rc-hw-fog-swell {
+  from {
+    transform: scaleY(0.82);
+  }
+
+  to {
+    transform: scaleY(1.18);
+  }
+}
+
+@keyframes rc-hw-fog-thin {
+  from {
+    opacity: 0.6;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* a tile wider than the window (width, tile and duration set by script), sliding by one tile and back to the start */
+.rc-hw-fog-texture {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
   background: var(--hw-fog);
   mask-repeat: repeat-x;
   mask-size: auto 100%;
+  animation: rc-hw-fog-drift linear infinite;
+  will-change: transform;
+}
+
+@keyframes rc-hw-fog-drift {
+  from {
+    transform: translateX(calc(-1 * var(--tile, 0px)));
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-hw-fog-wave,
+  .rc-hw-fog-texture {
+    animation: none;
+  }
 }
 
 /* a treat: a tip in a bubble near the click */
@@ -551,10 +605,6 @@ rc-hero-gallery[data-picture-moon] .rc-hw-moon {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rc-hw-led {
-    animation: none;
-  }
-
   .rc-hw-ghost,
   .rc-hw-treat {
     transition: none;

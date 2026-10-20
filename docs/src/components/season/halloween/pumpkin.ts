@@ -50,6 +50,8 @@ export function pumpkin(): Part {
   // a candle: the brightness moves slowly to a new level every few tenths of a second, now and then it dips as in a
   // draught, a gust of wind makes it flicker, and the flame sways a little
   const flame = { v: 0.85, target: 0.85, next: 0, flare: 0, t: 0 };
+  // a candle and a slow bob need no more than about 20 pictures a second, and every picture paints the pumpkin anew
+  let pending = 0;
   body.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     // the treat takes the place of the sign
@@ -62,7 +64,6 @@ export function pumpkin(): Part {
     update(dt, now) {
       if (dt === 0) {
         carving.style.opacity = "";
-        carving.style.filter = "";
         glow.style.opacity = "";
         flameGradient.setAttribute("cx", "0.5");
         flameGradient.setAttribute("cy", "0.6");
@@ -71,6 +72,10 @@ export function pumpkin(): Part {
         shadow.style.opacity = "";
         return;
       }
+      pending += dt;
+      if (pending < 0.05) return;
+      dt = pending;
+      pending = 0;
       if (now >= flame.next) {
         flame.target = Math.random() < 0.06 ? rand(0.5, 0.62) : rand(0.7, 0.96);
         flame.next = now + rand(220, 600);
@@ -80,8 +85,8 @@ export function pumpkin(): Part {
       flame.flare = Math.max(0, flame.flare - dt * 0.9);
       flame.t += dt;
       const v = flame.v + flame.flare;
-      carving.style.opacity = (0.8 + 0.2 * Math.min(1, v)).toFixed(3);
-      carving.style.filter = `drop-shadow(0 0 ${(2 + 2.4 * v).toFixed(1)}px var(--hw-flame-b)) drop-shadow(0 0 ${(6 + 7 * v).toFixed(1)}px var(--hw-flame-b)) brightness(${(0.95 + 0.18 * v).toFixed(2)})`;
+      // the glow of the carving stays (halloween.css); the flame flickers in the opacity of the carving and the inner glow
+      carving.style.opacity = (0.72 + 0.28 * Math.min(1, v)).toFixed(3);
       glow.style.opacity = Math.min(1, 0.3 + 0.45 * v).toFixed(3);
       flameGradient.setAttribute("cx", (0.5 + Math.sin(flame.t * 1.1) * 0.04 + (flame.v - 0.83) * 0.06).toFixed(3));
       flameGradient.setAttribute("cy", (0.6 + Math.sin(flame.t * 1.6) * 0.03).toFixed(3));

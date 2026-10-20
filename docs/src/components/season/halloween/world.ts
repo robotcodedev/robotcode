@@ -33,6 +33,18 @@ addEventListener("pointermove", (e) => (world.pointer = { x: e.clientX, y: e.cli
 document.addEventListener("pointerleave", () => (world.pointer = null));
 
 export const rand = (a: number, b: number) => a + Math.random() * (b - a);
+
+// Sets an attribute, or the opacity, only when its value changes, so that parts at rest cause no work: a change to the
+// SVG of a decoration makes the browser paint that part again.
+const written = new WeakMap<Element, Record<string, string>>();
+export function put(target: Element, name: string, value: string): void {
+  let values = written.get(target);
+  if (!values) written.set(target, (values = {}));
+  if (values[name] === value) return;
+  values[name] = value;
+  if (name === "opacity") (target as SVGElement).style.opacity = value;
+  else target.setAttribute(name, value);
+}
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export function el<K extends keyof SVGElementTagNameMap>(

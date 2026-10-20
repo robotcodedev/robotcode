@@ -3,6 +3,7 @@
 // while Spooky mode is off, and with reduced motion it shows one still frame instead.
 import "./halloween.css";
 import { bats } from "./bats";
+import { bloodTitle } from "./blood";
 import { ghost } from "./ghost";
 import { pumpkin } from "./pumpkin";
 import { createWeb, spiders } from "./spiders";
@@ -41,7 +42,8 @@ function build(page: Page): Part[] {
     const hero = document.querySelector<HTMLElement>(".rc-hero");
     const band = document.querySelector<HTMLElement>(".rc-band");
     const gallery = document.querySelector<HTMLElement>("rc-hero-gallery");
-    list.push(...homeWeather(gallery), ...spiders(hero, band), bats(), ghost(), pumpkin());
+    const title = hero?.querySelector<HTMLElement>("h1");
+    list.push(...homeWeather(gallery), ...spiders(hero, band), bats(), ghost(), pumpkin(), title ? bloodTitle(title) : null);
   } else {
     // a news page: a web at the top left of the page, the corner web in a layer over the table of contents, which
     // would take its clicks, and the screenshots and code blocks of a post for the ghost to hide behind
@@ -61,11 +63,17 @@ function build(page: Page): Part[] {
 const active = () =>
   document.documentElement.dataset.season !== undefined && document.documentElement.dataset.spooky !== "off";
 
+// The decorations move at about 30 pictures a second: smooth enough for them, and every picture makes the browser
+// paint what moved, so that 60 or the 120 of a fast display would only cost more.
+const STEP = 1 / 30;
+
 function frame(now: number) {
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
-  for (const p of parts!) p.update(dt, now);
   raf = requestAnimationFrame(frame);
+  const elapsed = (now - last) / 1000;
+  if (elapsed < STEP - 0.004) return;
+  last = now;
+  const dt = Math.min(0.05, elapsed);
+  for (const p of parts!) p.update(dt, now);
 }
 
 // runs the loop when the decorations may move, or shows their still state
