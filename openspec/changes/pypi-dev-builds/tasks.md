@@ -25,7 +25,7 @@ Implement this change after `publish-workflow`.
 
 ## 3. Verification with the maintainer
 
-- [ ] 3.1 After the push, the maintainer starts "publish" by hand. Check:
+- [x] 3.1 After the push, the maintainer starts "publish" by hand. Check:
   - the log shows PyPI's answers;
   - all 12 projects list the dev version of the latest successful run on `main`;
   - a second start uploads nothing;
