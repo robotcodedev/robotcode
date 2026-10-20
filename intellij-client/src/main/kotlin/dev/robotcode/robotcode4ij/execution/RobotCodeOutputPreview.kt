@@ -15,7 +15,7 @@ import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
-import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -42,11 +42,29 @@ import javax.swing.JPanel
 import javax.swing.event.DocumentEvent
 
 /**
+ * The file type of the preview tabs: binary, so that nothing takes a tab for a text file (LSP4IJ offers a language
+ * server for plain text files whose name ends in `.html`); the tab keeps the icon of a text file.
+ */
+internal object RobotCodeOutputPreviewFileType : FileType {
+    override fun getName(): String = "RobotCode Output Preview"
+
+    override fun getDescription(): String = RobotCodeBundle.message("run.preview.fileType")
+
+    override fun getDefaultExtension(): String = ""
+
+    override fun getIcon(): Icon = AllIcons.FileTypes.Text
+
+    override fun isBinary(): Boolean = true
+
+    override fun isReadOnly(): Boolean = true
+}
+
+/**
  * The preview tab of the report or log at [path]. Two of them are equal when they show the same file, so that the
  * editor manager finds an open tab again.
  */
 internal class RobotCodeOutputPreviewFile(val path: Path) : LightVirtualFile(
-    RobotCodeBundle.message("run.preview.fileName", path.fileName.toString()), PlainTextFileType.INSTANCE, ""
+    RobotCodeBundle.message("run.preview.fileName", path.fileName.toString()), RobotCodeOutputPreviewFileType, ""
 ) {
 
     // the file's own URL, also for a file of the project: the tab reloads itself, and relative links reach the log

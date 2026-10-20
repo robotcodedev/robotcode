@@ -1,5 +1,8 @@
 package dev.robotcode.robotcode4ij.execution
 
+import com.intellij.openapi.fileTypes.PlainTextLanguage
+import com.intellij.psi.PsiBinaryFile
+import com.intellij.psi.PsiManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.nio.file.Path
@@ -32,6 +35,16 @@ class RobotCodeOutputPreviewTest : BasePlatformTestCase() {
         assertNull(pagePath("http://localhost:63342/project/results/report.html"))
         assertNull(pagePath("about:blank"))
         assertNull(pagePath(null))
+    }
+
+    // LSP4IJ offers language servers for files whose PSI has the plain text or the TextMate language
+    fun testThePreviewIsNoTextFile() {
+        val file = RobotCodeOutputPreviewFile(report)
+
+        assertTrue(file.fileType.isBinary)
+        val psi = PsiManager.getInstance(project).findFile(file)
+        assertInstanceOf(psi, PsiBinaryFile::class.java)
+        assertFalse(psi!!.language.id in setOf(PlainTextLanguage.INSTANCE.id, "textmate"))
     }
 
     fun testTheTabLoadsTheFileItself() {
