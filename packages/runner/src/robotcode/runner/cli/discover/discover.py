@@ -345,9 +345,13 @@ class Collector(SuiteVisitor):
         self._collected.pop()
 
     def visit_test(self, test: TestCase) -> None:
+        # A custom parser or a pre-run modifier may create a test without a line number. Robot Framework's lines start
+        # at 1, so such a test gets 0 in its ID, as the debugger's events do, and no line and no range.
+        lineno = test.lineno or None
+
         if test.name in self._collected[-1]:
             LOGGER.warn(
-                f"Warning in file '{test.source}' on line {test.lineno}: "
+                f"Warning in file '{test.source}'{f' on line {lineno}' if lineno else ''}: "
                 f"Multiple {'task' if test.parent.rpa else 'test'}s with name '{test.name}' in suite "
                 f"'{test.parent.longname}'."
             )
@@ -359,16 +363,20 @@ class Collector(SuiteVisitor):
             absolute_path = normalized_path(Path(test.source)) if test.source is not None else None
             item = TestItem(
                 type="task" if self._current.rpa else "test",
-                id=f"{absolute_path or ''};{test.longname};{test.lineno}",
+                id=f"{absolute_path or ''};{test.longname};{lineno or 0}",
                 name=test.name,
                 longname=test.longname,
-                lineno=test.lineno,
+                lineno=lineno,
                 uri=str(Uri.from_path(absolute_path)) if absolute_path else None,
                 source=str(test.source),
                 rel_source=get_rel_source(test.source),
-                range=Range(
-                    start=Position(line=test.lineno - 1, character=0),
-                    end=Position(line=test.lineno - 1, character=0),
+                range=(
+                    Range(
+                        start=Position(line=lineno - 1, character=0),
+                        end=Position(line=lineno - 1, character=0),
+                    )
+                    if lineno
+                    else None
                 ),
                 tags=sorted(set(normalize(str(t), ignore="_") for t in test.tags)) if test.tags else None,
                 metadata=get_test_metadata(test) or None,

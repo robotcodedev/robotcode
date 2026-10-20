@@ -2,7 +2,7 @@
 
 ## 1. Discovery (D1, D2, D3)
 
-- [ ] 1.1 In `Collector.visit_test` of `discover.py`:
+- [x] 1.1 In `Collector.visit_test` of `discover.py`:
   - build the ID with `test.lineno or 0`;
   - set the range only when `test.lineno` is set;
   - leave "on line …" out of the duplicate-name warning when it is not.
@@ -16,18 +16,19 @@
 
 ## 2. Runs (D1, D3)
 
-- [ ] 2.1 In `listeners.py`, use `0` for a missing line number in the test IDs of `ListenerV2.start_test` and `end_test` (`attributes.get("lineno") or 0`), of the enqueued items in `ListenerV3.start_suite` and of the re-marked tests in `ListenerV3.end_suite`. Leave the events' `lineno` as it is.
+- [x] 2.1 In `listeners.py`, use `0` for a missing line number in the test IDs of `ListenerV2.start_test` and `end_test` (`attributes.get("lineno") or 0`), of `ListenerV2.log_message` and `message`, of the enqueued items in `ListenerV3.start_suite` and of the re-marked tests in `ListenerV3.end_suite`. Send `None` instead of the `''` of Robot Framework 6.1 and older in `lineno` and `attributes.lineno` of started and ended tests, in the attributes of failed keywords and in `lineno` of warnings and errors (D2).
 
   Tests in `tests/robotcode/debugger/test_listeners.py`:
   - a run, as `_ended` makes one, of a suite of the parser of 1.1: the IDs of `robotEnqueued`, `robotStarted` and `robotEnded` for its tests end in `;0` and equal the IDs that `discover all` reports for the same suite, and the events' `lineno` is empty;
-  - `end_suite` with a failing suite teardown and tests created without a line number, as in `test_set_failed_ids_use_the_normalized_source`: the IDs of `robotSetFailed` end in `;0`.
+  - `end_suite` with a failing suite teardown and tests created without a line number, as in `test_set_failed_ids_use_the_normalized_source`: the IDs of `robotSetFailed` end in `;0`;
+  - a run of a `.robot` suite to which a pre-run modifier adds a test without a line number that logs a warning and then fails, on every Robot Framework version: the `robotLog` event of the warning has the test's ID from `discover all`, and `lineno` of the test, of its failed keyword and of the warning is `None`.
 
-  Verify: the tests fail on main, where the IDs end in `;None`; `hatch run test:test tests/robotcode/debugger/test_listeners.py` passes.
-- [ ] 2.2 Add to the test of `enqueuedTestCount` in `RobotCodeFailureDetailsTest.kt` a test item whose ID ends in `;0`, counted as a test. Verify with `(cd intellij-client && ./gradlew test)`.
+  Verify: the tests fail on main, where the IDs end in `;None` or, up to Robot Framework 6.1, in `;`; `hatch run test:test tests/robotcode/debugger/test_listeners.py` passes.
+- [x] 2.2 Add to the test of `enqueuedTestCount` in `RobotCodeFailureDetailsTest.kt` a test item whose ID ends in `;0`, counted as a test. Verify with `(cd intellij-client && ./gradlew test)`.
 
 ## 3. Integration
 
-- [ ] 3.1 In the VS Code harness, open a project whose `robot.toml` configures the parser of 1.1: the Test Explorer shows its tests, **Run Test** at its suite runs them, and their results appear at their items. Run `hatch run test:test`, `hatch run lint:all` on the changed files and `openspec validate tests-without-line-numbers --strict`.
+- [x] 3.1 In the VS Code harness, open a project whose `robot.toml` configures the parser of 1.1: the Test Explorer shows its tests, **Run Test** at its suite runs them, and their results appear at their items. Run `hatch run test:test`, `hatch run lint:all` on the changed files and `openspec validate tests-without-line-numbers --strict`.
 
 ## Workflow follow-up
 

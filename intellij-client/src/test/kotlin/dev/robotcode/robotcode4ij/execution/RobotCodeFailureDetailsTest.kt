@@ -313,8 +313,9 @@ class RobotCodeFailureDetailsTest {
         assertEquals("/project/tests/caught.robot" to 9, firstLocation(failurePathOf(trace(caughtBefore)!!)))
     }
 
-    // a robotEnqueued body as the listener sends it for a folder with two suite files and a task file, whose source
-    // path has spaces; Robot Framework left out the test that the tag options of robot.toml exclude
+    // a robotEnqueued body as the listener sends it for a folder with two suite files, a task file and the suite file of
+    // a custom parser, whose source path has spaces; Robot Framework left out the test that the tag options of
+    // robot.toml exclude, and the custom parser's test has no line number, so its ID ends in 0
     private val enqueued = """
         {
           "items": [
@@ -326,7 +327,9 @@ class RobotCodeFailureDetailsTest {
             "/home/me/my project/tests/nested/second.robot;Tests.Nested.Second",
             "/home/me/my project/tests/nested/second.robot;Tests.Nested.Second.Three;2",
             "/home/me/my project/tests/tasks.robot;Tests.Tasks",
-            "/home/me/my project/tests/tasks.robot;Tests.Tasks.Clean Up;4"
+            "/home/me/my project/tests/tasks.robot;Tests.Tasks.Clean Up;4",
+            "/home/me/my project/tests/example.example;Tests.Example",
+            "/home/me/my project/tests/example.example;Tests.Example.Without Line;0"
           ]
         }
     """.trimIndent()
@@ -335,7 +338,7 @@ class RobotCodeFailureDetailsTest {
     fun theTestsAndTasksOfTheRunAreCounted() {
         val items = Gson().fromJson(enqueued, RobotEnqueuedArguments::class.java).items
 
-        assertEquals(4, enqueuedTestCount(items))
+        assertEquals(5, enqueuedTestCount(items))
         assertEquals(0, enqueuedTestCount(arrayOf()))
         assertEquals(0, enqueuedTestCount(null))
     }

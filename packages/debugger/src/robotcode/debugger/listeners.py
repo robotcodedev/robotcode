@@ -66,6 +66,15 @@ def source_from_attributes(attributes: Dict[str, Any]) -> str:
     return s or ""
 
 
+def without_empty_lineno(attributes: Dict[str, Any]) -> Dict[str, Any]:
+    """A copy of listener attributes with an empty line number as None. Up to Robot Framework 6.1, listeners get ""
+    for a test or keyword without one, as a custom parser or a pre-run modifier creates them."""
+    result = dict(attributes)
+    if result.get("lineno") == "":
+        result["lineno"] = None
+    return result
+
+
 class ListenerV2:
     ROBOT_LISTENER_API_VERSION = "2"
 
@@ -146,11 +155,11 @@ class ListenerV2:
                     type="test",
                     name=name,
                     id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')};"
-                    f"{attributes.get('lineno', 0)}",
+                    f"{attributes.get('lineno') or 0}",
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
-                    attributes=dict(attributes),
+                    attributes=without_empty_lineno(attributes),
                     source=source_from_attributes(attributes) or None,
-                    lineno=attributes.get("lineno", None),
+                    lineno=attributes.get("lineno") or None,
                 ),
             ),
         )
@@ -172,13 +181,13 @@ class ListenerV2:
                     type="test",
                     name=name,
                     id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')};"
-                    f"{attributes.get('lineno', 0)}",
+                    f"{attributes.get('lineno') or 0}",
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
-                    attributes=dict(attributes),
+                    attributes=without_empty_lineno(attributes),
                     failed_keywords=self.failed_keywords,
                     failures=self._failures(),
                     source=source_from_attributes(attributes) or None,
-                    lineno=attributes.get("lineno", None),
+                    lineno=attributes.get("lineno") or None,
                 ),
             ),
         )
@@ -310,7 +319,7 @@ class ListenerV2:
                 if self.failed_keywords is None:
                     self.failed_keywords = []
 
-                keyword = {"message": self.last_fail_message, **attributes}
+                keyword = {"message": self.last_fail_message, **without_empty_lineno(attributes)}
                 # it is the nearest failed keyword around those that ended since it started and have none yet
                 for inner in self.failed_keywords[: max(0, len(self.failed_keywords) - mark)]:
                     self.failed_keyword_parents.setdefault(id(inner), keyword)
@@ -356,7 +365,7 @@ class ListenerV2:
                     self.failure_logged[-1] = True
 
             source = current_frame.source if current_frame else None
-            line = current_frame.line if current_frame else None
+            line = (current_frame.line or None) if current_frame else None
             column = current_frame.column if current_frame else None
 
             item_id = next(
@@ -365,7 +374,7 @@ class ListenerV2:
                         f"{normalized_path(Path(item.source)) if item.source is not None else ''};{item.longname}"
                         if item.type == "SUITE"
                         else f"{normalized_path(Path(item.source)) if item.source is not None else ''};"
-                        f"{item.longname};{item.line}"
+                        f"{item.longname};{item.line or 0}"
                     )
                     for item in Debugger.instance.full_stack_frames
                     if item.type in ["SUITE", "TEST"]
@@ -405,7 +414,7 @@ class ListenerV2:
             current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 
             source = current_frame.source if current_frame else None
-            line = current_frame.line if current_frame else None
+            line = (current_frame.line or None) if current_frame else None
             column = current_frame.column if current_frame else None
 
             item_id = next(
@@ -414,7 +423,7 @@ class ListenerV2:
                         f"{normalized_path(Path(item.source)) if item.source is not None else ''};{item.longname}"
                         if item.type == "SUITE"
                         else f"{normalized_path(Path(item.source)) if item.source is not None else ''};"
-                        f"{item.longname};{item.line}"
+                        f"{item.longname};{item.line or 0}"
                     )
                     for item in Debugger.instance.full_stack_frames
                     if item.type in ["SUITE", "TEST"]
@@ -498,7 +507,9 @@ class ListenerV3:
                     yield from enqueue(s)
                 return
 
-            yield (f"{normalized_path(item.source) if item.source is not None else ''};{item.longname};{item.lineno}")
+            yield (
+                f"{normalized_path(item.source) if item.source is not None else ''};{item.longname};{item.lineno or 0}"
+            )
 
         if self._event_sended:
             return
@@ -534,7 +545,7 @@ class ListenerV3:
                             id=f"{normalized_path(Path(result_item.source)) if result_item.source else ''};"
                             f"{result_item.longname or ''}"
                             + (
-                                f";{data_item.lineno if data_item is not None else 0}"
+                                f";{(data_item.lineno if data_item is not None else None) or 0}"
                                 if isinstance(result_item, result.TestCase)
                                 else ""
                             ),

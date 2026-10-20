@@ -8,6 +8,10 @@ import pytest
 
 from robotcode.robot.utils import RF_VERSION
 
+needs_rf_61 = pytest.mark.skipif(
+    RF_VERSION < (6, 1),
+    reason="requires Robot Framework 6.1+ (custom parsers, `--parser`)",
+)
 needs_rf_70 = pytest.mark.skipif(
     RF_VERSION < (7, 0),
     reason="requires Robot Framework 7.0+ (VAR, JSON output, attribute renames, "

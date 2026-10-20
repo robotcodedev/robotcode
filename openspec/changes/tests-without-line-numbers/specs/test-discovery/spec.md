@@ -27,12 +27,17 @@ When a test or task has no line number, as one that a custom parser or a pre-run
 
 ### Requirement: Runs report a test under the ID of its discovery
 
-The events with which a run reports its tests, when it starts and enqueues them, when a test starts and ends, and when a failing suite teardown marks its tests again, SHALL carry the ID that `robotcode discover` gives the test, also when the test has no line number. Their `lineno` SHALL stay empty for such a test.
+The events with which a run reports its tests, when it enqueues them, when a test starts and ends, when a failing suite teardown marks its tests again, and when a test logs a warning or an error, SHALL carry the ID that `robotcode discover` gives the test, also when the test has no line number. A line number that Robot Framework does not know SHALL be empty in these events on every Robot Framework version, for the test and for its keywords.
 
 #### Scenario: Run of a test without a line number
 
 - **WHEN** a run executes a suite whose parser creates its tests without line numbers
 - **THEN** each test is enqueued, started and ended under the ID that `robotcode discover` reports for it, ending in `;0`, and the events' `lineno` is empty
+
+#### Scenario: Warning of a test without a line number
+
+- **WHEN** a pre-run modifier adds a test without a line number that logs a warning and then fails, and a run executes it
+- **THEN** the warning's event carries the ID that `robotcode discover` reports for the test, and the line numbers of the test and of its failed keyword are empty in the events, also with Robot Framework 6.1 and older
 
 #### Scenario: Test count in PyCharm
 
