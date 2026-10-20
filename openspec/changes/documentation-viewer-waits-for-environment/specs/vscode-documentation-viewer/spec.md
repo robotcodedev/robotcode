@@ -15,12 +15,12 @@ Showing a target SHALL show its kept page at once, if there is one; while RobotC
 - **THEN** the viewer shows the page of `Collections` at once and no error, and generates it again in that environment once RobotCode has checked it
 
 #### Scenario: Refresh while the environment has a problem
-- **WHEN** a viewer says that the selected Python environment of its folder has no Robot Framework, Robot Framework has just been installed into that environment, and the user chooses the refresh button
+- **WHEN** a viewer shows the error that the selected Python environment of its folder has no Robot Framework, Robot Framework has just been installed into that environment, and the user chooses the refresh button
 - **THEN** RobotCode checks the environment again, and the viewer shows the page
 
 ### Requirement: Targets whose documentation cannot be generated
 
-When the documentation of an entered target cannot be generated, the viewer SHALL show the error. If no page of that target was kept before, it SHALL also show a way to retry. The field SHALL keep the entered text, and back SHALL return to the previous page. A Python environment that cannot run Robot Framework, and a folder for which RobotCode is switched off, SHALL NOT count as such an error (requirement "A viewer says why it waits").
+When the documentation of an entered target cannot be generated, the viewer SHALL show the error. If no page of that target was kept before, it SHALL also show a way to retry. The field SHALL keep the entered text, and back SHALL return to the previous page. A Python environment that cannot run Robot Framework, and a folder for which RobotCode is switched off, SHALL NOT count as such an error (requirement "A viewer says that it waits").
 
 #### Scenario: Import arguments that fail
 - **WHEN** a library `StrictLib` raises for the unknown mode `bogus`, no page of `StrictLib::bogus` was kept before, and the user enters `StrictLib::bogus`
@@ -40,21 +40,26 @@ A viewer SHALL generate a page only when RobotCode's check finds the Python envi
 - **WHEN** a viewer waits because no Python interpreter is selected for its folder, and the user selects an environment with Robot Framework
 - **THEN** the viewer shows its page, generated with that environment
 
-### Requirement: A viewer says why it waits
+### Requirement: A viewer says that it waits
 
-While the Python environment of a viewer's folder cannot run Robot Framework, or RobotCode is switched off for the folder, the viewer SHALL say so instead of generating, above the page it shows if there is one, without a way to retry. A problem that the check finds while the viewer waits for that check SHALL be shown only when it remains for a few seconds, as RobotCode's message about the folder's environment is.
-
-#### Scenario: Environment without Robot Framework
-- **WHEN** the selected Python environment of the folder has no Robot Framework, and the user enters `Collections` in a viewer
-- **THEN** the viewer says that this environment has no Robot Framework, shows no way to retry, and no generation runs
+While the Python environment of a viewer's folder cannot run Robot Framework, the viewer SHALL say above the page it shows, if there is one, that it waits for that environment, with its progress bar running. When the problem has lasted 30 seconds, the viewer SHALL show it as an error that names the problem, without a way to retry. When RobotCode is switched off for the folder, the viewer SHALL show that as an error at once.
 
 #### Scenario: Problem that solves itself at startup
-- **WHEN** at startup RobotCode's first check finds the global interpreter without Robot Framework, and the Python side selects the folder's `.venv` with Robot Framework a moment later
-- **THEN** the viewer shows its progress bar and no problem, and then its page, generated with `.venv`
+- **WHEN** at startup RobotCode's first check finds the global interpreter without Robot Framework, and the Python side selects the folder's `.venv` with Robot Framework some seconds later
+- **THEN** the viewer shows its progress bar and that it waits for the Python environment, and no error, and then its page, generated with `.venv`
+
+#### Scenario: Problem that lasts
+- **WHEN** a viewer waits for the environment of its folder, and that environment still has no Robot Framework 30 seconds after RobotCode found that
+- **THEN** the viewer shows the error that the selected Python environment has no Robot Framework, with no way to retry
+- **AND** it shows its page by itself once Robot Framework is installed into that environment
+
+#### Scenario: Environment without Robot Framework
+- **WHEN** the selected Python environment of the folder has had no Robot Framework for more than 30 seconds, and the user enters `Collections` in a viewer
+- **THEN** the viewer shows the error that this environment has no Robot Framework at once, with no way to retry, and no generation runs
 
 #### Scenario: Switched-off folder
 - **WHEN** `robotcode.disableExtension` is `true` in the folder of a viewer, and the viewer shows `Collections`
-- **THEN** the viewer says that RobotCode is switched off for the folder, and shows the page once the setting is removed
+- **THEN** the viewer shows the error that RobotCode is switched off for the folder, and shows the page once the setting is removed
 
 ### Requirement: A viewer follows the environment of its folder
 
