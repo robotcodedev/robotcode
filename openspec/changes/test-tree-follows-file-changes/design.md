@@ -126,17 +126,22 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
   - ESLint 10 looks for config files from the directory of each file it lints. It therefore loaded the `eslint.config.mjs` of the downloaded Python extension and failed, so `eslint.config.mjs` ignores `.vscode-test/`.
 - **`.vscode-test.mjs`:**
   - `files: "out/test/**/*.test.js"`;
-  - `version: "1.127.0"`, the minimum the extension declares. The harness covers the newest VS Code.
+  - `version`: the minimum that `engines.vscode` in `package.json` declares (today `^1.127.0`, so `1.127.0`), read from there, so that the minimum is set in one place. `npm test` and the Extension Test Runner run that version.
+  - `vscode-test --code-version <version>` overrides it (`@vscode/test-cli` 0.0.15: "Override the VS Code version used to run tests"), for example `npm test -- --code-version stable` for the newest one.
   - No `skipExtensionDependencies`. `vscode-test` installs RobotCode's `extensionDependencies`, `ms-python.python` and `ms-python.debugpy`, from the Marketplace into `.vscode-test/extensions/`. Without them RobotCode cannot be activated in the test instance, and later tests of VS Code behavior need that.
   - The tests of this change import RobotCode's modules and do not need the activation.
   - The extensions of the Python extension's pack come along. On 2026-10-19 `vscode-test` installed `ms-python.python` 2026.10.0, `ms-python.debugpy` 2026.6.0, `ms-python.vscode-pylance` 2026.4.1 and `ms-python.vscode-python-envs` 1.40.0. Other extensions come with `installExtensions` when a test needs them.
 - **Running:**
   - `npm test` runs `vscode-test`, after `pretest` has run `npm run compile`. On Linux it needs a display, so the CI uses `xvfb-run -a`.
   - The "Extension Tests" configuration in `.vscode/launch.json` gets `"testConfiguration": "${workspaceFolder}/.vscode-test.mjs"` instead of the `--extensionTestsPath` to the removed runner, as the README of `@vscode/test-cli` describes. F5 then debugs the same tests.
+  - Ctrl+F5 does not work for it (harness, VS Code 1.142, 2026-10-20). js-debug starts the test window, the tests run and the window closes, but without the debugger js-debug is not attached to it: the output does not reach the Debug Console, and the session stays open until it is stopped. CONTRIBUTING.md and the configuration's comment say to start it with F5.
+  - In the Test Explorer, the Extension Test Runner 0.0.14 lists the tests under "VS Code Extension", **Run Test** there runs them in the downloaded VS Code 1.127.0, and **Debug Test** debugs them; all pass, with the output under Test Results (harness, 2026-10-20; the one failure of the debug run was the harness's probe extension, whose port was taken). It runs the built tests in `out/test/` without building them; CONTRIBUTING.md says so.
   - `.vscode/extensions.json` recommends `ms-vscode.extension-test-runner`, which shows the tests in the Test Explorer.
 - **CI:**
-  - A job `test-vscode` runs on Linux, Windows and macOS, as `test-jetbrains` does. It caches `.vscode-test/` per system and version.
-  - Mocha's `xunit` reporter writes `test-results.xml`, which is uploaded as `test-results-vscode-<os>`.
+  - A job `test-vscode` runs on Linux, Windows and macOS, as `test-jetbrains` does, each with the minimum VS Code version and with the newest stable one (maintainer: the CI shall show that both work). That is a matrix of `os` and `vscode: [minimum, stable]`, six runs.
+  - A step resolves the version of the run: `minimum` from `engines.vscode` in `package.json`, as `.vscode-test.mjs` does, and `stable` from `https://update.code.visualstudio.com/api/releases/stable`, the API that `@vscode/test-electron` asks for the newest version. The tests get it with `--code-version`.
+  - The job caches `.vscode-test/vscode-*` and `.vscode-test/extensions` per system and resolved version. A new stable release gives a new key, so its run installs the newest Python extensions that accept it; the minimum keeps its key, and its extensions, until `engines.vscode` changes.
+  - Mocha's `xunit` reporter writes `test-results.xml`, which is uploaded as `test-results-vscode-<os>-<minimum|stable>`.
   - `publish-test-results` and `package` also need `test-vscode`.
 - **Alternatives:**
   - Node's own test runner or vitest: no real `vscode` API.
@@ -199,7 +204,8 @@ See proposal.md, Why. The facts behind the decisions, reproduced on main on 2026
 - [Edits of `.robot` files that the tree does not show, such as files with keywords only, still discover the folder after each typing pause] → As today and in PyCharm. Only a parse of the text could tell that such a file cannot be a suite yet, and a test section added later makes it one.
 - [The `.resource` rule misses a project that makes Robot Framework parse `.resource` files as suites, for example with `--extension resource`] → Robot Framework's default suite extensions do not include it; such a set-up is accepted as not covered.
 - [Expanding a suite no longer reads its open file] → The file was read after its last edit already.
-- [The test job downloads VS Code and the Python extensions on every system] → It caches `.vscode-test/` per system and version, with the installed extensions. The fixed version 1.127.0 keeps the cache key stable. `vscode-test` installs the newest version of an extension that VS Code 1.127 accepts. A cached extension stays at its version until the cache key changes, which keeps the runs reproducible.
+- [The test job downloads VS Code and the Python extensions on every system] → It caches them per system and resolved version. `vscode-test` installs the newest version of an extension that the VS Code version accepts. A cached extension stays at its version until the key changes: for the minimum when `engines.vscode` changes, for stable with every release.
+- [A new stable release of VS Code breaks a test, while nothing in RobotCode changed] → That is what the stable runs are for; the job fails visibly, and the minimum runs show whether only the new version is affected.
 - [The Marketplace is unreachable, or no version of a Python extension accepts VS Code 1.127 any more] → The job fails visibly. A cached set of extensions keeps working, and raising the test version to the extension's minimum is the way out.
 - [The download of VS Code or an update service fails in CI] → The job fails visibly. `download.timeout` in `.vscode-test.mjs` can be raised if that happens often.
 - [The tests import modules that pull in `vscode-languageclient` or the managers] → The tested modules import none of them, and esbuild bundles each test file with only what it imports.

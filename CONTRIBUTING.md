@@ -344,7 +344,9 @@ Run `hatch env show` to list every environment, including the `test.*` and `deve
 npm test                  # on Linux without a display: xvfb-run -a npm test
 ```
 
-`npm test` builds the extension and runs the tests under `vscode-client/test/` in a VS Code that `vscode-test` downloads into `.vscode-test/`, together with the extension's dependencies `ms-python.python` and `ms-python.debugpy`. The version of VS Code is set in `.vscode-test.mjs`. To debug the tests, start the "Extension Tests" launch configuration, or run them from the Test Explorer with the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner).
+`npm test` builds the extension and runs the tests under `vscode-client/test/` in a VS Code that `vscode-test` downloads into `.vscode-test/`, together with the extension's dependencies `ms-python.python` and `ms-python.debugpy`. It uses the minimum VS Code version that `engines.vscode` in `package.json` declares; `npm test -- --code-version stable` runs the tests with the newest one. The CI runs both.
+
+In VS Code, the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner) shows the tests in the Test Explorer under "VS Code Extension", where **Run Test** and **Debug Test** run or debug them. It runs the tests built in `out/test/` and does not build them, so run `npm run compile` after a change. The "Extension Tests" launch configuration debugs them as well. Start it with F5 (**Run > Start Debugging**), not with Ctrl+F5 (**Run Without Debugging**): without the debugger, the tests run, but VS Code shows neither their output nor the end of the run, and the session stays open until you stop it.
 
 **Supported Python and Robot Framework versions:**
 

@@ -50,7 +50,7 @@ An eighth came up the same day while checking the seventh: in a workspace with s
   - The stack is `@vscode/test-cli` and `@vscode/test-electron` with Mocha. The tests run in a downloaded VS Code with RobotCode's extension dependencies, `ms-python.python` and `ms-python.debugpy`, and can use the real `vscode` API.
   - The logic of this change lives in a module without a `vscode` import, as in PyCharm. Its tests run there, and the tree is built against a real TestController.
   - `npm test` runs the tests, and the "Extension Tests" configuration in `launch.json` debugs them.
-  - The CI runs them in a job of its own on Linux, Windows and macOS, as it does for the JetBrains plugin, and packaging waits for that job.
+  - The CI runs them in a job of its own on Linux, Windows and macOS, as it does for the JetBrains plugin, each with the minimum VS Code version from `engines.vscode` and with the newest stable one, and packaging waits for that job.
   - Today the extension has no tests: the generator's sample tests were removed in 2023. `npm test` and the "Extension Tests" configuration still point to their removed files.
 
 ## Capabilities

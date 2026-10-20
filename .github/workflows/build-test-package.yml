@@ -136,6 +136,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        # the minimum version that engines.vscode in package.json declares, and the newest stable release
+        vscode: [minimum, stable]
 
     steps:
       - uses: actions/checkout@v6
@@ -154,29 +156,44 @@ jobs:
       - name: install node modules
         run: npm install --include=dev
 
+      - name: Resolve the VS Code version
+        id: vscode
+        # minimum as .vscode-test.mjs reads it; stable from the API that @vscode/test-electron asks
+        env:
+          VSCODE_LEG: ${{ matrix.vscode }}
+        run: |
+          if [ "$VSCODE_LEG" = "minimum" ]; then
+            version=$(node -p "require('./package.json').engines.vscode.replace(/^[^0-9]*/, '')")
+          else
+            version=$(curl -fsSL https://update.code.visualstudio.com/api/releases/stable | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8'))[0]")
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Cache VS Code and its extensions for the tests
-        # .vscode-test.mjs names the version of VS Code; the extensions stay at the versions installed first
+        # per resolved version; the extensions stay at the versions installed first for it
         uses: actions/cache@v6
         with:
           path: |
             .vscode-test/vscode-*
             .vscode-test/extensions
-          key: vscode-test-${{ runner.os }}-${{ hashFiles('.vscode-test.mjs') }}
+          key: vscode-test-${{ runner.os }}-${{ steps.vscode.outputs.version }}
 
       - name: Test VS Code Extension
         # VS Code needs a display on Linux; the xunit reporter writes test-results/vscode/test-results.xml
+        env:
+          VSCODE_VERSION: ${{ steps.vscode.outputs.version }}
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a npm test -- --reporter xunit
+            xvfb-run -a npm test -- --reporter xunit --code-version "$VSCODE_VERSION"
           else
-            npm test -- --reporter xunit
+            npm test -- --reporter xunit --code-version "$VSCODE_VERSION"
           fi
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-vscode-${{ matrix.os }}
+          name: test-results-vscode-${{ matrix.os }}-${{ matrix.vscode }}
           path: test-results/vscode
 
   publish-test-results:

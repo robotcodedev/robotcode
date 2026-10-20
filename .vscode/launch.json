@@ -237,7 +237,8 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			// the tests that `npm test` runs, see .vscode-test.mjs
+			// the tests that `npm test` runs, see .vscode-test.mjs; start with F5: without the debugger (Ctrl+F5)
+			// neither the output nor the end of the run reaches VS Code, and the session stays open
 			"testConfiguration": "${workspaceFolder}/.vscode-test.mjs",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
