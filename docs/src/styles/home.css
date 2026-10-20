@@ -185,7 +185,9 @@
   visibility: visible;
 }
 
-/* The bar grows by a transform, which the compositor plays without layout or painting. */
+/* The bar grows by a transform, which the compositor plays without layout or painting, and in steps of about two
+   pixels, so the browser draws a new frame only at each step instead of at every refresh of the screen. The tabs of the
+   feature tour are wider than those of the agent demo, so its bar takes more steps. */
 .rc-demo-progress {
   position: absolute;
   inset-inline-start: 0;
@@ -215,7 +217,11 @@
 }
 
 .is-armed.is-playing [aria-pressed="true"] > .rc-demo-progress {
-  animation: rc-progress var(--duration) linear forwards;
+  animation: rc-progress var(--duration) steps(var(--progress-steps, 60)) forwards;
+}
+
+.rc-tour {
+  --progress-steps: 200;
 }
 
 /* Hovering or focusing a demo holds the current panel; scrolled out of view, it holds entirely. */
