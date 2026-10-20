@@ -1,6 +1,13 @@
 package dev.robotcode.robotcode4ij.execution
 
-import com.intellij.openapi.fileTypes.PlainTextLanguage
+import com.intellij.openapi.fileEditor.FileEditor
+import com.intellij.openapi.fileEditor.FileEditorPolicy
+import com.intellij.openapi.fileEditor.FileEditorProvider
+import com.intellij.openapi.fileEditor.ex.FileEditorProviderManager
+import com.intellij.openapi.fileTypes.impl.AbstractFileType
+import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiBinaryFile
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.LightVirtualFile
@@ -37,14 +44,35 @@ class RobotCodeOutputPreviewTest : BasePlatformTestCase() {
         assertNull(pagePath(null))
     }
 
-    // LSP4IJ offers language servers for files whose PSI has the plain text or the TextMate language
+    // LSP4IJ offers language servers for files of a user-defined type and for files whose PSI has the plain text or the
+    // TextMate language; a binary PSI has no language
     fun testThePreviewIsNoTextFile() {
         val file = RobotCodeOutputPreviewFile(report)
 
         assertTrue(file.fileType.isBinary)
-        val psi = PsiManager.getInstance(project).findFile(file)
-        assertInstanceOf(psi, PsiBinaryFile::class.java)
-        assertFalse(psi!!.language.id in setOf(PlainTextLanguage.INSTANCE.id, "textmate"))
+        assertFalse(file.fileType is AbstractFileType)
+        assertInstanceOf(PsiManager.getInstance(project).findFile(file), PsiBinaryFile::class.java)
+    }
+
+    // an editor of another plugin that opens every binary file adds no tab to the preview
+    fun testOnlyThePreviewEditorOpensThePreviewFile() {
+        val binaryViewer = object : FileEditorProvider, DumbAware {
+            override fun accept(project: Project, file: VirtualFile): Boolean = file.fileType.isBinary
+
+            override fun acceptRequiresReadAction(): Boolean = false
+
+            override fun createEditor(project: Project, file: VirtualFile): FileEditor =
+                throw UnsupportedOperationException()
+
+            override fun getEditorTypeId(): String = "binary-viewer"
+
+            override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.NONE
+        }
+        FileEditorProvider.EP_FILE_EDITOR_PROVIDER.point.registerExtension(binaryViewer, testRootDisposable)
+
+        val providers = FileEditorProviderManager.getInstance().getProviderList(project, RobotCodeOutputPreviewFile(report))
+
+        assertEquals(listOf("robotcode-output-preview"), providers.map { it.editorTypeId })
     }
 
     fun testTheTabLoadsTheFileItself() {

@@ -28,7 +28,7 @@ See proposal.md for the motivation. What the change builds on:
 
 ### A binary file type of the plugin
 
-`RobotCodeOutputPreviewFileType` is binary and read-only and has no default extension. Its icon is the icon of a text file (`AllIcons.FileTypes.Text`), the icon the tab has today, and its description comes from the bundle. As a binary type it gives the file a binary PSI without a language, which none of LSP4IJ's three checks accepts. The preview never had text to edit, so nothing depends on it being text.
+`RobotCodeOutputPreviewFileType` is binary and has no default extension. Its icon is the icon of a text file (`AllIcons.FileTypes.Text`), the icon the tab has today, and its display name and description come from the bundle. It does not override `isReadOnly`, which only decides whether a registered type can be edited in the settings. As a binary type it gives the file a binary PSI without a language, which none of LSP4IJ's three checks accepts. The preview never had text to edit, so nothing depends on it being text.
 
 Alternatives:
 - A name that does not end in `.html`, such as "report.html (Preview)": changes the title of the tab, and the file stays a text file for the IDE.
@@ -39,7 +39,13 @@ Alternatives:
 
 Only the preview file uses the type and sets it itself. Registered, it would appear without patterns in Settings | Editor | File Types. The unregistered type left no entries in the harness log.
 
+### The preview editor hides the other editors
+
+`RobotCodeOutputPreviewEditorProvider` uses `FileEditorPolicy.HIDE_OTHER_EDITORS` instead of `HIDE_DEFAULT_EDITOR`. As a binary file the preview is now accepted by every editor that opens binary files, and `HIDE_DEFAULT_EDITOR` hides only the default editor: with a test provider that accepts every binary file, the platform listed `[binary-viewer, robotcode-output-preview]` for a preview file. `HIDE_OTHER_EDITORS` leaves only the preview. With Plain Text the same held for editors of text files, so the policy also closes that older gap.
+
+Alternative: keep `HIDE_DEFAULT_EDITOR`, and a plugin such as a hex viewer adds an empty tab of its own to every preview.
+
 ## Risks / Trade-offs
 
-- [Code that treats binary files differently, for example when no editor accepts them] → RobotCode's preview editor accepts every preview file and hides the default editor, so the file opens only there.
+- [LSP4IJ also matches servers to files by name, so a server set up for `*.html`, for example after "Install Harper Language Server", is matched to "Preview of report.html"] → in the harness (2026-10-21, a stand-in server mapped to `*.html` that logs its messages), opening the preview started that server but sent it no `didOpen`; with Plain Text it also received `didOpen` for `file:///Preview%20of%20report.html` with empty text. What remains is a server start, which any HTML file of the project would cause too. Not handled here: the file's name is the tab's title, and a name without `.html` with the title from elsewhere would be a change of its own.
 - [A later LSP4IJ checks something else] → the platform test pins down what the provider checks today, a binary PSI without a language; the bar itself can only be seen in the harness, because the provider shows nothing in unit test mode.

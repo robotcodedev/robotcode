@@ -6,7 +6,8 @@ When a report or a log opens in the built-in preview, LSP4IJ 0.21.0 shows a bar 
 
 ## What Changes
 
-- The preview tabs of reports and logs get a file type of their own instead of Plain Text: binary and read-only, with the icon of a text file as before. LSP4IJ then shows no suggestion above the tab.
+- The preview tabs of reports and logs get a file type of their own instead of Plain Text: binary, with the icon of a text file as before. LSP4IJ then shows no suggestion above the tab.
+- The preview editor hides every other editor of its file. A plugin whose editor opens every binary file, a hex viewer for example, would otherwise add a tab of its own to the preview.
 - The tab's title, icon, page and toolbar stay as they are.
 
 Not part of this change: LSP4IJ's suggestions on real HTML files. They come from LSP4IJ for files the IDE has no language support for.
@@ -19,11 +20,11 @@ _None._
 
 ### Modified Capabilities
 
-- `intellij-test-results`: a new requirement that no suggestion of LSP4IJ to install a language server appears above a preview tab.
+- `intellij-test-results`: new requirements that no suggestion of LSP4IJ to install a language server appears above a preview tab, and that a preview tab shows only RobotCode's preview.
 
 ## Impact
 
-- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeOutputPreview.kt`: a file type for the preview, used by the preview file.
-- `intellij-client/src/main/resources/messages/RobotCode.properties`: the file type's description.
-- A platform test of the preview file's type.
+- `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/execution/RobotCodeOutputPreview.kt`: a file type for the preview, used by the preview file, and the policy of the preview editor.
+- `intellij-client/src/main/resources/messages/RobotCode.properties`: the file type's name and description.
+- Platform tests of the preview file's type and of the editors that open it.
 - The plugin's users: no bar above the preview tab. Who clicked "Dismiss" before keeps LSP4IJ's suggestions off everywhere; this change does not undo that.

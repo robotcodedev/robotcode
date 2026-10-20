@@ -48,6 +48,8 @@ import javax.swing.event.DocumentEvent
 internal object RobotCodeOutputPreviewFileType : FileType {
     override fun getName(): String = "RobotCode Output Preview"
 
+    override fun getDisplayName(): String = RobotCodeBundle.message("run.preview.fileTypeName")
+
     override fun getDescription(): String = RobotCodeBundle.message("run.preview.fileType")
 
     override fun getDefaultExtension(): String = ""
@@ -55,8 +57,6 @@ internal object RobotCodeOutputPreviewFileType : FileType {
     override fun getIcon(): Icon = AllIcons.FileTypes.Text
 
     override fun isBinary(): Boolean = true
-
-    override fun isReadOnly(): Boolean = true
 }
 
 /**
@@ -256,7 +256,7 @@ internal class RobotCodeOutputPreviewEditor(
     override fun dispose() = Unit
 }
 
-/** Opens the preview tabs of reports and logs, without a text editor beside them. */
+/** Opens the preview tabs of reports and logs, without another editor beside them. */
 class RobotCodeOutputPreviewEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is RobotCodeOutputPreviewFile
 
@@ -267,5 +267,5 @@ class RobotCodeOutputPreviewEditorProvider : FileEditorProvider, DumbAware {
 
     override fun getEditorTypeId(): String = "robotcode-output-preview"
 
-    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
+    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_OTHER_EDITORS
 }

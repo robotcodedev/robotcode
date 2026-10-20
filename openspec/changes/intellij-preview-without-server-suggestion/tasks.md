@@ -3,6 +3,7 @@
 ## 1. File type of the preview
 
 - [x] 1.1 Give `RobotCodeOutputPreviewFile` the file type `RobotCodeOutputPreviewFileType` from design.md (binary, read-only, no default extension, icon `AllIcons.FileTypes.Text`, description `run.preview.fileType` in `RobotCode.properties`, not registered in `plugin.xml`); the version in the working tree is the starting point. Verify with a new test in `RobotCodeOutputPreviewTest` that the preview file's type is binary and that its PSI is a `PsiBinaryFile` whose language is neither plain text nor TextMate, and that `./gradlew test` and `./gradlew verifyPlugin` in `intellij-client/` pass.
+- [x] 1.2 Let `RobotCodeOutputPreviewEditorProvider` hide every other editor (`FileEditorPolicy.HIDE_OTHER_EDITORS`), drop `isReadOnly` from the file type and give it a display name from the bundle (`run.preview.fileTypeName`), and let the test of the file type rule out a user-defined type instead of a language that a binary PSI never has. Verify with a test in `RobotCodeOutputPreviewTest` that registers a provider for every binary file and finds only the preview's provider for a preview file, failing with `HIDE_DEFAULT_EDITOR`; that `./gradlew test` and `./gradlew verifyPlugin` pass; and in the headless PyCharm that `report.html` and `log.html` still open in their preview tabs, without a bar above them.
 
 ## 2. Verification
 

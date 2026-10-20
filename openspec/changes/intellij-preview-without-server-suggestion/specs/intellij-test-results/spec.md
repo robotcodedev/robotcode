@@ -16,3 +16,12 @@ The IDE SHALL NOT take a RobotCode preview tab of a report or a log for a text f
 
 - **WHEN** LSP4IJ's suggestions of language servers have not been dismissed and `log.html` opens in the built-in preview
 - **THEN** no suggestion to install a language server appears above the tab
+
+### Requirement: Only the preview on a preview tab
+
+Opening a report or a log in the built-in preview SHALL show only RobotCode's preview of it, also when another plugin offers an editor for files of the preview's kind.
+
+#### Scenario: A plugin that opens every binary file
+
+- **WHEN** a plugin is installed whose editor opens every binary file, and `report.html` opens in the built-in preview
+- **THEN** the IDE shows only RobotCode's preview of the report, without a tab of that plugin's editor
