@@ -39,6 +39,32 @@
   --rc-title-gradient: linear-gradient(120deg, var(--sl-color-white) 35%, var(--sl-color-accent));
 }
 
+/* The Halloween season (ThemeProvider.astro sets `data-season`): a pumpkin accent on the home page, in both themes. The
+   surfaces of the home page that mix the accent follow it. */
+:root[data-season="halloween"]:has(.rc-hero) {
+  --sl-color-accent-low: #3d1a05;
+  --sl-color-accent: #e0731a;
+  --sl-color-accent-high: #ffc993;
+}
+
+:root[data-season="halloween"][data-theme="light"]:has(.rc-hero) {
+  --sl-color-accent-low: #ffe2c7;
+  --sl-color-accent: #b35207;
+  --sl-color-accent-high: #5c2a03;
+}
+
+/* In the season, a pumpkin before the dates of the news posts and of the news on the home page. */
+:root[data-season="halloween"]:not([data-spooky="off"])
+  :is(time.sl-blog-metadata-date, .rc-news-badge time, .rc-news time)::before {
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  margin-inline-end: 0.35em;
+  vertical-align: -0.2em;
+  background: url("/halloween-favicon.svg") center / contain no-repeat;
+}
+
 /* Home page: supporter logos in one row. */
 .rc-supporters p {
   display: flex;

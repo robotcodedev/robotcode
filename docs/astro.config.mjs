@@ -92,6 +92,9 @@ export default defineConfig({
         Header: "./src/components/Header.astro",
         Hero: "./src/components/Hero.astro",
         Footer: "./src/components/Footer.astro",
+        // The seasons of the site: the season, its favicon and its default theme are set before the page is painted.
+        ThemeProvider: "./src/components/ThemeProvider.astro",
+        ThemeSelect: "./src/components/ThemeSelect.astro",
       },
       plugins: [
         // Algolia DocSearch instead of Pagefind; the key is the public search-only key of the index.

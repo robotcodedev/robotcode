@@ -1,6 +1,8 @@
 ---
-// Starlight's Footer plus the license line of the site.
+// Starlight's Footer plus the license line of the site and the loader of the Halloween season (its switch floats next
+// to the pumpkin, not in the footer).
 import Default from "@astrojs/starlight/components/Footer.astro";
+import Halloween from "./season/Halloween.astro";
 ---
 
 <Default><slot /></Default>
@@ -8,6 +10,7 @@ import Default from "@astrojs/starlight/components/Footer.astro";
   Released under the <a href="https://github.com/robotcodedev/robotcode/blob/main/LICENSE.txt">Apache-2.0</a>.
   Copyright © 2022-present <a href="https://github.com/d-biehl">Daniel Biehl</a>
 </p>
+<Halloween />
 
 <style>
   .rc-license {

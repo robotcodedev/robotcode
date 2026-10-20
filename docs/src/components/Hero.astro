@@ -18,6 +18,26 @@ const PICTURES = [
   { file: "robotcode-playmo.png", alt: "RobotCode Playmobil" },
   { file: "robotcode-rise.png", alt: "Rise of the RobotCode" },
 ];
+// Pictures of the seasons of the site (ThemeProvider.astro) lie in a folder named after the season below
+// src/assets/hero/; while a season is active the gallery shows only its pictures, otherwise none of them. A picture
+// whose name ends in `_moon` shows a moon of its own, so the decorations leave theirs out while it is shown. Their alt
+// texts, by path; a picture without one still shows, with a general alt text.
+const SEASON_ALTS: Record<string, string> = {
+  "halloween/01_Failien_Alien_1979.png": "Failien: RobotCode on a horror film poster after Alien",
+  "halloween/02_Frankensuite_Frankenstein_1931.png": "Frankensuite: RobotCode in a laboratory full of lightning, after Frankenstein",
+  "halloween/03_The_Sixth_Suite_Sixth_Sense_1999.png": "The Sixth Suite: RobotCode among ghosts with a book of code, after The Sixth Sense",
+  "halloween/04_Ghostdebuggers_Ghostbusters_1984.png": "Ghostdebuggers: RobotCode with a proton pack among glowing bug ghosts, after Ghostbusters",
+  "halloween/05_Flaws_II_Jaws_2_1978.png": "Flaws II: RobotCode bursting out of the water, after Jaws 2",
+  "halloween/06_The_Flake_The_Fly_1986.png": "The Flake: RobotCode with the wings and legs of a fly, after The Fly",
+  "halloween/07_The_Linting_The_Shining_1980.png": "The Linting: RobotCode breaking through a wooden door, after The Shining",
+  "halloween/08_Hallowelint_Halloween_1978.png": "Hallowelint: RobotCode with a knife among jack-o'-lanterns, after Halloween",
+  "halloween/09_Friday_the_CIteenth_Friday_the_13th_1980_moon.png": "Friday the CIteenth: RobotCode with a machete under a crescent moon, after Friday the 13th",
+  "halloween/10_Nosferatu_Nosferatu_2024_moon.png": "Nosferatu: RobotCode as a vampire before a castle and the full moon, after Nosferatu (2024)",
+  "halloween/11_Nosferatest_Nosferatu_1922_moon.png": "Nosferatest: RobotCode as a vampire in the style of a silent film, after Nosferatu (1922)",
+  "halloween/12_The_Exorcisuite_The_Exorcist_1973.png": "The Exorcisuite: RobotCode with a debug book under a street lamp, after The Exorcist",
+  "halloween/13_Evil_Debug_II_Evil_Dead_II_1987_moon.png": "Evil Debug II: RobotCode with a chainsaw before a cabin in the woods, after Evil Dead II",
+  "halloween/14_Army_of_Debugness_Army_of_Darkness_1992_moon.png": "Army of Debugness: RobotCode with a wrench above an army of skeletons, after Army of Darkness",
+};
 const SUBLINES = [
   "Robot Framework testing — same intelligence in your editor, on the command line, and in your CI pipeline. From your first keyword to enterprise scale.",
   "One workflow for the entire Robot Framework lifecycle — write tests in your editor, run them on the command line, ship them through CI.",
@@ -30,10 +50,19 @@ const { data } = route.entry;
 const isHome = route.id === "" && Boolean(data.hero);
 const { title = data.title, tagline, actions = [] } = data.hero ?? {};
 
-const files = import.meta.glob<{ default: ImageMetadata }>("../assets/hero/*.png", { eager: true });
+const files = import.meta.glob<{ default: ImageMetadata }>("../assets/hero/**/*.png", { eager: true });
+const seasonPictures = Object.keys(files)
+  .map((path) => path.slice("../assets/hero/".length))
+  .filter((file) => file.includes("/"))
+  .sort()
+  .map((file) => {
+    const season = file.split("/")[0];
+    return { file, alt: SEASON_ALTS[file] ?? `RobotCode in the ${season} season`, season };
+  });
 const pictures = isHome
   ? await Promise.all(
-      PICTURES.map(async ({ file, alt }) => {
+      [...PICTURES, ...seasonPictures].map(async (picture: { file: string; alt: string; season?: string }) => {
+        const { file, alt, season } = picture;
         const source = files[`../assets/hero/${file}`]?.default;
         if (!source) throw new Error(`Hero picture src/assets/hero/${file} is missing`);
         const small = await getImage({ src: source, width: 400, densities: [1, 2] });
@@ -45,6 +74,8 @@ const pictures = isHome
           height: small.attributes.height,
           large: large.src,
           alt,
+          season,
+          moon: file.endsWith("_moon.png"),
         };
       }),
     )
@@ -103,16 +134,26 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
           ‹
         </button>
         <button type="button" class="rc-picture" aria-label={`Open image: ${first.alt}`}>
-          {/* The picture is chosen while the page is parsed, so that the browser requests only that one, early. */}
+          {/* The picture is chosen while the page is parsed, so that the browser requests only that one, early. During
+              a season the gallery holds only its pictures; outside of it, only the usual ones. */}
           <img width={first.width} height={first.height} alt="" fetchpriority="high" draggable="false" />
           <script is:inline>
             (() => {
               const img = document.currentScript.previousElementSibling;
               const gallery = img.closest("rc-hero-gallery");
-              const pictures = JSON.parse(gallery.dataset.pictures);
+              // during a season with Spooky mode on only its pictures, if it has any, otherwise only the usual ones; a
+              // random one first; all pictures stay at hand, because Spooky mode can switch between them
+              const root = document.documentElement;
+              const season = root.dataset.spooky === "off" ? undefined : root.dataset.season;
+              const all = JSON.parse(gallery.dataset.pictures);
+              const own = season ? all.filter((p) => p.season === season) : [];
+              const pictures = own.length ? own : all.filter((p) => !p.season);
               const index = Math.floor(Math.random() * pictures.length);
+              gallery.dataset.allPictures = gallery.dataset.pictures;
+              gallery.dataset.pictures = JSON.stringify(pictures);
               gallery.dataset.index = String(index);
               Object.assign(img, { srcset: pictures[index].srcset, src: pictures[index].src, alt: pictures[index].alt });
+              gallery.toggleAttribute("data-picture-moon", pictures[index].moon);
               img.parentElement.setAttribute("aria-label", `Open image: ${pictures[index].alt}`);
             })();
           </script>
@@ -154,7 +195,7 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 }
 
 <script>
-  type Picture = { src: string; srcset: string; large: string; alt: string };
+  type Picture = { src: string; srcset: string; large: string; alt: string; season?: string; moon: boolean };
 
   const SWIPE_MIN_DISTANCE = 48;
   const SWIPE_INTENT_DISTANCE = 10;
@@ -196,15 +237,30 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
       dialog.addEventListener("close", () => (document.documentElement.style.overflow = ""));
       for (const element of [picture, this.querySelector<HTMLElement>(".rc-frame")!]) this.#addSwipe(element);
 
+      // Spooky mode switches between the pictures of the season and the usual ones (Halloween.astro)
+      document.addEventListener("rc-spooky", () => this.#choosePictures());
+
       // The inline script next to the picture has chosen it already.
       this.#show(Number(this.dataset.index ?? 0));
+    }
+
+    // the same choice as the inline script, again: the season's pictures with Spooky mode on, otherwise the usual ones
+    #choosePictures() {
+      const all: Picture[] = JSON.parse(this.dataset.allPictures ?? "[]");
+      const root = document.documentElement;
+      const season = root.dataset.spooky === "off" ? undefined : root.dataset.season;
+      const own = season ? all.filter((p) => p.season === season) : [];
+      this.#pictures = own.length ? own : all.filter((p) => !p.season);
+      this.#show(Math.floor(Math.random() * this.#pictures.length));
     }
 
     #show(index: number) {
       const count = this.#pictures.length;
       if (count === 0) return;
       this.#index = (index + count) % count;
-      const { src, srcset, large, alt } = this.#pictures[this.#index];
+      const { src, srcset, large, alt, moon } = this.#pictures[this.#index];
+      // the decorations of a season leave their moon out while the picture shows one of its own
+      this.toggleAttribute("data-picture-moon", moon);
       const [small, big] = this.querySelectorAll("img");
       Object.assign(small, { src, srcset, alt });
       Object.assign(big, { src: large, alt });
@@ -558,6 +614,23 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 
   .rc-hero rc-hero-gallery .rc-picture img {
     filter: drop-shadow(0 1.5rem 2.5rem var(--rc-shadow));
+  }
+
+  /* During a season (ThemeProvider.astro sets `data-season`) with Spooky mode on, the gallery shows the season's
+     posters, which carry the subline themselves: they get half of the hero and are shown larger, so that their text can
+     be read, and the subline is left out. */
+  :root[data-season]:not([data-spooky="off"]) .rc-hero rc-hero-gallery .rc-picture img {
+    max-height: 38rem;
+  }
+
+  @media (min-width: 50rem) {
+    :root[data-season]:not([data-spooky="off"]) .rc-hero {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  :root[data-season]:not([data-spooky="off"]) .rc-hero .rc-subline {
+    display: none;
   }
 
   @media (min-width: 50rem) {

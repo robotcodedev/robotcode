@@ -1,0 +1,78 @@
+---
+// Starlight's ThemeSelect with its markup and its storage in `localStorage["starlight-theme"]`, except that Auto means
+// the dark theme while a season of the site is active (`data-season`, set by ThemeProvider.astro): Starlight's own
+// select applies Auto again when it loads and would switch a light-preferring system back to the light theme.
+import Select from "@astrojs/starlight/components/Select.astro";
+---
+
+<starlight-theme-select>
+  <Select
+    icon="laptop"
+    label={Astro.locals.t("themeSelect.accessibleLabel")}
+    options={[
+      { label: Astro.locals.t("themeSelect.dark"), selected: false, value: "dark" },
+      { label: Astro.locals.t("themeSelect.light"), selected: false, value: "light" },
+      { label: Astro.locals.t("themeSelect.auto"), selected: true, value: "auto" },
+    ]}
+    width="6.25em"
+  />
+</starlight-theme-select>
+
+{/* Inlined to avoid a flash of the wrong icon; uses the global of ThemeProvider.astro. */}
+<script is:inline>
+  StarlightThemeProvider.updatePickers();
+</script>
+
+<script>
+  type Theme = "auto" | "dark" | "light";
+
+  const storageKey = "starlight-theme";
+
+  const parseTheme = (theme: unknown): Theme =>
+    theme === "auto" || theme === "dark" || theme === "light" ? theme : "auto";
+
+  function loadTheme(): Theme {
+    try {
+      return parseTheme(localStorage.getItem(storageKey));
+    } catch {
+      return "auto";
+    }
+  }
+
+  function storeTheme(theme: Theme): void {
+    try {
+      localStorage.setItem(storageKey, theme === "light" || theme === "dark" ? theme : "");
+    } catch {
+      // the choice applies to this page only
+    }
+  }
+
+  const inSeason = (): boolean => document.documentElement.dataset.season !== undefined;
+
+  // Auto: the system's color scheme, but dark while a season is active.
+  const autoTheme = (): Theme =>
+    !inSeason() && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+
+  function onThemeChange(theme: Theme): void {
+    StarlightThemeProvider.updatePickers(theme);
+    document.documentElement.dataset.theme = theme === "auto" ? autoTheme() : theme;
+    storeTheme(theme);
+  }
+
+  matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+    if (loadTheme() === "auto") onThemeChange("auto");
+  });
+
+  class StarlightThemeSelect extends HTMLElement {
+    constructor() {
+      super();
+      onThemeChange(loadTheme());
+      this.querySelector("select")?.addEventListener("change", (e) => {
+        if (e.currentTarget instanceof HTMLSelectElement) {
+          onThemeChange(parseTheme(e.currentTarget.value));
+        }
+      });
+    }
+  }
+  customElements.define("starlight-theme-select", StarlightThemeSelect);
+</script>

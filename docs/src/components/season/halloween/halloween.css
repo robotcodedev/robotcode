@@ -1,0 +1,567 @@
+/* The decorations of the Halloween season (main.ts). Starlight's dark theme is the default, so the dark values come
+   first and the light theme overrides them. */
+:root[data-season="halloween"] {
+  --hw-shadow: var(--rc-shadow);
+  --hw-web: rgb(225 236 240 / 32%);
+  --hw-leg-rim: rgb(255 255 255 / 20%);
+  --hw-shell-a: #2f8562;
+  --hw-shell-b: #0f4434;
+  --hw-shell-rim: rgb(140 230 185 / 60%);
+  --hw-shell-line: rgb(255 255 255 / 28%);
+  --hw-face: #e4f3ea;
+  --hw-face-ink: #0e3f2f;
+  --hw-joint: #1e5c45;
+  --hw-leg: #15402f;
+  --hw-knee: #3aa877;
+  --hw-led: #ff8a1f;
+  --hw-bat: #5a4a6e;
+  --hw-bat-eye: #ff9a2e;
+  --hw-ghost: #eef4f6;
+  --hw-ghost-rim: rgb(255 255 255 / 0%);
+  --hw-ghost-ink: #1f2a33;
+  --hw-ghost-cheek: rgb(255 120 140 / 35%);
+  --hw-pumpkin-a: #ffa53d;
+  --hw-pumpkin-b: #d65f0e;
+  --hw-pumpkin-line: #a8480b;
+  --hw-pumpkin-cut: #6e2a04;
+  --hw-stem: #4f6b2a;
+  --hw-flame-a: #fffbe3;
+  --hw-flame-b: #ffcf4a;
+  --hw-glow-inner: rgb(255 228 140 / 85%);
+  --hw-glow-outer: rgb(255 190 80 / 0%);
+  --hw-fog: rgb(196 210 222);
+  --hw-fog-back: 0.55;
+  --hw-fog-front: 0.65;
+  --hw-moon: #f6efd3;
+  --hw-moon-edge: #e3d7aa;
+  --hw-moon-shade: rgb(190 178 135 / 55%);
+  --hw-moon-glow: rgb(255 244 205 / 40%);
+  --hw-moon-halo: rgb(255 244 205 / 14%);
+  --hw-cloud: rgb(52 62 74 / 85%);
+  --hw-lightning: rgb(200 215 255 / 45%);
+  --hw-lightning-strong: rgb(215 225 255 / 70%);
+  --hw-bolt: #f4f7ff;
+  --hw-bolt-glow: rgb(170 190 255 / 90%);
+  --hw-sac: #ddd6c4;
+  --hw-sac-line: rgb(120 108 86 / 60%);
+}
+
+:root[data-season="halloween"][data-theme="light"] {
+  --hw-web: rgb(38 52 60 / 40%);
+  --hw-leg-rim: rgb(0 0 0 / 0%);
+  --hw-shell-rim: rgb(9 40 30 / 75%);
+  --hw-bat: #2a2030;
+  --hw-ghost: #ffffff;
+  --hw-ghost-rim: rgb(20 40 50 / 28%);
+  --hw-fog: rgb(150 166 175);
+  --hw-fog-back: 0.35;
+  --hw-fog-front: 0.4;
+  --hw-moon-glow: rgb(255 240 190 / 45%);
+  --hw-moon-halo: rgb(255 240 190 / 18%);
+  --hw-cloud: rgb(196 208 216 / 85%);
+  --hw-lightning: rgb(150 170 230 / 30%);
+  --hw-lightning-strong: rgb(150 170 235 / 50%);
+  --hw-bolt: #ffffff;
+  --hw-bolt-glow: rgb(80 100 220 / 90%);
+  --hw-sac: #f3eee2;
+  --hw-sac-line: rgb(96 86 66 / 55%);
+}
+
+:root[data-spooky="off"] .rc-halloween {
+  display: none !important;
+}
+
+.rc-hw-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Fixed layers over the window: below Starlight's header (z-index 10), so that creatures pass under it. Only the
+   creatures themselves take clicks. */
+.rc-hw-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rc-hw-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.rc-hw-led {
+  animation: rc-hw-blink 2.6s ease-in-out infinite;
+}
+
+@keyframes rc-hw-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* webs in a corner of their host */
+.rc-hw-web-host {
+  position: relative;
+}
+
+/* the layer over the top of a news page that holds the corner web, above the table of contents; it follows the web
+   host rule above, so its own position wins */
+.rc-hw-page-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 9;
+  height: 0;
+  pointer-events: none;
+}
+
+.rc-hw-web {
+  position: absolute;
+  z-index: 2;
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rc-hw-web-top-right {
+  top: 0;
+  right: 0;
+  width: min(320px, 50vw);
+}
+
+.rc-hw-web-bottom-left {
+  bottom: 0;
+  left: 0;
+  width: min(230px, 45vw);
+}
+
+.rc-hw-web-top-left {
+  top: 0;
+  left: 0;
+  width: min(200px, 40vw);
+}
+
+.rc-hw-strand {
+  fill: none;
+  stroke: var(--hw-web);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+
+.rc-hw-thread {
+  stroke: var(--hw-web);
+  stroke-width: 1;
+}
+
+/* the ghost sits below the block it hides behind and moves out at one of its sides */
+.rc-hw-peek-host {
+  position: relative;
+  z-index: 1;
+}
+
+.rc-hw-ghost {
+  position: absolute;
+  z-index: 0;
+  width: 64px;
+  height: 76px;
+  pointer-events: none;
+  transition: transform 0.9s cubic-bezier(0.3, 1.35, 0.5, 1);
+}
+
+.rc-hw-ghost svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rc-hw-ghost.rc-hw-show {
+  filter: drop-shadow(0 6px 10px var(--hw-shadow));
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.rc-hw-ghost.rc-hw-top.rc-hw-show {
+  transform: translateY(-80%) rotate(var(--hw-tilt, 0deg));
+}
+
+.rc-hw-ghost.rc-hw-right.rc-hw-show {
+  transform: translateX(80%) rotate(var(--hw-tilt, 0deg));
+}
+
+.rc-hw-ghost.rc-hw-left.rc-hw-show {
+  transform: translateX(-80%) rotate(var(--hw-tilt, 0deg));
+}
+
+.rc-hw-eyes {
+  transition: transform 0.35s ease-in-out;
+}
+
+/* the pumpkin floats in a lower corner of the window */
+.rc-hw-pumpkin {
+  position: fixed;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  z-index: 9;
+  width: 116px;
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rc-hw-pumpkin.rc-hw-right {
+  right: calc(14px + env(safe-area-inset-right, 0px));
+  left: auto;
+}
+
+.rc-hw-pumpkin-body {
+  pointer-events: all;
+  cursor: pointer;
+}
+
+/* the neon sign above the pumpkin on the home page: two tubes on a dark board, "boo" with a loose contact; it lights
+   up while the pointer is on the pumpkin, only for visitors with a mouse (and so, most likely, a keyboard) */
+.rc-hw-neon {
+  position: fixed;
+  bottom: calc(126px + env(safe-area-inset-bottom, 0px));
+  left: calc(72px + env(safe-area-inset-left, 0px));
+  z-index: 10;
+  display: none;
+  padding: 0.1rem 0.65rem 0.2rem;
+  border: 1.5px solid #b56cff;
+  border-radius: 0.55rem;
+  background: rgb(18 12 28 / 88%);
+  box-shadow:
+    0 0 4px #b56cff,
+    0 0 14px rgb(181 108 255 / 55%),
+    inset 0 0 6px rgb(181 108 255 / 45%);
+  color: #f2e4ff;
+  font-size: var(--sl-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px #b56cff,
+    0 0 14px #b56cff;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.rc-hw-neon.rc-hw-right {
+  right: calc(72px + env(safe-area-inset-right, 0px));
+  left: auto;
+  translate: 50% 0;
+}
+
+.rc-hw-neon span {
+  color: #ffe4c7;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px #ff8a1f,
+    0 0 14px #ff8a1f,
+    0 0 24px #ff8a1f;
+  animation: rc-hw-neon-flicker 4.7s linear infinite;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rc-hw-neon.rc-hw-on {
+    display: block;
+    animation:
+      rc-hw-neon-start 0.8s linear,
+      rc-hw-neon-hum 9s linear 0.8s infinite;
+  }
+}
+
+@media (max-width: 50em) {
+  .rc-hw-neon {
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    left: calc(52px + env(safe-area-inset-left, 0px));
+  }
+
+  .rc-hw-neon.rc-hw-right {
+    right: calc(52px + env(safe-area-inset-right, 0px));
+    left: auto;
+  }
+}
+
+/* switching on, the tubes catch after a few tries */
+@keyframes rc-hw-neon-start {
+  0% {
+    opacity: 0;
+  }
+
+  8%,
+  28%,
+  52%,
+  100% {
+    opacity: 1;
+  }
+
+  16% {
+    opacity: 0.1;
+  }
+
+  40% {
+    opacity: 0.25;
+  }
+}
+
+/* now and then the whole sign dips for a moment */
+@keyframes rc-hw-neon-hum {
+  0%,
+  61%,
+  63.5%,
+  100% {
+    opacity: 1;
+  }
+
+  62% {
+    opacity: 0.55;
+  }
+}
+
+/* "boo" goes out and catches again, irregularly */
+@keyframes rc-hw-neon-flicker {
+  0%,
+  17%,
+  19.5%,
+  22%,
+  24%,
+  70%,
+  76%,
+  100% {
+    opacity: 1;
+  }
+
+  18%,
+  23% {
+    opacity: 0.15;
+    text-shadow: none;
+  }
+
+  71%,
+  75% {
+    opacity: 0.2;
+    text-shadow: none;
+  }
+
+  73% {
+    opacity: 0.7;
+  }
+}
+
+/* the steady glow; the flicker is set by script */
+.rc-hw-carving {
+  filter: drop-shadow(0 0 3px var(--hw-flame-b)) drop-shadow(0 0 9px var(--hw-flame-b));
+}
+
+.rc-hw-inner-glow {
+  opacity: 0.6;
+}
+
+@media (max-width: 50em) {
+  .rc-hw-pumpkin {
+    width: 76px;
+  }
+}
+
+/* the sky: the moon, the clouds and the lightning; the script sets its left edge and width to
+   those of the window, which clips it, and nothing clips it at the top or the bottom */
+.rc-hw-sky {
+  position: absolute;
+  left: 0;
+  z-index: -1;
+  overflow-x: clip;
+  overflow-y: visible;
+  pointer-events: none;
+}
+
+/* around the hero's gallery picture, or along the top of a page */
+.rc-hw-sky-hero {
+  top: -6rem;
+  bottom: -4rem;
+}
+
+.rc-hw-sky-page {
+  top: 0;
+  height: 17rem;
+}
+
+/* small enough to stay above the line under the title of a news page */
+.rc-hw-sky-page .rc-hw-moon {
+  width: 84px;
+}
+
+.rc-hw-moon {
+  position: absolute;
+  width: 118px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 40%, var(--hw-moon-shade) 0 6%, transparent 11%),
+    radial-gradient(circle at 63% 62%, var(--hw-moon-shade) 0 5%, transparent 9%),
+    radial-gradient(circle at 56% 27%, var(--hw-moon-shade) 0 3%, transparent 6%),
+    radial-gradient(circle at 26% 66%, var(--hw-moon-shade) 0 3%, transparent 6%),
+    radial-gradient(circle at 40% 38%, var(--hw-moon) 0 55%, var(--hw-moon-edge) 100%);
+  box-shadow:
+    0 0 40px 8px var(--hw-moon-glow),
+    0 0 140px 50px var(--hw-moon-halo);
+}
+
+/* while the hero gallery shows a picture with a moon of its own (Hero.astro sets `data-picture-moon`), ours fades */
+.rc-hw-moon {
+  transition: opacity 0.6s;
+}
+
+rc-hero-gallery[data-picture-moon] .rc-hw-moon {
+  opacity: 0;
+}
+
+/* a cloud from a few soft ellipses of fixed size, so that none of them reaches the edge of its box */
+.rc-hw-cloud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 110px;
+  background:
+    radial-gradient(ellipse 70px 26px at 30% 58%, var(--hw-cloud) 25%, transparent 100%),
+    radial-gradient(ellipse 90px 32px at 52% 44%, var(--hw-cloud) 25%, transparent 100%),
+    radial-gradient(ellipse 80px 24px at 70% 60%, var(--hw-cloud) 25%, transparent 100%),
+    radial-gradient(ellipse 120px 20px at 50% 68%, var(--hw-cloud) 25%, transparent 100%);
+  filter: blur(2px);
+  will-change: transform;
+}
+
+/* centred on the moon by the script and large enough to light the whole hero, fading out before its own edges */
+.rc-hw-flash {
+  position: absolute;
+  width: max(240vw, 120rem);
+  height: 76rem;
+  translate: -50% -50%;
+  background: radial-gradient(
+    closest-side,
+    var(--hw-lightning),
+    color-mix(in srgb, var(--hw-lightning) 65%, transparent) 45%,
+    transparent
+  );
+  opacity: 0;
+}
+
+/* the flash of a lightning bolt, brighter than the far lightning */
+.rc-hw-flash-strong {
+  background: radial-gradient(
+    closest-side,
+    var(--hw-lightning-strong),
+    color-mix(in srgb, var(--hw-lightning-strong) 60%, transparent) 45%,
+    transparent
+  );
+}
+
+/* a lightning bolt: a white core with a glow, behind the clouds */
+.rc-hw-bolt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: 0;
+}
+
+.rc-hw-bolt path {
+  fill: none;
+  stroke: var(--hw-bolt);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px var(--hw-bolt-glow)) drop-shadow(0 0 12px var(--hw-bolt-glow));
+}
+
+.rc-hw-bolt .rc-hw-branch {
+  stroke-width: 1.4;
+}
+
+/* fog: a faint layer over the lower part of the window and a thin one at its bottom edge, both readable through */
+.rc-hw-fog {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.rc-hw-fog-back {
+  z-index: 8;
+  height: 32vh;
+  opacity: var(--hw-fog-back);
+  mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%);
+}
+
+.rc-hw-fog-front {
+  z-index: 9;
+  height: 11vh;
+  opacity: var(--hw-fog-front);
+  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+}
+
+/* billowing scales the texture from the bottom; above the layer the mask of the layer cuts it off */
+.rc-hw-fog-texture {
+  position: absolute;
+  inset: 0;
+  transform-origin: bottom;
+  background: var(--hw-fog);
+  mask-repeat: repeat-x;
+  mask-size: auto 100%;
+}
+
+/* a treat: a tip in a bubble near the click */
+.rc-hw-treat {
+  position: fixed;
+  z-index: 30;
+  max-width: min(20rem, calc(100vw - 32px));
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--sl-color-text-accent);
+  border-radius: 0.75rem;
+  background: var(--sl-color-bg-nav);
+  box-shadow: 0 0.8rem 2rem var(--hw-shadow);
+  color: var(--sl-color-white);
+  font-size: var(--sl-text-sm);
+  line-height: 1.45;
+  transition:
+    opacity 0.4s,
+    transform 0.4s;
+}
+
+.rc-hw-treat strong {
+  color: var(--sl-color-text-accent);
+}
+
+.rc-hw-treat.rc-hw-out {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-hw-led {
+    animation: none;
+  }
+
+  .rc-hw-ghost,
+  .rc-hw-treat {
+    transition: none;
+  }
+
+  .rc-hw-neon.rc-hw-on,
+  .rc-hw-neon span {
+    animation: none;
+  }
+}

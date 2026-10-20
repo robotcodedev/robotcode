@@ -1,0 +1,362 @@
+---
+// The Halloween season on the pages that it decorates, the home page and the news pages: the loader of the decorations
+// and the "Spooky mode" switch. The decorations are imported only when the season is active (`data-season`, set by
+// ThemeProvider.astro) and Spooky mode is on. The switch floats next to the pumpkin and stays there while the
+// decorations are off, so it is not part of them; for the same reason the loader chooses the pumpkin's corner
+// (`data-pumpkin-corner`), which the pumpkin and the switch share. A sound switch and a music switch sit beside it;
+// sound and music are on until the visitor turns them off, and browsers start them with the first click or key press.
+const path = Astro.url.pathname;
+const page = path === "/" ? "home" : path === "/news" || path.startsWith("/news/") ? "news" : "";
+---
+
+<div class="rc-season" data-season-page={page}>
+  <div class="rc-spooky-dock">
+    <button type="button" class="rc-spooky" aria-pressed="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M5 11.5C5 7 8 3.5 12 3.5S19 7 19 11.5V20l-2-1.6-2.3 1.6-2.7-1.6-2.7 1.6L7 18.4 5 20z"
+          fill="currentColor"
+        ></path>
+        <circle cx="9.6" cy="10.5" r="1.3" fill="var(--sl-color-bg)"></circle>
+        <circle cx="14.4" cy="10.5" r="1.3" fill="var(--sl-color-bg)"></circle>
+      </svg>
+      Spooky mode
+      <span class="rc-spooky-state" aria-hidden="true"></span>
+    </button>
+    {
+      page && (
+        <>
+          <p class="rc-sound-hint" aria-hidden="true">
+            <span class="rc-click">Click</span><span class="rc-tap">Tap</span> anywhere for sound
+          </p>
+          <button type="button" class="rc-sound" aria-pressed="false" aria-label="Sound effects" title="Sound effects">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
+              <path
+                class="rc-sound-on"
+                d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+              <path
+                class="rc-sound-off"
+                d="M15.5 9.5l5 5M20.5 9.5l-5 5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+          <button type="button" class="rc-sound rc-music" aria-pressed="false" aria-label="Music" title="Music">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M9.5 17.5a2.5 2.5 0 1 1-1.5-2.3V6.2l10-2.2v11.5a2.5 2.5 0 1 1-1.5-2.3V7.9l-7 1.5z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </>
+      )
+    }
+  </div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const season = document.querySelector<HTMLElement>("[data-season-page]");
+  const page = season?.dataset.seasonPage;
+  // out of the footer, which Starlight puts in the stacking context of the content: at the end of the page the switches
+  // lie above the sidebar and the decorations
+  if (season) document.body.append(season);
+  const button = document.querySelector<HTMLButtonElement>(".rc-spooky");
+  const sound = document.querySelector<HTMLButtonElement>(".rc-sound:not(.rc-music)");
+  const music = document.querySelector<HTMLButtonElement>(".rc-music");
+  const spookyOn = () => root.dataset.spooky !== "off";
+
+  async function start() {
+    if (root.dataset.season === undefined || !spookyOn() || !page) return;
+    const { startHalloween } = await import("./halloween/main");
+    startHalloween(page);
+  }
+
+  if (root.dataset.season !== undefined && page) root.dataset.pumpkinCorner = Math.random() < 0.5 ? "left" : "right";
+  button?.setAttribute("aria-pressed", String(spookyOn()));
+  button?.addEventListener("click", () => {
+    const on = !spookyOn();
+    if (on) delete root.dataset.spooky;
+    else root.dataset.spooky = "off";
+    try {
+      localStorage.setItem("robotcode-spooky", on ? "on" : "off");
+    } catch {
+      // the switch applies to this page only
+    }
+    button.setAttribute("aria-pressed", String(on));
+    document.dispatchEvent(new CustomEvent("rc-spooky", { detail: on }));
+    if (on) start();
+  });
+
+  // sound and music are on until the visitor turns them off, and the choices are remembered; the speaker switches all
+  // sound, the music switch the music within it (with the speaker off it turns both on); the decorations make their
+  // sounds while `data-sound` is set and play the music box while `data-music` is set
+  if (sound && music) {
+    const stored = (key: string) => {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    };
+    const store = (key: string, on: boolean) => {
+      try {
+        localStorage.setItem(key, on ? "on" : "off");
+      } catch {
+        // the switch applies to this page only
+      }
+    };
+    let soundOn = stored("robotcode-spooky-sound") !== "off";
+    let musicOn = stored("robotcode-spooky-music") !== "off";
+    const apply = (event: string) => {
+      if (soundOn) root.dataset.sound = "on";
+      else delete root.dataset.sound;
+      if (soundOn && musicOn) root.dataset.music = "on";
+      else delete root.dataset.music;
+      sound.setAttribute("aria-pressed", String(soundOn));
+      music.setAttribute("aria-pressed", String(soundOn && musicOn));
+      if (event) document.dispatchEvent(new CustomEvent(event));
+    };
+    apply("");
+    sound.addEventListener("click", () => {
+      soundOn = !soundOn;
+      store("robotcode-spooky-sound", soundOn);
+      apply("rc-sound");
+    });
+    music.addEventListener("click", () => {
+      musicOn = !soundOn || !musicOn;
+      soundOn = true;
+      store("robotcode-spooky-sound", true);
+      store("robotcode-spooky-music", musicOn);
+      apply("rc-music");
+    });
+  }
+  start();
+</script>
+
+<style>
+  .rc-season {
+    display: none;
+  }
+
+  /* only on the pages with decorations, during the season */
+  :root[data-season] .rc-season:not([data-season-page=""]) {
+    display: block;
+  }
+
+  /* the switches: next to the pumpkin, on the side towards the middle of the window; in the corner itself while the
+     pumpkin is away (Spooky mode off); above the fog, below the treats */
+  .rc-spooky-dock {
+    position: fixed;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    z-index: 10;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    animation: rc-spooky-float 4s ease-in-out infinite;
+  }
+
+  /* the sound switch on the side towards the middle */
+  :root[data-pumpkin-corner="right"] .rc-spooky-dock {
+    flex-direction: row-reverse;
+  }
+
+  .rc-spooky {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.2rem 0.3rem 0.2rem 0.55rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sl-color-bg-nav) 80%, transparent);
+    backdrop-filter: blur(4px);
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    opacity: 0.8;
+    cursor: pointer;
+  }
+
+  :root[data-pumpkin-corner="left"] .rc-spooky-dock {
+    left: calc(136px + env(safe-area-inset-left, 0px));
+  }
+
+  :root[data-pumpkin-corner="right"] .rc-spooky-dock {
+    right: calc(136px + env(safe-area-inset-right, 0px));
+  }
+
+  :root[data-spooky="off"][data-pumpkin-corner="left"] .rc-spooky-dock {
+    left: calc(14px + env(safe-area-inset-left, 0px));
+  }
+
+  :root[data-spooky="off"][data-pumpkin-corner="right"] .rc-spooky-dock {
+    right: calc(14px + env(safe-area-inset-right, 0px));
+  }
+
+  :root[data-spooky="off"] .rc-spooky-dock {
+    animation: none;
+  }
+
+  :root[data-spooky="off"] .rc-sound {
+    display: none;
+  }
+
+  @media (max-width: 50em) {
+    :root[data-pumpkin-corner="left"]:not([data-spooky="off"]) .rc-spooky-dock {
+      left: calc(96px + env(safe-area-inset-left, 0px));
+    }
+
+    :root[data-pumpkin-corner="right"]:not([data-spooky="off"]) .rc-spooky-dock {
+      right: calc(96px + env(safe-area-inset-right, 0px));
+    }
+  }
+
+  @keyframes rc-spooky-float {
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rc-spooky-dock {
+      animation: none;
+    }
+  }
+
+  .rc-spooky:hover,
+  .rc-spooky:focus-visible,
+  .rc-sound:hover,
+  .rc-sound:focus-visible {
+    border-color: var(--sl-color-text-accent);
+    color: var(--sl-color-white);
+    opacity: 1;
+  }
+
+  /* while the browser holds the sound back until a click (sound.ts sets `data-sound-waiting`), above the switches */
+  .rc-sound-hint {
+    position: absolute;
+    bottom: calc(100% + 0.45rem);
+    display: none;
+    margin: 0;
+    padding: 0.15rem 0.65rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sl-color-bg-nav) 85%, transparent);
+    backdrop-filter: blur(4px);
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-xs);
+    white-space: nowrap;
+    pointer-events: none;
+    animation: rc-sound-hint 2.4s ease-in-out infinite;
+  }
+
+  :root[data-sound-waiting]:not([data-spooky="off"]) .rc-sound-hint {
+    display: block;
+  }
+
+  :root[data-pumpkin-corner="left"] .rc-sound-hint {
+    left: 0;
+  }
+
+  :root[data-pumpkin-corner="right"] .rc-sound-hint {
+    right: 0;
+  }
+
+  .rc-sound-hint .rc-tap {
+    display: none;
+  }
+
+  @media (pointer: coarse) {
+    .rc-sound-hint .rc-click {
+      display: none;
+    }
+
+    .rc-sound-hint .rc-tap {
+      display: inline;
+    }
+  }
+
+  @keyframes rc-sound-hint {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rc-sound-hint {
+      animation: none;
+    }
+  }
+
+  .rc-sound {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--sl-color-bg-nav) 80%, transparent);
+    backdrop-filter: blur(4px);
+    color: var(--sl-color-gray-2);
+    opacity: 0.8;
+    cursor: pointer;
+  }
+
+  .rc-sound[aria-pressed="true"] {
+    color: var(--sl-color-text-accent);
+  }
+
+  .rc-sound[aria-pressed="true"] .rc-sound-off,
+  .rc-sound[aria-pressed="false"] .rc-sound-on {
+    display: none;
+  }
+
+  .rc-sound svg,
+  .rc-spooky svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* a small switch track: on is filled */
+  .rc-spooky-state {
+    position: relative;
+    width: 1.7rem;
+    height: 1rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-5);
+    transition: background 0.2s;
+  }
+
+  .rc-spooky-state::after {
+    content: "";
+    position: absolute;
+    top: 0.15rem;
+    left: 0.15rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: var(--sl-color-gray-2);
+    transition: transform 0.2s;
+  }
+
+  .rc-spooky[aria-pressed="true"] .rc-spooky-state {
+    background: var(--sl-color-text-accent);
+  }
+
+  .rc-spooky[aria-pressed="true"] .rc-spooky-state::after {
+    background: var(--sl-color-black);
+    transform: translateX(0.7rem);
+  }
+</style>
