@@ -201,6 +201,10 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
   const SWIPE_INTENT_DISTANCE = 10;
   const SWIPE_DIRECTION_RATIO = 1.35;
   const CLICK_SUPPRESSION_TIMEOUT_MS = 250;
+  // The gallery moves on by itself after a while, with a short fade; not with reduced motion.
+  const AUTOPLAY_MS = 8000;
+  const FADE_MS = 300;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
   class RcHeroGallery extends HTMLElement {
     #pictures: Picture[] = [];
@@ -208,6 +212,8 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
     #suppressNextClick = false;
     #suppressTimeout: ReturnType<typeof setTimeout> | undefined;
     #swipe: { pointerId: number; startX: number; startY: number; horizontal: boolean } | undefined;
+    #autoplay: ReturnType<typeof setTimeout> | undefined;
+    #hovered = false;
 
     connectedCallback() {
       this.#pictures = JSON.parse(this.dataset.pictures ?? "[]");
@@ -236,6 +242,9 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
       });
       dialog.addEventListener("close", () => (document.documentElement.style.overflow = ""));
       for (const element of [picture, this.querySelector<HTMLElement>(".rc-frame")!]) this.#addSwipe(element);
+
+      this.addEventListener("pointerenter", () => (this.#hovered = true));
+      this.addEventListener("pointerleave", () => (this.#hovered = false));
 
       // Spooky mode switches between the pictures of the season and the usual ones (Halloween.astro)
       document.addEventListener("rc-spooky", () => this.#choosePictures());
@@ -266,6 +275,30 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
       Object.assign(big, { src: large, alt });
       this.querySelector(".rc-picture")!.setAttribute("aria-label", `Open image: ${alt}`);
       this.querySelector("dialog")!.setAttribute("aria-label", alt);
+      // every change, by hand or by itself, gives the picture the full time
+      this.#scheduleAutoplay();
+    }
+
+    #scheduleAutoplay() {
+      clearTimeout(this.#autoplay);
+      if (reducedMotion.matches || this.#pictures.length < 2) return;
+      this.#autoplay = setTimeout(() => this.#autoplayStep(), AUTOPLAY_MS);
+    }
+
+    // waits while the pointer or the keyboard focus is on the gallery, the enlarged view is open or the tab is hidden;
+    // otherwise loads the next picture, fades the current one out and shows the next
+    async #autoplayStep() {
+      if (reducedMotion.matches) return;
+      const busy =
+        this.#hovered || this.querySelector(":focus-visible") || this.querySelector("dialog")!.open || document.hidden;
+      if (busy) return this.#scheduleAutoplay();
+      const { src, srcset } = this.#pictures[(this.#index + 1) % this.#pictures.length];
+      const next = Object.assign(new Image(), { srcset, src });
+      await next.decode().catch(() => undefined);
+      this.toggleAttribute("data-fading", true);
+      await new Promise((resolve) => setTimeout(resolve, FADE_MS));
+      this.#show(this.#index + 1);
+      this.toggleAttribute("data-fading", false);
     }
 
     #open() {
@@ -368,6 +401,15 @@ const newsDate = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
   /* Without JavaScript the picture inside <noscript> is shown instead. */
   rc-hero-gallery .rc-picture img:not([src]) {
     display: none;
+  }
+
+  /* the fade when the gallery moves on by itself */
+  rc-hero-gallery .rc-picture {
+    transition: opacity 0.3s ease;
+  }
+
+  rc-hero-gallery[data-fading] .rc-picture {
+    opacity: 0;
   }
 
   rc-hero-gallery .rc-picture img {
