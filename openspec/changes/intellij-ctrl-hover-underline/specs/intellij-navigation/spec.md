@@ -73,3 +73,28 @@ Holding Ctrl over a name in a Robot Framework file SHALL show the hint of that n
 
 - **WHEN** Ctrl is held and the mouse rests on `Collections` in `Collections.Append To List    ${items}    b`
 - **THEN** the hint describes the library `Collections`
+
+### Requirement: Usages search for the name under the caret
+
+In a Robot Framework file, Find Usages and Show Usages SHALL search for the name under the caret as the language server marks it, not for the first name of its cell. On the keyword of a call with a library or resource prefix they SHALL find the keyword's usages, and on the prefix those of the library or resource.
+
+#### Scenario: Find Usages on the keyword after a prefix
+
+- **WHEN** Find Usages starts on `Log` in `BuiltIn.Log    ${arg2}`
+- **THEN** it finds the usages of the keyword `Log`, among them calls of `Log` without a prefix
+- **AND** the Find tool window names what it searched for "Keyword" and "Log"
+
+#### Scenario: Show Usages on the keyword after a prefix
+
+- **WHEN** Show Usages starts on `Append To List` in `Collections.Append To List    ${items}    b`
+- **THEN** the popup lists the usages of the keyword `Append To List` under the title "Keyword Append To List"
+
+#### Scenario: Find Usages on the prefix
+
+- **WHEN** Find Usages starts on `BuiltIn` in `BuiltIn.Log    ${arg2}`
+- **THEN** it finds the usages of the library BuiltIn
+
+#### Scenario: Keyword after a BDD prefix
+
+- **WHEN** Find Usages starts on `Open Shop As` in `Given Open Shop As    bob`
+- **THEN** it finds the usages of the keyword `Open Shop As`

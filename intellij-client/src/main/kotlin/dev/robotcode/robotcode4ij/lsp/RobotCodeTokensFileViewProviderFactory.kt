@@ -40,12 +40,19 @@ class RobotCodeTokensFileViewProvider(
 
     override fun addSemanticToken(textRange: TextRange, tokenType: String?, tokenModifiers: List<String>?) {
         if (hidesServerTokens(textRange, tokenModifiers, ::getSemanticTokenTextRange)) return
-        super.addSemanticToken(textRange, tokenType, tokenModifiers)
+        super.addSemanticToken(textRange, referenceTokenTypes[tokenType] ?: tokenType, tokenModifiers)
         if (tokenType == null || textRange.isEmpty) return
         val stamp = getPsi(baseLanguage)?.modificationStamp ?: return
         val tokens = recorded.updateAndGet { if (it.stamp == stamp) it else RecordedTokens(stamp) }
         tokens.byStart[textRange.startOffset] = RecordedToken(textRange.endOffset, tokenType)
     }
+
+    // Only LSP4IJ's Go to Declaration handler asks these two. At a reference it resolves the target itself, and the IDE
+    // then underlines the whole PSI element, such as `BuiltIn.Log` for `Log`. At a declaration it steps aside, and the
+    // IDE takes the reference of the semantic token at the place, with the token's range.
+    override fun isReference(offset: Int): Boolean = false
+
+    override fun isDeclaration(offset: Int): Boolean = super.isDeclaration(offset) || super.isReference(offset)
 
     /** The type of the semantic token at [offset], as the language server sent it; null without a token. */
     internal fun semanticTokenTypeAt(offset: Int): String? {
@@ -62,6 +69,10 @@ class RobotCodeTokensFileViewProvider(
 
     private class RecordedToken(val endOffset: Int, val type: String)
 }
+
+// LSP4IJ makes references only of tokens of the standard types, and only a reference is underlined on Ctrl+hover and
+// resolved at its own place; keyword calls get the standard type of a function call
+private val referenceTokenTypes = mapOf("keywordCall" to "function", "keywordCallInner" to "function")
 
 // After a successful Go to Declaration, LSP4IJ marks the whole PSI element as one reference token. It passes no
 // modifiers, while tokens from the language server always come with a list. A keyword call such as
