@@ -53,6 +53,54 @@ The run SHALL have the terminal as its standard input and output, as in a shell:
 - **WHEN** the user presses Ctrl+C in the run terminal while a test runs
 - **THEN** Robot Framework stops the run as on Ctrl+C in a shell, and the terminal stays open with the run's output
 
+### Requirement: The run terminal shows the command line
+
+Before each run, the run terminal SHALL show the run's command line, the program and its arguments, in one line `Executing: <command line>` that is marked as VS Code marks its own terminal messages, with ` * ` in inverse video before it. The interpreter and RobotCode's script SHALL appear as `robotcode`, as one types it in a terminal. An argument that contains a space, a quote or another character that a shell would read SHALL be quoted. The line SHALL NOT list environment variables.
+
+#### Scenario: Run with a profile
+
+- **WHEN** the configuration profile `ci` is selected and the user runs a test
+- **THEN** the run terminal shows the marked line `Executing: robotcode -p ci` and the further arguments of the run before the run's output, without the interpreter's path and the path of RobotCode's script
+
+#### Scenario: Reused terminal
+
+- **WHEN** a second run starts in a run terminal
+- **THEN** the terminal shows the command line of the second run before its output, below the output of the first run
+
+#### Scenario: Argument with a space
+
+- **WHEN** an argument of the run, such as the long name of a suite, contains a space
+- **THEN** the line shows that argument quoted
+
+### Requirement: Each run is a command of the terminal
+
+Each run SHALL be a command for VS Code's shell integration: its marked command line SHALL carry VS Code's command decoration, colored by the run's exit code, whose menu offers copying the full command line and the run's output, and VS Code's sticky scroll SHALL keep it at the top while the run's output scrolls. **Rerun Command**, **Run Recent Command** and text pasted into the terminal SHALL neither start a run nor close the terminal.
+
+#### Scenario: Decoration of a passed and a failed run
+
+- **WHEN** a run passes and a second run in the same terminal fails
+- **THEN** the command line of the first run carries the decoration of a successful command and that of the second the decoration of a failed one
+
+#### Scenario: Copy the command line of a run
+
+- **WHEN** the user chooses **Copy Command** in the menu of a run's decoration
+- **THEN** the clipboard holds the full command line of the run, with the interpreter and the path of RobotCode's script
+
+#### Scenario: Copy the output of a run
+
+- **WHEN** the user chooses **Copy Output** in the menu of a run's decoration
+- **THEN** the clipboard holds the output of that run, without the command line and without the line about the reuse
+
+#### Scenario: Sticky scroll
+
+- **WHEN** the user scrolls through the output of a run so far that its command line leaves the view
+- **THEN** VS Code shows the run's command line at the top of the terminal, as for the commands of a shell
+
+#### Scenario: Rerun Command after the run
+
+- **WHEN** the user chooses **Rerun Command** in the menu of a run's decoration and confirms VS Code's question
+- **THEN** no run starts and the terminal stays open
+
 ### Requirement: Name and icon of the run terminal
 
 A run terminal SHALL carry the name of the run's debug session, such as "RobotCode: Run Tests" with the workspace folder's name, and RobotCode's robot icon.
@@ -64,12 +112,17 @@ A run terminal SHALL carry the name of the run's debug session, such as "RobotCo
 
 ### Requirement: The run terminal waits after a run
 
-When a run ends, its terminal SHALL keep the run's output and show the line ` * Terminal will be reused by RobotCode runs, press any key to close it.` A key pressed in the terminal after that line SHALL close the terminal.
+When a run ends, its terminal SHALL keep the run's output and show the line `Terminal will be reused by RobotCode runs, press any key to close it.`, marked as the command line is. When RobotCode's extension no longer runs, as after a restart of the extension host, the line SHALL be `Press any key to close the terminal.` instead. A key pressed in the terminal after that line SHALL close the terminal.
 
 #### Scenario: Passed run
 
 - **WHEN** a run ends with all tests passed
 - **THEN** the terminal stays open with the run's output and the line about its reuse
+
+#### Scenario: Extension host restarted during a run
+
+- **WHEN** VS Code's extension host restarts while a run is in progress in a run terminal
+- **THEN** the run goes on, and after it the terminal keeps the output, shows the line about closing it and closes on a key
 
 #### Scenario: Key after the run
 

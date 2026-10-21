@@ -251,11 +251,12 @@ Use the debugpy in python environment, not from the python extension.
 
 ### `robotcode.debug.defaultConsole` {#robotcode.debug.defaultConsole}
 
-Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.
+Default setting for where to launch the debug target: RobotCode's run terminal, internal console, integrated terminal, or external terminal.
 
 - **Type:** `string`
-- **Default:** `"integratedTerminal"`
+- **Default:** `"robotcodeTerminal"`
 - **Allowed values:**
+  - `robotcodeTerminal`: RobotCode's run terminal: runs without a shell, keeps the output after the run, is reused for the next run and closes on a key.
   - `internalConsole`: No terminal (pipes the output to the client debug console).
   - `integratedTerminal`: Use terminal integrated in client.
   - `externalTerminal`: External terminal (configured in user settings).

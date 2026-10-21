@@ -27,6 +27,14 @@ const projects = [
     external: ["vscode"],
   },
   {
+    // The process of RobotCode's run terminals, run with the Node.js of VS Code's Electron.
+    entryPoints: ["./vscode-client/runTerminal"],
+    format: "cjs",
+    platform: "node",
+    target: "node24",
+    outfile: "out/runTerminal.js",
+  },
+  {
     entryPoints: ["./vscode-client/rendererLog"],
     format: "esm",
     platform: "browser",

@@ -935,17 +935,19 @@
           "robotcode.debug.defaultConsole": {
             "type": "string",
             "enum": [
+              "robotcodeTerminal",
               "internalConsole",
               "integratedTerminal",
               "externalTerminal"
             ],
-            "default": "integratedTerminal",
+            "default": "robotcodeTerminal",
             "enumDescriptions": [
+              "RobotCode's run terminal: runs without a shell, keeps the output after the run, is reused for the next run and closes on a key.",
               "No terminal (pipes the output to the client debug console).",
               "Use terminal integrated in client.",
               "External terminal (configured in user settings)."
             ],
-            "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
+            "description": "Default setting for where to launch the debug target: RobotCode's run terminal, internal console, integrated terminal, or external terminal.",
             "scope": "resource"
           }
         }
@@ -1775,17 +1777,19 @@
               "console": {
                 "type": "string",
                 "enum": [
+                  "robotcodeTerminal",
                   "internalConsole",
                   "integratedTerminal",
                   "externalTerminal"
                 ],
                 "enumDescriptions": [
+                  "RobotCode's run terminal: runs without a shell, keeps the output after the run, is reused for the next run and closes on a key.",
                   "No terminal (pipes the output to the client debug console).",
                   "Use terminal integrated in client.",
                   "External terminal (configured in user settings)."
                 ],
-                "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
-                "default": "integratedTerminal"
+                "description": "Where to launch the debug target: RobotCode's run terminal, internal console, integrated terminal, or external terminal.",
+                "default": "robotcodeTerminal"
               },
               "dryRun": {
                 "type": "boolean",

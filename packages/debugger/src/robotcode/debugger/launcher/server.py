@@ -70,6 +70,17 @@ def _build_robotcode_run_args(
     ]
 
 
+Console = Literal["robotcodeTerminal", "internalConsole", "integratedTerminal", "externalTerminal"]
+
+
+def _console_for_client(console: Optional[Console], client_id: Optional[str]) -> Optional[Console]:
+    """The console a run uses: RobotCode's own run terminal is part of its VS Code extension, so any other client
+    gets the integrated terminal instead."""
+    if console == "robotcodeTerminal" and client_id != "vscode":
+        return "integratedTerminal"
+    return console
+
+
 class OutputProtocol(asyncio.SubprocessProtocol):
     def __init__(self, parent: LauncherDebugAdapterProtocol) -> None:
         super().__init__()
@@ -136,7 +147,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         paths: Optional[List[str]] = None,
         args: Optional[List[str]] = None,
         env: Optional[Dict[str, Optional[Any]]] = None,
-        console: Optional[Literal["internalConsole", "integratedTerminal", "externalTerminal"]] = "integratedTerminal",
+        console: Optional[Console] = "integratedTerminal",
         name: Optional[str] = None,
         no_debug: Optional[bool] = None,
         robotPythonPath: Optional[List[str]] = None,  # noqa: N803
@@ -263,7 +274,19 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
 
-        if console in ["integratedTerminal", "externalTerminal"]:
+        console = _console_for_client(
+            console, self._initialize_arguments.client_id if self._initialize_arguments is not None else None
+        )
+
+        if console == "robotcodeTerminal":
+            # RobotCode's VS Code extension runs it as the process of a terminal of its own, without a shell
+            await self.send_event_async(
+                Event(
+                    event="runInRobotCodeTerminal",
+                    body={"cwd": cwd, "args": [*robotcode_run_args, *run_args], "env": env, "title": name},
+                )
+            )
+        elif console in ["integratedTerminal", "externalTerminal"]:
             await self.send_request_async(
                 RunInTerminalRequest(
                     arguments=RunInTerminalRequestArguments(

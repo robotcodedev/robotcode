@@ -10,8 +10,12 @@ import { join } from "path";
 import { randomBytes } from "crypto";
 import { platform } from "process";
 import { getAvailablePort, isPortOpen } from "./net_utils";
+import { RunTerminalRun, RunTerminals, shownArgs } from "./runTerminals";
 
 const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
+
+// how long the session of a run in a run terminal may take to end by itself after the run's process ended
+const RUN_SESSION_END_GRACE = 1000;
 const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
 
 const DEBUG_ATTACH_DEFAULT_TCP_PORT = 6612;
@@ -371,6 +375,8 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
 export class DebugManager {
   private _disposables: vscode.Disposable;
   private _attachedSessions = new WeakValueSet<vscode.DebugSession>();
+  private _runTerminals: RunTerminals;
+  private _sessionsInRunTerminals = new WeakSet<vscode.DebugSession>();
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -378,7 +384,11 @@ export class DebugManager {
     public readonly languageClientsManager: LanguageClientsManager,
     public readonly outputChannel: vscode.OutputChannel,
   ) {
+    this._runTerminals = new RunTerminals(extensionContext.asAbsolutePath(path.join("out", "runTerminal.js")));
+
     this._disposables = vscode.Disposable.from(
+      this._runTerminals,
+
       vscode.debug.registerDebugConfigurationProvider(
         "robotcode",
         new RobotCodeDebugConfigurationProvider(this.pythonManager),
@@ -432,6 +442,10 @@ export class DebugManager {
               );
               break;
             }
+            case "runInRobotCodeTerminal": {
+              await this.OnRunInRobotCodeTerminal(event.session, event.body as RunTerminalRun & { title?: string });
+              break;
+            }
           }
         }
       }),
@@ -443,6 +457,7 @@ export class DebugManager {
       }),
 
       vscode.debug.onDidTerminateDebugSession(async (session) => {
+        this._sessionsInRunTerminals.delete(session);
         if (this._attachedSessions.has(session)) {
           this._attachedSessions.delete(session);
           if (session.parentSession?.type === "robotcode") {
@@ -608,6 +623,33 @@ export class DebugManager {
       });
     }
     return false;
+  }
+
+  private async OnRunInRobotCodeTerminal(
+    session: vscode.DebugSession,
+    run: RunTerminalRun & { title?: string },
+  ): Promise<void> {
+    let ended: Promise<number | null>;
+    try {
+      ({ ended } = await this._runTerminals.start(run.title ?? session.name, session.workspaceFolder, {
+        ...run,
+        shownArgs: shownArgs(run.args, this.pythonManager.robotCodeMain),
+      }));
+    } catch (e) {
+      void vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+      await vscode.debug.stopDebugging(session);
+      return;
+    }
+
+    // A run that ends normally ends its session by itself; this ends the session of a run whose process ended before
+    // the debugger connected, or whose terminal was closed, without waiting for the launcher's timeout.
+    this._sessionsInRunTerminals.add(session);
+    void ended.then(async () => {
+      await sleep(RUN_SESSION_END_GRACE);
+      if (this._sessionsInRunTerminals.has(session)) {
+        await vscode.debug.stopDebugging(session);
+      }
+    });
   }
 
   private async OnRobotExited(

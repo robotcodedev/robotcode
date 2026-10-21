@@ -12,6 +12,8 @@ See proposal.md, Why. The facts behind the decisions, checked on 2026-10-21 in t
 - **The prototype** (harness, both Python modes): a terminal whose process was a small Node.js script, run with VS Code's own runtime (`shellPath: process.execPath`, `ELECTRON_RUN_AS_NODE=1`), connected back to its extension over a local socket and started each run with `stdio: "inherit"`. The run saw a terminal (`isatty()` true), Robot Framework's progress line worked, Ctrl+C reached Robot Framework ("Second signal will force exit.") and the terminal stayed, three runs shared the terminal, a key closed it, and no activation text appeared.
 - **The Python Environments API** describes how to run Python in an environment with `execInfo.activatedRun`; for venv and conda environments this is the plain interpreter in 1.38.0 and 1.40.0. The `conda run --prefix … --no-capture-output` variant exists only in the private `__pythonTools` export for agent tools (vscode-python-environments #1900).
 
+- **The exit code of a Test Explorer run** (measured on 2026-10-21, after the decoration showed every such run in red). When the run is over, `robotcode debug` sends `robotExited`, `terminated` and `exited` and waits for the client to disconnect (`run.py`). For a run from the Test Explorer, VS Code then sends `disconnect` and, 2 ms later, `terminate`; for a launch configuration only `disconnect`. The `terminate` handler (`server.py`, `_terminate`) raises SIGINT in its own process, which then only waits for the disconnect, and the CLI ends on the KeyboardInterrupt with 253 (`keyboard_interrupt` in `plugin/__init__.py`). With `integratedTerminal` the shell integration of bash reports the same 253 for such a run; nobody saw it before.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -61,11 +63,37 @@ A run terminal is created with `hideFromUser: true` and shown at once, with `isT
 
 ### D6: Waiting after the run
 
-When the run ends, the script writes ` * Terminal will be reused by RobotCode runs, press any key to close it.`, switches its input to raw mode and waits. A key ends the script with exit code 0, and VS Code closes the terminal. A new run first switches raw mode off and pauses the script's input, then starts below the earlier output. Without a terminal as input, as in an extension test, the script skips the raw mode.
+When the run ends, the script writes `Terminal will be reused by RobotCode runs, press any key to close it.`, marked as VS Code marks its own terminal messages: ` * ` in inverse video before it, the ANSI sequence of VS Code's internal `formatMessageForTerminal` (maintainer, 2026-10-21). Then it switches its input to raw mode and waits. A key ends the script with exit code 0, and VS Code closes the terminal. A new run first switches raw mode off and pauses the script's input, then starts below the earlier output. Without a terminal as input, as in an extension test, the script skips the raw mode. When the connection to the extension is gone, as after a restart of the extension host, the script keeps the terminal and its output and writes `Press any key to close the terminal.` instead of the line about the reuse; a terminal without a run yet ends at once. The extension forgets a run terminal as soon as its connection closes, not only when VS Code reports the terminal closed, which comes later, so that a run starting in between gets a new terminal; and a failed `listen` is tried again with the next run.
+
+### D6a: The command line before each run
+
+Before it starts a run, the script writes `Executing: ` and the run's program and arguments in one line with the same mark, as a shell terminal shows the typed command (maintainer, 2026-10-21: the command line only, no environment variables and no working directory). An argument with a space, a quote or another character that a shell reads is quoted: in single quotes on Linux and macOS, as POSIX shells read them, and in double quotes on Windows. The quoting lives in a module of its own next to the script, so that the extension tests can import it without starting the script.
+
+The line shows the interpreter and RobotCode's script as `robotcode` (maintainer, 2026-10-21): RobotCode's terminal integration puts its bundled `robotcode` on the PATH of the terminals, and in an environment with RobotCode installed one types `robotcode` as well. The full command line still goes to VS Code with `E`, so **Copy Command** copies it. The extension knows the path of its script and passes the arguments to show with the run; the launcher's other form, `-m robotcode.cli`, is shown the same way, and any other command line as it is.
+
+- **Alternative: the interpreter's path, relative to the workspace folder.** It would tell which environment runs; the maintainer preferred the form one types.
+- **Alternative: also the environment variables that RobotCode passes to the run.** The maintainer chose the command line only.
+- **Alternative: the form a shell terminal shows, `cd … ; /usr/bin/env VAR=… <command>`.** It depends on the shell; this terminal has none.
+
+### D6b: Each run is a command of VS Code's shell integration
+
+VS Code reads the sequences of its shell integration (`OSC 633`, documented for shells and tools) from the output of any terminal process. The script writes them itself around each run: `A` before the mark, `B` after `Executing: `, so that the mark and that word are the prompt, `C` before the run's output, then `E` with the command line, and `D` with the exit code after the run. `E` comes after `C` because VS Code takes the command line from the screen at `C` (`commandDetectionCapability.ts`, Unix heuristics), and an `E` without VS Code's nonce sent before that would be overwritten. VS Code then draws its command decoration at the line, blue or red by the exit code, marks it in the scroll bar, lets Ctrl+Up and Ctrl+Down jump between the runs, and offers in the decoration's menu Copy Command, Copy Output, Copy Command and Output, Copy Output as HTML and, with chat, Attach To Chat (maintainer, 2026-10-21).
+
+- **Rerun Command and Run Recent Command** send the command line as typed text with Enter (`terminalInstance.ts`, `sendText`). In the task terminal this does nothing, because the task's process has ended. The script is still running, so it ignores such input: after a run, only a single key closes the terminal; input that arrives at once with more than one character, as from these commands or a paste, is dropped. While a run is in progress, such text reaches the run as typed input, as in a shell.
+- **The command line in `E` comes without the nonce** that VS Code injects only into shells with its own integration, so VS Code treats it as untrusted and asks before Rerun Command; the script then drops the text.
+- **Alternative: leave the command line out.** VS Code offers Rerun and the copy entries only for a command with a command line, so all of them would go.
+- **Not reachable:** the task terminal's own entries, which VS Code's task system adds internally.
+- **Sticky scroll** (maintainer, 2026-10-21): VS Code shows it only for a terminal that has announced rich command detection (`terminalStickyScrollContribution.ts`), with `OSC 633 ; P ; HasRichCommandDetection=True`, which says that the sequences come where they belong. The script writes it once when it starts. VS Code then keeps the command line of a run at the top while its output scrolls, at most five rows and fewer in a small panel; a longer command line is cut with " …", and when its last shown row is full, that mark pushes the first row out of the view. Our command lines are long because of their full paths; shortening them would defeat their purpose.
 
 ### D7: The session ends with the run's process
 
-When the script reports the end of a run, the extension stops the run's debug session if it is still active. A run that ends normally ends its session anyway; a process that ends before the debugger connected, for example because the interpreter cannot start RobotCode, no longer waits for `launcherTimeout`. **Stop** stays as it is (Context).
+When the script reports the end of a run, the extension waits a second and then stops the run's debug session if it is still active; the second lets a session that ends by itself do so first. A run that ends normally ends its session anyway; a process that ends before the debugger connected, for example because the interpreter cannot start RobotCode, no longer waits for `launcherTimeout`. **Stop** stays as it is (Context).
+
+### D7a: A terminate request after the end of the run is answered without a signal
+
+`_terminate` of the debugger raises no signal once the `exited` event has been sent; the process ends by itself after the disconnect, with Robot Framework's exit code. Before that, a `terminate` request interrupts the run as before (specs/debugger-termination).
+
+- **Alternative: keep VS Code from sending `terminate`.** It comes from VS Code's link between a debug session and the Test Explorer's run; the debugger is the place that knows whether there is still a run to interrupt, and the fix holds for every client.
 
 ### D8: The default moves to `robotcodeTerminal`
 

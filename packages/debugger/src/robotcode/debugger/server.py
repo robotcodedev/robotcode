@@ -210,6 +210,11 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> None:
+        if self.exited:
+            # The run has ended and the process only waits for the client to disconnect. A signal would end it with
+            # the exit code of an interrupt and skip its exit handlers, such as those that close a library's browsers.
+            return
+
         Debugger.instance.terminate()
 
         if not restart and not self._sigint_signaled:

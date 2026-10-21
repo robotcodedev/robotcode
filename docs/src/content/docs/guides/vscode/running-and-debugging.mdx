@@ -94,6 +94,23 @@ The launch configurations of type `robotcode` in `.vscode/launch.json` start run
 
 A configuration takes the options of a run, such as `profiles`, `variables`, `include`, `exclude`, `args` and `env`; VS Code completes and explains them while you edit `launch.json`. The settings `robotcode.robot.args`, `robotcode.robot.variables` and `robotcode.robot.env` are combined with these options, `profiles` falls back to `robotcode.profiles`, and options such as `console` and `attachPython` fall back to the `robotcode.debug.*` settings, see the [VS Code settings](/reference/vscode-settings/#debug).
 
+## The output of a run
+
+A run writes its output to RobotCode's run terminal, named after the run, such as **RobotCode: Run Tests robotcode-demo**. Before each run, the terminal shows the run's command line after `* Executing:` as you would type it, starting with `robotcode`, with the configuration profiles and the other options of the run, so that you can check them; **Copy Command** copies it in full, with the interpreter. Robot Framework runs there without a shell, with the terminal as its input and output: its colors and its progress line work, and <kbd>Ctrl+C</kbd> stops the run as in a shell. Every run uses the interpreter of the workspace folder; the Python extensions do not activate an environment in this terminal.
+
+VS Code marks the command line of each run with its command decoration, blue when the run passed and red when it failed. A click on it offers **Copy Command**, **Copy Output** and the other entries of VS Code's menu for commands; **Rerun Command** does nothing here. <kbd>Ctrl+↑</kbd> and <kbd>Ctrl+↓</kbd> (<kbd>Cmd+↑</kbd> and <kbd>Cmd+↓</kbd> on macOS) jump between the runs, and while you scroll through the output of a run, its command line stays at the top of the terminal.
+
+After the run, the terminal keeps the output and says that RobotCode will reuse it: the next run with the same name runs in it, below the earlier output, and any key closes it. A run that starts while the terminal is still busy gets a terminal of its own.
+
+The setting [`robotcode.debug.defaultConsole`](/reference/vscode-settings/#robotcode.debug.defaultConsole), or `console` in a launch configuration, chooses where a run writes its output:
+
+| Value | Output |
+| --- | --- |
+| `robotcodeTerminal` | RobotCode's run terminal, the default. |
+| `integratedTerminal` | A shell in VS Code's integrated terminal, which stays open after the run. |
+| `internalConsole` | The Debug Console, without a terminal. |
+| `externalTerminal` | A terminal window outside VS Code, as set in VS Code's `terminal.external.*` settings. |
+
 ## The log after a run
 
 With [`robotcode.run.openOutputAfterRun`](/reference/vscode-settings/#robotcode.run.openOutputAfterRun) set to `log` or `report`, RobotCode opens the log or report of a run when it ends, by default in VS Code's browser beside the editor; [`robotcode.run.openOutputTarget`](/reference/vscode-settings/#robotcode.run.openOutputTarget) opens it in your web browser instead.

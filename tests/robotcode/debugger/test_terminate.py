@@ -1,8 +1,10 @@
+import asyncio
 import io
 import os
+import signal
 import threading
 from pathlib import Path
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Iterator, List, Optional, Tuple
 
 import pytest
 import robot
@@ -16,6 +18,7 @@ from robotcode.debugger.dap_types import (
     StoppedEvent,
 )
 from robotcode.debugger.debugger import Debugger, RequestedState, State
+from robotcode.debugger.server import DebugAdapterServerProtocol
 
 SUITE = """\
 *** Test Cases ***
@@ -191,3 +194,45 @@ def test_a_pause_that_began_as_terminate_arrived_ends_at_once() -> None:
         debugger.terminated = False
         debugger.requested_state = RequestedState.Nothing
         debugger.state = State.Stopped
+
+
+@pytest.fixture
+def server_protocol(monkeypatch: pytest.MonkeyPatch) -> Iterator[Tuple[DebugAdapterServerProtocol, List[int]]]:
+    """The server's protocol without a client, and the signals that its `terminate` request raises."""
+    signals: List[int] = []
+    monkeypatch.setattr("robotcode.debugger.server.signal.raise_signal", signals.append)
+    protocol = DebugAdapterServerProtocol()
+    monkeypatch.setattr(protocol, "send_event", lambda event: None)
+
+    async def send_event_async(event: Event) -> None:
+        pass
+
+    monkeypatch.setattr(protocol, "send_event_async", send_event_async)
+    try:
+        yield protocol, signals
+    finally:
+        Debugger.instance.send_event.remove(protocol.on_debugger_send_event)
+        Debugger.instance.terminated = False
+
+
+def test_a_terminate_request_after_the_run_has_ended_raises_no_signal(
+    server_protocol: Tuple[DebugAdapterServerProtocol, List[int]],
+) -> None:
+    # VS Code sends it after a run from the Test Explorer; a signal would end the process with 253 and skip its exit
+    # handlers, such as the one with which the Browser library closes its browsers (issue #635)
+    protocol, signals = server_protocol
+    protocol.exit(0)
+
+    asyncio.run(protocol._terminate())
+
+    assert signals == []
+
+
+def test_a_terminate_request_during_the_run_interrupts_it(
+    server_protocol: Tuple[DebugAdapterServerProtocol, List[int]],
+) -> None:
+    protocol, signals = server_protocol
+
+    asyncio.run(protocol._terminate())
+
+    assert signals == [signal.SIGINT]
