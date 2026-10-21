@@ -40,7 +40,7 @@
   - Find Usages on a keyword definition names it "Keyword" in the Find tool window. LSP4IJ counts the definition as a usage, so there is no "not found" message for keywords.
   - the documentation on Ctrl+hover over a variable is as before;
   - `idea.log` has no new entries from the provider.
-- [ ] 4.2 Mark the title part of L1 as done in `playground/pycharm-befunde.md`, with the date and the commit. The count of the usages stays open.
+- [x] 4.2 Mark the title part of L1 as done in `playground/pycharm-befunde.md`, with the date and the commit. The count of the usages stays open.
 
 ## 5. Picture in the PyCharm guide
 
