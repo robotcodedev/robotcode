@@ -38,7 +38,15 @@
   - `idea.log` has no new entries from the provider.
 - [ ] 4.2 Mark the title part of L1 as done in `playground/pycharm-befunde.md`, with the date and the commit. The count of the usages stays open.
 
+## 5. Picture in the PyCharm guide
+
+- [ ] 5.1 Take `docs/src/assets/screenshots/pycharm/finding-usages-light.png` and `-dark.png` again. Use only the `finding-usages` part of `playground/robotcode-demo/pycharm/guide-finding.sh`, not `finding-structure`, and follow the guide-screenshot steps in `reference_intellij_headless_harness`. Verify that:
+  - both pictures show the title "Keyword Open Shop As";
+  - apart from the title they match the old pictures in size, content and theme;
+  - `npm run docs:build` passes.
+
+  The text and alt text of `guides/pycharm/finding-information.mdx` stay as they are, because they don't name the title.
+
 ## Workflow follow-up
 
 - Commit and archive only when the maintainer asks for it.
-- The picture `finding-usages` of the PyCharm guide still shows the old title. Take it again only when the maintainer asks for it.

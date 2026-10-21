@@ -34,4 +34,5 @@ _None._
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/psi/ElementTypes.kt`: three debug names.
 - `intellij-client/src/main/resources/messages/RobotCode.properties`: the words of the kinds.
 - Platform tests of the provider.
+- `docs/src/assets/screenshots/pycharm/finding-usages-{light,dark}.png`: the pictures of Show Usages in the PyCharm guide, taken again with the new title.
 - Users of the plugin: other titles in Show Usages and other wording in Find Usages messages. Nothing else changes in what the IDE finds or shows.
