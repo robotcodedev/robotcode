@@ -109,7 +109,7 @@ The page Test Explorer SHALL explain with screenshots how tests and tasks get in
 
 ### Requirement: Running and debugging in VS Code
 
-The page Running and debugging SHALL explain with screenshots how to run and debug tests from the editor, with the icons beside the tests and with Run or Debug Current File, the `launch.json` configurations RobotCode offers, breakpoints, the Debug Console and inline values, how to open the log after a run, and how to choose the configuration profiles for a run. It SHALL link to the Test Explorer page.
+The page Running and debugging SHALL explain with screenshots how to run and debug tests from the editor, with the icons beside the tests and with Run or Debug Current File, the `launch.json` configurations RobotCode offers, breakpoints, the Debug Console and inline values, where the output of a run appears and which console values there are, how to open the log after a run, and how to choose the configuration profiles for a run. It SHALL link to the Test Explorer page.
 
 #### Scenario: Icons beside the tests
 - **WHEN** a reader opens `/guides/vscode/running-and-debugging/`
@@ -126,6 +126,10 @@ The page Running and debugging SHALL explain with screenshots how to run and deb
 #### Scenario: Profiles for a run
 - **WHEN** a reader opens `/guides/vscode/running-and-debugging/`
 - **THEN** the page shows how to choose configuration profiles with "RobotCode: Select Configuration Profiles"
+
+#### Scenario: Output of a run
+- **WHEN** a reader opens `/guides/vscode/running-and-debugging/`
+- **THEN** the page explains that a run's output appears in RobotCode's run terminal, which shows the command line before each run, is reused and closes on a key, and names the console values `robotcodeTerminal`, `integratedTerminal`, `internalConsole` and `externalTerminal` with the setting `robotcode.debug.defaultConsole`
 
 ### Requirement: Configuration in VS Code
 
