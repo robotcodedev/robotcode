@@ -135,8 +135,9 @@ export class RunTerminals implements vscode.Disposable {
     const windows = platform === "win32";
     const terminal = (pending.terminal = vscode.window.createTerminal({
       name,
-      shellPath: windows ? process.env.ComSpec ?? "cmd.exe" : process.execPath,
-      shellArgs: windows ? ["/d", "/s", "/c", `"${process.execPath}" "${this.scriptPath}"`] : [this.scriptPath],
+      // The Windows GUI executable needs a console shell to inherit the terminal's standard handles.
+      shellPath: windows ? (process.env.ComSpec ?? "cmd.exe") : process.execPath,
+      shellArgs: windows ? ["/d", "/c", `"${process.execPath}" "${this.scriptPath}"`] : [this.scriptPath],
       cwd: folder?.uri,
       env: { ELECTRON_RUN_AS_NODE: "1", ROBOTCODE_RUN_TERMINAL_SOCKET: socketPath, ROBOTCODE_RUN_TERMINAL_KEY: key },
       iconPath: new vscode.ThemeIcon("robotcode-robot"),
