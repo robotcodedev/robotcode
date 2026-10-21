@@ -132,10 +132,11 @@ export class RunTerminals implements vscode.Disposable {
     this._pending.set(key, pending);
 
     // Created hidden and shown at once, as the REPL's terminal: the Python extensions type no activation into it.
+    const windows = platform === "win32";
     const terminal = (pending.terminal = vscode.window.createTerminal({
       name,
-      shellPath: process.execPath,
-      shellArgs: [this.scriptPath],
+      shellPath: windows ? process.env.ComSpec ?? "cmd.exe" : process.execPath,
+      shellArgs: windows ? ["/d", "/s", "/c", `"${process.execPath}" "${this.scriptPath}"`] : [this.scriptPath],
       cwd: folder?.uri,
       env: { ELECTRON_RUN_AS_NODE: "1", ROBOTCODE_RUN_TERMINAL_SOCKET: socketPath, ROBOTCODE_RUN_TERMINAL_KEY: key },
       iconPath: new vscode.ThemeIcon("robotcode-robot"),
