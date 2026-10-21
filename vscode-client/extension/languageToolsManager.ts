@@ -22,6 +22,7 @@ import * as path from "path";
 import * as fs from "fs-extra";
 
 const NOT_INSTALLED = "not installed";
+const UNKNOWN = "unknown";
 
 type QuickPickActionItem = {
   label?: string;
@@ -628,11 +629,17 @@ export class LanguageToolsManager {
     const robotProblem = environmentState?.problem;
     const installedRobotVersion = environmentState?.robotVersion;
 
+    // the version of the language server, else the one the environment check found; while Robot Framework cannot be
+    // checked, because the interpreter has a problem or the first check runs, it is unknown
     this.robotVersion.text = `$(robotcode-robot) ${
       projectInfo?.robotVersionString ??
-      (robotProblem === "robotTooOld" && installedRobotVersion !== undefined
-        ? `${installedRobotVersion} (not supported)`
-        : NOT_INSTALLED)
+      (environmentState?.state === "usable" && installedRobotVersion !== undefined
+        ? installedRobotVersion
+        : robotProblem === "robotTooOld" && installedRobotVersion !== undefined
+          ? `${installedRobotVersion} (not supported)`
+          : robotProblem === "robotMissing"
+            ? NOT_INSTALLED
+            : UNKNOWN)
     }`;
     this.robotVersion.detail = `Robot Framework Version${
       robotProblem === "robotMissing"
@@ -642,10 +649,10 @@ export class LanguageToolsManager {
           : ""
     }`;
 
-    if (projectInfo !== undefined) {
-      this.robotVersion.severity = LanguageStatusSeverity.Information;
-    } else {
+    if (isRobotFrameworkProblem(robotProblem)) {
       this.robotVersion.severity = LanguageStatusSeverity.Error;
+    } else {
+      this.robotVersion.severity = LanguageStatusSeverity.Information;
     }
 
     this.robocopVersion.text = `$(robotcode-robocop) ${projectInfo?.robocopVersionString ?? NOT_INSTALLED}`;
@@ -689,7 +696,9 @@ export class LanguageToolsManager {
       tooltip: pythonInfo?.path,
     };
 
-    if (projectInfo !== undefined || (environmentState?.state === "usable" && pythonProblem === undefined)) {
+    // a problem of the interpreter, which the detail names, or no interpreter at all; a missing Robot Framework marks
+    // the Robot Framework item
+    if (pythonProblem === undefined && pythonInfo !== undefined) {
       this.pythonVersion.severity = LanguageStatusSeverity.Information;
     } else {
       this.pythonVersion.severity = LanguageStatusSeverity.Error;
