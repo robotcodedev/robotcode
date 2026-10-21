@@ -9,6 +9,8 @@ import com.intellij.psi.PsiManager
 import com.redhat.devtools.lsp4ij.features.semanticTokens.viewProvider.LSPSemanticTokensFileViewProvider
 import com.redhat.devtools.lsp4ij.features.semanticTokens.viewProvider.LSPSemanticTokensSingleRootFileViewProvider
 import dev.robotcode.robotcode4ij.RobotFrameworkLanguage
+import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.atomic.AtomicReference
 
 class RobotCodeTokensFileViewProviderFactory : FileViewProviderFactory {
     override fun createFileViewProvider(
@@ -32,10 +34,33 @@ class RobotCodeTokensFileViewProvider(
 ) : LSPSemanticTokensSingleRootFileViewProvider(manager, file, eventSystemEnabled, language),
     LSPSemanticTokensFileViewProvider {
 
+    // the types of the tokens, which LSP4IJ keeps to itself, for the current version of the file; held here and not in a
+    // cached value, which the garbage collector may drop while LSP4IJ still has its tokens
+    private val recorded = AtomicReference(RecordedTokens(-1))
+
     override fun addSemanticToken(textRange: TextRange, tokenType: String?, tokenModifiers: List<String>?) {
         if (hidesServerTokens(textRange, tokenModifiers, ::getSemanticTokenTextRange)) return
         super.addSemanticToken(textRange, tokenType, tokenModifiers)
+        if (tokenType == null || textRange.isEmpty) return
+        val stamp = getPsi(baseLanguage)?.modificationStamp ?: return
+        val tokens = recorded.updateAndGet { if (it.stamp == stamp) it else RecordedTokens(stamp) }
+        tokens.byStart[textRange.startOffset] = RecordedToken(textRange.endOffset, tokenType)
     }
+
+    /** The type of the semantic token at [offset], as the language server sent it; null without a token. */
+    internal fun semanticTokenTypeAt(offset: Int): String? {
+        val tokens = recorded.get()
+        if (tokens.stamp != getPsi(baseLanguage)?.modificationStamp) return null
+        val token = tokens.byStart.floorEntry(offset)?.value ?: return null
+        return token.type.takeIf { offset < token.endOffset }
+    }
+
+    // by start offset: the server's tokens do not overlap
+    private class RecordedTokens(val stamp: Long) {
+        val byStart = ConcurrentSkipListMap<Int, RecordedToken>()
+    }
+
+    private class RecordedToken(val endOffset: Int, val type: String)
 }
 
 // After a successful Go to Declaration, LSP4IJ marks the whole PSI element as one reference token. It passes no

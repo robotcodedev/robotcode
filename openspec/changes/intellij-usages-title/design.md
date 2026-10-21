@@ -4,7 +4,7 @@
 
 See proposal.md for the motivation and specs/intellij-navigation/spec.md for the behavior. What the change builds on:
 
-- **The title:** Show Usages titles its popup with `UsageViewUtil.getType(element)` and `UsageViewUtil.getLongName(element)`, plus the location (`ShowUsagesAction.getUsagesTitle`). Find Usages uses the type and the short name in its messages, such as "Usages of … were not found". Both ask the `elementDescriptionProvider`s in order; the first non-null answer wins. Without an answer, the platform asks the language's `FindUsagesProvider` (none is registered for `robotframework`), then splits the class name into words.
+- **The title:** Show Usages titles its popup with `UsageViewUtil.getType(element)` and `UsageViewUtil.getLongName(element)`, plus the location (`ShowUsagesAction.getUsagesTitle`). Find Usages shows the type in its tool window and uses it in its messages, such as "Usages of … were not found"; with LSP4IJ, the definition itself counts as a usage, so that message does not appear for keywords. Both ask the `elementDescriptionProvider`s in order; the first non-null answer wins. Without an answer, the platform asks the language's `FindUsagesProvider` (none is registered for `robotframework`), then splits the class name into words.
 - **LSP4IJ 0.21.0, `LSPUsageElementDescriptionProvider`** (order `last`, unchanged upstream since 63a35550):
   - It swaps an `LSPUsageTriggeredPsiElement` for `file.findElementAt(offset)`, which in a Robot file is a leaf of RobotCode's own PSI.
   - It answers only for `LSPPsiElement`s, so for that leaf it returns null.
@@ -29,7 +29,7 @@ See proposal.md for the motivation and specs/intellij-navigation/spec.md for the
 
   - The plugin's lexer gives `ARGUMENT` for the keyword in `Test Setup`, for the inner keyword, for import names and for tags.
   - LSP4IJ keeps the types in package-private classes. Only standard LSP types (`variable`, `namespace`) can be reached, through `findReferenceAt`.
-  - LSP4IJ keeps its tokens in a `CachedValue` of the PSI file that depends on the file. After Go to Declaration it adds a token of type `type` with null modifiers, which `RobotCodeTokensFileViewProvider` drops where the server sent tokens (issue #464).
+  - LSP4IJ keeps its tokens in a `CachedValue` of the PSI file that depends on the file, one entry per character of a token. The platform holds such a value through a soft reference (`CachedValueImpl`), so the garbage collector may drop it before the file changes; LSP4IJ then gets the tokens again with the next highlighting. After Go to Declaration it adds a token of type `type` with null modifiers, which `RobotCodeTokensFileViewProvider` drops where the server sent tokens (issue #464).
 
 ## Goals / Non-Goals
 
@@ -54,9 +54,16 @@ Alternatives:
 
 ### The kind comes from a record of the token types
 
-`RobotCodeTokensFileViewProvider.addSemanticToken` already sees every token before it hands it to LSP4IJ. For each token it keeps, it records the type by offset in a `CachedValue` of the PSI file that depends on the file, as LSP4IJ does, so both records are dropped together. The provider looks up the type at the element's offset.
+`RobotCodeTokensFileViewProvider.addSemanticToken` already sees every token before it hands it to LSP4IJ. For each token it keeps, it records the type with the token's start and end offset. The record belongs to the PSI file's modification stamp:
+- A token of a newer version of the file starts a new record.
+- A lookup for another version finds nothing.
+
+The provider looks up the type at the element's offset: the token with the nearest start at or before it, if it ends after it. The server's tokens do not overlap.
+
+The record is a field of the view provider, not a `CachedValue`. It lives as long as the view provider and changes only with the file, so the garbage collector cannot take it while LSP4IJ still has its tokens. One entry per token, not per character, keeps it small.
 
 Alternatives:
+- A `CachedValue` of the PSI file, as LSP4IJ keeps its tokens: the garbage collector may drop it on its own, and the kinds would fall back to the lexer until the next highlighting.
 - Reading LSP4IJ's tokens by reflection: package-private, and breaks without notice.
 - The lexer alone: it sees the keyword in `Test Setup`, inner keywords and import names as arguments.
 - A request to the language server: the provider runs in a read action and must not wait. LSP has no request for the kind of a place.
@@ -97,4 +104,4 @@ The words are in `RobotCode.properties`, in lower case like Python's "function" 
 - [Places of the lexer kind `ARGUMENT`, such as the keyword in `Test Setup`, are called "symbol" until the server's tokens arrive] → They are named correctly as soon as the tokens are there, which happens right after the file is analyzed. Show Usages needs the server anyway.
 - [A declaration in a file of another language keeps LSP4IJ's words] → In the harness, variables from a Python variable file and from `robot.toml` stayed on the place in the Robot file. Other declarations of that kind were not seen.
 - [LSP4IJ renames or moves `LSPPsiElement`] → The build breaks or the provider stops answering, which brings back today's title. Platform tests pin the words down.
-- [One more map per open Robot file] → It has the same size as LSP4IJ's own token map and is dropped with it.
+- [One more record per open Robot file, held as long as its view provider] → One entry per token, a small part of LSP4IJ's own token map with one entry per character. It goes with the view provider when the platform drops the file's PSI.

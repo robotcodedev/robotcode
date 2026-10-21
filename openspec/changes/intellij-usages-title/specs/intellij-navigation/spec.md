@@ -50,10 +50,10 @@ When Show Usages or Find Usages starts in a Robot Framework file, the IDE SHALL 
 - **WHEN** Show Usages starts on `smoke` in `[Tags]    smoke`
 - **THEN** the popup's title starts with "Symbol smoke"
 
-#### Scenario: Find Usages finds nothing
+#### Scenario: Find Usages
 
-- **WHEN** Find Usages on a keyword finds no usages in the chosen scope
-- **THEN** its message calls it a keyword, without a class name
+- **WHEN** Find Usages starts on the name of the keyword definition `Unused Helper`
+- **THEN** the Find tool window names what it searched for "Keyword" and "Unused Helper", without a class name
 
 #### Scenario: Before the language server has sent its tokens
 

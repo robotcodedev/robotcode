@@ -69,6 +69,8 @@
 		<lang.fileViewProviderFactory
 			language="robotframework"
 			implementationClass="dev.robotcode.robotcode4ij.lsp.RobotCodeTokensFileViewProviderFactory"/>
+		<elementDescriptionProvider implementation="dev.robotcode.robotcode4ij.lsp.RobotCodeUsageDescriptionProvider"
+									order="first"/>
 
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 		<postStartupActivity

@@ -2,7 +2,7 @@
 
 ## Why
 
-In Robot Framework files, Show Usages titles its popup "LSP Usage Triggered Psi Element **Open Shop As**", and Find Usages uses the same words in its messages. That is LSP4IJ's class name split into words (L1 of the PyCharm findings). LSP4IJ 0.21.0 describes only its own elements and returns nothing once it finds RobotCode's own PSI at the place, so the platform falls back to the class name. On a local variable or a keyword argument the popup goes to the declaration instead, and the title reads "LSP Symbol **${**", where even the name is wrong. Elsewhere in PyCharm the title names the kind of thing searched for, such as "Function foo".
+In Robot Framework files, Show Usages titles its popup "LSP Usage Triggered Psi Element **Open Shop As**", and the Find tool window of Find Usages uses the same words. That is LSP4IJ's class name split into words (L1 of the PyCharm findings). LSP4IJ 0.21.0 describes only its own elements and returns nothing once it finds RobotCode's own PSI at the place, so the platform falls back to the class name. On a local variable or a keyword argument the popup goes to the declaration instead, and the title reads "LSP Symbol **${**", where even the name is wrong. Elsewhere in PyCharm the title names the kind of thing searched for, such as "Function foo".
 
 ## What Changes
 
@@ -28,11 +28,11 @@ _None._
 ## Impact
 
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/lsp/`:
-  - `RobotCodeTokensFileViewProvider.kt` records the type of each semantic token it keeps.
+  - `RobotCodeTokensFileViewProviderFactory.kt`: the view provider records the type of each semantic token it keeps.
   - A new description provider names the kind and the name.
   - `plugin.xml` registers the provider ahead of LSP4IJ's.
 - `intellij-client/src/main/kotlin/dev/robotcode/robotcode4ij/psi/ElementTypes.kt`: three debug names.
 - `intellij-client/src/main/resources/messages/RobotCode.properties`: the words of the kinds.
-- Platform tests of the provider.
+- Platform tests of the record and of the provider.
 - `docs/src/assets/screenshots/pycharm/finding-usages-{light,dark}.png`: the pictures of Show Usages in the PyCharm guide, taken again with the new title.
-- Users of the plugin: other titles in Show Usages and other wording in Find Usages messages. Nothing else changes in what the IDE finds or shows.
+- Users of the plugin: other titles in Show Usages and other words in the Find tool window. Nothing else changes in what the IDE finds or shows.
