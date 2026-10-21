@@ -4,6 +4,7 @@ on:
   # dev builds, not at the full hour, when GitHub delays scheduled runs under load
   schedule:
     - cron: "23 2 * * *"
+      timezone: "Europe/Berlin"
 
   workflow_dispatch:
 
