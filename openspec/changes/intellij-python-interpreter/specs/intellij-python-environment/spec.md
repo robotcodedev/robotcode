@@ -1,9 +1,5 @@
 # Spec Delta
 
-## Purpose
-
-Defines which Python interpreter the IntelliJ plugin uses for RobotCode, which interpreters it accepts, how and when it checks them, and what it tells the user about an interpreter it cannot use.
-
 ## ADDED Requirements
 
 ### Requirement: One interpreter for the project
@@ -33,6 +29,11 @@ When several modules count and the user has not chosen one, the plugin SHALL det
 
 - **WHEN** of two modules only "ModuleB" has a `pyproject.toml` that lists `robotframework` as a dependency, and neither contains Robot Framework files yet
 - **THEN** the plugin uses the interpreter of "ModuleB"
+
+#### Scenario: A module without roots before the Robot Framework module
+
+- **WHEN** "ModuleA" has the same interpreter as "ModuleB" but no content roots, and "ModuleB" has the project folder with a `robot.toml` as content root and the folder `shared` marked as Sources, which holds `common.resource`
+- **THEN** the plugin uses "ModuleB", the project folder and `shared` are on the Python path of the analysis, and a suite that imports `common.resource` by its name finds it
 
 ### Requirement: Several Robot Framework modules: the user is asked
 

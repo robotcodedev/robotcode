@@ -1,9 +1,5 @@
 # Spec Delta
 
-## Purpose
-
-Defines what a Robot Framework run configuration of the IntelliJ plugin runs, how it is stored, edited, shared and reused, and which arguments its runs pass to `robotcode` and Robot Framework.
-
 ## ADDED Requirements
 
 ### Requirement: Problems are reported before a run
@@ -22,15 +18,6 @@ While a Robot Framework run configuration is edited and when it is started, the 
 
 - **WHEN** a configuration has no Python interpreter
 - **THEN** the editor shows PyCharm's own error about the missing interpreter, and no second error from RobotCode about it
-
-### Requirement: Remote interpreters are reported before a run
-
-While a Robot Framework run configuration is edited and when it is started, the plugin SHALL report an error when the configuration's interpreter is a remote one, which Robot Framework runs do not support yet.
-
-#### Scenario: Remote interpreter
-
-- **WHEN** a configuration's interpreter is a WSL, Docker or SSH interpreter
-- **THEN** the editor shows the error that Robot Framework runs with remote interpreters are not supported yet, before the configuration is run
 
 ### Requirement: Problems of the run target are reported before a run
 
@@ -54,3 +41,19 @@ An error about a run configuration SHALL keep the run from starting; a warning S
 
 - **WHEN** a configuration uses an interpreter that RobotCode has not checked yet, and the user opens the configuration in the editor
 - **THEN** the editor opens without delay and reports nothing about the interpreter, and a check of it starts in the background
+
+## MODIFIED Requirements
+
+### Requirement: Runs with remote interpreters
+
+A run whose interpreter is remote, such as WSL, Docker or SSH, SHALL NOT start a process and SHALL report that Robot Framework runs with remote interpreters are not supported yet. The editor of the run configuration SHALL show this as an error before the configuration is run.
+
+#### Scenario: Remote interpreter
+
+- **WHEN** a configuration's interpreter is a WSL interpreter and the user runs it
+- **THEN** no process starts, and the user sees that Robot Framework runs with remote interpreters are not supported yet
+
+#### Scenario: Remote interpreter in the editor
+
+- **WHEN** a configuration's interpreter is a WSL, Docker or SSH interpreter and the user opens the configuration in the editor
+- **THEN** the editor shows the error that Robot Framework runs with remote interpreters are not supported yet, before the configuration is run
