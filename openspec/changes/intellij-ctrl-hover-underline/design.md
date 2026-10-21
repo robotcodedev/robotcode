@@ -26,10 +26,10 @@ See proposal.md for the motivation and specs/intellij-navigation/spec.md for the
   - The same as HEAD: Ctrl+click targets, colors and the titles of Show Usages.
   - Nothing underlined, as at HEAD: `Given`, a keyword definition and tags.
 - **Find Usages and Show Usages** take their target from the `usageTargetProvider`s. `UsageTargetUtil.findUsageTargets` collects the targets of all providers in their order, and the actions use the first one.
-  - LSP4IJ's `LSPUsageTargetProvider` (order `last`) builds an `LSPUsageTriggeredPsiElement` over `LSPIJUtils.getWordRangeAt`. For a language other than plain text and TextMate, that range is the PSI leaf at the caret (`findBestTextRangeAt` → `file.findElementAt`).
+  - LSP4IJ's `LSPUsageTargetProvider` (order `last`) builds an `LSPUsageTriggeredPsiElement` over `LSPIJUtils.getWordRangeAt`. For a language other than plain text and TextMate, that range is the PSI leaf before the caret (`findBestTextRangeAt` → `file.findElementAt(offset - 1)`).
   - LSP4IJ asks the server for the references at the element's start, so on `Log` in `BuiltIn.Log` it searches from `BuiltIn` and finds the library.
   - `LSPUsageTriggeredPsiElement` has a public constructor (file and range).
-  - Measured, the same at HEAD and with the change:
+  - Measured without the usage target provider, at HEAD e1c53fca and with tasks 1.1–1.2:
     - Find Usages on `Log` in `BuiltIn.Log` shows "Namespace BuiltIn.Log" with `class BuiltIn`, and on `Append To List` the import `Library Collections`.
     - Show Usages jumps to that single result. Without a prefix, `Log` finds its 33 lines.
 - **Quick Documentation** is not affected: at the caret it shows the keyword or the library as it should.

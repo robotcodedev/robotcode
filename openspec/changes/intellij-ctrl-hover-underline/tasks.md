@@ -23,16 +23,16 @@
     - the colors of keyword calls and keyword names;
     - the titles of Show Usages (the checks of L1), apart from the location, which names the definition's file;
     - `idea.log` with no new entries.
-- [ ] 2.2 Mark J10 as done in `playground/pycharm-befunde.md`, with the date and the commit. The report to LSP4IJ stays open there.
+- [x] 2.2 Mark J10 as done in `playground/pycharm-befunde.md`, with the date and the commit. The report to LSP4IJ stays open there.
 
 ## 3. Find Usages and Show Usages
 
-- [ ] 3.1 Add the lookup of a recorded token's range to `RobotCodeTokensFileViewProvider`. Add `RobotCodeUsageTargetProvider`, registered in `plugin.xml` with order `first` (design.md, "Find Usages and Show Usages get a target over the token"). Verify with platform tests on a Robot file with recorded tokens for `BuiltIn` and `Log` in `BuiltIn.Log    x` that the provider's target is:
+- [x] 3.1 Add the lookup of a recorded token's range to `RobotCodeTokensFileViewProvider`. Add `RobotCodeUsageTargetProvider`, registered in `plugin.xml` with order `first` (design.md, "Find Usages and Show Usages get a target over the token"). Verify with platform tests on a Robot file with recorded tokens for `BuiltIn` and `Log` in `BuiltIn.Log    x` that the provider's target is:
   - `Log` with the caret in `Log` or right after it, and `BuiltIn` with the caret in `BuiltIn`;
   - nothing without a token at the caret.
 
   Also verify that `./gradlew test` and `./gradlew verifyPlugin` in `intellij-client/` pass, and that `verifyPlugin` reports no usages beyond the current ones.
-- [ ] 3.2 Check in the headless PyCharm, with the project of 2.1, against a build without the provider. These SHALL behave as in `specs/intellij-navigation/spec.md`:
+- [x] 3.2 Check in the headless PyCharm, with the project of 2.1, against a build without the provider. These SHALL behave as in `specs/intellij-navigation/spec.md`:
   - Find Usages on `Log` in `BuiltIn.Log` and on `BuiltIn`;
   - Show Usages on `Append To List` in `Collections.Append To List`;
   - Find Usages on `Open Shop As` in `Given Open Shop As`.

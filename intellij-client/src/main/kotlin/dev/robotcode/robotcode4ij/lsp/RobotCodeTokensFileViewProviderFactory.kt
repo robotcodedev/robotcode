@@ -55,11 +55,17 @@ class RobotCodeTokensFileViewProvider(
     override fun isDeclaration(offset: Int): Boolean = super.isDeclaration(offset) || super.isReference(offset)
 
     /** The type of the semantic token at [offset], as the language server sent it; null without a token. */
-    internal fun semanticTokenTypeAt(offset: Int): String? {
+    internal fun semanticTokenTypeAt(offset: Int): String? = recordedTokenAt(offset)?.value?.type
+
+    /** The range of the semantic token at [offset]; null without a token. */
+    internal fun semanticTokenRangeAt(offset: Int): TextRange? =
+        recordedTokenAt(offset)?.let { TextRange(it.key, it.value.endOffset) }
+
+    private fun recordedTokenAt(offset: Int): Map.Entry<Int, RecordedToken>? {
         val tokens = recorded.get()
         if (tokens.stamp != getPsi(baseLanguage)?.modificationStamp) return null
-        val token = tokens.byStart.floorEntry(offset)?.value ?: return null
-        return token.type.takeIf { offset < token.endOffset }
+        val token = tokens.byStart.floorEntry(offset) ?: return null
+        return token.takeIf { offset < it.value.endOffset }
     }
 
     // by start offset: the server's tokens do not overlap
