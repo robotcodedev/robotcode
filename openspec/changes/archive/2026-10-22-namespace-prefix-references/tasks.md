@@ -23,7 +23,7 @@
   - `idea.log` with no new entries.
 
   Also note what Find Usages on `BuiltIn` finds now; it searched from the prefix and found only `class BuiltIn` before.
-- [ ] 2.2 Mark J14 as done in `playground/pycharm-befunde.md`, with the date and the commit.
+- [x] 2.2 Mark J14 as done in `playground/pycharm-befunde.md`, with the date and the commit.
 
 ## Workflow follow-up
 
