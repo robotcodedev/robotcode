@@ -1338,7 +1338,7 @@
               "Opens a new viewer in the active editor group."
             ],
             "default": "beside",
-            "markdownDescription": "Where a new Documentation Viewer opens, from \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\" (in the editor and in the Keywords view) and from \"RobotCode: Open Documentation Viewer\"."
+            "markdownDescription": "Where a new Documentation Viewer opens, from \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\" (in the editor and in the Keywords view) and from \"New Documentation Viewer\" (in the command palette and in a viewer's toolbar)."
           },
           "robotcode.documentationViewer.showOutline": {
             "type": "boolean",
@@ -1484,15 +1484,15 @@
         "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView"
       },
       {
-        "title": "Open Documentation Viewer",
+        "title": "New Documentation Viewer",
         "category": "RobotCode",
-        "command": "robotcode.openDocumentationViewer",
+        "command": "robotcode.newDocumentationViewer",
         "icon": "$(book)"
       },
       {
-        "title": "Open Documentation Viewer in New Window",
+        "title": "Copy Documentation Viewer into New Window",
         "category": "RobotCode",
-        "command": "robotcode.openDocumentationViewerInNewWindow",
+        "command": "robotcode.copyDocumentationViewerToNewWindow",
         "icon": "$(empty-window)"
       },
       {
@@ -1611,7 +1611,7 @@
       ],
       "editor/title/context": [
         {
-          "command": "robotcode.openDocumentationViewerInNewWindow",
+          "command": "robotcode.copyDocumentationViewerToNewWindow",
           "when": "activeWebviewPanelId == 'robotcode.documentationViewer'"
         }
       ],

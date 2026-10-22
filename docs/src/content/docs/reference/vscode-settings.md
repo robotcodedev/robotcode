@@ -652,7 +652,7 @@ Starts the internal HTTP server only if needed.
 
 ### `robotcode.documentationViewer.openLocation` {#robotcode.documentationViewer.openLocation}
 
-Where a new Documentation Viewer opens, from "Show in Documentation Viewer" and "Show in New Documentation Viewer" (in the editor and in the Keywords view) and from "RobotCode: Open Documentation Viewer".
+Where a new Documentation Viewer opens, from "Show in Documentation Viewer" and "Show in New Documentation Viewer" (in the editor and in the Keywords view) and from "New Documentation Viewer" (in the command palette and in a viewer's toolbar).
 
 - **Type:** `string`
 - **Default:** `"beside"`

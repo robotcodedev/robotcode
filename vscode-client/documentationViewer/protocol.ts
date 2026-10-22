@@ -141,7 +141,9 @@ export type ViewerMessage =
   | PinMessage
   | { type: "pickFolder" }
   // The page of the load `seq`, as a Markdown document.
-  | { type: "openMarkdown"; seq: number };
+  | { type: "openMarkdown"; seq: number }
+  // A new viewer on `BuiltIn`, in the folder of this viewer.
+  | { type: "newViewer" };
 
 const api = acquireVsCodeApi();
 

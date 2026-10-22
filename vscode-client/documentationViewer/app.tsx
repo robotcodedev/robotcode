@@ -764,6 +764,12 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
             controller.setPinned((event.currentTarget as HTMLElement & { checked: boolean }).checked)
           }
         />
+        <vscode-toolbar-button
+          icon="add"
+          label="New Documentation Viewer"
+          title="New Documentation Viewer"
+          onClick={() => post({ type: "newViewer" })}
+        />
       </vscode-toolbar-container>
       <div class="progress">
         {busy && <vscode-progress-bar indeterminate aria-label="Generating the documentation" />}

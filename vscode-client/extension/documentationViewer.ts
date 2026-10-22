@@ -23,6 +23,9 @@ const ENVIRONMENT_ERROR_DELAY = 30000;
 const PINNED_KEY = "robotcode.documentationViewer.pinned";
 // A window that gets the focus back activates its last active editor for a moment; only a longer activation is use.
 const ACTIVATION_DELAY_MS = 300;
+// How long the button "New Documentation Viewer" waits until VS Code reports its viewer as active; the page of a
+// webview checks its focus only every 250 ms.
+const ACTIVATION_WAIT_MS = 1000;
 
 interface NamedAnchor {
   name: string;
@@ -69,7 +72,8 @@ type ViewerMessage =
   | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean; keptPage?: string }
   | { type: "pin"; pinned: boolean }
   | { type: "pickFolder" }
-  | { type: "openMarkdown"; seq: number };
+  | { type: "openMarkdown"; seq: number }
+  | { type: "newViewer" };
 
 // What a generation depends on besides the folder and the Python command.
 interface GenerationCommand {
@@ -342,8 +346,8 @@ export class DocumentationViewerManager implements vscode.Disposable {
           if (panel.active) this.markUsed(viewer);
         },
       }),
-      vscode.commands.registerCommand("robotcode.openDocumentationViewer", () => this.openViewer()),
-      vscode.commands.registerCommand("robotcode.openDocumentationViewerInNewWindow", () =>
+      vscode.commands.registerCommand("robotcode.newDocumentationViewer", () => this.openViewer()),
+      vscode.commands.registerCommand("robotcode.copyDocumentationViewerToNewWindow", () =>
         this.openViewerInNewWindow(),
       ),
       vscode.commands.registerCommand("robotcode.showInDocumentationViewer", (target: DocumentationTarget) =>
@@ -364,12 +368,34 @@ export class DocumentationViewerManager implements vscode.Disposable {
     this._disposables.dispose();
   }
 
-  private async openViewer(): Promise<void> {
-    const folder = await pickFolder();
+  // The button of a viewer passes the viewer's folder; the command picks one.
+  private async openViewer(folder?: vscode.WorkspaceFolder): Promise<void> {
+    folder ??= await pickFolder();
     if (folder === undefined) return;
 
     const viewer = this.createViewer(openColumn(), false, folder, DEFAULT_TARGET);
     viewer.show({ type: "show", folder: folder.uri.toString(), text: DEFAULT_TARGET, focusTarget: true });
+  }
+
+  // When the button is the first click into the viewer, its message reaches the extension before VS Code reports the
+  // viewer as active. Where a new viewer opens depends on the active editor, so it opens once the viewer is active.
+  private async openViewerFrom(viewer: Viewer): Promise<void> {
+    if (!viewer.disposed && !viewer.panel.active) {
+      await new Promise<void>((resolve) => {
+        const done = () => {
+          clearTimeout(timer);
+          listener.dispose();
+          resolve();
+        };
+        const timer = setTimeout(done, ACTIVATION_WAIT_MS);
+        const listener = viewer.panel.onDidChangeViewState(() => {
+          if (viewer.panel.active) done();
+        });
+      });
+    }
+    if (viewer.disposed) return;
+
+    await this.openViewer(folderOf(viewer.current?.folder) ?? viewer.folder);
   }
 
   private async openViewerInNewWindow(): Promise<void> {
@@ -564,6 +590,9 @@ export class DocumentationViewerManager implements vscode.Disposable {
         break;
       case "openMarkdown":
         void openMarkdown(viewer, message.seq);
+        break;
+      case "newViewer":
+        void this.openViewerFrom(viewer);
         break;
       case "pin":
         if (message.pinned) {
