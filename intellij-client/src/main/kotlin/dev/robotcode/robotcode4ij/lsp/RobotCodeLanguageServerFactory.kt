@@ -10,6 +10,7 @@ import dev.robotcode.robotcode4ij.EnvironmentState
 import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.languageServerEnabled
 import dev.robotcode.robotcode4ij.lsp.features.RobotDiagnosticsFeature
+import dev.robotcode.robotcode4ij.lsp.features.RobotHoverFeature
 import dev.robotcode.robotcode4ij.lsp.features.RobotSemanticTokensFeature
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import org.eclipse.lsp4j.services.LanguageServer
@@ -24,6 +25,7 @@ import org.eclipse.lsp4j.services.LanguageServer
         return super.createClientFeatures()
             .setDiagnosticFeature(RobotDiagnosticsFeature())
             .setSemanticTokensFeature(RobotSemanticTokensFeature())
+            .setHoverFeature(RobotHoverFeature())
     }
     
     override fun createLanguageClient(project: Project): LanguageClientImpl {

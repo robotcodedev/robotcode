@@ -7,12 +7,12 @@ Holding Ctrl over a name in a Robot Framework file SHALL show the documentation 
 #### Scenario: Arguments of a keyword
 
 - **WHEN** Ctrl is held and the mouse rests on `Open Shop As` in `shop.Open Shop As    alice`
-- **THEN** the hint shows the rows of the argument table directly below the heading "Arguments:"
+- **THEN** the hint shows the rows of the argument table below the heading "Arguments:", spaced as in Quick Documentation
 
 #### Scenario: Library import
 
 - **WHEN** Ctrl is held and the mouse rests on `Collections` in `Library    Collections`
-- **THEN** the hint shows the library's version and scope directly below the heading "Library *Collections*"
+- **THEN** the hint shows the library's version and scope below the heading "Library *Collections*", spaced as in Quick Documentation
 
 #### Scenario: Paragraphs of the documentation
 
@@ -27,4 +27,4 @@ Holding Ctrl over a name in a Robot Framework file SHALL show the documentation 
 #### Scenario: Quick Documentation and the hover without Ctrl
 
 - **WHEN** Quick Documentation is opened on `Collections` in `Library    Collections`, or the mouse rests on it without Ctrl
-- **THEN** the documentation shows the library's version and scope directly below the heading and no markup as text
+- **THEN** the documentation shows the heading, the library's version and scope and the introduction, and no markup as text

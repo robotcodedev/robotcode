@@ -52,4 +52,5 @@ Once LSP4IJ puts the HTML into `<html>` itself, `RobotHoverFeature` is removed. 
 
 - [A hover with several contents] → `convertToHtml` joins the contents with `<hr />`, each in its own `<html>` element, and `getHtmlBody` would keep only the first. RobotCode's hovers have one content.
 - [Other uses of an element's short name] → LSP4IJ answers `UsageViewShortNameLocation` with the whole hover HTML, which now comes in `<html>`. RobotCode's own description provider answers only the kind and the long name. The harness check covers the places in the spec; no other place that shows the short name of a Robot Framework element is known.
+- [The hint grows wider with long paragraphs] → The line breaks inside a paragraph no longer break the hint's lines, so IntelliJ makes a hint with long paragraphs as wide as the screen allows. In the harness, the hint of `Collections` grew from about 700 to about 1,400 pixels; before, the wrong `<br>` kept it narrow. Accepted on 2026-10-22.
 - [An LSP4IJ update wraps the HTML itself] → The hint would then get two `<html>` start tags. After an LSP4IJ update the hint is checked, and the workaround is removed when LSP4IJ wraps the HTML.
