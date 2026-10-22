@@ -48,3 +48,4 @@ Alternatives:
 
 - [A client relies on the declaration coming first] → LSP sets no order, and VS Code sorts the locations itself.
 - [A keyword or variable has no usage] → The result then holds only the declaration. LSP4IJ goes straight to it, as before.
+- [LSP Reference(s) on a keyword argument titles its popup "Variable user" instead of "Argument user"] → LSP4IJ titles the popup by the token at the first location, now a use of the argument, which is a `variable` token. The rows stay the same. `argument-usage-tokens` makes these uses `parameter` tokens, which brings the title back.

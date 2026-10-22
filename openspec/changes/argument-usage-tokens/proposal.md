@@ -2,7 +2,7 @@
 
 ## Why
 
-The language server sends a `parameter` token only for the declaration of a keyword's argument in `[Arguments]`. Every use of the argument in the keyword's body is a `variable` token, although LSP defines `parameter` for identifiers that "declare or reference" a parameter. Clients that name a place by its token therefore call a use of `${user}` a variable. In PyCharm, Show Usages started from such a use would be titled "Variable user" instead of "Argument user" once it searches from the name at the caret (J13 of the PyCharm findings).
+The language server sends a `parameter` token only for the declaration of a keyword's argument in `[Arguments]`. Every use of the argument in the keyword's body is a `variable` token, although LSP defines `parameter` for identifiers that "declare or reference" a parameter. Clients that name a place by its token therefore call a use of `${user}` a variable. In PyCharm, Show Usages started from such a use would be titled "Variable user" instead of "Argument user" once it searches from the name at the caret (J13 of the PyCharm findings). LSP Reference(s) on such a use is already titled that way, because LSP4IJ titles its popup by the first location, which is a use since `references-declaration-last`.
 
 ## What Changes
 

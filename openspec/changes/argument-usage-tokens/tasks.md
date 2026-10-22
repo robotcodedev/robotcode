@@ -22,6 +22,7 @@
   - the token at `${user}` in `Log In    ${user}` of `Open Shop As` is `parameter`, read from RobotCode's token record;
   - its colour is unchanged with the default scheme;
   - Show Usages on it is titled "Argument user", as before;
+  - LSP Reference(s) on it is titled "Argument user" again; since `references-declaration-last` it reads "Variable user", because LSP4IJ titles the popup by the first location, a use of `${user}`;
   - `idea.log` has no new entries.
 
 ## Workflow follow-up

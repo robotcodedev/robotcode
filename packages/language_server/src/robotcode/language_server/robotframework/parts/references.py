@@ -260,10 +260,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
         include_declaration: bool = True,
         stop_at_first: bool = False,
     ) -> List[Location]:
-        result = []
-
-        if include_declaration and variable.source:
-            result.append(Location(str(Uri.from_path(variable.source)), variable.name_range))
+        result: List[Location] = []
 
         if variable.type == VariableDefinitionType.LOCAL_VARIABLE:
             result.extend(self.find_variable_references_in_file(document, variable, False))
@@ -273,6 +270,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
                 result.append(next(iter(refs)))
             else:
                 result.extend(refs)
+
+        # the declaration last: LSP4IJ searches from the first location, and finds nothing in a Python file
+        if include_declaration and variable.source:
+            result.append(Location(str(Uri.from_path(variable.source)), variable.name_range))
+
         return result
 
     @_logger.call
@@ -351,14 +353,15 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     ) -> List[Location]:
         result = []
 
-        if include_declaration and kw_doc.source:
-            result.append(Location(str(Uri.from_path(kw_doc.source)), kw_doc.range))
-
         refs = self.parent.documents_cache.get_project_index(document).find_keyword_references(kw_doc)
         if stop_at_first and refs:
             result.append(next(iter(refs)))
         else:
             result.extend(refs)
+
+        # the declaration last: LSP4IJ searches from the first location, and finds nothing in a Python file
+        if include_declaration and kw_doc.source:
+            result.append(Location(str(Uri.from_path(kw_doc.source)), kw_doc.range))
 
         return result
 
