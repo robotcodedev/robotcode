@@ -7,13 +7,16 @@ Robot Framework sets an existing variable again with `EXCEPT    AS    ${name}` a
 - Rename leaves them unchanged, so after a rename they still set the old name.
 - Since `argument-usage-tokens`, their names stay `variable` tokens where every other use of an argument is a `parameter` token.
 
-The gaps were found while checking `argument-usage-tokens` against Robot Framework.
+Robot Framework also resolves the variables in the index of an item assignment, such as `${key}` in `${d}[${key}]=`. RobotCode gives them neither a reference nor a diagnostic.
+
+The gaps were found while checking `argument-usage-tokens` against Robot Framework, the one in the index while implementing this change.
 
 ## What Changes
 
 - `EXCEPT    AS    ${name}` with the name of an argument or a local variable is a reference of that variable, as a FOR variable with that name already is.
 - On Robot Framework 6.1 and newer, an item assignment such as `${items}[0]=` or `${SUITE_DICT}[key]=` is a reference of the variable it changes, whatever its kind.
 - An item assignment to a variable that does not exist reports `VariableNotFound` on its name, because Robot Framework fails there with "Variable '${name}' not found.".
+- A variable in the index of an item assignment, such as `${key}` in `${dict}[${key}]=`, is a use of that variable, with a reference or `VariableNotFound` like any other use, because Robot Framework resolves the index.
 - Both analysis paths, with and without the semantic model, record the same references and report the same diagnostics.
 - Find References, Rename, the document highlight and the semantic tokens follow from the references and need no changes of their own.
 

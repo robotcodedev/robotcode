@@ -281,6 +281,23 @@ def test_local_variable_of_the_same_keyword(protocol: Any) -> None:
     assert _plain(tokens[4]) == [("Log", "keywordCall"), ("greeting", "variable")]
 
 
+def test_argument_in_except_as(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol,
+        "*** Keywords ***\nKw\n    [Arguments]    ${error}\n    TRY\n        Fail    boom\n"
+        "    EXCEPT    AS    ${error}\n        No Operation\n    END\n",
+    )
+    assert ("error", "parameter") in _plain(tokens[5])
+
+
+@pytest.mark.skipif(RF_VERSION < (6, 1), reason="item assignments need Robot Framework 6.1")
+def test_argument_in_an_item_assignment(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol, "*** Keywords ***\nKw\n    [Arguments]    @{items}\n    ${items}[0]=    Set Variable    x\n"
+    )
+    assert _plain(tokens[3]) == [("items", "parameter"), ("Set Variable", "keywordCall")]
+
+
 def test_embedded_argument(protocol: Any) -> None:
     tokens = _tokens(protocol, "*** Keywords ***\nOpen ${shop} Now\n    Log    ${shop}\n")
     assert ("shop", "variable") in _plain(tokens[1])

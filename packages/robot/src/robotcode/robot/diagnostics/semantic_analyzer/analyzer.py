@@ -3210,7 +3210,10 @@ class SemanticAnalyzer(Visitor):
                     ignore_errors=True,
                 )
 
-                if not matcher.is_assign(allow_assign_mark=True, allow_nested=True) or matcher.name is None:
+                if (
+                    not matcher.is_assign(allow_assign_mark=True, allow_nested=True, allow_items=True)
+                    or matcher.name is None
+                ):
                     return
 
                 if RF_VERSION >= (7, 0) and contains_variable(matcher.base, "$@&%"):
@@ -3254,6 +3257,19 @@ class SemanticAnalyzer(Visitor):
                 stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
 
                 if matcher.items:
+                    # Robot Framework resolves the variables in the index; the search without types keeps a type
+                    # in the base, so the index starts after it
+                    raw = search_variable(matcher.string, ignore_errors=True)
+                    items_start = raw.start + len(raw.identifier) + len(raw.base) + 2
+                    items_token = Token(
+                        Token.ARGUMENT,
+                        matcher.string[items_start : raw.end],
+                        assign_token.lineno,
+                        assign_token.col_offset + items_start,
+                    )
+                    for var_token, var in self._iter_variables_from_token(items_token):
+                        self._handle_find_variable_result(var_token, var)
+
                     existing_var = self._find_variable(name)
                     if existing_var is None:
                         self._handle_find_variable_result(
@@ -3502,18 +3518,21 @@ class SemanticAnalyzer(Visitor):
                 if not matcher.is_scalar_assign():
                     return
 
-                if (
-                    next(
-                        (
-                            k
-                            for k, v in self._variables.items()
-                            if k == matcher
-                            and v.type in [VariableDefinitionType.ARGUMENT, VariableDefinitionType.LOCAL_VARIABLE]
-                        ),
-                        None,
+                existing_var = next(
+                    (
+                        v
+                        for k, v in self._variables.items()
+                        if k == matcher
+                        and v.type in [VariableDefinitionType.ARGUMENT, VariableDefinitionType.LOCAL_VARIABLE]
+                    ),
+                    None,
+                )
+                if existing_var is not None:
+                    # EXCEPT AS sets the existing variable again, like a FOR variable of that name
+                    self._variable_references[existing_var].add(
+                        Location(self._document_uri, range_from_token(strip_variable_token(variable_token)))
                     )
-                    is None
-                ):
+                else:
                     var_def = LocalVariableDefinition(
                         name=variable_token.value,
                         name_token=strip_variable_token(variable_token),

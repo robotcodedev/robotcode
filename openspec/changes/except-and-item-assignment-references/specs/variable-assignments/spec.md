@@ -42,6 +42,20 @@ When a statement sets a variable that already exists, the analysis SHALL record 
 - **WHEN** the same file is analyzed with the semantic model enabled
 - **THEN** Find References lists the same locations
 
+### Requirement: Variables in the index of an item assignment are uses
+
+On Robot Framework 6.1 and newer, a variable in the index of an item assignment, such as `${key}` in `${dict}[${key}]=`, SHALL be a use of that variable on both analysis paths: the analysis SHALL record a reference to it, or report `VariableNotFound` when it does not exist, as Robot Framework resolves the index at run time.
+
+#### Scenario: Known variable in the index
+
+- **WHEN** a test contains `${key}=    Set Variable    k`, `${d}=    Create Dictionary` and `${d}[${key}]=    Set Variable    v`, on Robot Framework 6.1 or newer
+- **THEN** Find References on `${key}` lists `key` in the item assignment
+
+#### Scenario: Unknown variable in the index
+
+- **WHEN** a test contains `${d}=    Create Dictionary` and `${d}[${missing}]=    Set Variable    v`, and no variable `${missing}` exists, on Robot Framework 6.1 or newer
+- **THEN** the error `VariableNotFound` with the message "Variable '${missing}' not found." is reported on the name of `${missing}`
+
 ### Requirement: Item assignment to a variable that does not exist
 
 On Robot Framework 6.1 and newer, an item assignment to a variable that does not exist SHALL report the error `VariableNotFound` on the name of that variable, on both analysis paths, as Robot Framework fails there at run time.
