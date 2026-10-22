@@ -24,12 +24,12 @@ The **Documentation Viewer** shows the documentation of a library, a resource fi
 
 ## Opening a viewer
 
-- **RobotCode: Open Documentation Viewer** in the command palette opens a new viewer on `BuiltIn`. Its target field has the focus, so you can type the target you want.
+- **RobotCode: New Documentation Viewer** in the command palette opens a new viewer on `BuiltIn`. Its target field has the focus, so you can type the target you want. *New Documentation Viewer*, the last button in a viewer's toolbar, opens one the same way, in the workspace folder of that viewer.
 - **Show in Documentation Viewer** is the first source action (right-click → *Source Action…*). It is offered on the name of a `Library` or `Resource` import, on a keyword in a keyword call, setup, teardown or template, and on the name of a keyword definition. It shows the library, resource file or suite file and scrolls to the keyword. It is the preferred source action, so a key of your own can run it without the menu, see [A key for the source actions](#a-key-for-the-source-actions).
 - **Show in New Documentation Viewer**, offered next to it, shows the same in a new viewer, for example to keep two libraries side by side.
 - In the **Keywords** view, the book button of an import or keyword shows it in the Documentation Viewer, and its context menu has both actions, also for the keywords of the current file.
 - The **links in documentation** that RobotCode shows in a hover, in the details of a completion item, in signature help and in the tooltips of the Keywords view open the viewer, see [Links in hovers and tooltips](#links-in-hovers-and-tooltips).
-- **RobotCode: Open Documentation Viewer in New Window**, in the command palette and in the context menu of a viewer's tab, opens a second viewer in a new window, with the target of the active viewer, or else of the viewer you used last, or `BuiltIn` without any viewer. From a tab's context menu it also copies the active viewer, which need not be the viewer whose tab you clicked.
+- **RobotCode: Copy Documentation Viewer into New Window**, in the command palette and in the context menu of a viewer's tab, opens a second viewer in a new window, with the target of the active viewer, or else of the viewer you used last, or `BuiltIn` without any viewer. From a tab's context menu it also copies the active viewer, which need not be the viewer whose tab you clicked.
 
 <ThemeImage
   name="viewer-source-action"
@@ -102,7 +102,7 @@ A space in the search text matches any white space, also where the documentation
 
 ## Arranging viewers
 
-Several viewers can be open at the same time. You arrange them like editors: drag them into other editor groups or side by side, pin their tabs, or move one into a window of its own with VS Code's *Move Editor into New Window*. A viewer keeps its target, position, history and filter when its tab is hidden, when it is moved, and after a reload of the window. A viewer cannot be split or copied, and *Reopen Closed Editor* does not bring a closed viewer back.
+Several viewers can be open at the same time. You arrange them like editors: drag them into other editor groups or side by side, pin their tabs, or move one into a window of its own with VS Code's *Move Editor into New Window*. A viewer keeps its target, position, history and filter when its tab is hidden, when it is moved, and after a reload of the window. VS Code's *Split Editor* and *Copy Editor into New Window* cannot split or copy a viewer; *RobotCode: Copy Documentation Viewer into New Window* opens a second one in a new window instead, see [Opening a viewer](#opening-a-viewer). *Reopen Closed Editor* does not bring a closed viewer back.
 
 ## Which viewer an action uses
 
