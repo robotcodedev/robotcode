@@ -12,6 +12,7 @@ Find References on the prefix of a keyword call, such as `BuiltIn` in `BuiltIn.L
   - for a library imported with an alias, every call with that alias as prefix.
 - This also holds for the libraries Robot Framework imports by itself, such as `BuiltIn`, which have no import statement.
 - In PyCharm, LSP Reference(s) on a prefix shows these locations.
+- The VS Code guide says that Find All References also works on a prefix.
 
 Not part of this change:
 - Find Usages on resource imports in PyCharm (J13). There the IDE searches the import's definition, which the language server cannot answer, and the fix belongs in the plugin.
@@ -30,5 +31,6 @@ _None._
 ## Impact
 
 - `packages/language_server/src/robotcode/language_server/robotframework/parts/references.py`: the lookup for a position on a prefix and the reuse of the import's references.
-- New tests in `tests/robotcode/language_server/robotframework/parts/test_references.py`. The data files and the existing regression outputs stay as they are.
-- Clients get locations where they got none before: VS Code's Find All References, PyCharm's LSP Reference(s) and Find Usages on a library prefix such as `BuiltIn`.
+- New tests in `tests/robotcode/language_server/robotframework/parts/test_references.py`. The data files stay as they are. The regression outputs of the two markers that already stand on a prefix, `firstresource.` in `references.robot`, change from no result to the references of the import.
+- `docs/src/content/docs/guides/vscode/finding-information.mdx`: one sentence.
+- Clients get locations where they got none before: VS Code's Find All References and PyCharm's LSP Reference(s) on a prefix. PyCharm's Show Usages and Find Usages on the prefix of a library without an import, such as `BuiltIn`, list the prefixed calls besides the library's class.

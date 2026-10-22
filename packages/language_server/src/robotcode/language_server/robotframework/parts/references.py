@@ -150,7 +150,37 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
             if result is not None:
                 return result
 
-        return None
+        return self._references_at_namespace_prefix(document, position, context)
+
+    def _references_at_namespace_prefix(
+        self,
+        document: TextDocument,
+        position: Position,
+        context: ReferenceContext,
+    ) -> Optional[List[Location]]:
+        namespace = self.parent.documents_cache.get_namespace(document)
+
+        # the analysis keeps the range of every prefix of a keyword call, keyed by the library or resource it names
+        entries = [
+            entry
+            for entry, locations in namespace.namespace_references.items()
+            if not isinstance(entry, VariablesEntry) and any(position in location.range for location in locations)
+        ]
+        if not entries:
+            return None
+
+        # a prefix has the references of the import it names
+        result: List[Location] = []
+        for entry in entries:
+            if isinstance(entry, ResourceEntry):
+                result.extend(self._resource_references(document, entry, context))
+            elif entry.alias:
+                result.extend(self._library_alias_references(document, entry, context))
+            else:
+                result.extend(self._library_references(document, entry.library_doc))
+
+        # a prefix can name more than one entry, and their answers overlap
+        return list(dict.fromkeys(result))
 
     def _find_references_in_workspace(
         self,
@@ -388,12 +418,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
             if library_doc is None:
                 return None
 
-            return self._find_references_in_workspace(
-                document,
-                False,
-                self._find_library_import_references_in_file,
-                library_doc,
-            )
+            return self._library_references(document, library_doc)
 
         separator = import_node.get_token(RobotToken.WITH_NAME)
         alias_token = import_node.get_tokens(RobotToken.NAME)[-1] if separator else None
@@ -413,6 +438,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
         if entry is None:
             return None
 
+        return self._library_alias_references(document, entry, context)
+
+    def _library_references(self, document: TextDocument, library_doc: LibraryDoc) -> List[Location]:
+        return self._find_references_in_workspace(
+            document,
+            False,
+            self._find_library_import_references_in_file,
+            library_doc,
+        )
+
+    def _library_alias_references(
+        self, document: TextDocument, entry: LibraryEntry, context: ReferenceContext
+    ) -> List[Location]:
         result = list(self.parent.documents_cache.get_project_index(document).find_namespace_references(entry))
 
         if context.include_declaration and entry.import_source:
@@ -475,6 +513,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
         if entry is None:
             return None
 
+        return self._resource_references(document, entry, context)
+
+    def _resource_references(
+        self, document: TextDocument, entry: ResourceEntry, context: ReferenceContext
+    ) -> List[Location]:
         result = self._find_references_in_workspace(
             document,
             False,

@@ -2,4 +2,175 @@ data: !GeneratedTestData
   character: 4
   line: 105
   name: a keyword with namespace and emoji
-result: null
+result:
+- !Location
+  range:
+    end:
+      character: 0
+      line: 0
+    start:
+      character: 0
+      line: 0
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 34
+      line: 1
+    start:
+      character: 12
+      line: 1
+  uri: tests/__init__.robot
+- !Location
+  range:
+    end:
+      character: 38
+      line: 8
+    start:
+      character: 16
+      line: 8
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 61
+      line: 10
+    start:
+      character: 16
+      line: 10
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 61
+      line: 6
+    start:
+      character: 16
+      line: 6
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 70
+    start:
+      character: 4
+      line: 70
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 2
+    start:
+      character: 12
+      line: 2
+  uri: tests/external_libray.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 7
+    start:
+      character: 4
+      line: 7
+  uri: tests/external_libray.robot
+- !Location
+  range:
+    end:
+      character: 63
+      line: 10
+    start:
+      character: 18
+      line: 10
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 81
+    start:
+      character: 4
+      line: 81
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 143
+    start:
+      character: 4
+      line: 143
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 63
+      line: 13
+    start:
+      character: 18
+      line: 13
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 117
+    start:
+      character: 4
+      line: 117
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 214
+    start:
+      character: 4
+      line: 214
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 254
+    start:
+      character: 4
+      line: 254
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 61
+      line: 9
+    start:
+      character: 16
+      line: 9
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 105
+    start:
+      character: 4
+      line: 105
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 111
+    start:
+      character: 4
+      line: 111
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 1
+    start:
+      character: 12
+      line: 1
+  uri: tests1/first.robot
