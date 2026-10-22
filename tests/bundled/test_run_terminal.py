@@ -1,5 +1,6 @@
 """`bundled/tool/utils/run_terminal.py`, the process of RobotCode's run terminal, closes the terminal on a single key
-after a run and marks the end of each run for VS Code's shell integration."""
+after a run, marks the end of each run for VS Code's shell integration, and on Windows lets a variable of a run
+replace an inherited one whose name differs only in case."""
 
 import importlib.util
 from pathlib import Path
@@ -66,3 +67,35 @@ def test_end_of_command_without_exit_code(script: ModuleType) -> None:
 def test_announces_rich_command_detection(script: ModuleType) -> None:
     # which VS Code's sticky scroll needs
     assert script.RICH_COMMAND_DETECTION == "\x1b]633;P;HasRichCommandDetection=True\x07"
+
+
+def test_run_variable_replaces_another_spelling_on_windows(script: ModuleType) -> None:
+    assert script.merged_environment({"Path": r"C:\Windows"}, {"path": r"C:\tools"}, windows=True) == {
+        "path": r"C:\tools"
+    }
+    assert script.merged_environment({"PATH": r"C:\Windows"}, {"Path": r"C:\tools"}, windows=True) == {
+        "Path": r"C:\tools"
+    }
+
+
+def test_run_variables_keep_other_variables_on_windows(script: ModuleType) -> None:
+    base = {"PATH": r"C:\Windows", "TEMP": r"C:\Temp"}
+
+    assert script.merged_environment(base, {"Path": r"C:\tools", "ROBOT_OPTIONS": "-L DEBUG"}, windows=True) == {
+        "TEMP": r"C:\Temp",
+        "Path": r"C:\tools",
+        "ROBOT_OPTIONS": "-L DEBUG",
+    }
+
+
+def test_run_variable_keeps_another_spelling_on_other_platforms(script: ModuleType) -> None:
+    assert script.merged_environment({"PATH": "/usr/bin"}, {"path": "/opt/bin"}, windows=False) == {
+        "PATH": "/usr/bin",
+        "path": "/opt/bin",
+    }
+
+
+def test_last_of_two_spellings_of_the_run_stays_on_windows(script: ModuleType) -> None:
+    env = {"path": r"C:\from-robot-env", "Path": r"C:\from-launch-config"}
+
+    assert script.merged_environment({"PATH": r"C:\Windows"}, env, windows=True) == {"Path": r"C:\from-launch-config"}

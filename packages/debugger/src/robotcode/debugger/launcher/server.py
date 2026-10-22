@@ -6,7 +6,7 @@ import os
 import shlex
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Mapping, Optional
 
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -79,6 +79,19 @@ def _console_for_client(console: Optional[Console], client_id: Optional[str]) ->
     if console == "robotcodeTerminal" and client_id != "vscode":
         return "integratedTerminal"
     return console
+
+
+def _merged_environment(
+    base: Mapping[str, str], env: Mapping[str, Optional[str]], windows: bool
+) -> Dict[str, Optional[str]]:
+    """The environment of a run: ``base`` with the variables of ``env``. On Windows, where a name means the same
+    variable in any case, a variable of ``env`` replaces the one of ``base`` whose name differs only in case, and of
+    two names in ``env`` that differ only in case, the last one stays."""
+    if windows:
+        last = {name.upper(): name for name in env}
+        env = {name: value for name, value in env.items() if last[name.upper()] == name}
+        base = {name: value for name, value in base.items() if name.upper() not in last}
+    return {**base, **env}
 
 
 class OutputProtocol(asyncio.SubprocessProtocol):
@@ -307,8 +320,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             )
             # time.sleep(1)  # Give some time for the terminal to start
         elif console is None or console == "internalConsole":
-            run_env: Dict[str, Optional[str]] = dict(os.environ)
-            run_env.update(env)
+            run_env = _merged_environment(os.environ, env, sys.platform == "win32")
 
             await asyncio.get_event_loop().subprocess_exec(
                 lambda: OutputProtocol(self), *robotcode_run_args, *run_args, cwd=cwd, env=run_env

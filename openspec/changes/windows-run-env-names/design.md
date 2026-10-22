@@ -24,7 +24,7 @@ The extension already merges without regard to case for its own processes (`merg
 
 ### D1: The same small merge in both places
 
-Each place gets a function `merged_environment(base, env, windows)`. On Windows it drops every variable of `base` whose name, in upper case, is also a name of `env`, then adds `env`; elsewhere it adds `env` to `base`. It keeps the spelling of `env`, as `mergeEnvironment` does.
+Each place gets a function `merged_environment(base, env, windows)`. On Windows it drops every variable of `base` whose name, in upper case, is also a name of `env`, then adds `env`; elsewhere it adds `env` to `base`. It keeps the spelling of `env`, as `mergeEnvironment` does. Of two names in `env` that differ only in case, for example `path` from `robotcode.robot.env` and `Path` from a launch configuration, it keeps the last: the extension puts a launch configuration's variables after those of `robotcode.robot.env`, so that they win.
 
 - The launcher calls it for `internalConsole` with `os.environ`.
 - The script calls it for each run with its own environment.
@@ -43,6 +43,7 @@ The functions take `windows` as a parameter, so the unit tests run on every plat
 Cases:
 - the run's `path` replaces `Path`, and the run's `Path` replaces `PATH`;
 - other names stay;
+- of two spellings in `env`, the last one stays;
 - with `windows=False`, both names stay.
 
 The real check runs on the Windows VM with Python 3.10 and 3.14, `Path` set as `path`, and a run that starts `cmd`.

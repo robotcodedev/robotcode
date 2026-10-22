@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Mapping
 from typing import Any
 
 if sys.platform == "win32":
@@ -64,6 +65,17 @@ def command_finished(exit_code: int | None) -> str:
 def is_single_key(text: str) -> bool:
     """Whether `text`, input that arrived at once, is a single key."""
     return SINGLE_KEY.fullmatch(text) is not None
+
+
+def merged_environment(base: Mapping[str, str], env: Mapping[str, str], windows: bool) -> dict[str, str]:
+    """The environment of a run: `base` with the variables of `env`. On Windows, where a name means the same variable
+    in any case, a variable of `env` replaces the one of `base` whose name differs only in case, and of two names in
+    `env` that differ only in case, the last one stays."""
+    if windows:
+        last = {name.upper(): name for name in env}
+        env = {name: value for name, value in env.items() if last[name.upper()] == name}
+        base = {name: value for name, value in base.items() if name.upper() not in last}
+    return {**base, **env}
 
 
 def write(text: str) -> None:
@@ -195,7 +207,9 @@ class RunTerminal:
         error: str | None = None
         try:
             process = subprocess.Popen(
-                [run["command"], *run["args"]], cwd=run.get("cwd"), env={**os.environ, **(run.get("env") or {})}
+                [run["command"], *run["args"]],
+                cwd=run.get("cwd"),
+                env=merged_environment(os.environ, run.get("env") or {}, sys.platform == "win32"),
             )
         except OSError as e:
             error = str(e)

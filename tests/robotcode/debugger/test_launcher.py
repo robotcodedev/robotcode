@@ -6,6 +6,9 @@ itself, it hands it to robotcode as `--wrapper` and lets robotcode apply it.
 
 Also covers which console a run uses: RobotCode's own run terminal only for
 VS Code, the integrated terminal for any other client.
+
+And the environment of a run in the internal console: on Windows, a variable
+of the run replaces an inherited one whose name differs only in case.
 """
 
 import shlex
@@ -13,7 +16,12 @@ from typing import Optional
 
 import pytest
 
-from robotcode.debugger.launcher.server import Console, _build_robotcode_run_args, _console_for_client
+from robotcode.debugger.launcher.server import (
+    Console,
+    _build_robotcode_run_args,
+    _console_for_client,
+    _merged_environment,
+)
 
 
 def test_forwards_wrapper_as_a_cli_option() -> None:
@@ -54,3 +62,31 @@ def test_integrated_terminal_instead_of_robotcode_terminal_for_other_clients(cli
 @pytest.mark.parametrize("client_id", ["vscode", "neovim", None])
 def test_other_consoles_stay(console: Optional[Console], client_id: Optional[str]) -> None:
     assert _console_for_client(console, client_id) == console
+
+
+def test_run_variable_replaces_another_spelling_on_windows() -> None:
+    assert _merged_environment({"Path": r"C:\Windows"}, {"path": r"C:\tools"}, windows=True) == {"path": r"C:\tools"}
+    assert _merged_environment({"PATH": r"C:\Windows"}, {"Path": r"C:\tools"}, windows=True) == {"Path": r"C:\tools"}
+
+
+def test_run_variables_keep_other_variables_on_windows() -> None:
+    base = {"PATH": r"C:\Windows", "TEMP": r"C:\Temp"}
+
+    assert _merged_environment(base, {"Path": r"C:\tools", "ROBOT_OPTIONS": "-L DEBUG"}, windows=True) == {
+        "TEMP": r"C:\Temp",
+        "Path": r"C:\tools",
+        "ROBOT_OPTIONS": "-L DEBUG",
+    }
+
+
+def test_run_variable_keeps_another_spelling_on_other_platforms() -> None:
+    assert _merged_environment({"PATH": "/usr/bin"}, {"path": "/opt/bin"}, windows=False) == {
+        "PATH": "/usr/bin",
+        "path": "/opt/bin",
+    }
+
+
+def test_last_of_two_spellings_of_the_run_stays_on_windows() -> None:
+    env = {"path": r"C:\from-robot-env", "Path": r"C:\from-launch-config"}
+
+    assert _merged_environment({"PATH": r"C:\Windows"}, env, windows=True) == {"Path": r"C:\from-launch-config"}
