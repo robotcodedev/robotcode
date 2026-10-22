@@ -214,6 +214,79 @@ def test_arguments_with_and_without_default_values(protocol: Any) -> None:
     ]
 
 
+# --- Uses of arguments are parameters ---
+
+
+def test_use_of_an_argument(protocol: Any) -> None:
+    tokens = _tokens(protocol, "*** Keywords ***\nKw\n    [Arguments]    ${user}\n    Log In    ${user}\n")
+    assert _plain(tokens[3]) == [("Log In", "keywordCall"), ("user", "parameter")]
+
+
+def test_argument_with_item_access_and_extended_syntax(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol,
+        "*** Keywords ***\nKw\n    [Arguments]    ${items}    ${name}\n"
+        "    Log    ${items}[0]\n    Log    ${name.upper()}\n",
+    )
+    assert _plain(tokens[3]) == [("Log", "keywordCall"), ("items", "parameter")]
+    assert _plain(tokens[4]) == [("Log", "keywordCall"), ("name", "parameter")]
+
+
+def test_argument_inside_a_nested_variable(protocol: Any) -> None:
+    tokens = _tokens(protocol, "*** Keywords ***\nKw\n    [Arguments]    ${key}\n    Log    ${CONFIG_${key}}\n")
+    assert _plain(tokens[3]) == [("Log", "keywordCall"), ("CONFIG_", "variable"), ("key", "parameter")]
+
+
+def test_argument_set_again(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol,
+        "*** Keywords ***\nKw\n    [Arguments]    ${user}\n    ${user}=    Set Variable    x\n    Log    ${user}\n",
+    )
+    assert _plain(tokens[3]) == [("user", "parameter"), ("Set Variable", "keywordCall")]
+    assert _plain(tokens[4]) == [("Log", "keywordCall"), ("user", "parameter")]
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 0), reason="VAR needs Robot Framework 7")
+def test_argument_set_again_with_var(protocol: Any) -> None:
+    tokens = _tokens(protocol, "*** Keywords ***\nKw\n    [Arguments]    ${user}\n    VAR    ${user}    y\n")
+    assert ("user", "parameter") in _plain(tokens[3])
+
+
+def test_argument_in_a_keyword_that_run_keyword_calls(protocol: Any) -> None:
+    tokens = _tokens(protocol, "*** Keywords ***\nKw\n    [Arguments]    ${user}\n    Run Keyword    Log    ${user}\n")
+    assert ("user", "parameter") in _plain(tokens[3])
+
+
+def test_settings_and_steps_above_the_arguments(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol, "*** Keywords ***\nKw\n    [Timeout]    ${limit}\n    Log    ${limit}\n    [Arguments]    ${limit}\n"
+    )
+    assert ("limit", "parameter") in _plain(tokens[2])
+    assert _plain(tokens[3]) == [("Log", "keywordCall"), ("limit", "parameter")]
+
+
+def test_tags_of_the_keyword(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol, "*** Keywords ***\nKw\n    [Arguments]    ${user}\n    [Tags]    ${user}\n    No Operation\n"
+    )
+    assert ("user", "variable") in _plain(tokens[3])
+
+
+def test_local_variable_of_the_same_keyword(protocol: Any) -> None:
+    tokens = _tokens(
+        protocol,
+        "*** Keywords ***\nKw\n    [Arguments]    ${user}\n    ${greeting}=    Greeting\n    Log    ${greeting}\n",
+    )
+    assert ("greeting", "variable") in _plain(tokens[3])
+    assert _plain(tokens[4]) == [("Log", "keywordCall"), ("greeting", "variable")]
+
+
+def test_embedded_argument(protocol: Any) -> None:
+    tokens = _tokens(protocol, "*** Keywords ***\nOpen ${shop} Now\n    Log    ${shop}\n")
+    assert ("shop", "variable") in _plain(tokens[1])
+    assert _plain(tokens[2]) == [("Log", "keywordCall"), ("shop", "variable")]
+
+
 # --- Only variables get variable tokens ---
 
 

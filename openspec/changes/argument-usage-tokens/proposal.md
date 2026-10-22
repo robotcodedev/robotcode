@@ -17,6 +17,7 @@ Not part of this change:
 - Searching from the name at the caret in PyCharm (J13), which builds on this.
 - Other kinds of variables: local, test, suite, global, built-in or environment variables keep their tokens.
 - Embedded arguments of a keyword's name: their declaration is a `variable` token, so their uses stay `variable` tokens too.
+- `EXCEPT    AS    ${user}` and item assignments such as `${items}[0]=` that set an argument again: the analysis records no reference for them, so Find References and Rename miss them and their tokens stay `variable`. A separate change fixes the analysis.
 
 ## Capabilities
 

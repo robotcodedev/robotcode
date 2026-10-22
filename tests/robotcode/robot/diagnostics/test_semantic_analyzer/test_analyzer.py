@@ -20,7 +20,7 @@ from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
 from robotcode.robot.diagnostics.import_resolver import ResolvedImports
 from robotcode.robot.diagnostics.library_doc import KeywordDoc as RealKeywordDoc
 from robotcode.robot.diagnostics.semantic_analyzer.analyzer import SemanticAnalyzer, _get_builtin_variables
-from robotcode.robot.diagnostics.semantic_analyzer.enums import ImportType, NodeKind, TokenKind
+from robotcode.robot.diagnostics.semantic_analyzer.enums import ImportType, NodeKind, TokenKind, TokenModifier
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     DefinitionBlock,
     DefinitionStatement,
@@ -2188,3 +2188,49 @@ Test One
 
         eol_count = sum(1 for stmt in model.statements for t in stmt.tokens if t.kind == TokenKind.EOL)
         assert eol_count == self._TEXT.count("\n")
+
+
+class TestArgumentUses:
+    """A variable that names an argument from `[Arguments]` carries the ARGUMENT
+    modifier and stays a VARIABLE; the declaration stays a PARAMETER.
+    """
+
+    _TEXT = """\
+*** Keywords ***
+Kw
+    [Arguments]    ${user}
+    Log    ${user}
+
+Open ${shop} Now
+    Log    ${shop}
+"""
+
+    @staticmethod
+    def _variable(result: AnalyzerResult, line: int, value: str) -> SemanticToken:
+        model = result.semantic_model
+        assert model is not None
+        found: List[SemanticToken] = []
+        pending = [token for stmt in model.statements for token in stmt.tokens]
+        while pending:
+            token = pending.pop()
+            if token.line == line and token.value == value and token.kind in (TokenKind.VARIABLE, TokenKind.PARAMETER):
+                found.append(token)
+            pending.extend(token.sub_tokens or [])
+        assert len(found) == 1
+        return found[0]
+
+    def test_use_of_an_argument(self, analyzer_factory: AnalyzerFactory) -> None:
+        use = self._variable(analyzer_factory(self._TEXT), 4, "${user}")
+        assert use.kind == TokenKind.VARIABLE
+        assert use.modifiers is not None
+        assert TokenModifier.ARGUMENT in use.modifiers
+
+    def test_declaration_of_an_argument(self, analyzer_factory: AnalyzerFactory) -> None:
+        declaration = self._variable(analyzer_factory(self._TEXT), 3, "${user}")
+        assert declaration.kind == TokenKind.PARAMETER
+        assert not declaration.modifiers or TokenModifier.ARGUMENT not in declaration.modifiers
+
+    def test_use_of_an_embedded_argument(self, analyzer_factory: AnalyzerFactory) -> None:
+        use = self._variable(analyzer_factory(self._TEXT), 7, "${shop}")
+        assert use.kind == TokenKind.VARIABLE
+        assert not use.modifiers or TokenModifier.ARGUMENT not in use.modifiers

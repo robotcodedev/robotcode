@@ -26,6 +26,16 @@ In a keyword, every name that the analysis resolves to an argument declared in t
 - **WHEN** a keyword with `[Arguments]    ${user}` contains `${user}=    Set Variable    x`, then `VAR    ${user}    y`, then `Log    ${user}`
 - **THEN** `user` gets a parameter token in all three statements
 
+#### Scenario: Settings and steps above the arguments
+
+- **WHEN** a keyword has `[Timeout]    ${limit}` and `Log    ${limit}` above `[Arguments]    ${limit}`
+- **THEN** `limit` gets a parameter token in both, because Robot Framework sets the arguments before it runs any of them
+
+#### Scenario: Tags of the keyword
+
+- **WHEN** a keyword with `[Arguments]    ${user}` has `[Tags]    ${user}`
+- **THEN** `user` in `[Tags]` gets a variable token, because Robot Framework resolves the tags with the caller's variables
+
 #### Scenario: Local variable of the same keyword
 
 - **WHEN** a keyword with `[Arguments]    ${user}` contains `${greeting}=    Greeting` and `Log    ${greeting}`

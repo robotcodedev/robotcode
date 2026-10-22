@@ -11,6 +11,8 @@ This change builds on three earlier changes:
 
 This change starts after all three. It changes only the model path.
 
+The model also carries `TokenModifier.ARGUMENT` from `argument-usage-tokens` on variable tokens that name an argument from `[Arguments]`. The static tables render it as the type `parameter`, not as a modifier, and `PARAMETER` stays the kind of the declaration.
+
 ### Rendering today
 
 The model renderer (`SemanticTokenGenerator.collect_tokens_from_model()` in `packages/language_server/src/robotcode/language_server/robotframework/parts/semantic_tokens.py`) does three things:

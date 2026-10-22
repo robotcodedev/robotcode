@@ -405,6 +405,8 @@ class SemanticAnalyzer(Visitor):
             )
             self._logger.exception(e)
 
+        self._mark_argument_uses()
+
         # Build indexes
         self._semantic_model.build_index()
 
@@ -422,6 +424,38 @@ class SemanticAnalyzer(Visitor):
             self._scope_builder.build(self._variable_scope),
             semantic_model=self._semantic_model,
         )
+
+    def _mark_argument_uses(self) -> None:
+        """Mark every variable token whose name the analysis resolved to an argument from `[Arguments]`, the same
+        resolution Find References and Rename use; embedded arguments stay unmarked."""
+        starts = {
+            (location.range.start.line, location.range.start.character)
+            for var, locations in self._variable_references.items()
+            if isinstance(var, ArgumentDefinition) and not isinstance(var, EmbeddedArgumentDefinition)
+            for location in locations
+        }
+        if starts:
+            for stmt in self._semantic_model.statements:
+                self._mark_argument_uses_in_statement(stmt, starts)
+
+    def _mark_argument_uses_in_statement(self, stmt: SemanticStatement, starts: Set[Tuple[int, int]]) -> None:
+        for token in stmt.tokens:
+            self._mark_argument_uses_in_token(token, starts)
+        # the inner calls of a Run Keyword variant have tokens of their own
+        if isinstance(stmt, RunKeywordCallStatement):
+            for inner in stmt.inner_calls:
+                self._mark_argument_uses_in_statement(inner, starts)
+
+    def _mark_argument_uses_in_token(self, token: SemanticToken, starts: Set[Tuple[int, int]]) -> None:
+        for sub in token.sub_tokens or ():
+            self._mark_argument_uses_in_token(sub, starts)
+            # a reference covers the name of the variable, its base
+            if (
+                token.kind is TokenKind.VARIABLE
+                and sub.kind is TokenKind.VARIABLE_BASE
+                and (sub.range.start.line, sub.range.start.character) in starts
+            ):
+                token.modifiers = (token.modifiers or frozenset()) | {TokenModifier.ARGUMENT}
 
     # --- Semantic Model helpers ---
 

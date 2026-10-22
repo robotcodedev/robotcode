@@ -21,6 +21,7 @@ from typing import (
     Union,
     cast,
 )
+from weakref import WeakKeyDictionary
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Section
@@ -55,6 +56,7 @@ from robotcode.core.lsp.types import (
     SemanticTokenTypes,
 )
 from robotcode.core.text_document import TextDocument, range_to_utf16
+from robotcode.robot.diagnostics.entities import ArgumentDefinition, EmbeddedArgumentDefinition
 from robotcode.robot.diagnostics.keyword_finder import DEFAULT_BDD_PREFIX_REGEXP, build_bdd_prefix_regexp
 from robotcode.robot.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
@@ -1099,6 +1101,12 @@ class SemanticTokenGenerator:
         TokenModifier.DOCUMENTATION: SemanticTokenModifiers.DOCUMENTATION,
     }
 
+    # Modifiers that change the type instead: a variable that names an argument
+    # renders as `parameter`, like the argument's declaration.
+    _TOKEN_MODIFIER_TO_SEM_TYPE: ClassVar[Dict[Tuple[TokenKind, TokenModifier], AnyTokenType]] = {
+        (TokenKind.VARIABLE, TokenModifier.ARGUMENT): SemanticTokenTypes.PARAMETER,
+    }
+
     # --- Legacy-compat emission policy (design D7) ---
 
     # Whole options of control structures render atomically: one control-flow
@@ -1151,6 +1159,8 @@ class SemanticTokenGenerator:
         """Initialize the generator with its own dependencies."""
         self.token_mapper = SemanticTokenMapper()
         self.keyword_analyzer = KeywordTokenAnalyzer(self.token_mapper)
+        # a namespace holds the result of one analysis, so its argument uses never change
+        self._argument_uses_cache: WeakKeyDictionary[Namespace, FrozenSet[Tuple[int, int]]] = WeakKeyDictionary()
 
     def collect_tokens_from_model(
         self,
@@ -1231,6 +1241,8 @@ class SemanticTokenGenerator:
             mapped = {self._TOKEN_MODIFIER_TO_SEM[m] for m in token.modifiers if m in self._TOKEN_MODIFIER_TO_SEM}
             if mapped:
                 sem_mods = (sem_mods or set()) | mapped
+            for m in token.modifiers:
+                sem_type = self._TOKEN_MODIFIER_TO_SEM_TYPE.get((token.kind, m), sem_type)
         return SemTokenInfo(token.line, token.col_offset, token.length, sem_type, sem_mods)
 
     def _iter_model_sem_tokens(
@@ -1815,26 +1827,46 @@ class SemanticTokenGenerator:
         if not sub_tokens:
             yield SemTokenInfo.from_token(token, sem_type, sem_mod)
             return
-        yield from self._iter_variable_name_sem_tokens(sub_tokens, sem_type, sem_mod)
+        yield from self._iter_variable_name_sem_tokens(sub_tokens, sem_type, sem_mod, self._argument_uses(namespace))
+
+    def _argument_uses(self, namespace: Namespace) -> FrozenSet[Tuple[int, int]]:
+        """Where the analysis resolved a name to an argument from `[Arguments]`, the same resolution Find References
+        and Rename use; embedded arguments are left out."""
+        uses = self._argument_uses_cache.get(namespace)
+        if uses is None:
+            uses = frozenset(
+                (location.range.start.line, location.range.start.character)
+                for var, locations in namespace.variable_references.items()
+                if isinstance(var, ArgumentDefinition) and not isinstance(var, EmbeddedArgumentDefinition)
+                for location in locations
+            )
+            self._argument_uses_cache[namespace] = uses
+        return uses
 
     def _iter_variable_name_sem_tokens(
         self,
         sub_tokens: Sequence[SemanticToken],
         sem_type: AnyTokenType,
         sem_mod: Optional[Set[AnyTokenModifier]],
+        argument_uses: FrozenSet[Tuple[int, int]],
     ) -> Iterator[SemTokenInfo]:
         for sub in sub_tokens:
             if sub.kind is TokenKind.VARIABLE:
                 if sub.sub_tokens:
-                    yield from self._iter_variable_name_sem_tokens(sub.sub_tokens, RobotSemTokenTypes.VARIABLE, None)
+                    yield from self._iter_variable_name_sem_tokens(
+                        sub.sub_tokens, RobotSemTokenTypes.VARIABLE, None, argument_uses
+                    )
                 else:
                     yield SemTokenInfo(sub.line, sub.col_offset, sub.length, RobotSemTokenTypes.VARIABLE)
             elif sub.kind is TokenKind.PYTHON_EXPRESSION:
                 continue
             elif sub.sub_tokens:
-                yield from self._iter_variable_name_sem_tokens(sub.sub_tokens, sem_type, sem_mod)
+                yield from self._iter_variable_name_sem_tokens(sub.sub_tokens, sem_type, sem_mod, argument_uses)
             elif sub.kind is TokenKind.VARIABLE_BASE:
-                yield SemTokenInfo(sub.line, sub.col_offset, sub.length, sem_type, sem_mod)
+                # a use of an argument is a parameter, like its declaration
+                is_argument = (sub.range.start.line, sub.range.start.character) in argument_uses
+                base_type = SemanticTokenTypes.PARAMETER if is_argument else sem_type
+                yield SemTokenInfo(sub.line, sub.col_offset, sub.length, base_type, sem_mod)
             elif sub.kind is TokenKind.VARIABLE_TYPE_HINT:
                 yield SemTokenInfo(sub.line, sub.col_offset, sub.length, SemanticTokenTypes.TYPE)
 

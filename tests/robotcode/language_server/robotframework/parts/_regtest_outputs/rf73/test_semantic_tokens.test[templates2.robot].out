@@ -473,12 +473,12 @@ result: !SemanticTokens
   - 0
   - 9
   - 8
-  - 36
+  - 7
   - 0
   - 0
   - 15
   - 8
-  - 36
+  - 7
   - 0
   - 2
   - 0
@@ -518,11 +518,11 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 0
   - 5
   - 1
-  - 36
+  - 7
   - 0
   result_id: null

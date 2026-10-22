@@ -503,7 +503,11 @@ class TestKeywordTokenAnalyzer:
         node = KeywordCall([])
 
         # Create a minimal namespace mock
-        namespace = type("MockNamespace", (), {"find_keyword": lambda self, name, raise_keyword_error=True: None})()
+        namespace = type(
+            "MockNamespace",
+            (),
+            {"variable_references": {}, "find_keyword": lambda self, name, raise_keyword_error=True: None},
+        )()
 
         tokens = list(self.analyzer.generate_keyword_tokens(namespace, kw_token, arguments, node))
 
@@ -529,7 +533,11 @@ class TestKeywordTokenAnalyzer:
             ],
         )
 
-        namespace = type("MockNamespace", (), {"find_keyword": lambda self, name, raise_keyword_error=True: kw_doc})()
+        namespace = type(
+            "MockNamespace",
+            (),
+            {"variable_references": {}, "find_keyword": lambda self, name, raise_keyword_error=True: kw_doc},
+        )()
 
         tokens = list(self.analyzer.generate_keyword_tokens(namespace, kw_token, arguments, node, kw_doc))
 
@@ -575,6 +583,7 @@ class TestRunKeywordTokenAnalysis:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -615,6 +624,7 @@ class TestRunKeywordTokenAnalysis:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -649,6 +659,7 @@ class TestRunKeywordTokenAnalysis:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -670,6 +681,7 @@ class TestRunKeywordTokenAnalysis:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -711,6 +723,7 @@ Example Test
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -803,6 +816,7 @@ Variable Test
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -909,7 +923,11 @@ class TestSemanticTokenGenerator:
         node = KeywordCall([])
 
         # Create minimal mocks
-        namespace = type("MockNamespace", (), {"find_keyword": lambda self, name, **kwargs: None, "languages": None})()
+        namespace = type(
+            "MockNamespace",
+            (),
+            {"variable_references": {}, "find_keyword": lambda self, name, **kwargs: None, "languages": None},
+        )()
 
         sem_tokens = list(self.generator.generate_sem_sub_tokens(namespace, None, token, node))
 
@@ -921,7 +939,11 @@ class TestSemanticTokenGenerator:
         token = Token(Token.VARIABLE, "${var}", 1, 0)
         node = Variable([])
 
-        namespace = type("MockNamespace", (), {"find_keyword": lambda self, name, **kwargs: None, "languages": None})()
+        namespace = type(
+            "MockNamespace",
+            (),
+            {"variable_references": {}, "find_keyword": lambda self, name, **kwargs: None, "languages": None},
+        )()
 
         sem_tokens = list(self.generator.generate_sem_tokens(token, node, namespace, None))
 
@@ -1003,6 +1025,7 @@ def sample_namespace() -> Any:
         "MockNamespace",
         (),
         {
+            "variable_references": {},
             "find_keyword": lambda self, name, **kwargs: None,
             "languages": None,
             "get_imported_library_libdoc": lambda self, *args: None,
@@ -1110,6 +1133,7 @@ class TestRunKeywordVariantsComprehensive:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": self._mock_find_keyword,
                 "languages": None,
             },
@@ -1706,6 +1730,7 @@ class TestErrorHandling:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
             },
@@ -1806,6 +1831,7 @@ Custom Keyword With Complex Args
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
                 "get_imported_library_libdoc": lambda self, *args: None,
@@ -1877,6 +1903,7 @@ class TestBddPrefixSemanticTokens:
             "MockNamespace",
             (),
             {
+                "variable_references": {},
                 "find_keyword": lambda self, name, **kwargs: None,
                 "languages": None,
                 "namespaces": {},

@@ -194,6 +194,7 @@ class TokenModifier(Enum):
     EMBEDDED = "embedded"
     DECLARATION = "declaration"
     DOCUMENTATION = "documentation"
+    ARGUMENT = "argument"  # a variable that names an argument from the keyword's [Arguments], not an embedded one
 
 
 class ForFlavor(Enum):

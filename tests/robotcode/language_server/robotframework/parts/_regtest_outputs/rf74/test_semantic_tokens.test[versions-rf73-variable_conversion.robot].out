@@ -513,7 +513,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 0
   - 11
@@ -528,7 +528,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 1
   - 4
@@ -538,7 +538,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 1
   - 4
@@ -548,7 +548,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 1
   - 4
@@ -598,7 +598,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 1
   - 4
@@ -608,7 +608,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 2
   - 0
@@ -648,7 +648,7 @@ result: !SemanticTokens
   - 0
   - 9
   - 1
-  - 36
+  - 7
   - 0
   - 12
   - 0

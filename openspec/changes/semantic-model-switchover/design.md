@@ -46,6 +46,8 @@ The analyzer sets `TokenModifier.BUILTIN` on a variable token when the variable 
 
 The modifier is new (legacy never emitted it), so it is the one deliberate output *difference* the Level-D parity fixture must account for: assert legacy-equal on everything except this modifier bit, or land it as a separate commit after the parity gate with its own targeted test.
 
+Not an LSP modifier: `TokenModifier.ARGUMENT` from `argument-usage-tokens` marks a variable token whose name resolves to an argument from `[Arguments]`. It renders as the type `parameter`, both paths already send it, and `PARAMETER` stays the kind of the declaration.
+
 *Alternatives considered*:
 - Local, global and environment modifiers as planned before. Rejected:
   - Robot Framework has more scopes than two modifiers can express (local, test, suite, global, plus arguments, command-line and imported variables);

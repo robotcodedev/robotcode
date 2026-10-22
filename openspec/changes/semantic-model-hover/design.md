@@ -39,6 +39,8 @@ The path gives both the leaf (e.g. `VARIABLE_BASE`) and its parents (`VARIABLE` 
 | IMPORT_NAME | import hover (same content as legacy namespace hover) |
 | anything else | no hover (matches legacy misses) |
 
+A use of an argument from `[Arguments]` stays a VARIABLE token: `argument-usage-tokens` only adds the model-internal `TokenModifier.ARGUMENT`, which renders as the type `parameter`, not as a modifier, and `PARAMETER` stays the kind of the declaration.
+
 Range returned = the matched SemanticToken's `range` — must equal the legacy `found_range` (reference ranges and token ranges are produced by the same analyzer; parity tests enforce it).
 
 ### D3: Parity before value
@@ -63,6 +65,7 @@ Two consumers use it:
 
 - [Legacy hover range comes from reference-dict `Location.range`, model range from `SemanticToken.range`; off-by-one differences (e.g. embedded arguments, BDD prefixes) would fail parity] → dual-protocol tests over every hover position in the existing test data; mismatches are analyzed individually — if legacy is wrong, document as xfail with reason (precedent exists).
 - [Multiple hover sources match one position (variable inside keyword argument)] → legacy precedence is variable → keyword → namespace; the model dispatch must encode the same precedence (leaf-first path order does this naturally; verified by tests).
+- [`model.find_variable()` looks up by position: it misses an argument above the `[Arguments]` line and finds it in `[Tags]` and `[Documentation]` below it, unlike Robot Framework and the references the legacy hover reads (Context of `argument-usage-tokens`)] → take the variable of a VARIABLE token from the references, or cover these orders in the parity tests.
 - [Audit merges break external theme/token expectations] → merges restricted to kinds that never reach LSP output distinctly (identical mapping), hence invisible to clients.
 
 ## Migration Plan
