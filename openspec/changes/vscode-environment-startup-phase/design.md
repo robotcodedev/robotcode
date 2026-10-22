@@ -45,6 +45,8 @@ A provisional problem is one that `isRobotEnvironmentKnownInvalid` reports while
 
 When the startup phase of a folder ends while `isRobotEnvironmentKnownInvalid` reports a problem, `LanguageClientsManager` fires `onRobotEnvironmentStateChanged` with the folder's state. The Testing view discovers the folder again and shows its hint, the language status shows the error, and the message request from D2 shows the message. A phase that ends without a problem changes nothing.
 
+The timer ends the phase itself, by dropping the folder's end time, before it fires the event. Node measures timers by libuv's loop time, which is updated only at the start of a loop iteration; started during the activation, the timer can fire before `Date.now()` reaches the recorded end, and a display that asked `isInStartupPhase` right then would still see the phase (review, task 5.1).
+
 Alternative considered:
 - **Let each display poll the phase.** Three timers for one moment; the event already reaches all of them.
 
@@ -57,3 +59,21 @@ Alternative considered:
 ## Migration Plan
 
 Nothing for users to do. Rollback is a revert.
+
+## Verification
+
+Harness of 2026-10-21: isolated VS Code 1.142.0, RobotCode from the working tree, a copy of `playground/robotcode-demo` with a `.venv` (Python 3.14.8, Robot Framework 7.5), the global `/usr/bin/python3` without Robot Framework. A stub of the Python extension stands in for a slow Python side: it reports nothing selected, which resolves to `/usr/bin/python3`, and selects `.venv` 8 s after activation, with the change event. Times are counted from the moment the window exists; the Testing view is opened as soon as the extension host answers. Without a state of RobotCode's, the Testing view shows VS Code's own text "No tests have been found in this workspace yet. Install Additional Test Extensions…", as during every start until the discovery has ended.
+
+Before the change (task 1.1):
+- 1.4 s: the language status with the error icon, Robot Framework "not installed", Python "Python 3.14.8".
+- 1.7 s: the Testing view's hint "… RobotCode needs a Python environment with Robot Framework for this folder to find its tests."
+- 4.5 s: the environment message "Found a Robot Framework project in 'robotcode-demo', but the selected Python environment 'Python 3.14.8' has no Robot Framework …".
+- 9.9 s, after the selection of `.venv`: the message closed, "Environment for 'robotcode-demo' found: .venv with Python 3.14.8 and Robot Framework 7.5. RobotCode is ready."; the language status busy, without an error from 10.2 s on.
+- 11.1 s: the test tree.
+
+After the change (task 4.1), same harness:
+- **`.venv` selected 8 s after activation:** from 1.6 s on the language status busy, Robot Framework "unknown", Python "Python 3.14.8", without an error; the Testing view with VS Code's own text and no hint; no message. At 9.8 s `.venv` was usable, from 10.4 s on the language status without the busy indicator, at 11.3 s the test tree. Neither the environment message nor the message that the environment was found appeared.
+- **`.venv-norf` without Robot Framework, never fixed:** from 1.5 s on the language status busy, Robot Framework "unknown", without an error, and no hint and no message. At 16.4 s, when the startup phase had ended, the language status with the error icon and Robot Framework "not installed", the Testing view's hint and the environment message, together.
+- **After the startup phase, an environment without Robot Framework selected:** the language status with the error icon 1.5 s after the selection, the Testing view's hint at 2.0 s, the environment message at 4.1 s, 2.5 s after the check's result, as before the change.
+
+After the review corrections (task 5.2), same harness, `.venv-norf` without Robot Framework, never fixed: until the end of the startup phase the language status busy, Robot Framework "unknown", no hint and no message; at 16.6 s the error icon, Robot Framework "not installed", the Testing view's hint and the environment message, together.
