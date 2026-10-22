@@ -69,7 +69,9 @@
 - [x] 4.2 Run `hatch run test:test` and `hatch run lint:all`. Verify that every Robot Framework environment is green, and that ruff and mypy report nothing.
 
   Note (2026-10-19): all nine environments green (Robot Framework 5.0: 5,029 passed, up to 7.5: 5,377 passed; no failures), 2,275 s; ruff and mypy without findings in 483 source files.
-- [ ] 4.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 4.3 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-22): all 99 Python test jobs green on Linux, Windows and macOS in the build of d347c177 (run 39574224490, first attempt) and of d8933532 (run 39678933337, which failed only in the VS Code extension tests on Windows). One earlier first attempt (run 39562139333) failed in `test_library_loading.py::TestExpectedLoadErrorsAreNotLogged::test_timeout` on Windows with Python 3.10: `process.kill()` in `_end_process` raised `PermissionError: [WinError 5] Access is denied`. That code is not part of this change.
 
 ## Workflow follow-up
 
