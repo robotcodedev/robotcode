@@ -24,6 +24,26 @@ class RobotHoverFeatureTest : BasePlatformTestCase() {
         assertFalse(UIUtil.getHtmlBody(html).contains("<br>"))
     }
 
+    // the documentation shows a header without text as a large gap between the heading and the table
+    fun testAnEmptyTableHeaderIsRemoved() {
+        val markdown = "#### Arguments:\n\n| | | | |\n|:--|:--|:--|:--|\n| `user` | | | |\n"
+
+        val html = contentOf(MarkupKind.MARKDOWN, markdown)!!
+
+        assertFalse(html.contains("<thead>"))
+        assertTrue(html.contains("<code>user</code>"))
+    }
+
+    fun testATableHeaderWithTextStays() {
+        val markdown = "| Name | Default |\n|:--|:--|\n| `user` | |\n"
+
+        val html = contentOf(MarkupKind.MARKDOWN, markdown)!!
+
+        assertTrue(html.contains("<thead>"))
+        assertTrue(html.contains("Name"))
+        assertTrue(html.contains("<code>user</code>"))
+    }
+
     fun testPlainTextStaysAsItIs() {
         assertEquals("first line\nsecond line", contentOf(MarkupKind.PLAINTEXT, "first line\nsecond line"))
     }
