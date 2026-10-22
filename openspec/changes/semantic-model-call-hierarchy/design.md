@@ -44,6 +44,7 @@ Outgoing enumeration descends into `RunKeywordCallStatement.inner_calls` recursi
 - [Workspace-wide incoming scan is expensive on large projects] → use the aggregated `keyword_references` rather than re-iterating every model; it is already maintained by analysis. Only fall back to a model walk if a reference set is unavailable.
 - [Keyword identity across resource imports / aliases (same keyword reachable by different names)] → resolve on `KeywordDoc` identity (`stable_id`), which is alias-independent, not on the call token text.
 - [Overloaded/embedded-argument keywords match multiple defs] → `keyword_doc` on the statement is the analyzer's resolved choice; the hierarchy follows that single resolution, consistent with goto-definition.
+- [Find Usages started on a node of the Call Hierarchy tool window] → In LSP4IJ 0.21.0 the base node, the word where the hierarchy was opened, is exactly an `LSPPsiElement`, for which RobotCode's usage target provider answers with the name at the caret of the selected editor (`intellij-usages-from-caret`). The calls are `LSPHierarchyItemPsiElement`; for those LSP4IJ's own provider answers with the word at the caret of an editor that shows the node's file. Check in PyCharm that Find Usages from the base node and from a call searches the node's keyword, not a name at a caret.
 
 ## Migration Plan
 

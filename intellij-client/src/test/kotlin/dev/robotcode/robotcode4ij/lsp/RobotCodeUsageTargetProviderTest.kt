@@ -2,8 +2,12 @@ package dev.robotcode.robotcode4ij.lsp
 
 import com.intellij.find.findUsages.PsiElement2UsageTargetAdapter
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.usages.UsageTarget
+import com.redhat.devtools.lsp4ij.features.LSPPsiElement
+import com.redhat.devtools.lsp4ij.usages.LSPUsagePsiElement
 import com.redhat.devtools.lsp4ij.usages.LSPUsageTriggeredPsiElement
 
 class RobotCodeUsageTargetProviderTest : BasePlatformTestCase() {
@@ -55,5 +59,40 @@ class RobotCodeUsageTargetProviderTest : BasePlatformTestCase() {
         assertNull(targetAt(rangeOf("First").startOffset))
         assertNull(targetAt(rangeOf("x").startOffset))
         assertNull(targetAt(rangeOf("x").endOffset))
+    }
+
+    // the provider's targets for [element], with the caret of the open editor at [offset]
+    private fun targetsFor(element: PsiElement, offset: Int = rangeOf("Log").startOffset + 1): Array<UsageTarget>? {
+        myFixture.editor.caretModel.moveToOffset(offset)
+        return RobotCodeUsageTargetProvider().getTargets(element)
+    }
+
+    // the element the name at the caret resolves to, which can lie in another file
+    fun testResolvedDefinitionGetsTheNameAtTheCaret() {
+        val definition = LSPPsiElement(myFixture.addFileToProject("library.txt", "def log"), TextRange(4, 7))
+
+        val element = (targetsFor(definition)!!.single() as PsiElement2UsageTargetAdapter).element
+
+        assertInstanceOf(element, LSPUsageTriggeredPsiElement::class.java)
+        assertEquals(file, element.containingFile)
+        assertEquals(rangeOf("Log"), element.textRange)
+    }
+
+    // the usages and the targets themselves, and elements of other views
+    fun testOtherElementsGetNothing() {
+        assertNull(targetsFor(LSPUsageTriggeredPsiElement(file, rangeOf("Log"))))
+        assertNull(targetsFor(LSPUsagePsiElement(file, rangeOf("Log"))))
+        assertNull(targetsFor(file))
+    }
+
+    fun testResolvedDefinitionWithoutATokenAtTheCaret() {
+        assertNull(targetsFor(LSPPsiElement(file, rangeOf("Log")), rangeOf("First").startOffset))
+    }
+
+    fun testResolvedDefinitionInAnEditorOfAnotherFile() {
+        val definition = LSPPsiElement(file, rangeOf("Log"))
+        myFixture.configureByText("notes.txt", "Log")
+
+        assertNull(RobotCodeUsageTargetProvider().getTargets(definition))
     }
 }
