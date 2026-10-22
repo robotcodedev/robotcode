@@ -124,7 +124,7 @@ Each of these actions on a keyword SHALL open the documentation at that keyword,
 A Documentation Viewer SHALL be an editor tab that shows the documentation of one library, resource file or suite file, titled with its name. Several viewers SHALL be possible at the same time. Like an editor, a viewer SHALL be movable into other editor groups and into a window of its own, and SHALL be pinnable.
 
 #### Scenario: Open Documentation Viewer
-- **WHEN** the user runs "RobotCode: Open Documentation Viewer" while a file of a workspace folder is the active editor
+- **WHEN** the user runs "RobotCode: New Documentation Viewer" while a file of a workspace folder is the active editor
 - **THEN** a new viewer shows `BuiltIn` of that folder, and the target field has the focus with its text selected
 
 #### Scenario: Several viewers
@@ -144,7 +144,7 @@ A Documentation Viewer SHALL be an editor tab that shows the documentation of on
 - **THEN** the viewer shows `XML` at the same position again when its tab is shown
 
 #### Scenario: New window from an active viewer
-- **WHEN** the user runs "Open Documentation Viewer in New Window" while a viewer that shows `BuiltIn` is active
+- **WHEN** the user runs "Copy Documentation Viewer into New Window" while a viewer that shows `BuiltIn` is active
 - **THEN** a new window opens with a second viewer that shows `BuiltIn`, and the first viewer stays
 
 ### Requirement: The workspace folder of a viewer
@@ -596,22 +596,22 @@ A viewer SHALL keep its target, position, history, filter, whether its outline i
 - **WHEN** the window is reloaded while a viewer that shows `XML` has its outline hidden
 - **THEN** the viewer shows `XML` with its outline hidden
 
-### Requirement: The command Open Documentation Viewer
+### Requirement: The command New Documentation Viewer
 
-The command "RobotCode: Open Documentation Viewer" SHALL open a new viewer on `BuiltIn` of the workspace folder, with the target field focused and its text selected. The workspace folder is the one of the active editor. Without an active editor in a folder, the only folder is used; with several folders, the user SHALL choose one. Without a workspace folder, the commands SHALL show an error message.
+The command "RobotCode: New Documentation Viewer" SHALL open a new viewer on `BuiltIn` of the workspace folder, with the target field focused and its text selected. The workspace folder is the one of the active editor. Without an active editor in a folder, the only folder is used; with several folders, the user SHALL choose one. Without a workspace folder, the commands SHALL show an error message.
 
 #### Scenario: Several folders without an active editor
-- **WHEN** a workspace has two folders, no editor is active, and the user runs "RobotCode: Open Documentation Viewer"
+- **WHEN** a workspace has two folders, no editor is active, and the user runs "RobotCode: New Documentation Viewer"
 - **THEN** the user is asked to choose one of the two folders
 
-### Requirement: The command Open Documentation Viewer in New Window
+### Requirement: The command Copy Documentation Viewer into New Window
 
-The command "RobotCode: Open Documentation Viewer in New Window" SHALL open a new viewer in a new window. It SHALL show the target of the active viewer, or else of the viewer used last; without any viewer it SHALL show `BuiltIn`.
+The command "RobotCode: Copy Documentation Viewer into New Window" SHALL open a new viewer in a new window. It SHALL show the target of the active viewer, or else of the viewer used last; without any viewer it SHALL show `BuiltIn`.
 
 Both commands SHALL be in the command palette. The second command SHALL also be in the context menu of the active viewer's tab.
 
 #### Scenario: New window without a viewer
-- **WHEN** no viewer is open and the user runs "RobotCode: Open Documentation Viewer in New Window"
+- **WHEN** no viewer is open and the user runs "RobotCode: Copy Documentation Viewer into New Window"
 - **THEN** a new window opens with a viewer that shows `BuiltIn`
 
 ### Requirement: Switching the workspace folder of a viewer
@@ -921,7 +921,7 @@ The setting `robotcode.documentationViewer.showOutline` SHALL decide whether a n
 - **THEN** the new viewer shows its outline
 
 #### Scenario: New viewer without the outline
-- **WHEN** `robotcode.documentationViewer.showOutline` is `false` and the user runs "RobotCode: Open Documentation Viewer"
+- **WHEN** `robotcode.documentationViewer.showOutline` is `false` and the user runs "RobotCode: New Documentation Viewer"
 - **THEN** the new viewer shows `BuiltIn` with its outline hidden, and the outline button shows the outline when clicked
 
 #### Scenario: Setting changed while a viewer is open
@@ -984,3 +984,23 @@ When the Python environment of a viewer's workspace folder becomes usable with a
 #### Scenario: Wrong interpreter at startup
 - **WHEN** at startup RobotCode's first check finds the global interpreter usable, a viewer shows `Collections` generated with it, and the Python side then selects the folder's `.venv`
 - **THEN** the viewer shows `Collections` generated with `.venv`
+
+### Requirement: The button New Documentation Viewer
+
+The toolbar of a viewer SHALL have the button "New Documentation Viewer", after the pin button. Choosing it SHALL open a new viewer on `BuiltIn` of the viewer's workspace folder, without asking for a folder, with the target field focused and its text selected. The new viewer SHALL open where the requirement "Where a viewer opens" says, and take the focus. The viewer whose button was chosen SHALL keep its target, position and history.
+
+#### Scenario: Second viewer from the toolbar
+- **WHEN** a viewer shows `Collections` at `Remove From List` and the user clicks "New Documentation Viewer" in its toolbar
+- **THEN** a new viewer opens beside it and shows `BuiltIn`, its target field has the focus with its text selected, and the first viewer still shows `Collections` at `Remove From List`
+
+#### Scenario: Folder of the viewer
+- **WHEN** a workspace has the folders `tests` and `shared`, a viewer of `shared` shows `Collections`, and the user clicks "New Documentation Viewer" in its toolbar
+- **THEN** the new viewer shows `BuiltIn` of `shared`, and the user is not asked for a folder
+
+#### Scenario: New viewer in the active group
+- **WHEN** `robotcode.documentationViewer.openLocation` is `active` and the user clicks "New Documentation Viewer" in the toolbar of a viewer
+- **THEN** the new viewer opens in the editor group of that viewer
+
+#### Scenario: Pinned viewer stays pinned
+- **WHEN** a pinned viewer shows `XML` and the user clicks "New Documentation Viewer" in its toolbar
+- **THEN** the new viewer is not pinned, and a following "Show in Documentation Viewer" still uses the viewer that shows `XML`
