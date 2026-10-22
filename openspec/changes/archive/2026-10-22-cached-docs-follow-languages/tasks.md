@@ -20,7 +20,9 @@
 - [x] 2.1 Run `hatch run test:test` and `hatch run lint:all`. Verify that every Robot Framework environment is green, and that ruff and mypy report nothing.
 
   Note (2026-10-19): all nine environments green (Robot Framework 5.0: 5,033 passed, up to 7.5: 5,383 passed; no failures), 2,428 s; ruff and mypy without findings in 484 source files.
-- [ ] 2.2 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+- [x] 2.2 After the maintainer pushes, verify that the CI's Python tests are green on Linux, Windows and macOS.
+
+  Note (2026-10-22): the run of "build test and package" on d347c177 (2026-10-21), which contains 0a2e269d, was green in all 111 jobs, the Python tests on Linux, Windows and macOS included.
 
 ## Workflow follow-up
 
