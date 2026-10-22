@@ -1,8 +1,8 @@
 """Tests for rendering keyword and library documentation as Markdown.
 
 Documentation written in Markdown is normalised on every Robot Framework
-version, argument descriptions exist with Robot Framework 7.5 or newer, and
-everything else renders exactly as before.
+version, argument descriptions exist with Robot Framework 7.5 or newer,
+variable files show no scope, and everything else renders exactly as before.
 """
 
 import re
@@ -10,11 +10,13 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import pytest
+from robot.api import get_model
 
 from robotcode.robot.diagnostics.library_doc import (
     KeywordDoc,
     LibraryDoc,
     get_library_doc,
+    get_model_doc,
     get_variables_doc,
 )
 from robotcode.robot.utils import RF_VERSION
@@ -71,7 +73,7 @@ NAME = "value"
 NUMBER = 42
 '''
 VARIABLES_FILE_MARKDOWN = (
-    "### Variables *golden_vars*\n\n|  |  |\n| :--- | :--- |\n| **Library Scope:** | GLOBAL |\n\n\n\n---\n\n\n"
+    "### Variables *golden_vars*\n\n\n---\n\n\n"
     "```robotframework\n*** Variables ***\n${NAME}    value\n${NUMBER}    ${42}\n```"
 )
 
@@ -156,7 +158,16 @@ def test_library_scope_is_named_as_libdoc_names_it() -> None:
     assert "| **Library Scope:** | GLOBAL |" in doc.to_markdown()
 
 
-def test_variables_file_renders_as_before(tmp_path: Path) -> None:
+def test_resource_file_shows_the_scope_as_libdoc_does(tmp_path: Path) -> None:
+    resource_file = tmp_path / "golden.resource"
+    resource_file.write_text("*** Keywords ***\nDo Nothing\n    No Operation\n", encoding="utf-8")
+
+    doc = get_model_doc(model=get_model(str(resource_file)), source=str(resource_file))
+
+    assert "| **Library Scope:** | GLOBAL |" in doc.to_markdown()
+
+
+def test_variables_file_renders_without_a_scope(tmp_path: Path) -> None:
     variables_file = tmp_path / "golden_vars.py"
     variables_file.write_text(VARIABLES_FILE, encoding="utf-8")
 

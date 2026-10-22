@@ -1930,13 +1930,16 @@ class LibraryDoc:
     def _get_title_markdown(self, header_level: int) -> str:
         result = f"#{'#' * header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*\n\n"
 
-        if self.version or self.scope:
+        # resource and suite files show GLOBAL, as in Libdoc; variable files have no scope in Robot Framework
+        scope = self.scope if self.type != "VARIABLES" else ""
+
+        if self.version or scope:
             result += "|  |  |\n| :--- | :--- |\n"
 
             if self.version:
                 result += f"| **Library Version:** | {self.version} |\n"
-            if self.scope:
-                result += f"| **Library Scope:** | {self.scope} |\n"
+            if scope:
+                result += f"| **Library Scope:** | {scope} |\n"
 
             result += "\n\n"
 
