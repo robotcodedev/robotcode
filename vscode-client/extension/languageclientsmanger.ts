@@ -49,8 +49,12 @@ const RETRY = "Retry";
 const OPEN_SETTINGS = "Open Settings";
 const DISABLE_FOR_SESSION = "For this session";
 const DISABLE_FOR_PROJECT = "For this project";
-// The Python side's own selection arrives shortly after RobotCode's first check at startup; the message waits for it.
+// After a check, the Python side's own selection may follow shortly; the message waits for it. At startup the startup
+// phase waits longer.
 const ENVIRONMENT_NOTIFICATION_DELAY = 2500;
+// In a larger workspace the Python side selects a folder's environment only some seconds after VS Code starts; until
+// then a problem RobotCode finds is provisional and is not reported.
+const STARTUP_PHASE = 15000;
 const ENVIRONMENT_ACTION_COMMAND = "robotcode.environmentAction";
 
 type EnvironmentAction = "select" | "create" | "useVenv" | "retry" | "settings";
@@ -291,6 +295,9 @@ export class LanguageClientsManager {
   // Folders whose message was shown: when they become usable, a short information message says so.
   private readonly _environmentMessageShown = new Set<string>();
   private readonly _foldersDisabledForSession = new Set<string>();
+  // When the startup phase of each folder ends, and the timer that shows a problem that remains; see STARTUP_PHASE.
+  private readonly _startupPhaseEnds = new Map<string, number>();
+  private readonly _startupPhaseTimers = new Map<string, NodeJS.Timeout>();
 
   private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
 
@@ -389,6 +396,7 @@ export class LanguageClientsManager {
 
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const folder of event.removed) this.forgetFolder(folder);
+        for (const folder of event.added) this.startStartupPhase(folder);
         await this.refresh();
       }),
       vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document)),
@@ -409,6 +417,8 @@ export class LanguageClientsManager {
         await this.restart(uri);
       }),
     );
+
+    for (const folder of vscode.workspace.workspaceFolders ?? []) this.startStartupPhase(folder);
   }
 
   private readonly logger = {
@@ -475,6 +485,7 @@ export class LanguageClientsManager {
     for (const timer of this._environmentPollers.values()) clearTimeout(timer);
     for (const timer of this._environmentReconsiderTimers.values()) clearTimeout(timer);
     for (const timer of this._environmentNotificationTimers.values()) clearTimeout(timer);
+    for (const timer of this._startupPhaseTimers.values()) clearTimeout(timer);
     for (const notification of this._environmentNotifications.values()) notification.close();
     this._disposables.dispose();
   }
@@ -682,6 +693,33 @@ export class LanguageClientsManager {
     this._environmentGenerations.delete(key);
     this._environmentMessageShown.delete(key);
     this._foldersDisabledForSession.delete(key);
+    clearTimeout(this._startupPhaseTimers.get(key));
+    this._startupPhaseTimers.delete(key);
+    this._startupPhaseEnds.delete(key);
+  }
+
+  /** Whether the folder is in its startup phase, in which a problem of its environment is provisional. */
+  public isInStartupPhase(folder: vscode.WorkspaceFolder): boolean {
+    return Date.now() < (this._startupPhaseEnds.get(folder.uri.toString()) ?? 0);
+  }
+
+  // The startup phase of a folder begins when RobotCode first looks at it. A problem that remains at its end is shown
+  // then: the displays update on the environment event, and a message request has waited for the end.
+  private startStartupPhase(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    clearTimeout(this._startupPhaseTimers.get(key));
+    this._startupPhaseEnds.set(key, Date.now() + STARTUP_PHASE);
+    this._startupPhaseTimers.set(
+      key,
+      setTimeout(() => {
+        this._startupPhaseTimers.delete(key);
+        // Timers run on libuv's loop time, which can lag behind Date.now(); the phase ends here, not by the clock.
+        this._startupPhaseEnds.delete(key);
+        if (this.isRobotEnvironmentKnownInvalid(folder) && !this.isDisabledForFolder(folder)) {
+          this._onRobotEnvironmentStateChangedEmitter.fire({ folder, state: this.getRobotEnvironmentState(folder) });
+        }
+      }, STARTUP_PHASE),
+    );
   }
 
   /** Whether RobotCode is switched off for the folder, by `robotcode.disableExtension` or for this session. */
@@ -827,15 +865,19 @@ export class LanguageClientsManager {
     await this.reconsiderFolder(folder);
   }
 
+  // The message waits ENVIRONMENT_NOTIFICATION_DELAY, and in the folder's startup phase until the phase ends.
   private requestEnvironmentNotification(folder: vscode.WorkspaceFolder): void {
     const key = folder.uri.toString();
     clearTimeout(this._environmentNotificationTimers.get(key));
     this._environmentNotificationTimers.set(
       key,
-      setTimeout(() => {
-        this._environmentNotificationTimers.delete(key);
-        this.updateEnvironmentNotification(folder);
-      }, ENVIRONMENT_NOTIFICATION_DELAY),
+      setTimeout(
+        () => {
+          this._environmentNotificationTimers.delete(key);
+          this.updateEnvironmentNotification(folder);
+        },
+        Math.max(ENVIRONMENT_NOTIFICATION_DELAY, (this._startupPhaseEnds.get(key) ?? 0) - Date.now()),
+      ),
     );
   }
 

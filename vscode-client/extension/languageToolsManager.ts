@@ -48,6 +48,7 @@ type QuickPickActionItem = {
 
 export class LanguageToolsManager {
   private _workspaceFolderLanguageStatuses = new WeakMap<vscode.WorkspaceFolder, ProjectInfo>();
+  private _languageServerStarting = false;
   private _disposables: vscode.Disposable;
 
   readonly robotCode: vscode.LanguageStatusItem;
@@ -409,12 +410,12 @@ export class LanguageToolsManager {
         switch (status.state) {
           case ClientState.Starting:
             this.removeFolder(folder);
-            this.robotVersion.busy = true;
+            this._languageServerStarting = true;
 
             break;
           default:
             this.removeFolder(folder);
-            this.robotVersion.busy = false;
+            this._languageServerStarting = false;
 
             break;
         }
@@ -626,7 +627,12 @@ export class LanguageToolsManager {
 
     const environmentState =
       folder !== undefined ? this.languageClientsManager.getRobotEnvironmentState(folder) : undefined;
-    const robotProblem = environmentState?.problem;
+    // a problem found in the folder's startup phase is provisional: the items show that RobotCode is still checking
+    const provisional =
+      folder !== undefined &&
+      this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder) &&
+      this.languageClientsManager.isInStartupPhase(folder);
+    const robotProblem = provisional ? undefined : environmentState?.problem;
     const installedRobotVersion = environmentState?.robotVersion;
 
     // the version of the language server, else the one the environment check found; while Robot Framework cannot be
@@ -654,6 +660,7 @@ export class LanguageToolsManager {
     } else {
       this.robotVersion.severity = LanguageStatusSeverity.Information;
     }
+    this.robotVersion.busy = this._languageServerStarting || provisional;
 
     this.robocopVersion.text = `$(robotcode-robocop) ${projectInfo?.robocopVersionString ?? NOT_INSTALLED}`;
     this.robocopVersion.detail = "Robocop Version";
@@ -698,10 +705,11 @@ export class LanguageToolsManager {
 
     // a problem of the interpreter, which the detail names, or no interpreter at all; a missing Robot Framework marks
     // the Robot Framework item
-    if (pythonProblem === undefined && pythonInfo !== undefined) {
+    if (provisional || (pythonProblem === undefined && pythonInfo !== undefined)) {
       this.pythonVersion.severity = LanguageStatusSeverity.Information;
     } else {
       this.pythonVersion.severity = LanguageStatusSeverity.Error;
     }
+    this.pythonVersion.busy = provisional;
   }
 }

@@ -790,10 +790,7 @@ export class TestControllerManager {
     const folder = TestControllerManager.folderOf(folderKey);
     if (folder === undefined) return;
 
-    if (
-      !this.isTestExplorerEnabledForWorkspace(folder) ||
-      this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder)
-    ) {
+    if (!this.isTestExplorerEnabledForWorkspace(folder) || this.hasKnownEnvironmentProblem(folder)) {
       // No discovery can run without a valid environment. The cached answer is used so that this does not wait for
       // the environment dialog; the language client start discovers again once an environment is valid.
       this.removeFolderModel(folder);
@@ -844,6 +841,15 @@ export class TestControllerManager {
     for (const id of oldRootIds) if (!kept.has(id)) this.treeBuilder.remove(undefined, id);
   }
 
+  // A problem of the folder's environment found in its startup phase is provisional: the folder's discovery runs as
+  // for an unchecked folder, gets no result, and the view keeps its loading state until the phase ends.
+  private hasKnownEnvironmentProblem(folder: vscode.WorkspaceFolder): boolean {
+    return (
+      this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder) &&
+      !this.languageClientsManager.isInStartupPhase(folder)
+    );
+  }
+
   // The Testing view shows welcome content only while the tree is empty; the context key says why it is
   // empty, so the manifest's viewsWelcome entries can pick the right hint. While an enabled folder has no
   // model yet, its discovery has not ended, and the state stays until it has.
@@ -856,7 +862,7 @@ export class TestControllerManager {
       setTestExplorerState("disabled");
     } else if (this.testController.items.size > 0) {
       setTestExplorerState("hasTests");
-    } else if (enabled.some((folder) => this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder))) {
+    } else if (enabled.some((folder) => this.hasKnownEnvironmentProblem(folder))) {
       setTestExplorerState("noEnvironment");
     } else if (enabled.every((folder) => this.robotTestItems.get(folder) !== undefined)) {
       setTestExplorerState("noTests");
