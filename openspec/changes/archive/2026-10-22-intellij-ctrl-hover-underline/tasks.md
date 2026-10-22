@@ -41,7 +41,7 @@
   - Find Usages and Show Usages on a plain `Log`, on `Collections.`, on `${user}`, on `${arg2: str}` and on a tag;
   - Quick Documentation, the rename handler, and Ctrl+hover and Ctrl+click from 2.1;
   - `idea.log` with no new entries.
-- [ ] 3.3 Mark J11 as done in `playground/pycharm-befunde.md`, with the date and the commit.
+- [x] 3.3 Mark J11 as done in `playground/pycharm-befunde.md`, with the date and the commit.
 
 ## Workflow follow-up
 
