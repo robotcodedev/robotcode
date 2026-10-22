@@ -1,9 +1,10 @@
 import * as net from "net";
 import * as vscode from "vscode";
 import { randomBytes } from "crypto";
-import { tmpdir } from "os";
-import { join, resolve } from "path";
+import { resolve } from "path";
 import { platform } from "process";
+import { commandLine } from "./commandLine";
+import { runHeader } from "./shellIntegration";
 
 // how long a new run terminal may take until its script has connected
 const READY_TIMEOUT = 20000;
@@ -52,6 +53,23 @@ export function chooseRunTerminal<T extends RunTerminalState>(
   return terminals.find((t) => !t.busy && t.name === name && t.folder === folder);
 }
 
+// a message of a run terminal's script, one JSON object per line
+interface ScriptMessage {
+  type?: string;
+  key?: string;
+  id?: number;
+  exitCode?: number | null;
+}
+
+function parseMessage(line: string): ScriptMessage | undefined {
+  try {
+    const message: unknown = JSON.parse(line);
+    return typeof message === "object" && message !== null ? (message as ScriptMessage) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 interface RunTerminal extends RunTerminalState {
   key: string;
   terminal: vscode.Terminal;
@@ -72,8 +90,9 @@ export interface StartedRun {
 }
 
 /**
- * RobotCode's run terminals: terminals whose process is the script `scriptPath`, which runs the runs it gets over a
- * local socket with the terminal as their input and output and waits after each run for a key or the next run.
+ * RobotCode's run terminals: terminals whose process is the Python script `scriptPath`, which runs the runs it gets
+ * over a local connection with the terminal as their input and output and waits after each run for a key or the next
+ * run.
  */
 export class RunTerminals implements vscode.Disposable {
   private readonly _terminals: RunTerminal[] = [];
@@ -81,7 +100,7 @@ export class RunTerminals implements vscode.Disposable {
   private readonly _ended = new Map<number, (exitCode: number | null) => void>();
   private readonly _disposable: vscode.Disposable;
   private _server: net.Server | undefined;
-  private _socketPath: Promise<string> | undefined;
+  private _address: Promise<string> | undefined;
   private _nextId = 1;
 
   constructor(private readonly scriptPath: string) {
@@ -96,10 +115,19 @@ export class RunTerminals implements vscode.Disposable {
     this._server = undefined;
   }
 
-  /** Starts `run` in a run terminal named `name` of the workspace folder `folder`. */
-  async start(name: string, folder: vscode.WorkspaceFolder | undefined, run: RunTerminalRun): Promise<StartedRun> {
+  /**
+   * Starts `run` in a run terminal named `name` of the workspace folder `folder`. A new run terminal runs its script
+   * with the Python interpreter `python`.
+   */
+  async start(
+    name: string,
+    folder: vscode.WorkspaceFolder | undefined,
+    run: RunTerminalRun,
+    python: string,
+  ): Promise<StartedRun> {
     const folderKey = folder?.uri.toString();
-    const runTerminal = chooseRunTerminal(this._terminals, name, folderKey) ?? (await this.create(name, folder));
+    const runTerminal =
+      chooseRunTerminal(this._terminals, name, folderKey) ?? (await this.create(name, folder, python));
 
     const id = this._nextId++;
     runTerminal.busy = true;
@@ -115,14 +143,14 @@ export class RunTerminals implements vscode.Disposable {
         args: run.args.slice(1),
         cwd: run.cwd,
         env: run.env,
-        shownArgs: run.shownArgs,
+        header: runHeader(commandLine(run.shownArgs ?? run.args), commandLine(run.args)),
       }) + "\n",
     );
     return { terminal: runTerminal.terminal, ended };
   }
 
-  private async create(name: string, folder: vscode.WorkspaceFolder | undefined): Promise<RunTerminal> {
-    const socketPath = await this.listen();
+  private async create(name: string, folder: vscode.WorkspaceFolder | undefined, python: string): Promise<RunTerminal> {
+    const address = await this.listen();
     const key = randomBytes(8).toString("hex");
     const pending: PendingTerminal = { resolve: () => {}, reject: () => {} };
     const connected = new Promise<net.Socket>((resolve, reject) => {
@@ -134,10 +162,12 @@ export class RunTerminals implements vscode.Disposable {
     // Created hidden and shown at once, as the REPL's terminal: the Python extensions type no activation into it.
     const terminal = (pending.terminal = vscode.window.createTerminal({
       name,
-      shellPath: process.execPath,
-      shellArgs: [this.scriptPath],
+      // isolated, so that neither PYTHONPATH nor the user's site packages nor the working directory reach the script;
+      // the runs get the whole environment
+      shellPath: python,
+      shellArgs: ["-I", this.scriptPath],
       cwd: folder?.uri,
-      env: { ELECTRON_RUN_AS_NODE: "1", ROBOTCODE_RUN_TERMINAL_SOCKET: socketPath, ROBOTCODE_RUN_TERMINAL_KEY: key },
+      env: { ROBOTCODE_RUN_TERMINAL_ADDRESS: address, ROBOTCODE_RUN_TERMINAL_KEY: key },
       iconPath: new vscode.ThemeIcon("robotcode-robot"),
       hideFromUser: true,
       isTransient: true,
@@ -162,45 +192,51 @@ export class RunTerminals implements vscode.Disposable {
     }
   }
 
+  // TCP on the loopback interface: on Windows, Python cannot write to a named pipe while it reads from it, which the
+  // script does. Every local process can connect, though, so a connection counts only as `connected` describes.
   private listen(): Promise<string> {
-    if (this._socketPath === undefined) {
-      const name = randomBytes(16).toString("hex");
-      const socketPath = platform === "win32" ? join("\\\\.\\pipe\\", name) : join(tmpdir(), name);
-      this._socketPath = new Promise((resolve, reject) => {
+    if (this._address === undefined) {
+      this._address = new Promise((resolve, reject) => {
         const server = net.createServer((socket) => this.connected(socket));
         server.once("error", (e) => {
           // the next run tries again
-          this._socketPath = undefined;
+          this._address = undefined;
           reject(e);
         });
-        server.listen(socketPath, () => resolve(socketPath));
+        server.listen(0, "127.0.0.1", () => resolve(`127.0.0.1:${(server.address() as net.AddressInfo).port}`));
         this._server = server;
       });
     }
-    return this._socketPath;
+    return this._address;
   }
 
+  // A connection whose first message is not `ready` with the key of a terminal being created is closed; a key binds
+  // one connection. Only the connection of the terminal that has a run ends it.
   private connected(socket: net.Socket): void {
+    let bound = false;
     let buffer = "";
     socket.on("data", (data) => {
       buffer += data.toString();
       for (let i = buffer.indexOf("\n"); i >= 0; i = buffer.indexOf("\n")) {
-        const message = JSON.parse(buffer.slice(0, i)) as {
-          type: string;
-          key?: string;
-          id?: number;
-          exitCode?: number;
-        };
+        const message = parseMessage(buffer.slice(0, i));
         buffer = buffer.slice(i + 1);
-        if (message.type === "ready" && message.key !== undefined) {
-          this._pending.get(message.key)?.resolve(socket);
-        } else if (message.type === "ended" && message.id !== undefined) {
-          const runTerminal = this._terminals.find((t) => t.runId === message.id);
+        if (!bound) {
+          const key = message?.type === "ready" ? message.key : undefined;
+          const pending = key !== undefined ? this._pending.get(key) : undefined;
+          if (key === undefined || pending === undefined) {
+            socket.destroy();
+            return;
+          }
+          this._pending.delete(key);
+          bound = true;
+          pending.resolve(socket);
+        } else if (message?.type === "ended" && message.id !== undefined) {
+          const runTerminal = this._terminals.find((t) => t.socket === socket && t.runId === message.id);
           if (runTerminal !== undefined) {
             runTerminal.busy = false;
             runTerminal.runId = undefined;
+            this.end(message.id, message.exitCode ?? null);
           }
-          this.end(message.id, message.exitCode ?? null);
         }
       }
     });

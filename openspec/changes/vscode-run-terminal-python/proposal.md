@@ -13,7 +13,7 @@ The prototype of that Python script also passed the checks with real runs in the
 
 ## What Changes
 
-- The run terminal's process becomes a Python script of the extension, using only the standard library, run with the Python interpreter that RobotCode uses for the run. The Node.js script and its build go.
+- The run terminal's process becomes a Python script of the extension, using only the standard library, run with the Python interpreter that RobotCode uses for the workspace folder, as the debug launcher. The Node.js script and its build go.
 - The extension and the script talk over TCP on `127.0.0.1` instead of a Unix socket or a named pipe; the extension accepts only connections that name a run terminal's key.
 - The extension sends the script the text that the terminal shows before a run, so the command line `robotcode …`, its quoting and the shell integration sequences stay in the extension's TypeScript.
 - What users see stays the same, on Linux and macOS as today: the lines, the decoration, the robot icon, the reuse and closing on a key. On Windows the run terminal now works.
@@ -30,7 +30,7 @@ The prototype of that Python script also passed the checks with real runs in the
 
 - **Code:**
   - a new `bundled/tool/utils/run_terminal.py`, next to `check_robot_version.py`, which the extension also runs with the folder's interpreter;
-  - `vscode-client/extension/runTerminals.ts` (terminal creation, TCP server, text before a run) and `debugmanager.ts` (the interpreter of the run);
+  - `vscode-client/extension/runTerminals.ts` (terminal creation, TCP server, text before a run) and `debugmanager.ts` (the folder's interpreter);
   - `vscode-client/runTerminal/`: the script `index.ts` and its project in `esbuild.mjs` go, and `commandLine.ts` and `shellIntegration.ts` move into `vscode-client/extension/`.
 - **Tests:**
   - `vscode-client/test/runTerminals.test.ts` runs the terminals with a Python interpreter;

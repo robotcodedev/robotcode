@@ -25,7 +25,7 @@ Measured on a Windows 11 VM with VS Code 1.142 and its own node-pty, in Windows'
   - closing on a key;
   - no activation in either Python mode.
 
-Each RobotCode launch configuration carries the interpreter of its run in `python`: `debugmanager.ts` sets it from the folder's interpreter when the configuration has none.
+The extension starts the debug launcher with the folder's interpreter: `robotcode.python`, or else the one selected in VS Code for the folder. A launch configuration can give its run another interpreter in `python`.
 
 ## Goals / Non-Goals
 
@@ -40,12 +40,12 @@ Each RobotCode launch configuration carries the interpreter of its run in `pytho
 
 ## Decisions
 
-### D1: The terminal's process is a Python script run with the run's interpreter
+### D1: The terminal's process is a Python script run with the folder's interpreter
 
 The script `bundled/tool/utils/run_terminal.py` uses only the standard library and runs on Python 3.10 and newer, the oldest version RobotCode supports. It sits next to `check_robot_version.py`, which the extension also runs with the folder's interpreter, and `bundled/` goes into the package as it is.
 
 The run terminal is created with:
-- `shellPath`: the interpreter of the session's configuration (`session.configuration.python`), or the folder's when it has none;
+- `shellPath`: the folder's interpreter, as for the debug launcher; a run keeps the interpreter of its launch configuration;
 - `shellArgs`: `["-I", <script>]`, so that `PYTHONPATH`, the user's site packages and the working directory do not reach the script; the run still gets the whole environment;
 - `env`: the address and the key, without `ELECTRON_RUN_AS_NODE`.
 
@@ -54,6 +54,7 @@ A reused terminal keeps the interpreter it started with; the script only starts 
 - **Alternative: the task terminal of VS Code.** It works on Windows, but it can neither show RobotCode's line before a run nor RobotCode's icon, so the maintainer rejected it.
 - **Alternative: `cmd.exe` in front of `Code.exe`.** Ctrl+C breaks the terminal, as measured.
 - **Alternative: Python only on Windows.** That would keep two scripts with the same behavior.
+- **Alternative: the interpreter of the launch configuration (`python`).** It differs only when a configuration sets one. The run uses it anyway, and the debug launcher already needs the folder's interpreter.
 
 ### D2: TCP on 127.0.0.1, with connections bound to their terminal
 

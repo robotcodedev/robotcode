@@ -156,6 +156,13 @@ jobs:
       - name: install node modules
         run: npm install --include=dev
 
+      - name: Setup Python environment
+        # for the run terminal's script, with the oldest Python that RobotCode supports
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
       - name: Resolve the VS Code version
         id: vscode
         # minimum as .vscode-test.mjs reads it; stable from the API that @vscode/test-electron asks
@@ -183,6 +190,7 @@ jobs:
         # test-results/vscode/test-results.xml
         env:
           VSCODE_VERSION: ${{ steps.vscode.outputs.version }}
+          ROBOTCODE_TEST_PYTHON: ${{ steps.setup-python.outputs.python-path }}
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
             xvfb-run -a npm test -- --reporter mocha-multi-reporters --code-version "$VSCODE_VERSION"

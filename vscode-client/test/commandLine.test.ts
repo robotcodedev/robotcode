@@ -1,6 +1,6 @@
 import * as assert from "assert";
 
-import { commandLine } from "../runTerminal/commandLine";
+import { commandLine } from "../extension/commandLine";
 
 suite("commandLine", () => {
   test("leaves plain arguments as they are", () => {

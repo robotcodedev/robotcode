@@ -1,8 +1,10 @@
 import * as assert from "assert";
+import * as net from "net";
 import * as path from "path";
+import { spawnSync } from "child_process";
 import * as vscode from "vscode";
 
-import { chooseRunTerminal, RunTerminalRun, RunTerminals, shownArgs } from "../extension/runTerminals";
+import { chooseRunTerminal, RunTerminalRun, RunTerminals, shownArgs, StartedRun } from "../extension/runTerminals";
 
 suite("shownArgs", () => {
   const main = path.join(path.sep, "ext", "bundled", "tool", "robotcode");
@@ -47,18 +49,35 @@ suite("chooseRunTerminal", () => {
   });
 });
 
+// The Python interpreter for the run terminals and their runs: ROBOTCODE_TEST_PYTHON, or else python3 or python on the
+// path, 3.10 or newer as RobotCode needs.
+function findPython(): string {
+  const configured = process.env.ROBOTCODE_TEST_PYTHON;
+  for (const candidate of configured ? [configured] : ["python3", "python"]) {
+    const result = spawnSync(
+      candidate,
+      ["-c", "import sys; print(sys.executable); sys.exit(sys.version_info < (3, 10))"],
+      { encoding: "utf8" },
+    );
+    if (result.status === 0) return result.stdout.trim();
+  }
+  throw new Error("The tests need Python 3.10 or newer, as python3 or python on the path or in ROBOTCODE_TEST_PYTHON.");
+}
+
 suite("RunTerminals", function () {
   // the terminals are real ones of the VS Code that runs the tests
   this.timeout(60000);
 
   const name = "RobotCode Test Run";
-  // the script as `npm run compile` builds it next to the compiled tests
-  const script = path.join(__dirname, "..", "runTerminal.js");
+  // the script as the package has it
+  const script = path.join(__dirname, "..", "..", "bundled", "tool", "utils", "run_terminal.py");
+  let python: string;
   let runTerminals: RunTerminals;
 
-  // a run of VS Code's own runtime, which reports the result of `code` as its exit code
-  function run(code: string): RunTerminalRun {
-    return { args: [process.execPath, "-e", code], env: { ELECTRON_RUN_AS_NODE: "1" } };
+  // a run of the interpreter that also runs the script, which reports the result of `code` as its exit code
+  function start(code: string): Promise<StartedRun> {
+    const run: RunTerminalRun = { args: [python, "-c", code] };
+    return runTerminals.start(name, undefined, run, python);
   }
 
   function closed(terminal: vscode.Terminal): Promise<void> {
@@ -72,6 +91,10 @@ suite("RunTerminals", function () {
     });
   }
 
+  suiteSetup(() => {
+    python = findPython();
+  });
+
   setup(() => {
     runTerminals = new RunTerminals(script);
   });
@@ -83,37 +106,37 @@ suite("RunTerminals", function () {
     }
   });
 
-  test("runs with the terminal as its output and reuses the terminal for the next run", async () => {
-    const first = await runTerminals.start(name, undefined, run("process.exit(process.stdout.isTTY ? 3 : 4)"));
+  test("runs with the terminal as its input and output and reuses the terminal for the next run", async () => {
+    const first = await start("import sys; sys.exit(3 if sys.stdin.isatty() and sys.stdout.isatty() else 4)");
     assert.strictEqual(await first.ended, 3);
 
-    const second = await runTerminals.start(name, undefined, run("process.exit(5)"));
+    const second = await start("import sys; sys.exit(5)");
     assert.strictEqual(second.terminal, first.terminal);
     assert.strictEqual(await second.ended, 5);
   });
 
   test("gives a run while another is in progress a terminal of its own", async () => {
-    const first = await runTerminals.start(name, undefined, run("setTimeout(() => process.exit(0), 3000)"));
-    const second = await runTerminals.start(name, undefined, run("process.exit(0)"));
+    const first = await start("import time; time.sleep(3)");
+    const second = await start("pass");
     assert.notStrictEqual(second.terminal, first.terminal);
     assert.deepStrictEqual(await Promise.all([first.ended, second.ended]), [0, 0]);
   });
 
   test("closes the terminal on a key after the run, and the next run gets a new one", async () => {
-    const started = await runTerminals.start(name, undefined, run("process.exit(0)"));
+    const started = await start("pass");
     await started.ended;
 
     const terminalClosed = closed(started.terminal);
     started.terminal.sendText("x", false);
     await terminalClosed;
 
-    const next = await runTerminals.start(name, undefined, run("process.exit(0)"));
+    const next = await start("pass");
     assert.notStrictEqual(next.terminal, started.terminal);
     assert.strictEqual(await next.ended, 0);
   });
 
   test("drops a line sent at once after the run, as Rerun Command sends it", async () => {
-    const started = await runTerminals.start(name, undefined, run("process.exit(0)"));
+    const started = await start("pass");
     await started.ended;
 
     const terminalClosed = closed(started.terminal);
@@ -126,7 +149,7 @@ suite("RunTerminals", function () {
   });
 
   test("keeps the output of a run whose extension is gone until a key", async () => {
-    const started = await runTerminals.start(name, undefined, run("setTimeout(() => process.exit(0), 1500)"));
+    const started = await start("import time; time.sleep(1.5)");
     // as a restart of the extension host closes the connection
     runTerminals.dispose();
 
@@ -139,15 +162,40 @@ suite("RunTerminals", function () {
   });
 
   test("runs in a new terminal when the previous one was closed by a key just before", async () => {
-    const started = await runTerminals.start(name, undefined, run("process.exit(0)"));
+    const started = await start("pass");
     await started.ended;
 
     started.terminal.sendText("x", false);
     // the script has ended, VS Code may not have reported the terminal closed yet
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    const next = await runTerminals.start(name, undefined, run("process.exit(7)"));
+    const next = await start("import sys; sys.exit(7)");
     assert.notStrictEqual(next.terminal, started.terminal);
     assert.strictEqual(await next.ended, 7);
+  });
+
+  test("closes a connection without the key of a terminal being created, which ends no run", async () => {
+    const started = await start("import time; time.sleep(3)");
+    const env = (started.terminal.creationOptions as vscode.TerminalOptions).env ?? {};
+    const [host, port] = (env.ROBOTCODE_RUN_TERMINAL_ADDRESS ?? "").split(":");
+
+    // what another local process gets that connects and sends `messages`, until its connection is closed
+    async function connect(...messages: object[]): Promise<string> {
+      const socket = net.connect(Number(port), host);
+      let received = "";
+      socket.on("data", (data) => (received += data.toString()));
+      socket.on("error", () => {});
+      const socketClosed = new Promise((resolve) => socket.on("close", resolve));
+      socket.write(messages.map((message) => JSON.stringify(message) + "\n").join(""));
+      await socketClosed;
+      return received;
+    }
+
+    // as the end of the run, whose id is the first, and with the key of the terminal, which has started already
+    const ended = { type: "ended", id: 1, exitCode: 42 };
+    assert.strictEqual(await connect(ended), "");
+    assert.strictEqual(await connect({ type: "ready", key: env.ROBOTCODE_RUN_TERMINAL_KEY }, ended), "");
+
+    assert.strictEqual(await started.ended, 0);
   });
 });

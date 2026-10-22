@@ -384,7 +384,9 @@ export class DebugManager {
     public readonly languageClientsManager: LanguageClientsManager,
     public readonly outputChannel: vscode.OutputChannel,
   ) {
-    this._runTerminals = new RunTerminals(extensionContext.asAbsolutePath(path.join("out", "runTerminal.js")));
+    this._runTerminals = new RunTerminals(
+      extensionContext.asAbsolutePath(path.join("bundled", "tool", "utils", "run_terminal.py")),
+    );
 
     this._disposables = vscode.Disposable.from(
       this._runTerminals,
@@ -631,10 +633,16 @@ export class DebugManager {
   ): Promise<void> {
     let ended: Promise<number | null>;
     try {
-      ({ ended } = await this._runTerminals.start(run.title ?? session.name, session.workspaceFolder, {
-        ...run,
-        shownArgs: shownArgs(run.args, this.pythonManager.robotCodeMain),
-      }));
+      // the folder's interpreter, as for the debug launcher; the run keeps its own
+      const python = await this.pythonManager.getPythonCommand(session.workspaceFolder);
+      if (python === undefined) throw new Error("Can't get a valid python command.");
+
+      ({ ended } = await this._runTerminals.start(
+        run.title ?? session.name,
+        session.workspaceFolder,
+        { ...run, shownArgs: shownArgs(run.args, this.pythonManager.robotCodeMain) },
+        python,
+      ));
     } catch (e) {
       void vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
       await vscode.debug.stopDebugging(session);
