@@ -19,7 +19,7 @@
   - Show Usages on these places;
   - LSP Reference(s) on `${user}` in the body of `Open Shop As`, with the same rows. Its title reads "Variable user" instead of "Argument user" until `argument-usage-tokens`: LSP4IJ titles the popup by the first location, which is now a use of `${user}`. That change checks the title (its task 4.1);
   - `idea.log` with no new entries.
-- [ ] 2.2 Mark J12 as done in `playground/pycharm-befunde.md`, with the date and the commit. The report to LSP4IJ stays open there.
+- [x] 2.2 Mark J12 as done in `playground/pycharm-befunde.md`, with the date and the commit. The report to LSP4IJ stays open there.
 
 ## Workflow follow-up
 
