@@ -23,7 +23,7 @@ Apply after `namespace-prefix-references` and `argument-usage-tokens` are implem
   - Quick Documentation, the rename handler, Ctrl+hover and Ctrl+click;
   - `idea.log` with no new entries.
 - [x] 2.2 Add one line to the design of `semantic-model-call-hierarchy`: Find Usages started on a node of the Call Hierarchy tool window has to be checked, because RobotCode's usage target provider answers for elements of exactly the class `LSPPsiElement` with the caret of the selected editor. Verify with `openspec validate --strict` for that change.
-- [ ] 2.3 Mark J13 as done in `playground/pycharm-befunde.md`, with the date and the commit. The report to LSP4IJ stays open there.
+- [x] 2.3 Mark J13 as done in `playground/pycharm-befunde.md`, with the date and the commit. The report to LSP4IJ stays open there.
 
 ## Workflow follow-up
 
