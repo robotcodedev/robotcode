@@ -20,7 +20,7 @@ The toolbar is rendered by `vscode-client/documentationViewer/app.tsx`. Its butt
 
 ### D1: The button sends a message, the extension opens the viewer
 
-The button posts a new message `newViewer` to the extension. `onMessage` opens the viewer as the command does, with the folder of the viewer's current entry or else the viewer's folder, the way `openViewerInNewWindow()` finds the folder of its source. `openViewer()` takes this folder as an optional parameter and calls `pickFolder()` only without it.
+The button posts a new message `newViewer` to the extension. Once VS Code reports the viewer as active (D5), `onMessage` opens the viewer as the command does, with the folder of the viewer's current entry or else the viewer's folder, the way `openViewerInNewWindow()` finds the folder of its source. `openViewer()` takes this folder as an optional parameter and calls `pickFolder()` only without it.
 
 *Alternative:* the page runs the command itself. A webview cannot run commands without the extension, and the command would ask for the folder in a multi-root workspace, because the active editor is the viewer and not a text editor.
 
@@ -38,7 +38,14 @@ The static screenshot `viewer-window` (light and dark) shows the toolbar as the 
 
 The recordings stay: `viewer-browsing` on the guide page and `vscode-documentation-viewer.mp4` of the home page's tour. They show the viewer at work; the missing button does not make what they show wrong. `viewer-source-action` shows no toolbar.
 
+### D5: The button waits until its viewer is active
+
+A click on the button is often the first click into its viewer, for example while the editor beside it is active. The message of the click reaches the extension at once, but VS Code reports the viewer as the active editor only later: the page of a webview checks its focus every 250 ms. `Beside` and `Active` are resolved against the active editor, so without waiting the new viewer would open beside the editor, that is in the group of the viewer and over it, or with `openLocation` `active` in the group of the editor. `onMessage` therefore waits until VS Code reports the viewer as active, at most one second, and then opens the new viewer as the command does.
+
+*Alternative:* the column of the viewer, or the next one, instead of `Beside` and `Active`. It needs no wait, but places the new viewer by other rules than the command and the requirement "Where a viewer opens", which name the active editor.
+
 ## Risks / Trade-offs
 
 - [The planned change `documentation-viewer-accessibility` also edits the toolbar in `app.tsx`, which it names as one group.] → The button is one more control in that group. Whichever change lands second adds it there; no requirement of either change conflicts.
 - [Someone runs the old command ID from a script or a keybinding made with a development build.] → Not released, so only development builds are affected; VS Code reports the unknown command.
+- [The new viewer opens a moment after the click, when VS Code reports the viewer as active (D5).] → VS Code reports it within a quarter of a second after the click; without the report, the new viewer opens after one second, beside the active editor as before.
