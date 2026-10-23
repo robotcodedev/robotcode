@@ -208,6 +208,7 @@ If you prefer to set up locally:
    - [Node.js](https://nodejs.org/)
    - [Git](https://git-scm.com/)
    - [Hatch](https://hatch.pypa.io/latest/install/)
+   - A JDK 21, only for the PyCharm plugin in `intellij-client/`
 
    Supported Python and Node.js versions are declared in [`pyproject.toml`](pyproject.toml) and [`package.json`](package.json) respectively. Hatch will tell you if your interpreter is too old when you create the dev environment.
 
@@ -259,7 +260,7 @@ This installs the `pre-commit`, `commit-msg` and `pre-push` hooks. To run all ho
 
 1. **Create a branch:** `git checkout -b feature/your-feature-name`
 2. **Make your changes** following the project's coding standards
-3. **Run tests:** `hatch run test:test` (runs the full test suite against all supported Robot Framework versions with the default Python — run this before committing or pushing, not only the tests you added or changed)
+3. **Run tests:** the tests of every part you changed, before committing or pushing, and not only the tests you added or changed — `hatch run test:test` for the Python packages (the full test suite against all supported Robot Framework versions with the default Python), `npm test` for the VS Code extension, `./gradlew test` in `intellij-client/` for the PyCharm plugin (see [Running Tests](#running-tests))
 4. **Run linting:** `hatch run lint:all` (or use the VS Code task) — the [pre-commit hooks](#pre-commit-hooks) run style and typing checks automatically if installed
 5. **Fix linting issues:** `hatch run lint:style` for formatting
 6. **Commit your changes** with a descriptive commit message
@@ -274,7 +275,7 @@ When you open a pull request, GitHub will pre-fill the [pull request template](.
 Before submitting your pull request, make sure that:
 
 - [ ] The change is **focused** on a single concern (no unrelated refactors or formatting noise).
-- [ ] **Tests** for the change have been added or updated, and `hatch run test:test` passes locally (RF matrix against the default Python) — *not required for documentation-only or other non-code changes; note that in the PR*. See [Running Tests](#running-tests) for faster iteration options and the full matrix.
+- [ ] **Tests** for the change have been added or updated, and the tests of every changed part pass locally: `hatch run test:test` for the Python packages (RF matrix against the default Python), `npm test` for the VS Code extension, `./gradlew test` in `intellij-client/` for the PyCharm plugin — *not required for documentation-only or other non-code changes; note that in the PR*. See [Running Tests](#running-tests) for faster iteration options and the full matrix.
 - [ ] **Linting** passes: `hatch run lint:all` (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed) — *not applicable to documentation-only or other non-code changes; there is no Markdown linter*.
 - [ ] **Documentation** has been updated where relevant (user docs, code comments, README).
 - [ ] **Generated files** (if any) were regenerated with the documented script, not edited by hand.
@@ -292,7 +293,7 @@ A good PR description:
 
 ##### PR Review Process
 
-- Automated checks must pass (tests, linting, etc.).
+- Automated checks must pass (see "What the CI runs" under [Running Tests](#running-tests)).
 - At least one maintainer review is required.
 - Address feedback promptly.
 - Keep your PR up to date with the main branch.
@@ -347,6 +348,28 @@ npm test                  # on Linux without a display: xvfb-run -a npm test
 `npm test` builds the extension and runs the tests under `vscode-client/test/` in a VS Code that `vscode-test` downloads into `.vscode-test/`, together with the extension's dependencies `ms-python.python` and `ms-python.debugpy`. It uses the minimum VS Code version that `engines.vscode` in `package.json` declares; `npm test -- --code-version stable` runs the tests with the newest one. The CI runs both. The tests of the run terminal run its script with Python, so `npm test` needs Python 3.10 or newer, as `python3` or `python` on the path, or the interpreter that `ROBOTCODE_TEST_PYTHON` names.
 
 In VS Code, the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner) shows the tests in the Test Explorer under "VS Code Extension", where **Run Test** and **Debug Test** run or debug them. It runs the tests built in `out/test/` and does not build them, so run `npm run compile` after a change. The "Extension Tests" launch configuration debugs them as well. Start it with F5 (**Run > Start Debugging**), not with Ctrl+F5 (**Run Without Debugging**): without the debugger, the tests run, but VS Code shows neither their output nor the end of the run, and the session stays open until you stop it.
+
+**PyCharm plugin tests:**
+
+```bash
+cd intellij-client
+./gradlew test
+```
+
+`./gradlew test` runs the tests under `intellij-client/src/test/kotlin/` in the PyCharm version that `platformVersion` in `intellij-client/gradle.properties` names; Gradle downloads it on the first run. `--tests` runs only some of them, for example `./gradlew test --tests '*RobotCodeBannerTest'`. `RobotCodeEnvironmentProbeTest` runs only when `ROBOTCODE_TEST_PYTHON` is set, to a Python with Robot Framework such as the one of the `test.rf75` environment; otherwise it is skipped.
+
+`./gradlew runIde` starts that PyCharm version with the plugin in a sandbox. To try the plugin in another PyCharm release or EAP build, `./gradlew runIdePyCharmProf -PrunIdeVersion=2026.2.3` starts that version in a sandbox of its own.
+
+`./gradlew verifyPlugin` checks the plugin with the JetBrains Plugin Verifier against the released PyCharm versions of the plugin's build range (`pluginSinceBuild` to `pluginUntilBuild` in `gradle.properties`), and `./gradlew verifyPlugin -PverifyEap` against the newest EAP build. The reports are written to `intellij-client/build/reports/pluginVerifier/` and `pluginVerifier-eap/`. In the CI, a compatibility problem with a released version fails the checks; with the EAP build, it only shows a warning.
+
+**What the CI runs:**
+
+The CI workflow `build test and package` (`.github/workflows/build-test-package.yml`) runs for pull requests and pushes to `main`:
+
+- on Linux, Windows and macOS: the Python tests with every supported Python and Robot Framework combination, the VS Code extension's tests with the minimum and the newest stable VS Code, and the PyCharm plugin's tests;
+- on Linux: `hatch run lint:style`, `hatch run lint:typing` and the plugin verifier.
+
+The packages are only built when all tests pass. Since every test suite runs on all three systems, write tests that pass on each of them: create files in a temporary directory, such as pytest's `tmp_path`, instead of fixed paths like `/tmp/...`, and don't depend on path separators, line endings or the form of file URIs.
 
 **Supported Python and Robot Framework versions:**
 
@@ -410,7 +433,7 @@ Review the diff: only the generated region of `model.py`, the schema and `config
 - `hatch run build:update-doc-links` — Update documentation links.
 - `hatch run build:bump [major|minor|patch]` — Bump project version using semantic versioning.
 - `hatch run build:package` — Package for distribution.
-- `hatch run build:publish` — Publish to PyPI, VS Code Marketplace, etc. (requires the specific credentials set up in your environment).
+- `hatch run build:publish` — Publish a release to the VS Code Marketplace, Open VSX, PyPI and the JetBrains Marketplace; `hatch run build:publish-dev` publishes the dev builds. Both need the stores' credentials and are run by the `publish` workflow (`.github/workflows/publish.yml`): a release after the successful build of a version tag, the dev builds every night.
 
 #### Troubleshooting Development Setup
 
@@ -534,19 +557,20 @@ Good commit messages help maintain a clean project history and make it easier to
 - **refactor:** A code change that neither fixes a bug nor adds a feature
 - **perf:** A code change that improves performance
 - **test:** Adding missing tests or correcting existing tests
-- **chore:** Changes to the build process or auxiliary tools and libraries
+- **build:** Changes to the build system or its dependencies, such as Gradle or esbuild
+- **ci:** Changes to the CI workflows
+- **chore:** Other changes that touch neither the source code nor the tests, such as auxiliary tools
+- **revert:** Reverting an earlier commit
+
+The changelog leaves out `build`, `chore`, `ci`, `style` and `test` commits (see `cliff.toml`), so a change that users notice, such as a new minimum IDE version, is a `feat` or `fix`.
 
 #### Scope
 
-The scope should indicate the package or area affected:
-- **core:** Core functionality
-- **language-server:** Language server features
-- **debugger:** Debugging functionality
-- **runner:** Test runner
-- **analyze:** Code analysis
-- **plugin:** Plugin system
-- **docs:** Documentation
-- **vscode:** VS Code extension
+The scope names the package or area that the change mostly touches; `git log` shows how the existing scopes are spelled. Common scopes:
+- **Python packages:** the package, such as `core`, `robot`, `language-server`, `debugger`, `runner`, `analyze`, `repl` or `plugin`, and `robotcode` for the root package
+- **Editors:** `vscode` for the VS Code extension, `intellij` for the PyCharm plugin, `textmate` for the syntax grammars
+- **Documentation:** `website` for robotcode.io, or the area that a page documents, such as `vscode` or `repl`; `contributing` for this guide; `openspec` for the planning artifacts under `openspec/`
+- **Repository:** `github` for the GitHub workflows, `chat-plugin` for the bundled chat plugin
 
 #### Examples
 
@@ -636,7 +660,7 @@ If you're interested in joining the project team:
 
 ### What We Look For
 
-- **Technical expertise** in relevant areas (Python, Robot Framework, VS Code extensions)
+- **Technical expertise** in relevant areas (Python, Robot Framework, VS Code extensions, IntelliJ Platform plugins)
 - **Communication skills** for working with contributors and users
 - **Reliability** in following through on commitments
 - **Collaborative mindset** and willingness to help others
