@@ -99,12 +99,17 @@ Each run SHALL be a command for VS Code's shell integration: its marked command 
 #### Scenario: Copy the output of a run
 
 - **WHEN** the user chooses **Copy Output** in the menu of a run's decoration
-- **THEN** the clipboard holds the output of that run, without the command line and without the line about the reuse
+- **THEN** the clipboard holds the output of that run without the command line, ending with the line about the reuse
 
 #### Scenario: Sticky scroll
 
 - **WHEN** the user scrolls through the output of a run so far that its command line leaves the view
 - **THEN** VS Code shows the run's command line at the top of the terminal, as for the commands of a shell
+
+#### Scenario: Sticky scroll in a reused terminal
+
+- **WHEN** the user scrolls through the output of the second run in a reused terminal so far that its command line leaves the view
+- **THEN** VS Code shows only that run's command line at the top of the terminal, without the line about the reuse after the first run
 
 #### Scenario: Rerun Command after the run
 
