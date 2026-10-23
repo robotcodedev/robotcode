@@ -3,18 +3,26 @@
 ## ADDED Requirements
 
 ### Requirement: Hover resolves via the SemanticModel when available
-When `namespace.semantic_model` is set, hover SHALL resolve the symbol under the cursor via `model.token_path_at()` (with statement context from `model.statement_at()`), dispatching on `TokenKind`. The model path SHALL NOT walk the AST and SHALL NOT iterate the full `variable_references` / `keyword_references` / `namespace_references` dictionaries. When the model is absent, the legacy path SHALL be used unchanged.
+When `namespace.semantic_model` is set, hover SHALL resolve the symbol under the cursor via `model.token_path_at()` (with statement context from `model.statement_at()`), dispatching on `TokenKind`. The model path SHALL NOT walk the AST to find the symbol and SHALL NOT iterate the full `variable_references` / `keyword_references` / `namespace_references` dictionaries. When the model is absent, the legacy path SHALL be used unchanged.
 
 #### Scenario: Keyword call hover
 - **WHEN** the cursor is on a keyword name in a keyword call and the model path is active
 - **THEN** hover shows the same documentation and highlight range as the legacy path, sourced from the enclosing statement's pre-resolved `keyword_doc`
 
 #### Scenario: Variable hover with value resolution
-- **WHEN** the cursor is on `${var}` (or on its VARIABLE_BASE sub-token) and the variable is resolvable
-- **THEN** hover shows the same rendered value and range as the legacy path, with the definition found via `model.find_variable()`
+- **WHEN** the cursor is on the name of `${var}` and the variable is resolvable
+- **THEN** hover shows the same rendered value and range (the name without `${` and `}`) as the legacy path, with the definition found via `model.find_variable()`
+
+#### Scenario: Hover on a definition
+- **WHEN** the model path is active and the cursor is on the name of an `[Arguments]` entry, an assignment target, a FOR variable or a keyword definition
+- **THEN** hover shows what is defined there, with the same contents and range as the legacy path
+
+#### Scenario: Test case hover
+- **WHEN** the model path is active and the cursor is on the name of a test case
+- **THEN** hover shows its documentation, tags and metadata as on the legacy path, taken from the test's RF node
 
 #### Scenario: Position without hover target
-- **WHEN** the cursor is on a position where the legacy path produces no hover (e.g. a separator)
+- **WHEN** the cursor is on a position where the legacy path produces no hover (e.g. a separator, or the `$`, a brace or the `=` of a variable)
 - **THEN** the model path also produces no hover
 
 ### Requirement: Keywords in inline IF bodies and Run Keyword arguments resolve on the model path
