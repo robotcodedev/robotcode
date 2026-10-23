@@ -18,8 +18,8 @@ robotcode.io SHALL have a page in Getting Started that explains, for the VS Code
 
 #### Scenario: Python dev version without other pre-releases
 
-- **WHEN** a user installs a Python dev version as the page shows
-- **THEN** pip installs that dev version of `robotcode` and of its packages, and installs releases of all other dependencies, such as Robot Framework
+- **WHEN** a user installs a Python dev version by naming it, as the page shows for pip and for uv
+- **THEN** the installer installs that dev version of `robotcode` and of its packages, and releases of all other dependencies, such as Robot Framework
 
 #### Scenario: README link
 
