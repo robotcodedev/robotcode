@@ -68,6 +68,12 @@ npm run lint                        # ESLint
 npm run lint-fix                    # ESLint auto-fix
 ```
 
+### Testing
+```bash
+npm test                            # Extension tests in vscode-client/test/, in a downloaded VS Code
+xvfb-run -a npm test                # The same on Linux without a display
+```
+
 ### Key Build Notes
 - Uses **esbuild** (not webpack) — configured in `esbuild.mjs`
 - Main entry compiles to `./out/extension.js`

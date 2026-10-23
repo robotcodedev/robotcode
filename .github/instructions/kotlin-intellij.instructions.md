@@ -38,7 +38,12 @@ intellij-client/
 
 ### Building & Packaging
 ```bash
-cd intellij-client && gradle buildPlugin  # IntelliJ plugin
+cd intellij-client && ./gradlew buildPlugin  # IntelliJ plugin
+```
+
+### Testing
+```bash
+cd intellij-client && ./gradlew test         # Unit tests in src/test/kotlin/
 ```
 
 ## LSP4IJ Best Practices

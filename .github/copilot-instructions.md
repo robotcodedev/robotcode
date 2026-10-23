@@ -25,12 +25,15 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 |------|---------|
 | **Lint all (style + types)** | `hatch run lint:all` |
 | **Auto-fix lint** | `hatch run lint:fix` |
-| **Run tests** | `pytest .` |
-| **Run tests (specific matrix)** | `hatch run test.rf70.py311:test` |
-| **Update snapshots** | `pytest --regtest2-reset` |
+| **Run tests** | `hatch run test:test` (all Robot Framework versions, default Python) |
+| **Run tests (one Robot Framework version)** | `hatch run test.rf75:test` |
+| **Run tests (one Python × Robot Framework combination)** | `hatch run devel.py3.12-rf75:test` |
+| **Update snapshots** | `hatch run test.rf75:test-reset <path>` (per Robot Framework version) |
 | **Coverage** | `hatch run cov` |
+| **Test VS Code extension** | `npm test` (Linux without a display: `xvfb-run -a npm test`) |
+| **Test IntelliJ plugin** | `cd intellij-client && ./gradlew test` |
 | **Build VS Code extension** | `npm run compile && npm run package` |
-| **Build IntelliJ plugin** | `cd intellij-client && gradle buildPlugin` |
+| **Build IntelliJ plugin** | `cd intellij-client && ./gradlew buildPlugin` |
 | **Bump version** | `hatch run build:bump` |
 
 ### Key Files
@@ -48,7 +51,7 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 
 - **Namespace packages:** All Python packages live under the `robotcode.*` namespace. The `__init__.py` files in `robotcode/` directories are **empty** — never add imports to them.
 - **Plugin registration:** New CLI commands or tools must be registered via `[project.entry-points.robotcode]` in the package's `pyproject.toml` and use `@hookimpl` from `robotcode.plugin`.
-- **Snapshot tests:** If test output changes intentionally, reset snapshots with `pytest --regtest2-reset`. Failing to do so causes false negatives.
+- **Snapshot tests:** If test output changes intentionally, reset the snapshots of each affected Robot Framework version with `hatch run test.<rf-env>:test-reset <path>`. Failing to do so causes false negatives.
 - **Python environment:** Always ask your tools which Python interpreter is selected for the workspace before running commands.
 - **VS Code build:** The extension uses esbuild (not webpack). Run `npm run compile` for development, `npm run package` for production.
 - **Version files:** Never edit `__version__.py` or version strings manually — use `hatch run build:bump` and `scripts/update_git_versions.py` to keep all 12+ packages in sync.
