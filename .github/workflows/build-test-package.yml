@@ -280,6 +280,9 @@ jobs:
       - run: hatch run lint:typing
         if: always()
 
+      - run: npm run lint
+        if: always()
+
       - name: Verify JetBrains Plugin (released IDE versions)
         if: always()
         working-directory: intellij-client

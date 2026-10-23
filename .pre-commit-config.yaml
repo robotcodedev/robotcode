@@ -1,6 +1,6 @@
 fail_fast: true
 default_language_version:
-  python: python3.10
+  python: python3
 default_stages:
   - commit-msg
   - pre-commit
@@ -12,7 +12,7 @@ default_install_hook_types:
 
 repos:
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.0.0
+    rev: v4.4.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]

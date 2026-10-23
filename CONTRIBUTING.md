@@ -197,7 +197,7 @@ For local development with containers:
    - Clone the repository: `git clone https://github.com/robotcodedev/robotcode.git`.
    - Open the project in VS Code.
    - When prompted, click "Reopen in Container" — or use the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run "Dev Containers: Reopen in Container".
-   - The container automatically installs all dependencies (Python, Node.js, etc.).
+   - The container automatically installs all dependencies: Python, Node.js and Hatch, a JDK 21 for the PyCharm plugin, and xvfb for the VS Code extension's tests. All three test suites run in it, in Codespaces as well; start the VS Code extension's tests there with `xvfb-run -a npm test`, since the container has no display.
 
 **Option 3: Local Development**
 
@@ -261,8 +261,8 @@ This installs the `pre-commit`, `commit-msg` and `pre-push` hooks. To run all ho
 1. **Create a branch:** `git checkout -b feature/your-feature-name`
 2. **Make your changes** following the project's coding standards
 3. **Run tests:** the tests of every part you changed, before committing or pushing, and not only the tests you added or changed — `hatch run test:test` for the Python packages (the full test suite against all supported Robot Framework versions with the default Python), `npm test` for the VS Code extension, `./gradlew test` in `intellij-client/` for the PyCharm plugin (see [Running Tests](#running-tests))
-4. **Run linting:** `hatch run lint:all` (or use the VS Code task) — the [pre-commit hooks](#pre-commit-hooks) run style and typing checks automatically if installed
-5. **Fix linting issues:** `hatch run lint:style` for formatting
+4. **Run linting:** `hatch run lint:all` (or use the VS Code task) for the Python code and `npm run lint` for the VS Code extension — the [pre-commit hooks](#pre-commit-hooks) run these checks automatically if installed
+5. **Fix linting issues:** `hatch run lint:fix` for the Python code and `npm run lint-fix` for the VS Code extension; both fix what they can, formatting included
 6. **Commit your changes** with a descriptive commit message
 7. **Push and create a pull request**
 
@@ -276,7 +276,7 @@ Before submitting your pull request, make sure that:
 
 - [ ] The change is **focused** on a single concern (no unrelated refactors or formatting noise).
 - [ ] **Tests** for the change have been added or updated, and the tests of every changed part pass locally: `hatch run test:test` for the Python packages (RF matrix against the default Python), `npm test` for the VS Code extension, `./gradlew test` in `intellij-client/` for the PyCharm plugin — *not required for documentation-only or other non-code changes; note that in the PR*. See [Running Tests](#running-tests) for faster iteration options and the full matrix.
-- [ ] **Linting** passes: `hatch run lint:all` (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed) — *not applicable to documentation-only or other non-code changes; there is no Markdown linter*.
+- [ ] **Linting** passes: `hatch run lint:all`, and `npm run lint` for changes to the VS Code extension (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed) — *not applicable to documentation-only or other non-code changes; there is no Markdown linter*.
 - [ ] **Documentation** has been updated where relevant (user docs, code comments, README).
 - [ ] **Generated files** (if any) were regenerated with the documented script, not edited by hand.
 - [ ] **Commits** follow [Conventional Commits](#commit-messages) and are [cryptographically signed](#signed-commits-required) (`git commit -S`, GPG/SSH).
@@ -311,7 +311,7 @@ This runs the full test suite across all supported Robot Framework versions usin
 `test:test` runs every Robot Framework version with your default Python, also the versions that do not officially support it (see "Supported Python and Robot Framework versions" below). Robot Framework itself may fail in such a combination: for example, Robot Framework 7.2 and older cannot load their XML library on Python 3.15. The CI, which runs only the supported combinations, is authoritative.
 
 > [!NOTE]
-> **Documentation-only or other non-code changes** (typo fixes, prose, Markdown docs) need neither the test matrix nor linting: `hatch run lint:all` only checks source code (ruff/mypy for Python, eslint for JS/TS), there is no Markdown linter, and the pre-commit hooks skip automatically when no code files are staged. Run the tests and linting whenever you touch source code, even slightly.
+> **Documentation-only or other non-code changes** (typo fixes, prose, Markdown docs) need neither the test matrix nor linting: `hatch run lint:all` and `npm run lint` only check source code (ruff/mypy for Python, ESLint for JS/TS), there is no Markdown linter, and the pre-commit hooks skip automatically when no code files are staged. Run the tests and linting whenever you touch source code, even slightly.
 
 **Fast iteration during development:**
 
@@ -367,7 +367,7 @@ cd intellij-client
 The CI workflow `build test and package` (`.github/workflows/build-test-package.yml`) runs for pull requests and pushes to `main`:
 
 - on Linux, Windows and macOS: the Python tests with every supported Python and Robot Framework combination, the VS Code extension's tests with the minimum and the newest stable VS Code, and the PyCharm plugin's tests;
-- on Linux: `hatch run lint:style`, `hatch run lint:typing` and the plugin verifier.
+- on Linux: `hatch run lint:style`, `hatch run lint:typing`, `npm run lint` and the plugin verifier.
 
 The packages are only built when all tests pass. Since every test suite runs on all three systems, write tests that pass on each of them: create files in a temporary directory, such as pytest's `tmp_path`, instead of fixed paths like `/tmp/...`, and don't depend on path separators, line endings or the form of file URIs.
 
@@ -402,7 +402,7 @@ These commands are mainly used by maintainers, but contributors may need some of
 
 **Code Quality & Linting:**
 - `hatch run lint:typing` — Type checking with mypy.
-- `hatch run lint:style` — Code style check and formatting.
+- `hatch run lint:style` — Code style and formatting check.
 - `hatch run lint:all` — Run all linting checks.
 
 **Code Generation:**
