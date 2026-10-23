@@ -2,56 +2,68 @@
 
 ## Context
 
-`completion.py` collects items through a class-dispatch table: `create_completion_items` finds the AST node at the cursor via `get_node_at_position`, then calls `complete_<NodeType>(...)` for the matching RF AST class (and a `complete_default`). Handlers re-resolve keywords (`find_keyword`), split BDD/namespace (`ModelHelper`), and inspect surrounding AST siblings to decide context (keyword call vs. template data vs. setting value vs. import path vs. FOR option). This is the largest LSP surface (2588 LOC) and the highest-risk migration — hence "migrate last" in the design doc.
+See proposal.md (Why). The current state that shapes the approach:
 
-The SemanticModel already answers every context question completion asks, but structurally rather than positionally: `model.statement_at(line)` gives the statement subclass (`KeywordCallStatement`, `TemplateDataStatement`, `ImportStatement`, `SettingStatement`, `ForStatement`, …) and `stmt.kind`; `token_path_at(line, col)` gives the in-token context (inside `${…}`, after a `namespace.`, on a `name=` cell); `stmt.keyword_doc` / `arguments_spec` / `lib_entry` are pre-resolved.
+- `CompletionCollector.collect` takes all nodes of the parsed model at the cursor (`get_nodes_at_position`, innermost first), calls every matching `complete_<NodeType>` handler (20 of them) and then `complete_default`, and joins their items. The handlers work on the RF tokens and the text: indentation, separators, `EOL`, and `rfind("{")` inside a token for a variable whose closing brace is still missing.
+- Completion uses the namespace of the last finished analysis (`get_initialized_namespace`, since 2c6fe37c2, "to be a bit more responsive"), and a text change keeps it. Probe on RF 7.5 with the flag on: after typing `    Log    ` on a new line, completion gets the namespace from before the edit, whose semantic model has the old `No Operation` statement on that line; completion still offers `message=`, `level=`, … because it reads the line from the current text and finds `Log` by name.
+- An up-to-date model would not add anything at the typical cursor position either: `token_path_at()` excludes the token end, so right after `${fo`, `Collections.` or `Log␣␣␣␣` it returns the `EOL` token; `${fo` is an `ARGUMENT` without sub-tokens, and `Collections.` with no keyword after it is a `KEYWORD` token without `NAMESPACE` and without `lib_entry`.
+- Everything completion reads from the namespace exists on both paths: the keyword finder, the imported libraries and resources, and the scope tree behind `get_variable_matchers()` and `get_resolvable_variables()`, which the SemanticAnalyzer builds too. Its `ModelHelper` calls (BDD prefix, the keyword of a call through `finder.find_keyword`, keyword prefix, argument position) work on both namespaces. A first probe at four positions with incomplete input gave identical items on both paths.
+- There is no completion corpus. Completion is tested in five files; two of them run with both flag states (`test_completion_deprecated_keywords.py`, `test_private_keywords.py`).
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Completion context and resolution come from the SemanticModel on the model path.
-- Item lists identical to the legacy path under both flag states (contents, sort text, insert text, ranges).
-- `ModelHelper` confined to the legacy fallback in completion (removing the last active consumer).
+- Prove completion parity under both flag states over a corpus that includes incomplete input.
+- Fix in the SemanticAnalyzer what the corpus finds where the result with the flag on is wrong, before it becomes the default.
 
 **Non-Goals:**
-- No new completion kinds (named-argument, block-option, BDD-prefix, template-row completion are Ideas Collection — later changes).
-- No flag-default change (Phase 3) and no `ModelHelper` deletion (Phase 4).
-- No rewrite of the item-building/formatting helpers — only the *context detection and resolution* switch to the model.
+- No model branch in `completion.py` and no change to which namespace completion uses.
+- No new completion kinds: block options (#419) and template-row arguments are separate changes; without a model branch they go into the handlers once.
+- No removal of `ModelHelper` from completion (see D4).
+- `SemanticModel.get_variables_at()` stays unused; completion keeps reading variables through the namespace.
 
 ## Decisions
 
-### D1: Context detection via `statement_at()` + `stmt.kind`, not AST-class dispatch
+### D1: No model branch; the context comes from the current text
 
-The model path replaces `get_node_at_position` + `isinstance(node, KeywordCall/Template/...)` with `stmt = model.statement_at(line)` and a dispatch on `stmt.kind` / statement subclass. The existing `complete_<NodeType>` handlers are reused where their body is resolution-agnostic; only their entry (how the node/context is obtained) changes. Handlers that inspected AST siblings to detect "are we in a keyword-call cell vs. still on the setting name" use `token_path_at()` and the token kinds already on `stmt.tokens` (SETTING_NAME vs. KEYWORD vs. ARGUMENT).
+The semantic model belongs to the last finished analysis, and completion runs between a keystroke and the next analysis, so a model branch would read what stood on the cursor line before the edit (see Context). Completion keeps its handlers and its lookups by name.
 
-*Alternative considered*: a parallel model-native dispatch table duplicating all 60+ handlers — rejected; doubles the surface and the parity risk. Reuse the handlers, swap the front door.
+*Alternatives considered:*
+- A fresh namespace for every completion request, as the other features use: a full analysis per keystroke, which reverses 2c6fe37c2.
+- The model only when the namespace matches the current text version, the text otherwise: two implementations of the same context detection that must stay equal.
 
-### D2: `token_path_at()` decides in-token completion context
+### D2: Corpus: test data, incomplete input, completion test documents
 
-Whether the cursor is inside `${…}` (offer variables), after `namespace.` (offer that library's keywords), on a `name=` cell (offer named args — legacy behavior only, no new kinds), or on plain keyword text is read from the token path's leaf/parent kinds, not from column math against the AST token. This is the same primitive hover uses; completion is a second production consumer of `token_path_at()`.
+`test_completion_model.py` follows `test_hover_model.py`: two module-scoped protocols (flag off and on) with the vacuity guard, the `.robot` files of the LSP test data (without `very_big_file.robot`), and the documents of the completion tests written to a temporary project and opened in both protocols.
 
-### D3: Keyword / variable resolution reads pre-resolved model data
+Positions per line, comment lines skipped: column 0, the end of the indentation, the start and end of every cell, the position after each `{` of a variable and after each `.` in a keyword cell, and the end of the line. They are capped per file and thinned evenly like in the hover test; the cap comes from a measured run time.
 
-Keyword-name and argument completion read `stmt.keyword_doc` / `stmt.keyword_doc.arguments_spec` / `stmt.lib_entry` and `model.get_variables_at(line)` instead of `find_keyword` / `ModelHelper` / scope-tree walks. `get_variables_at()` already replaces the scope query completion uses for variable suggestions.
+The test data are mostly complete code, so a document with incomplete input adds the typical typing positions: an unclosed `${fo` and `%{NA`, `${` alone, `BuiltIn.` and a resource name followed by `.` with nothing after the dot, a keyword followed only by a separator, an indented empty line in a test case and in a keyword, a partial setting name in `*** Settings ***` and in a test case (`[Ta`), a partial section header (`*** Te`), partial import paths (`Library    ./`, `Resource    ../`), a BDD prefix (`Given `), a named argument (`level=`), and a data row of a templated test.
 
-### D4: Parity before enhancement, red-first over the corpus
+The items are compared as dictionaries after replacing the process-specific object ids in `data` (`str(id(...))` and the doc-cache names built from them).
 
-Land the model branch, run the dual-protocol parity suite over every completion test position, close gaps until green, and only then (in a *later* change) add the completion enhancements the model unlocks. Deviations where the model is more correct than legacy are documented xfails (existing precedent).
+*Alternative considered:* snapshot files of the items, which would also catch a bug that both paths share. Rejected for this change: the gate is parity, and the item lists of the test data would make large snapshots that change with every library update.
 
-### D5: Granularity audit is evidence-based and behavior-neutral
+### D3: Deviations: fix the analyzer, xfail only legacy bugs
 
-Completion is the first production consumer of `token_path_at()`, the declared trigger for the sub-token granularity audit (moved here from `semantic-model-hover`, which has no model branch). Method: for each of the 28+ variable-related TokenKinds, grep/record which consumer branches on it (Tier 1 `_TOKEN_KIND_TO_SEM_TOKEN` map, signature help, code actions, inlay hints, the new completion dispatch). Output: keep/merge table appended to the design doc. Merge only kinds with **zero** consumers and identical LSP mapping; every merge must keep `test_semantic_tokens_flag_parity.py` and all analyzer snapshots green. If in doubt, keep the kind — the audit's job is documentation first, deletion second.
+Completion has no branch, so a deviation means that the two analyzers fill the namespace differently at that position. If the result with the flag on is wrong, the SemanticAnalyzer is fixed in this change, with a regression test. If the result with the flag off is wrong, the position gets a documented xfail with its reason (the known-deviations table of the hover test).
+
+### D4: `ModelHelper` stays until the cleanup
+
+The seven calls are text and finder helpers that serve both paths. Deleting `ModelHelper` is the job of `semantic-model-cleanup`, which decides once, for all remaining users, where the helpers go. Its task 2.3 ("collapse to model-only") then becomes "move the helpers completion uses and remove the mixin".
+
+*Alternative considered:* move the helpers out of `ModelHelper` now. Rejected: the legacy features use some of them until the cleanup, so they would move twice or exist twice.
+
+### D5: Granularity audit against the actual consumers
+
+`token_path_at()` and `token_at()` have no production caller, so the audit cannot wait for one. It records, for each variable-related `TokenKind`, the code that branches on it: `_TOKEN_KIND_TO_SEM_TOKEN` in `semantic_tokens.py` and its mirror in the REPL lexer, signature help, inlay hints, the code actions, `model_variables.py` (inline values, selection ranges, debugging), and the analyzer. Output: a keep/merge table in `dev-docs/semantic-model.md`. Only kinds without a distinct consumer and with the same LSP mapping are merged; every merge keeps `test_semantic_tokens_flag_parity.py`, the analyzer snapshots and all `test_*_model.py` suites unchanged. When in doubt, the kind stays.
 
 ## Risks / Trade-offs
 
-- [Completion has the most context-dependent edge cases (empty cells, continuation lines, trailing separators, partial tokens)] → dual-protocol parity over the full existing completion corpus is the gate; each mismatch is analyzed individually before green.
-- [`statement_at()` on an empty/partial line returns the enclosing definition header, not a fresh statement the way `get_node_at_position` returns an `EmptyLine`/`Statement`] → verify the empty-cell and new-line completion paths explicitly; keep the legacy handling if the model can't reproduce the position semantics, documented as a scoped exception.
-- [Largest single migration — high blast radius] → it is deliberately last; every other feature has proven the model, and the flag keeps it dark until parity holds.
+- [Completion lists are long (well over 100 items at a keyword position), so many positions make the test slow] → a per-file cap from a measured run, as in the hover test.
+- [The corpus finds many deviations between the analyzers] → each is analyzed before it is fixed or marked; the run on all RF versions is the gate.
+- [The parity test cannot see a bug that both paths share] → accepted (D2); the targeted completion tests cover the behavior itself.
 
 ## Migration Plan
 
-Ordered commits: (1) model-branch skeleton (`statement_at`/`token_path_at` dispatch) with the parity test wired, (2) keyword-name + keyword-call completion on the model, (3) argument + variable + setting-value + import + template-row + FOR/WHILE-option contexts, (4) close corpus parity, xfail documentation, design-doc Tier 4 tick. Rollback = revert; flag default stays `false` throughout.
-
-## Open Questions
-
-- Does the model need a `statements_in_range()` / partial-line helper for completion on not-yet-parsed trailing cells, or does `statement_at()` + `token_path_at()` suffice? Determined during the red phase — if a helper is needed it is a small model addition, not a shape change.
+(1) Parity test over the test data and the completion test documents, (2) the document with incomplete input, (3) deviations fixed or marked, (4) audit, (5) docs. Rollback = revert; the flag default stays `false`.

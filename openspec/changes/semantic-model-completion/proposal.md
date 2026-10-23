@@ -2,31 +2,31 @@
 
 ## Why
 
-`completion.py` (2588 LOC) is the last LSP feature still resolving context and keywords the pre-SemanticModel way and the **last actively-using `ModelHelper` consumer** (`class CompletionCollector(ModelHelper)`, [completion.py:322](../../../packages/language_server/src/robotcode/language_server/robotframework/parts/completion.py)) — every other feature keeps `ModelHelper` only in a legacy fallback. Completion determines what to suggest by walking the AST (`get_node_at_position`) and dispatching on RF AST node classes (`complete_KeywordCall`, `complete_TestTemplate`, `complete_Setup_or_Teardown_or_Template`, … 60+ handlers), then re-resolving keywords/variables per request. The design document (`dev-docs/semantic-model.md`, Tier 4) scopes this as the highest-risk, migrate-last feature: the model's `stmt.kind` / statement subclasses replace the AST type checks, and `statement_at()` / `token_path_at()` / pre-resolved `keyword_doc` / `arguments_spec` / block-option enums replace the re-resolution.
-
-Until completion is migrated, Phase 4 cannot delete `ModelHelper` (completion is the one remaining hard dependency after the fallbacks are removed), and Phase 3's flag flip has no complete feature coverage.
+Completion is the last LSP feature without proof that it answers the same with the semantic-model analysis path enabled as with it disabled, and `semantic-model-switchover` makes that proof a hard gate. A model branch, as planned before, would answer for an outdated text while the user types: completion works with the namespace of the last finished analysis (`get_initialized_namespace`, since 2c6fe37c2), whose semantic model still describes the text before the latest keystrokes.
 
 ## What Changes
 
-- Add a model branch to `completion.py`: when `namespace.semantic_model` is set, derive completion context from the SemanticModel (`statement_at(line)` → `stmt.kind` / statement subclass; `token_path_at()` for in-token context such as inside `${…}`, after `namespace.`, in a named-argument position) instead of `get_node_at_position` + AST-class dispatch.
-- Keyword-name completion, argument completion, and keyword-snippet building read the pre-resolved `keyword_doc` / `arguments_spec` / `lib_entry` on the statement rather than calling `find_keyword` / `ModelHelper`.
-- Legacy AST path stays as the fallback while the flag defaults to `false`; **byte-identical completion items required under both flag states** (pure parity migration — the new completion *ideas* from the design doc's Ideas Collection, e.g. block-option or named-argument completion, are explicitly out of scope here).
-- After this change, `ModelHelper` is referenced only from legacy fallback paths across all LSP features — Phase 4 becomes unblocked on the completion side.
-- Sub-token granularity audit (moved from `semantic-model-hover`): record which `TokenKind` values the model consumers branch on, now including the completion dispatch; merge kinds with zero consumers, behavior-neutral.
+- No model branch in `completion.py`. Completion keeps taking its context from the current text and looking up the keyword of a call and the library of a prefix by name; this already runs unchanged on the namespaces of both analyzers.
+- New dual-protocol parity test `test_completion_model.py`: the completion items with the flag off and on, compared at probed positions of the LSP test data, of a document with incomplete input (an unclosed `${fo`, `BuiltIn.` with nothing after the dot, a keyword followed only by a separator, an indented empty line, …) and of the documents of the existing completion tests.
+- Deviations the test finds are fixed in the SemanticAnalyzer where the result with the flag on is wrong; a documented xfail is allowed only where the result with the flag off is wrong.
+- Sub-token granularity audit (moved here from `semantic-model-hover`): which `TokenKind` values the code branches on, recorded as a keep/merge table; only kinds without a distinct consumer are merged, behavior-neutral.
+- `dev-docs/semantic-model.md`: the Completion section describes this approach instead of the model dispatch sketch, and the Ideas Collection drops named-argument and BDD-prefix completion, which completion already offers.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `semantic-model-completion`: Completion derives its context and resolution from the SemanticModel when the `robotcode.experimental.semanticModel` flag is active, producing item lists identical to the legacy AST path.
+- `semantic-model-completion`: Completion answers the same with the semantic-model analysis path enabled and disabled, and offers items for the current text of the document, also before it is analyzed again.
 
 ### Modified Capabilities
 
-_None — no existing main specs cover completion._
+_None._
 
 ## Impact
 
-- **Code**: `packages/language_server/.../parts/completion.py` (context detection + keyword/variable/argument resolution branches). Possibly small analyzer additions if a completion context needs statement/token data the model does not yet expose; possibly `packages/robot/.../semantic_analyzer/enums.py` + `analyzer.py`/`variable_tokenizer.py` for TokenKind merges resulting from the audit.
-- **Tests**: new `test_completion_model.py` (dual-protocol flag OFF/ON parity over the existing completion test positions); existing completion E2E/regtest suites stay green under both flag states.
-- **Docs**: tick the Tier 4 completion item and the granularity-audit item in `dev-docs/semantic-model.md`; record the audit result table there.
-- **Sequencing (soft)**: needs only the SemanticModel available and proven correct (`semantic-model-sidecar-cleanup` + `semantic-model-tier1-completion`) — no hard ordering against the other feature changes. Do not *merge* before `semantic-model-tier1-completion` (its non-vacuous parity suite is the precondition for trusting the largest consumer's parity), but development can proceed in parallel. Independent of `semantic-model-hover`. Not breaking; flag default stays `false`.
+- **Code**: no change to `completion.py`. Fixes in the SemanticAnalyzer (`packages/robot/src/robotcode/robot/diagnostics/semantic_analyzer/`) for deviations the parity test finds; possibly `enums.py` and the token builders for merges from the audit.
+- **Tests**: new `tests/robotcode/language_server/robotframework/parts/test_completion_model.py`.
+- **Docs**: `dev-docs/semantic-model.md` (Completion section, Ideas Collection, audit table).
+- **Order**: the other open changes to `completion.py` (`env-var-completion-keep-default`, `variables-completion-details`, `variables-import-signature`, `library-index`, `library-keyword-set-declaration`) can land before or after this one; without a model branch they change both paths at once, and the parity test covers what has landed.
+- **Follow-up**: completion keeps its `ModelHelper` calls; `semantic-model-cleanup` moves those helpers when it deletes `ModelHelper`, so its task 2.3 ("collapse to model-only") needs that correction.
+- Not breaking; the flag default stays `false`.
