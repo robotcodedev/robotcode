@@ -129,7 +129,7 @@ The page Running and debugging SHALL explain with screenshots how to run and deb
 
 #### Scenario: Output of a run
 - **WHEN** a reader opens `/guides/vscode/running-and-debugging/`
-- **THEN** the page explains that a run's output appears in RobotCode's run terminal, which shows the command line before each run, is reused and closes on a key, and names the console values `robotcodeTerminal`, `integratedTerminal`, `internalConsole` and `externalTerminal` with the setting `robotcode.debug.defaultConsole`
+- **THEN** the page explains that a run's output appears in RobotCode's run terminal, which shows the command line before each run, is reused and closes on a key, and names the console values `robotcodeTerminal`, `integratedTerminal`, `internalConsole` and `externalTerminal` with the setting `robotcode.debug.defaultConsole`, and says that VS Code does not open the Debug Console by itself for a run in a terminal unless `internalConsoleOptions` in a launch configuration or the setting `debug.internalConsoleOptions` says so
 
 ### Requirement: Configuration in VS Code
 
