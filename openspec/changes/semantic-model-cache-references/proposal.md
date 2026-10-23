@@ -26,5 +26,5 @@ _None._
 
 - **Code**: `packages/robot/.../semantic_analyzer/nodes.py` (pickled state of the statements), `serialization.py` (`resolve_references()`), `entities.py` and `namespace.py` (the key of a library entry, design D2).
 - **Tests**: unit tests for the pickled state and the mapping back (`test_serialization.py`); a restore test on the model path (`test_namespace_cache_restore.py`).
-- **Cache**: entries written before the change still load, with copies as today; a new RobotCode version drops old cache entries anyway.
+- **Cache**: an entry written before the change no longer loads and counts as a miss, so that namespace is analyzed fresh and stored again; a new RobotCode version drops old cache entries anyway.
 - **Dependencies**: none. It should land before `semantic-model-completion` and `semantic-model-switchover`, which build on the model's keywords. Not breaking.

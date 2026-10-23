@@ -32,16 +32,18 @@ A file opened in the editor with unchanged text keeps the namespace restored for
 
 ### D2: The entry key moves next to `LibraryEntry`
 
-`_namespace_reference_key()` in `namespace.py` computes the key that `all_entries` and `namespace_references` use (entry type, name, import name, arguments, alias, importing file, import and alias ranges). It moves to `entities.py`, next to `LibraryEntry`, so the statements can compute the same key without importing `namespace.py`; `namespace.py` uses it from there.
+`_namespace_reference_key()` in `namespace.py` computes the key that `all_entries` and `namespace_references` use (entry type, name, import name, arguments, alias, importing file, import and alias ranges). It moves to `entities.py`, next to `LibraryEntry`, as `library_entry_key()`, so the statements can compute the same key without importing `namespace.py`; `namespace.py` uses it from there.
 
 ### D3: `resolve_references()` covers every field D1 replaces
 
 It resolves `ImportStatement.init_keyword_doc` and `TemplateDataStatement.template_keyword_doc` too, by `kw_by_id`, like `keyword_doc`. An id that the restored namespace does not have resolves to `None`, as for `keyword_doc` today.
 
+The init of a Variables import comes from its variables file, whose documentation `kw_by_id` did not hold; `from_data()` adds the inits of the imported variables files (only Robot Framework < 7.0 gives a variables file an init). For a library whose documentation has errors the analyzer takes the init from a documentation loaded without arguments, which the restored namespace does not have; that case never reaches the cache, because such an import counts as failed and the cache keeps no analysis with failed imports.
+
 ## Risks / Trade-offs
 
 - [`KeywordDoc.stable_id` is not unique when one library is imported twice with different arguments; the restored keyword is then the one `kw_by_id` holds last] → `to_data()` already merges the reference dicts of such keywords; a call with a prefix keeps its import through `lib_entry`, whose key includes the import position.
-- [Cache entries written before the change hold copies] → `resolve_references()` leaves non-string values alone, so they load as today; a new RobotCode version drops old cache entries anyway.
+- [Cache entries written before the change hold the old pickled state of the statements] → the new `__setstate__` fails on it, and `_try_load_cached_namespace()` counts a failed read as a miss: the namespace is analyzed fresh and stored again (checked 2026-10-23); a new RobotCode version drops old cache entries anyway.
 - [The ids of a cached model no longer match after an import changed] → the namespace is not restored when a file it depends on changed (requirement of `namespace-cache`); a missing id resolves to `None`.
 
 ## Migration Plan

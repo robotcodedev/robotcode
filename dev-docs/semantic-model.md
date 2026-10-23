@@ -2747,9 +2747,12 @@ This follows the existing pattern already used for `keyword_references` and
 #### Pickle Preparation: `__getstate__` / `__setstate__`
 
 `SemanticToken` has no live references — it is a pure value object and needs no
-custom pickle handling. Only statement subclasses carry resolved references
-(`keyword_doc`, `lib_entry`, `template_keyword_doc`) that must be replaced with
-`stable_id` strings before pickling.
+custom pickle handling. Only statement subclasses carry resolved references:
+`KeywordCallStatement` (inner calls included) its `keyword_doc` and `lib_entry`,
+`ImportStatement` its `lib_entry` and `init_keyword_doc`, `TemplateDataStatement`
+its `template_keyword_doc`. Since `semantic-model-cache-references`, their
+`__getstate__` stores `KeywordDoc.stable_id` and `library_entry_key(entry)`
+(`entities.py`) instead; the model in memory keeps its objects.
 
 After unpickling, the string ids need to be resolved back to live objects:
 
@@ -2806,7 +2809,15 @@ def _resolve_statement(stmt, kw_by_id, entry_by_key):
     elif isinstance(stmt, ImportStatement):
         if isinstance(stmt.lib_entry, str):
             stmt.lib_entry = entry_by_key.get(stmt.lib_entry)
+        if isinstance(stmt.init_keyword_doc, str):
+            stmt.init_keyword_doc = kw_by_id.get(stmt.init_keyword_doc)
 ```
+
+`from_data()` builds `kw_by_id` from the keywords and inits of the resolved
+libraries and resource files, the inits of the variables files and the file's
+own keywords. A `stable_id` is not unique when one library is imported twice
+with different arguments; `kw_by_id` then holds one of the keywords, the same
+way `to_data()` merges their entries in `keyword_references`.
 
 #### In NamespaceData
 
