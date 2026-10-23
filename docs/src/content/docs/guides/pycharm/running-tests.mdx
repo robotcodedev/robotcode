@@ -12,15 +12,15 @@ PyCharm has no Test Explorer like VS Code. You run tests where they are: from th
 
 ## Running from the editor
 
-A run marker in the gutter sits beside every test and task, and on the first line of a suite file for the whole suite. Its icon shows the result of the last run. A click on it offers **Run**, **Debug**, **Run with Profile...** and **Debug with Profile...**; in PyCharm Professional also PyCharm's **Profile**, which Robot Framework runs do not support:
+A run marker in the gutter sits beside every test and task, and on the first line of a suite file for the whole suite. Its icon shows the result of the last run. A click on it offers **Run**, **Debug**, **Run with Profile...** and **Debug with Profile...**:
 
 <ThemeImage
   folder="pycharm"
   name="running-gutter-menu"
-  alt="The menu of the run marker of the test Order Coffee with Run, Debug, Profile and Concurrency Diagram for 'Test Order Coffee', then Run with Profile..., Debug with Profile... and Modify Run Configuration...."
+  alt="The menu of the run marker of the test Order Coffee with Run, Debug, Run with Profile..., Debug with Profile... and Modify Run Configuration...."
 />
 
-The context menu of the editor runs or debugs what is at the cursor: the test or task when the cursor is in its body, otherwise the suite of the file. <kbd>Ctrl+Shift+F10</kbd> (<kbd>Ctrl+Shift+R</kbd> on macOS) runs it directly. The context menu of the editor tab runs the suite of the file.
+The context menu of the editor runs or debugs what is at the cursor: the test or task when the cursor is in its body, otherwise the suite of the file. <kbd>Ctrl+Shift+F10</kbd> (<kbd>Ctrl+Shift+R</kbd> on macOS) runs it directly. The context menu of the editor tab runs the suite of the file. In PyCharm Professional, **More Run/Debug** in the context menu also lists PyCharm's **Profile** and **Concurrency Diagram**; Robot Framework runs support neither, and both end with a message.
 
 A file that Robot Framework cannot read as a suite, for example one with both tests and tasks, gets an error marker on its first line instead; its tooltip names the problem.
 

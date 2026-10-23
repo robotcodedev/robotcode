@@ -67,21 +67,34 @@ class RobotCodeProgramRunner : AsyncProgramRunner<RunnerSettings>() {
     }
 }
 
+// the ids of the executors of PyCharm Professional's "Profile" and "Concurrency Diagram"
+private const val PROFILER_EXECUTOR_ID = "Profiler"
+private const val CONCURRENCY_DIAGRAM_EXECUTOR_ID = "ConcurrencyExecutor"
+
+/** The end of a run of [environment] with the message that Robot Framework runs do not support its executor. */
+internal fun unsupportedRun(environment: ExecutionEnvironment): Promise<RunContentDescriptor?> {
+    val key = when (environment.executor.id) {
+        CONCURRENCY_DIAGRAM_EXECUTOR_ID -> "run.concurrencyDiagram.notSupported"
+        else -> "run.profile.notSupported"
+    }
+    return rejectedPromise(ExecutionException(RobotCodeBundle.message(key)))
+}
+
 /**
- * Takes PyCharm Professional's "Profile" for Robot Framework configurations, which its profiler runner would otherwise
- * accept as Python run configurations, and ends it with a message.
+ * Takes PyCharm Professional's "Profile" and "Concurrency Diagram" for Robot Framework configurations, which its
+ * runners would otherwise accept as Python run configurations, and ends them with a message.
  */
 class RobotCodeProfileRunner : AsyncProgramRunner<RunnerSettings>() {
     override fun getRunnerId(): String {
         return "dev.robotcode.robotcode4ij.execution.RobotCodeProfileRunner"
     }
-    
-    // the id of PyCharm Professional's profiler executor
+
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
-        return executorId == "Profiler" && isRobotRunProfile(profile)
+        return (executorId == PROFILER_EXECUTOR_ID || executorId == CONCURRENCY_DIAGRAM_EXECUTOR_ID) &&
+            isRobotRunProfile(profile)
     }
-    
+
     override fun execute(environment: ExecutionEnvironment, state: RunProfileState): Promise<RunContentDescriptor?> {
-        return rejectedPromise(ExecutionException(RobotCodeBundle.message("run.profile.notSupported")))
+        return unsupportedRun(environment)
     }
 }
