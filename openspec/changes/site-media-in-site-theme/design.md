@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for the motivation. The current state, as of 2026-10-11:
+See proposal.md for the motivation. The current state, as of 2026-10-11, rechecked on 2026-10-23:
 
 - **Feature tour:**
   - `FeatureTour.astro` lists its slides as `{ video, duration, alt }` or `{ image, alt }`, with dark files from `docs/src/assets/screenshots/`. These are 14 `vscode-*.mp4` recordings and 5 `vscode-*.png`, 5 `pycharm-*.png` and 4 `neovim-*.png` screenshots, all 2072×1182 pixels.
@@ -11,7 +11,10 @@ See proposal.md for the motivation. The current state, as of 2026-10-11:
   - The enlarged view copies `currentSrc` and `currentTime` of the slide's video or image.
 - **About page:** `about.mdx` shows `vscode-code-intelligence.mp4` and `vscode-run-tests.mp4` with plain `<video autoplay>` tags.
 - **Get Started with VS Code:** `getting-started/vscode.mdx` shows three clips from the previous site: 320×550, 600×114 and 600×180 pixels, dark.
-- **Guide components:** `ThemeImage` and `ThemeVideo` find a pair `<name>-light`/`<name>-dark` in `src/assets/screenshots/vscode/` by name. `ThemeVideo` gives a variant its source only when it is shown and near the viewport.
+- **Guide components:** `ThemeImage` and `ThemeVideo` find a pair `<name>-light`/`<name>-dark` by name, `ThemeImage` in `src/assets/screenshots/vscode/` or `pycharm/` (its `folder`, added with the PyCharm guide), `ThemeVideo` in `vscode/`. `ThemeVideo` gives a variant its source only when it is shown and near the viewport. The PyCharm guide's pairs are cut to their subject and don't fit the tour's full windows.
+- **Other pages with top-level files:** `getting-started/neovim.mdx` shows `neovim-mason-import-errors.png`. The v2.8.0 news post `news/v2-8-0.mdx`, not yet committed on 2026-10-23, shows `pycharm-debugger.png`, `pycharm-run-configuration.png`, `pycharm-settings.png` and `pycharm-test-results.png`.
+- **PyCharm screenshots of the tour:** `pycharm-hover.png` was taken again on 2026-10-22, without the gap above the argument table and with today's color of keyword calls; the other four are from 2026-10-05.
+- **Seasons:** the Halloween season marks `<html>` with `data-season` and starts the site in the dark theme unless the reader picked one; `data-theme` stays `light` or `dark`.
 - **Recordings shared with the guide:**
 
   | Scene | Home page today | Guide pair |
@@ -64,7 +67,7 @@ A screenshot slide renders both variants with `light:sl-hidden` and `dark:sl-hid
 
 - **Recordings:** the tour's VS Code recordings come from `screenshots/vscode/`, which holds the guide's pairs. The three new pairs are added there as well, for example as `tour-diagnostics`, `tour-keywords-view` and `tour-log-after-run`.
 - **Screenshots:** the tour's screenshots become `screenshots/tour/<editor>-<subject>-{light,dark}.png`.
-- **Removed:** the dark `screenshots/vscode-*.mp4`, `vscode-*.png`, `pycharm-*.png` and `neovim-*.png` files are deleted.
+- **Removed:** the dark files that only the tour and the About page use are deleted: the 14 `vscode-*.mp4` recordings and the 5 `vscode-*.png`, 5 `pycharm-*.png` and 4 `neovim-*.png` screenshots that `FeatureTour.astro` imports. `neovim-mason-import-errors.png` and the PyCharm screenshots of the v2.8.0 news post stay.
 - **Durations:** the tour takes the longer of the two variants of each pair, measured from the files.
 - **Lookup:** the tour finds its files with `import.meta.glob`, like the guide's components.
 
@@ -73,7 +76,7 @@ A screenshot slide renders both variants with `light:sl-hidden` and `dark:sl-hid
 - **VS Code:**
   - `guide-recordings.sh` gets scenes 7, 8 and 11.
   - `shots.js` takes its screenshots with the theme helper of `guide.js` (`ctx.pair`).
-- **PyCharm:** `shots.sh` runs once with the IDE's light theme and once with its dark theme. The theme is switched through the `ij` driver.
+- **PyCharm:** `shots.sh` runs once with the IDE's light theme and once with its dark theme, switched with the `theme` helper of the guide scripts (`guide.sh`). Each shot waits until the IDE is in smart mode and the file is analyzed, and Quick Documentation until its popup shows: with fixed sleeps alone, the hover shot came too early on 2026-10-22.
 - **Neovim:** `screenshot.sh` runs once with `background=light` and once with `background=dark`. `ansi2html.py` takes the matching page background. That the color scheme in `init.lua` has a light variant is to be checked first.
 
 ### D5 About and Get Started with VS Code use ThemeVideo

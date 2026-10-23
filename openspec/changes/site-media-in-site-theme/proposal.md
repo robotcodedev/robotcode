@@ -37,7 +37,7 @@ None.
 - **Docs site:**
   - `docs/src/components/home/FeatureTour.astro`, possibly `docs/src/components/home/demo-player.ts`.
   - `docs/src/content/docs/about.mdx` and `docs/src/content/docs/getting-started/vscode.mdx`.
-  - `docs/src/assets/screenshots/`: the home page's dark files are removed, and light and dark pairs are added.
+  - `docs/src/assets/screenshots/`: the dark files of the tour and the About page are removed, while files that other pages show stay, and light and dark pairs are added.
 - **Captures:** the git-ignored `playground/robotcode-demo/` (`vscode/`, `pycharm/`, `nvim/`).
 - **Sequencing:** the home page requirements this change builds on are still pending in `migrate-docs-to-starlight` and `home-feature-tour-examples`. Its own requirements are added, not modified, so it can be archived after them.
 - **Repository size:** minus 8.7 MB of dark home page recordings, plus three new recording pairs and the light variants of 14 screenshots.

@@ -8,7 +8,7 @@
 - [ ] 1.2 Let `vscode/shots.js` take the tour's five VS Code screenshots in both themes (D4), as `screenshots/tour/vscode-<subject>-{light,dark}.png`. Verify:
   - Each pair shows the same state in both themes.
   - The pair helper's check for personal data passes.
-- [ ] 1.3 Take the five PyCharm screenshots with the IDE's light and dark theme, as `screenshots/tour/pycharm-<subject>-{light,dark}.png`. Verify that each pair shows the same state and no personal data.
+- [ ] 1.3 Take the five PyCharm screenshots with the IDE's light and dark theme and the waits of D4, as `screenshots/tour/pycharm-<subject>-{light,dark}.png`. Verify that each pair shows the same state and no personal data.
 - [ ] 1.4 Check that the color scheme in `nvim/init.lua` has a light variant, then take the four Neovim screenshots with a light and a dark background (D4), as `screenshots/tour/neovim-<subject>-{light,dark}.png`. Verify that each pair shows the same state.
 
 ## 2. Feature tour
@@ -18,7 +18,7 @@
   - Switching the theme while a recording plays continues from the same point.
   - The enlarged view shows the variant of the theme.
 - [ ] 2.2 Switch the tour's screenshot slides to the pairs of D2. Verify in the same browser check that the screenshots and their enlarged view follow the theme.
-- [ ] 2.3 Delete the home page's dark files of D3. Verify that `npm run docs:build` has no link errors and that no deleted name is referenced anywhere in `docs/src`.
+- [ ] 2.3 Delete the dark files of D3, and only those. Verify that `npm run docs:build` has no link errors, that no deleted name is referenced anywhere in `docs/src`, and that `neovim-mason-import-errors.png` and the PyCharm screenshots of the v2.8.0 news post are still there.
 
 ## 3. About page
 
