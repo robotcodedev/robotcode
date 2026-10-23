@@ -62,6 +62,13 @@ def command_finished(exit_code: int | None) -> str:
     return osc("D" if exit_code is None else f"D;{exit_code}")
 
 
+def end_of_run(exit_code: int | None, closed: bool) -> str:
+    """What the terminal shows after a run: the line about its reuse, or about closing it, then the end of the command
+    on the empty line below. VS Code lets the next command's prompt begin at the end of the previous command, so that
+    its sticky scroll shows only the next command line, not the line about the reuse."""
+    return (CLOSE_MESSAGE if closed else REUSE_MESSAGE) + command_finished(exit_code)
+
+
 def is_single_key(text: str) -> bool:
     """Whether `text`, input that arrived at once, is a single key."""
     return SINGLE_KEY.fullmatch(text) is not None
@@ -219,7 +226,6 @@ class RunTerminal:
             # a run that a signal ended, on Linux and macOS, has no exit code
             exit_code = returncode if returncode >= 0 else None
 
-        write(command_finished(exit_code))
         return {"type": "ended", "id": run["id"], "exitCode": exit_code, "error": error}
 
     def _wait(self, ended: Message) -> Message | None:
@@ -227,7 +233,7 @@ class RunTerminal:
         with self._lock:
             self._running = False
         closed = self._closed
-        write(CLOSE_MESSAGE if closed else REUSE_MESSAGE)
+        write(end_of_run(ended["exitCode"], closed))
 
         with Keyboard() as keyboard:
             # reported only now, so that a key right after the report already closes the terminal

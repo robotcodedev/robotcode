@@ -1,6 +1,6 @@
 """`bundled/tool/utils/run_terminal.py`, the process of RobotCode's run terminal, closes the terminal on a single key
-after a run, marks the end of each run for VS Code's shell integration, and on Windows lets a variable of a run
-replace an inherited one whose name differs only in case."""
+after a run, marks the end of each run for VS Code's shell integration after the line about the terminal's reuse,
+and on Windows lets a variable of a run replace an inherited one whose name differs only in case."""
 
 import importlib.util
 from pathlib import Path
@@ -62,6 +62,21 @@ def test_end_of_command_with_exit_code(script: ModuleType) -> None:
 
 def test_end_of_command_without_exit_code(script: ModuleType) -> None:
     assert script.command_finished(None) == "\x1b]633;D\x07"
+
+
+def test_end_of_run_follows_the_line_about_the_reuse(script: ModuleType) -> None:
+    # on the empty line below it, where the next command's prompt begins, so that its sticky scroll shows only the
+    # command line
+    assert script.end_of_run(0, closed=False) == (
+        "\r\n\x1b[0m\x1b[7m * \x1b[0m Terminal will be reused by RobotCode runs, press any key to close it.\r\n"
+        "\x1b]633;D;0\x07"
+    )
+
+
+def test_end_of_run_follows_the_line_about_closing(script: ModuleType) -> None:
+    assert script.end_of_run(None, closed=True) == (
+        "\r\n\x1b[0m\x1b[7m * \x1b[0m Press any key to close the terminal.\r\n\x1b]633;D\x07"
+    )
 
 
 def test_announces_rich_command_detection(script: ModuleType) -> None:
