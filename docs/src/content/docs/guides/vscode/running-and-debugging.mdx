@@ -111,6 +111,8 @@ The setting [`robotcode.debug.defaultConsole`](/reference/vscode-settings/#robot
 | `internalConsole` | The Debug Console, without a terminal. |
 | `externalTerminal` | A terminal window outside VS Code, as set in VS Code's `terminal.external.*` settings. |
 
+When a run writes its output to a terminal, VS Code does not open the Debug Console by itself; <kbd>Ctrl+Shift+Y</kbd> (<kbd>Cmd+Shift+Y</kbd> on macOS) opens it. If you set VS Code's setting `debug.internalConsoleOptions`, or `internalConsoleOptions` in a launch configuration, that value decides when it opens.
+
 ## The log after a run
 
 With [`robotcode.run.openOutputAfterRun`](/reference/vscode-settings/#robotcode.run.openOutputAfterRun) set to `log` or `report`, RobotCode opens the log or report of a run when it ends, by default in VS Code's browser beside the editor; [`robotcode.run.openOutputTarget`](/reference/vscode-settings/#robotcode.run.openOutputTarget) opens it in your web browser instead.

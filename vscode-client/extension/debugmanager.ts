@@ -190,6 +190,19 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       debugConfiguration.console =
         (debugConfiguration?.console as string | undefined) ?? config.get<string>("debug.defaultConsole");
 
+      // a run in a terminal stays in front: VS Code would otherwise open the Debug Console at the first run of a
+      // window, unless the user chose when it opens
+      if (debugConfiguration.console !== "internalConsole" && !debugConfiguration.internalConsoleOptions) {
+        const userSetting = vscode.workspace.getConfiguration("debug", folder).inspect("internalConsoleOptions");
+        if (
+          userSetting?.globalValue === undefined &&
+          userSetting?.workspaceValue === undefined &&
+          userSetting?.workspaceFolderValue === undefined
+        ) {
+          debugConfiguration.internalConsoleOptions = "neverOpen";
+        }
+      }
+
       if (debugConfiguration.attachPython && !config.get<boolean>("debug.useExternalDebugpy")) {
         const debugpyPath = await this.pythonManager.getDebuggerPackagePath();
 
