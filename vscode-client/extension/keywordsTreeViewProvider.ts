@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { LSPErrorCodes, ResponseError } from "vscode-languageclient/node";
 import { DocumentationTarget, LanguageClientsManager, SUPPORTED_LANGUAGES } from "./languageclientsmanger";
 import { TreeItemCollapsibleState, TreeItemLabel } from "vscode";
 import { Mutex } from "./utils";
@@ -99,6 +100,9 @@ export class KeywordsTreeViewProvider
         await this.refresh();
       }),
       languageClientsManager.onClientStateChanged(async () => {
+        // the remembered items come from a language server that is gone, or from none, as before the environment of
+        // the folder was usable
+        this._documentsData = new WeakMap();
         await this.refresh();
       }),
       vscode.workspace.onWillSaveTextDocument(async (event) => {
@@ -205,6 +209,7 @@ export class KeywordsTreeViewProvider
 
     return this.refreshMutex.dispatch(async () => {
       this._cancelationSource = new vscode.CancellationTokenSource();
+      const token = this._cancelationSource.token;
 
       this._currentDocumentData = undefined;
 
@@ -281,7 +286,12 @@ export class KeywordsTreeViewProvider
             .sort((a, b) => (a.label as string).localeCompare(b.label as string));
         }
       } catch (e) {
-        this.outputChannel.appendLine(`Error: Can't get items for keywords treeview: ${e?.toString()}`);
+        // a newer refresh, or the language server, has canceled the request, which is no error
+        const canceled =
+          token.isCancellationRequested || (e instanceof ResponseError && e.code === LSPErrorCodes.RequestCancelled);
+        if (!canceled) {
+          this.outputChannel.appendLine(`Error: Can't get items for keywords treeview: ${e?.toString()}`);
+        }
 
         this._currentDocumentData = undefined;
       } finally {
