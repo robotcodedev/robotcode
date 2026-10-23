@@ -4,6 +4,7 @@ import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.util.Locale
+import kotlin.io.path.exists
 
 /**
  * One selected element of a context run: a discovered [item], or the [path] of a suite file or folder that discovery
@@ -117,6 +118,16 @@ internal fun resolveStoredPath(path: String, base: Path?): Path? = try {
     (base?.resolve(path) ?: Path.of(path)).normalize()
 } catch (_: InvalidPathException) {
     null
+}
+
+/**
+ * The stored [paths] of a "Files and folders" target that do not exist, each after [expand], which returns null for a
+ * path whose macros cannot be expanded without a run, and resolved against the working directory [base].
+ */
+internal fun missingTargetPaths(paths: List<String>, base: Path?, expand: (String) -> String?): List<String> {
+    return paths.filter { it.isNotBlank() }.filter { path ->
+        expand(path)?.let { resolveStoredPath(it, base) }?.exists() == false
+    }
 }
 
 /**

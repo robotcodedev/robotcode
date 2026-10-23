@@ -21,7 +21,7 @@ While a Robot Framework run configuration is edited and when it is started, the 
 
 ### Requirement: Problems of the run target are reported before a run
 
-While a Robot Framework run configuration is edited and when it is started, the plugin SHALL report an error that names each path of a "Files and folders" target that does not exist, and a warning that names the items of a "Tests and suites" target that the current discovery does not contain, when discovery has a result.
+While a Robot Framework run configuration is edited and when it is started, the plugin SHALL report an error that names each path of a "Files and folders" target that does not exist, and a warning that names the items of a "Tests and suites" target that the current discovery does not contain, when discovery has a result and the configuration uses the profiles that discovery uses.
 
 #### Scenario: Path that does not exist
 
@@ -33,14 +33,24 @@ While a Robot Framework run configuration is edited and when it is started, the 
 - **WHEN** the target is "Tests and suites" with an item whose test has been renamed, and discovery has a result
 - **THEN** the editor shows a warning that names the item, and the configuration can still be started
 
+#### Scenario: Configuration with other profiles
+
+- **WHEN** the target is "Tests and suites" with an item that discovery does not contain, and the configuration uses custom profiles instead of the project's selection
+- **THEN** the editor shows no warning about the item
+
 ### Requirement: How the problems of a run configuration are checked
 
-An error about a run configuration SHALL keep the run from starting; a warning SHALL NOT. The validation SHALL use only results of the environment check that already exist, and SHALL NOT start a Python process while the IDE waits for it. When no result exists for the configuration's interpreter, it SHALL request a check in the background and report nothing about the interpreter.
+An error about a run configuration SHALL keep the run from starting; a warning SHALL NOT. The validation SHALL use only results of the environment check that already exist, and SHALL NOT start a Python process while the IDE waits for it. When no result exists for the configuration's interpreter, it SHALL request a check in the background and report nothing about the interpreter. A result that is not usable SHALL be checked again when the interpreter's SDK changes and when RobotCode is restarted.
 
 #### Scenario: Interpreter not checked yet
 
 - **WHEN** a configuration uses an interpreter that RobotCode has not checked yet, and the user opens the configuration in the editor
 - **THEN** the editor opens without delay and reports nothing about the interpreter, and a check of it starts in the background
+
+#### Scenario: Robot Framework installed later
+
+- **WHEN** a configuration's interpreter was found without Robot Framework, the user installs Robot Framework into it and restarts RobotCode
+- **THEN** the interpreter is checked again, and the configuration starts
 
 ## MODIFIED Requirements
 

@@ -41,12 +41,16 @@ class RobotCodePersonalConfiguration(private val project: Project) :
 
         // switches RobotCode off for the project, as VS Code's robotcode.disableExtension does
         var disableExtension by property(false)
+
+        // the name of the module whose Python interpreter RobotCode uses when several modules have one
+        var pythonModule by string()
     }
 
     var extraArgs by stringDelegate(PersonalState::extraArgs)
     var languageServerExtraArgs by stringDelegate(PersonalState::languageServerExtraArgs)
     var profiles by delegate(PersonalState::profiles)
     var disableExtension by delegate(PersonalState::disableExtension)
+    var pythonModule by stringDelegate(PersonalState::pythonModule)
 
     val extraArgsList: List<String>
         get() = ParametersListUtil.parse(extraArgs)

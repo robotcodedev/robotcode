@@ -23,7 +23,7 @@ When several modules count and the user has not chosen one, the plugin SHALL det
 #### Scenario: Robot Framework files in the second module
 
 - **WHEN** a project in IntelliJ IDEA has the modules "ModuleA", whose interpreter has no Robot Framework and which contains no Robot Framework files, and "ModuleB", which contains the Robot Framework files and whose interpreter has Robot Framework, and the project is opened for the first time
-- **THEN** the language server and discovery run with the interpreter of "ModuleB", no Robot file shows a message about a missing Robot Framework, and the "Robot Framework" settings page shows "ModuleB"
+- **THEN** the language server and discovery run with the interpreter of "ModuleB", no Robot file shows a message about a missing Robot Framework, and the "General" settings page shows "ModuleB"
 
 #### Scenario: Robot Framework dependency without files
 
@@ -46,11 +46,11 @@ When the detection finds several Robot Framework projects, the plugin SHALL ask 
 
 ### Requirement: Several modules: the user's choice
 
-When several modules count, the plugin SHALL use the module the user has chosen. It SHALL store the choice for the current user only, not in the project's shared settings. The "Robot Framework" settings page SHALL show the chosen module and let the user change it while several modules count. The plugin SHALL determine the choice again when the chosen module no longer exists or no longer counts.
+When several modules count, the plugin SHALL use the module the user has chosen. It SHALL store the choice for the current user only, not in the project's shared settings. The "General" settings page SHALL show the chosen module and let the user change it while several modules count. The plugin SHALL determine the choice again when the chosen module no longer exists or no longer counts.
 
 #### Scenario: Changing the module
 
-- **WHEN** the user selects "ModuleA" instead of "ModuleB" on the "Robot Framework" settings page and applies
+- **WHEN** the user selects "ModuleA" instead of "ModuleB" on the "General" settings page and applies
 - **THEN** the language server and discovery restart with the interpreter of "ModuleA"
 
 #### Scenario: Choice kept after a restart

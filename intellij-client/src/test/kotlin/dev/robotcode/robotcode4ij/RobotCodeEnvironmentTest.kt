@@ -217,6 +217,45 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
         waitForChecks(interpreter, 1)
     }
 
+    // as for the interpreter of a run configuration, which no module has
+    fun testSdkChangeChecksAnyInterpreterThatIsNotUsable() {
+        environment.watchWorkspaceModel()
+        val sdk = registeredPythonSdk("Python E", missingPython("e"))
+        val interpreter = pythonInterpreterOf(sdk)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        environment.checks.setState(interpreter, tooOld)
+        changeSdk(sdk, "Python 3.12.3")
+        waitForChecks(interpreter, 1)
+
+        environment.checks.setState(interpreter, usable)
+        changeSdk(sdk, "Python 3.12.4")
+        waitForChecks(interpreter, 1)
+    }
+
+    fun testRestartWithResetChecksTheInterpretersThatAreNotUsable() {
+        val notUsable = pythonInterpreterOf(registeredPythonSdk("Python F", missingPython("f")))
+        val usableToo = pythonInterpreterOf(registeredPythonSdk("Python G", missingPython("g")))
+        environment.checks.setState(notUsable, tooOld)
+        environment.checks.setState(usableToo, usable)
+
+        project.restartAll(reset = true)
+
+        waitForChecks(notUsable, 1)
+        waitForChecks(usableToo, 0)
+    }
+
+    // as when the stored settings or the roots announce a change while the project opens
+    fun testSettingsChangeBeforeTheStartupActivityChecksNothingAgain() {
+        environment.resetForTests(interpreterKnown = false)
+        environment.markRobotProject()
+        waitForChecks(noInterpreter, 1)
+
+        environment.settingsChanged()
+
+        waitForChecks(noInterpreter, 1)
+    }
+
     fun testProjectSdkInheritedByTheModuleStartsOneCheck() {
         environment.watchWorkspaceModel()
         environment.markRobotProject()

@@ -160,6 +160,8 @@
 							 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeEditorTabActionHandler"/>
 		<editorNotificationProvider implementation="dev.robotcode.robotcode4ij.editor.EditorNotificationProvider"/>
 		<notificationGroup id="RobotCode" displayType="BALLOON" key="notification.group.robotcode"/>
+		<notificationGroup id="RobotCode Module" displayType="STICKY_BALLOON"
+						   key="notification.group.robotcode.module"/>
 	</extensions>
 
 	<projectListeners>
@@ -172,6 +174,8 @@
 		<listener class="dev.robotcode.robotcode4ij.RobotCodeFileOpenedListener"
 				  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
 		<listener class="dev.robotcode.robotcode4ij.RobotCodeSettingsRestartListener"
+				  topic="dev.robotcode.robotcode4ij.RobotCodeSettingsListener"/>
+		<listener class="dev.robotcode.robotcode4ij.RobotCodeModuleChoiceSettingsListener"
 				  topic="dev.robotcode.robotcode4ij.RobotCodeSettingsListener"/>
 		<listener class="dev.robotcode.robotcode4ij.RobotCodeRootsListener"
 				  topic="com.intellij.openapi.roots.ModuleRootListener"/>

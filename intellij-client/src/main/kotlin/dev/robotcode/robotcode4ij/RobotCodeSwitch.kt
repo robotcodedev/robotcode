@@ -37,6 +37,7 @@ internal fun Project.robotCodeSwitchChanged() {
         langServerManager.enableForSession()
         robotCodeEnvironment.startAgain()
     }
+    robotCodeEnvironment.switchChanged()
     EditorNotifications.getInstance(this).updateAllNotifications()
     updateRobotCodeStatusBar()
 }
@@ -50,6 +51,7 @@ internal fun Project.languageServerEnabled() {
     if (settings.disableExtension) {
         settings.disableExtension = false
         testManger.refreshDebounced()
+        robotCodeEnvironment.switchChanged()
         EditorNotifications.getInstance(this).updateAllNotifications()
         updateRobotCodeStatusBar()
     }

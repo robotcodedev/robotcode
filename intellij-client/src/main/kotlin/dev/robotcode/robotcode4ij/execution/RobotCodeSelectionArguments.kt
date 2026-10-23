@@ -107,6 +107,18 @@ internal fun resolveStoredSelection(
 }
 
 /**
+ * The full names of the stored [items] of a "Tests and suites" target that the discovery [model] does not contain, for
+ * example after a rename. Without a model, that is before a discovery has a result, none are reported.
+ */
+internal fun staleSelectionItems(items: List<RobotRunSelectionItem>, model: Array<RobotCodeTestItem>): List<String> {
+    if (model.isEmpty()) {
+        return emptyList()
+    }
+    val names = model.asSequence().flatMap { it.withDescendants() }.map { it.longname }.toSet()
+    return items.mapNotNull { it.name }.filter { it !in names }
+}
+
+/**
  * The arguments for Robot Framework that a stored target passes: the paths for files and folders, each through
  * [expandPath], and the selection arguments for tests and suites. Without arguments, robotcode runs the paths of
  * `robot.toml` or the project folder.

@@ -26,6 +26,7 @@ class RobotCodePersonalConfigurationTest {
             languageServerExtraArgs = "--log --log-level INFO"
             profiles = mutableListOf("dev", "ci")
             disableExtension = true
+            pythonModule = "ModuleB"
         }
 
         val restored = XmlSerializer.deserialize(

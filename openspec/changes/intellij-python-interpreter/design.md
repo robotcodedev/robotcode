@@ -7,7 +7,7 @@ See proposal.md for the motivation. The state that shapes the approach:
 - **Today on main:**
   - `Project.robotPythonModule` returns the first module that has a Python SDK, and `Project.robotPythonSdk` its SDK (`RobotCodeHelpers.kt:59-68`).
   - `RobotCodeEnvironment.projectInterpreter` is the interpreter of `robotPythonSdk` (`RobotCodeEnvironment.kt:281`). The language server, both discovery calls, the profile list and the banner use it.
-  - `RobotCodeRunConfiguration.applyRobotCodeDefaults` gives new configurations, the template and configurations from earlier versions `robotPythonModule` with "use module SDK" (`execution/RobotCodeRunConfiguration.kt:43-50`).
+  - `RobotCodeRunConfiguration.applyRobotCodeDefaults` gives new configurations, the template and configurations from earlier versions `robotPythonModule` with "use module SDK" (`execution/RobotCodeRunConfiguration.kt:44-51`).
   - `RobotCodeRootPythonPath.rootPythonPath` takes the content and source roots of `robotPythonModule` and the modules it depends on (#430).
 - **Archived changes this builds on:**
   - `intellij-environment-check`: `RobotCodeEnvironment` keeps the environment state per interpreter, checks in the background, watches the workspace model (`watchWorkspaceModel`) and compares interpreter identities. `RobotCodeLanguageServerFactory.isEnabled` and the test manager read the state without waiting; the banner in `editor/EditorNotificationProvider.kt` follows it.
@@ -61,7 +61,7 @@ Modules that share one interpreter count separately: a module without content ro
 
 Only the first opening of a project with several modules waits for the index. The resolved module and the reason go to idea.log.
 
-The plugin resolves again when the stored module no longer exists or no longer has a Python SDK, and on the workspace model changes that `RobotCodeEnvironment` watches. It does not ask again because a second module gets Robot Framework files later: a stored choice stays until the user changes it.
+The plugin resolves again when the stored module no longer exists or no longer has a Python SDK, and detects again when modules or their content roots change. A request for a detection that runs for the same modules repeats it once it is done instead of cancelling it, so that frequent changes do not keep it from finishing. It does not ask again because a second module gets Robot Framework files later: a stored choice stays until the user changes it.
 
 Alternatives:
 - Breaking a tie by the module of the project folder and then by module name: it guesses, and a wrong guess starts the language server with an interpreter without Robot Framework, which is #489 again.
@@ -89,9 +89,9 @@ Alternative: the shared `robotcodeSettings.xml`. The module structure is shared,
 
 ### The choice is part of the environment state
 
-`RobotCodeEnvironment` keeps the resolved module, or "waiting for a choice", together with the identity of the chosen interpreter, and resolves it in the background. Every consumer reads the cached result. Before the first result exists, they see no result, as before the first check.
+`RobotCodeEnvironment` resolves the choice from the modules, the stored module and the cached result of the detection, which runs in the background. Each access resolves once and takes the module, its interpreter and its state from that one resolution, which needs neither the index nor waiting. Before the detection has a result, consumers see no result, as before the first check. The last choice and interpreter are kept to log and follow a change.
 
-Alternative: resolving on every request. `isEnabled` and the banner need an answer without index access or waiting.
+Alternative: caching the resolved module as well. With one module or a stored module the resolution is cheap, and a cache would need its own invalidation on module and SDK changes.
 
 ### New configurations start with the chosen interpreter
 
@@ -109,7 +109,7 @@ Alternative: setting the module in the producer for each gutter run. Users who c
 
 It then checks the target:
 - each path of a "Files and folders" target, after macro expansion and relative to the project folder, must exist; Robot Framework stops a run with a missing path anyway;
-- the full names of a "Tests and suites" target are compared with the current discovery model when discovery has a result, and missing items give a warning.
+- the full names of a "Tests and suites" target are compared with the current discovery model when discovery has a result and the configuration's profiles resolve to the profiles of the project, which discovery uses; missing items give a warning.
 
 The fix is the `Runnable` of the `(String, Runnable)` constructors. It opens the Python Interpreter page with `ShowSettingsUtil.showSettingsDialog(project, predicate, null)`, where the predicate matches the configurable id. The refusal of remote interpreters at the start of a run stays as a safety net for starts without validation.
 
@@ -120,7 +120,7 @@ Alternatives:
 
 ### The start of a run checks the configuration's interpreter
 
-`ensureUsableForRun` takes the interpreter of the configuration's `getSdk()` instead of `projectInterpreter`, so a configuration with its own usable interpreter runs while the project's interpreter is unusable, and one with an unusable interpreter does not run while the project's is usable. The waiting with a progress indication for a missing result stays as it is.
+`ensureUsableForRun` takes the interpreter of the configuration's `getSdk()` instead of `projectInterpreter`, so a configuration with its own usable interpreter runs while the project's interpreter is unusable, and one with an unusable interpreter does not run while the project's is usable. The waiting with a progress indication for a missing result stays as it is. A result that is not usable is checked again when the SDK of its interpreter changes and on Retry and Restart, for the interpreters of run configurations as for the project's, so that a configuration is not refused for an interpreter that has Robot Framework by now.
 
 Alternative: keeping the project's interpreter. A run would be refused or allowed by an interpreter it does not use.
 

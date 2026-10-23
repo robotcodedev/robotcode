@@ -42,10 +42,10 @@ import org.eclipse.lsp4j.services.LanguageServer
             return false
         }
         
-        // never waits for the check: without a result, LSP4IJ starts nothing yet, and a usable result starts the server
+        // never waits for the check: without a result, LSP4IJ starts nothing yet, and a usable result starts the
+        // server; while the module is not chosen, the state is not usable either
         val environment = project.robotCodeEnvironment
-        val interpreter = environment.projectInterpreter
-        val state = environment.state(interpreter)
+        val (interpreter, state) = environment.projectInterpreterAndState
         if (state == EnvironmentState.Unknown) {
             environment.requestCheck(interpreter)
         }

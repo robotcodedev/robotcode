@@ -8,6 +8,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.EditorNotificationProvider
 import com.intellij.ui.EditorNotifications
+import dev.robotcode.robotcode4ij.EnvironmentResult
 import dev.robotcode.robotcode4ij.EnvironmentState
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotResourceFileType
@@ -17,6 +18,7 @@ import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.restartAll
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.setRobotCodeDisabled
+import dev.robotcode.robotcode4ij.useRobotCodeModule
 import org.jetbrains.annotations.TestOnly
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
@@ -45,14 +47,21 @@ class EditorNotificationProvider : EditorNotificationProvider, DumbAware {
         file: VirtualFile
     ): Function<in FileEditor, out JComponent?>? {
         val robotFile = file.fileType == RobotSuiteFileType || file.fileType == RobotResourceFileType
-        if (!robotFile || project.isRobotCodeDisabled || project.locationHash in dismissed) {
+        if (!robotFile || project.isRobotCodeDisabled) {
             return null
         }
 
         // never waits for the check; the banner is updated when the result arrives
         val environment = project.robotCodeEnvironment
-        val interpreter = environment.projectInterpreter
-        val state = environment.state(interpreter)
+        val (interpreter, state) = environment.projectInterpreterAndState
+        val result = (state as? EnvironmentState.Checked)?.result
+        // RobotCode starts nothing until a module is chosen, so this banner cannot be closed
+        if (result is EnvironmentResult.ModuleNotChosen) {
+            return moduleChoicePanel(project, state, result.candidates)
+        }
+        if (project.locationHash in dismissed) {
+            return null
+        }
         if (state == EnvironmentState.Unknown) {
             environment.requestCheck(interpreter)
         }
@@ -75,6 +84,24 @@ class EditorNotificationProvider : EditorNotificationProvider, DumbAware {
             panel.setCloseAction {
                 dismissed.add(project.locationHash)
                 EditorNotifications.getInstance(project).updateAllNotifications()
+            }
+            panel
+        }
+    }
+
+    // the request to choose one of the modules that are Robot Framework projects, with an action for each
+    private fun moduleChoicePanel(
+        project: Project,
+        state: EnvironmentState,
+        candidates: List<String>
+    ): Function<in FileEditor, out JComponent?> {
+        return Function { editor ->
+            val panel = EditorNotificationPanel(editor, EditorNotificationPanel.Status.Warning)
+            panel.text = bannerText(state)
+            candidates.forEach { name ->
+                panel.createActionLabel(RobotCodeBundle.message("python.module.use", name)) {
+                    project.useRobotCodeModule(name)
+                }
             }
             panel
         }

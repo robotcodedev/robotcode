@@ -6,7 +6,6 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.modules
 import com.intellij.util.messages.Topic
 import com.jetbrains.python.sdk.PythonSdkUtil
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
@@ -56,10 +55,11 @@ internal fun pluginPathOf(classResource: URL?): Path? {
     return jar.parent?.parent
 }
 
-/** The module whose Python interpreter RobotCode uses: the first module that has one. */
+/** The module whose Python interpreter RobotCode uses, as [RobotCodeEnvironment.moduleChoice] chooses it. */
 val Project.robotPythonModule: com.intellij.openapi.module.Module?
     get() {
-        return this.modules.firstOrNull { PythonSdkUtil.findPythonSdk(it) != null }
+        // settings for new projects have no modules
+        return if (isDefault) null else robotCodeEnvironment.pythonModule
     }
 
 val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
@@ -101,12 +101,11 @@ fun Project.buildRobotCodeCommandLine(
     noColor: Boolean = true,
     noPager: Boolean = true
 ): GeneralCommandLine {
-    val interpreter = robotCodeEnvironment.projectInterpreter
-    val state = robotCodeEnvironment.state(interpreter)
+    val (interpreter, state) = robotCodeEnvironment.projectInterpreterAndState
     if (!state.isUsable) {
         throw CantRunException(state.message)
     }
-    
+
     val commandLine = GeneralCommandLine(
         interpreter.homePath,
         "-u",
@@ -168,10 +167,12 @@ private class RobotCodeRestartManager(private val project: Project, private val 
     
     val decisions = AtomicInteger()
     
-    // The restart waits for the check and starts the server itself.
+    // The restart waits for the check and starts the server itself. A reset also checks the interpreters of run
+    // configurations again that were not usable.
     private suspend fun restart(reset: Boolean, discovery: Boolean) {
         val environment = project.robotCodeEnvironment
         if (reset) {
+            environment.checkAgainNotUsable()
             environment.checkAgain().await()
         } else {
             environment.awaitRunningCheck()
