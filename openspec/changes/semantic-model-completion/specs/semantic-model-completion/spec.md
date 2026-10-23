@@ -38,3 +38,17 @@ For every completion test position in the LSP test data, the completion item lis
 
 - **WHEN** the model path runs on any position
 - **THEN** it offers only the item kinds the legacy path already offers (no named-argument, block-option, BDD-prefix, or template-row completions introduced by this change)
+
+### Requirement: Sub-token granularity audit is performed and documented
+
+The variable-related `TokenKind` vocabulary SHALL be audited against actual consumers (semantic tokens map, signature help, code actions, inlay hints, completion dispatch). The resulting keep/merge table SHALL be recorded in `dev-docs/semantic-model.md`. Kinds merged SHALL be limited to those with zero distinct consumers, and merging SHALL NOT change any consumer's output.
+
+#### Scenario: Audit result is recorded
+
+- **WHEN** the audit completes
+- **THEN** the design document contains a table listing every variable-related TokenKind with its consumers and a keep/merge verdict
+
+#### Scenario: Merges are behavior-neutral
+
+- **WHEN** a TokenKind merge is applied
+- **THEN** `test_semantic_tokens_flag_parity.py`, the analyzer snapshot tests, and all `test_*_model.py` suites pass without output changes

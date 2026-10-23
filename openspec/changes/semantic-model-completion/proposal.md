@@ -12,6 +12,7 @@ Until completion is migrated, Phase 4 cannot delete `ModelHelper` (completion is
 - Keyword-name completion, argument completion, and keyword-snippet building read the pre-resolved `keyword_doc` / `arguments_spec` / `lib_entry` on the statement rather than calling `find_keyword` / `ModelHelper`.
 - Legacy AST path stays as the fallback while the flag defaults to `false`; **byte-identical completion items required under both flag states** (pure parity migration — the new completion *ideas* from the design doc's Ideas Collection, e.g. block-option or named-argument completion, are explicitly out of scope here).
 - After this change, `ModelHelper` is referenced only from legacy fallback paths across all LSP features — Phase 4 becomes unblocked on the completion side.
+- Sub-token granularity audit (moved from `semantic-model-hover`): record which `TokenKind` values the model consumers branch on, now including the completion dispatch; merge kinds with zero consumers, behavior-neutral.
 
 ## Capabilities
 
@@ -25,7 +26,7 @@ _None — no existing main specs cover completion._
 
 ## Impact
 
-- **Code**: `packages/language_server/.../parts/completion.py` (context detection + keyword/variable/argument resolution branches). Possibly small analyzer additions if a completion context needs statement/token data the model does not yet expose.
+- **Code**: `packages/language_server/.../parts/completion.py` (context detection + keyword/variable/argument resolution branches). Possibly small analyzer additions if a completion context needs statement/token data the model does not yet expose; possibly `packages/robot/.../semantic_analyzer/enums.py` + `analyzer.py`/`variable_tokenizer.py` for TokenKind merges resulting from the audit.
 - **Tests**: new `test_completion_model.py` (dual-protocol flag OFF/ON parity over the existing completion test positions); existing completion E2E/regtest suites stay green under both flag states.
-- **Docs**: tick the Tier 4 completion item in `dev-docs/semantic-model.md`.
+- **Docs**: tick the Tier 4 completion item and the granularity-audit item in `dev-docs/semantic-model.md`; record the audit result table there.
 - **Sequencing (soft)**: needs only the SemanticModel available and proven correct (`semantic-model-sidecar-cleanup` + `semantic-model-tier1-completion`) — no hard ordering against the other feature changes. Do not *merge* before `semantic-model-tier1-completion` (its non-vacuous parity suite is the precondition for trusting the largest consumer's parity), but development can proceed in parallel. Independent of `semantic-model-hover`. Not breaking; flag default stays `false`.

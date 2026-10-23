@@ -2,7 +2,7 @@
 
 ## 1. Verification harness (flag stays false)
 
-- [ ] 1.1 Verify prerequisites (HARD GATE): `semantic-model-tier1-completion`, `semantic-model-sidecar-cleanup`, `semantic-model-hover`, `semantic-model-completion` and `semantic-tokens-variable-names` are all implemented (every LSP feature has a proven model path). Do not proceed otherwise.
+- [ ] 1.1 Verify prerequisites (HARD GATE): `semantic-model-tier1-completion`, `semantic-model-sidecar-cleanup`, `semantic-model-hover`, `semantic-model-completion` and `semantic-tokens-variable-names` are all implemented (every LSP feature has a proven model path; hover reads the references on both paths and is covered by `test_hover_model.py`). Do not proceed otherwise.
 - [ ] 1.2 Build the global Level-D fixture: parametrize the existing LSP snapshot/regtest suites over `semantic_model` OFF/ON (generalize the `test_semantic_tokens_flag_parity.py` dual-protocol pattern); assert identical output across all migrated features; vacuity guard on the flag-on protocol
 - [ ] 1.3 Add `test_analyzer_performance.py` (Level E): overhead ≤ 30% (`SemanticAnalyzer` vs `NamespaceAnalyzer`, warmup + N runs), model ≤ 500 KB/file (pickle-size estimate), pickle round-trip + `resolve_references()` ≤ 50 ms/file
 - [ ] 1.4 Both harness suites green on all RF versions with the flag toggled per-run

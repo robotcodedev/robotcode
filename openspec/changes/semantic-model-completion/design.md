@@ -38,6 +38,10 @@ Keyword-name and argument completion read `stmt.keyword_doc` / `stmt.keyword_doc
 
 Land the model branch, run the dual-protocol parity suite over every completion test position, close gaps until green, and only then (in a *later* change) add the completion enhancements the model unlocks. Deviations where the model is more correct than legacy are documented xfails (existing precedent).
 
+### D5: Granularity audit is evidence-based and behavior-neutral
+
+Completion is the first production consumer of `token_path_at()`, the declared trigger for the sub-token granularity audit (moved here from `semantic-model-hover`, which has no model branch). Method: for each of the 28+ variable-related TokenKinds, grep/record which consumer branches on it (Tier 1 `_TOKEN_KIND_TO_SEM_TOKEN` map, signature help, code actions, inlay hints, the new completion dispatch). Output: keep/merge table appended to the design doc. Merge only kinds with **zero** consumers and identical LSP mapping; every merge must keep `test_semantic_tokens_flag_parity.py` and all analyzer snapshots green. If in doubt, keep the kind — the audit's job is documentation first, deletion second.
+
 ## Risks / Trade-offs
 
 - [Completion has the most context-dependent edge cases (empty cells, continuation lines, trailing separators, partial tokens)] → dual-protocol parity over the full existing completion corpus is the gate; each mismatch is analyzed individually before green.

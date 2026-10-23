@@ -2,55 +2,28 @@
 
 ## ADDED Requirements
 
-### Requirement: Hover resolves via the SemanticModel when available
-When `namespace.semantic_model` is set, hover SHALL resolve the symbol under the cursor via `model.token_path_at()` (with statement context from `model.statement_at()`), dispatching on `TokenKind`. The model path SHALL NOT walk the AST to find the symbol and SHALL NOT iterate the full `variable_references` / `keyword_references` / `namespace_references` dictionaries. When the model is absent, the legacy path SHALL be used unchanged.
-
-#### Scenario: Keyword call hover
-- **WHEN** the cursor is on a keyword name in a keyword call and the model path is active
-- **THEN** hover shows the same documentation and highlight range as the legacy path, sourced from the enclosing statement's pre-resolved `keyword_doc`
-
-#### Scenario: Variable hover with value resolution
-- **WHEN** the cursor is on the name of `${var}` and the variable is resolvable
-- **THEN** hover shows the same rendered value and range (the name without `${` and `}`) as the legacy path, with the definition found via `model.find_variable()`
-
-#### Scenario: Hover on a definition
-- **WHEN** the model path is active and the cursor is on the name of an `[Arguments]` entry, an assignment target, a FOR variable or a keyword definition
-- **THEN** hover shows what is defined there, with the same contents and range as the legacy path
-
-#### Scenario: Test case hover
-- **WHEN** the model path is active and the cursor is on the name of a test case
-- **THEN** hover shows its documentation, tags and metadata as on the legacy path, taken from the test's RF node
-
-#### Scenario: Position without hover target
-- **WHEN** the cursor is on a position where the legacy path produces no hover (e.g. a separator, or the `$`, a brace or the `=` of a variable)
-- **THEN** the model path also produces no hover
-
-### Requirement: Keywords in inline IF bodies and Run Keyword arguments resolve on the model path
-When `namespace.semantic_model` is set, a keyword in the body of an inline IF and a keyword in the arguments of a Run Keyword variant SHALL resolve as on the legacy path. Hover SHALL show its documentation with the same range. The documentation target of the position SHALL be that keyword with the import that defines it; the documentation source actions and, with viewer links, the link in the heading of the hover come from that target.
+### Requirement: Keywords in inline IF bodies and Run Keyword arguments have a documentation target on the model path
+With the semantic-model analysis path enabled, a keyword in the body of an inline IF and a keyword in the arguments of a Run Keyword variant, nested ones too, SHALL have the documentation target they have on the legacy path: that keyword with the import that defines it. The documentation source actions and, with viewer links, the link in the heading of the hover come from that target.
 
 #### Scenario: Keyword in an inline IF
-- **WHEN** the model path is active and the cursor is on `Log` in `IF    ${TRUE}    Log    a    ELSE    No Operation`
-- **THEN** hover shows the documentation of `Log` with the same range as the legacy path
-- **AND** the documentation source actions are offered for `BuiltIn` at `Log`, and with viewer links the heading of the hover links there, as on the legacy path
+- **WHEN** the semantic-model path is enabled and the cursor is on `Log` in `IF    ${TRUE}    Log    a    ELSE    No Operation`
+- **THEN** the documentation source actions are offered for `BuiltIn` at `Log`, and with viewer links the heading of the hover links there, as on the legacy path
 
 #### Scenario: Keyword in the arguments of Run Keyword
-- **WHEN** the model path is active and the cursor is on `Log` in `Run Keyword    Log    hi`
-- **THEN** hover, documentation source actions and the link of the heading are those of `Log`, as on the legacy path
+- **WHEN** the semantic-model path is enabled and the cursor is on `Log` in `Run Keyword    Log    hi`
+- **THEN** the documentation source actions and the link of the hover's heading are those of `Log`, as on the legacy path
 
-### Requirement: Hover output parity between flag states
-For every hover position covered by the existing hover test suites, the response (markdown contents and range) SHALL be identical whether `robotcode.experimental.semanticModel` is off or on. Documented xfails are permitted only where the legacy output is demonstrably wrong, following the existing parity-exception precedent.
+#### Scenario: Keyword in a nested Run Keyword If
+- **WHEN** the semantic-model path is enabled and the cursor is on `Log` in `Run Keyword    Run Keyword If    ${TRUE}    Log    hi`
+- **THEN** the documentation source actions and the link of the hover's heading are those of `Log`, as on the legacy path
 
-#### Scenario: Dual-protocol parity suite
-- **WHEN** `test_hover_model.py` runs hover requests through two protocols (flag off / flag on) over the hover test data
-- **THEN** all responses match exactly, or carry a documented xfail with reason
+### Requirement: Hover answers the same on both analysis paths
+At every probed position of the hover test data and of the documents of the hover tests, the hover response (contents and range) SHALL be identical with the semantic-model analysis path enabled and disabled, with and without viewer links. A documented xfail is permitted only where the legacy output is demonstrably wrong.
 
-### Requirement: Sub-token granularity audit is performed and documented
-The variable-related `TokenKind` vocabulary SHALL be audited against actual consumers (semantic tokens map, signature help, code actions, inlay hints, hover dispatch). The resulting keep/merge table SHALL be recorded in `dev-docs/semantic-model.md`. Kinds merged SHALL be limited to those with zero distinct consumers, and merging SHALL NOT change any consumer's output.
+#### Scenario: Dual-protocol parity test
+- **WHEN** the hover is requested at the probed positions through two protocols, one with the semantic-model path disabled and one with it enabled
+- **THEN** all responses are identical, or the position carries a documented xfail with its reason
 
-#### Scenario: Audit result is recorded
-- **WHEN** the audit completes
-- **THEN** the design document contains a table listing every variable-related TokenKind with its consumers and a keep/merge verdict
-
-#### Scenario: Merges are behavior-neutral
-- **WHEN** a TokenKind merge is applied
-- **THEN** `test_semantic_tokens_flag_parity.py`, the analyzer snapshot tests, and all `test_*_model.py` suites pass without output changes
+#### Scenario: Call that matches several keywords
+- **WHEN** the cursor is on a call whose name matches keywords of two imported resource files
+- **THEN** both paths show the documentation of each of them, joined and without a link in the heading

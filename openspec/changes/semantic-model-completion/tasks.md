@@ -25,6 +25,11 @@
 - [ ] 4.2 Confirm `ModelHelper` is referenced only from the legacy fallback in `completion.py`
 - [ ] 4.3 `hatch run test:test` green (all RF versions); `hatch run lint:all`
 
-## 5. Documentation
+## 5. Granularity audit
 
-- [ ] 5.1 Update `dev-docs/semantic-model.md`: tick the Tier 4 completion item; note completion enhancements remain in the Ideas Collection
+- [ ] 5.1 Build the consumer matrix (design D5): every variable-related TokenKind × consumer (Tier 1 map, signature help, code actions, inlay hints, completion dispatch) with keep/merge verdict; append the table to `dev-docs/semantic-model.md`
+- [ ] 5.2 Merge zero-consumer kinds (if any) in `enums.py` / builders; all parity and snapshot suites must pass unchanged
+
+## 6. Documentation
+
+- [ ] 6.1 Update `dev-docs/semantic-model.md`: tick the Tier 4 completion item and the granularity-audit item; note completion enhancements remain in the Ideas Collection

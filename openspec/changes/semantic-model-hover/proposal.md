@@ -2,29 +2,28 @@
 
 ## Why
 
-Hover is the designated first consumer of `model.token_path_at()` (see `dev-docs/semantic-model.md`, Tier 3). The 2026-07-19 audit showed hover no longer depends on `ModelHelper` (dead mixin, removed in `semantic-model-sidecar-cleanup`) — but its current implementation still re-walks the AST (`get_nodes_at_position`) and **linearly scans all of** `namespace.variable_references`, `keyword_references`, and `namespace_references` on every hover request. The SemanticModel answers the same question with one position query plus a targeted lookup. This migration also finally exercises `token_path_at()` in production, which is the declared trigger for the sub-token granularity audit (28+ variable TokenKinds, merge what no consumer branches on).
+Hover reads the reference lists of the analysis (`variable_references`, `keyword_references`, `namespace_references`). The `SemanticAnalyzer` produces them as well, and they stay after `semantic-model-cleanup`, because references, document highlight and rename read them too; so hover answers on the model path without a model branch of its own. Two things are open before `semantic-model-switchover` makes the model path the default: on the model path, keywords in the body of an inline IF and in the arguments of a Run Keyword variant have no documentation target, so they lack the documentation source actions and the link in the heading of their hover, and no test shows that hover answers the same on both paths.
 
 ## What Changes
 
-- `hover.py` gains a model branch (`namespace.semantic_model` set): `model.token_path_at(position)` → dispatch on `TokenKind` (KEYWORD → `stmt.keyword_doc`; the name of a variable → `model.find_variable()` for a use, the definition itself on a definition; NAMESPACE → `stmt.lib_entry` / `ImportStatement.lib_entry`; KEYWORD_NAME → the documentation of the keyword; TEST_NAME → documentation, tags and metadata from the test's RF node, which the model does not carry) instead of AST walk + full reference-dict scans.
-- Legacy path stays as fallback while the flag defaults to `false` — identical output required under both flag states (pure parity migration; hover *enhancements* from the design doc's Ideas Collection are explicitly out of scope).
-- Keywords that the model keeps outside the statement of their line resolve as on the legacy path: a keyword in the body of an inline IF, whose call is a statement of its own on the line, and a keyword in the arguments of a Run Keyword variant (`inner_calls`).
-- The documentation target on the model path (`_target_at_from_model` in `code_action_documentation.py`) finds the same keywords. The hover takes the link of its heading from that target (`doc-viewer-access`), and the editor its documentation source actions; for these keywords both are missing on the model path today, while the legacy path has them.
-- Sub-token granularity audit: record which `TokenKind` values are actually branched on across all model consumers (Tier 1 map, Tier 2 features, hover); merge kinds with zero consumers, behavior-neutral.
+- The documentation target on the model path (`_target_at_from_model` in `code_action_documentation.py`) finds keywords in inline IF bodies and Run Keyword arguments, nested ones too, through one model lookup: the keyword call whose keyword reference covers a position. The hover takes the link of its heading from that target (`doc-viewer-access`), and the editor its documentation source actions.
+- A dual-protocol test compares the hover responses with the flag off and on over the positions of the hover test data and the documents of the hover tests, with and without viewer links.
+- `hover.py` keeps its implementation (design D1).
 
 ## Capabilities
 
 ### New Capabilities
 
-- `semantic-model-hover`: Hover resolves the symbol under the cursor via SemanticModel position queries when the `robotcode.experimental.semanticModel` flag is active, with output parity to the legacy reference-dict path; the variable sub-token vocabulary is audited against real consumers.
+- `semantic-model-hover`: Hover and the documentation target behind it answer the same on the semantic-model analysis path as on the legacy path.
 
 ### Modified Capabilities
 
-_None — `semantic-model-sidecar-consumers` (from the sidecar-cleanup change) is not touched; hover had no requirements captured there. The scenario "Both analysis paths" of `vscode-documentation-viewer` already requires the same documentation actions on both paths; this change makes the model path meet it for keywords in inline IF bodies and Run Keyword arguments._
+_None — the scenario "Both analysis paths" of `vscode-documentation-viewer` already requires the same documentation actions on both paths; this change makes the model path meet it for keywords in inline IF bodies and Run Keyword arguments._
 
 ## Impact
 
-- **Code**: `packages/language_server/.../parts/hover.py`; `_target_at_from_model` in `packages/language_server/.../parts/code_action_documentation.py`; possibly `packages/robot/.../semantic_analyzer/enums.py` + `analyzer.py`/`variable_tokenizer.py` for TokenKind merges resulting from the audit.
-- **Tests**: new `test_hover_model.py` (dual-protocol flag OFF/ON parity over the existing hover test positions, including those of `test_hover_test_metadata.py` and `test_hover_documentation_links.py`, plus keywords in an inline IF body and in Run Keyword arguments with viewer links on); the documentation targets of those positions on both paths; existing hover E2E/regtest suites stay green; analyzer snapshot tests updated only if TokenKind merges land.
-- **Docs**: tick the Tier 3 hover item and the granularity-audit item in `dev-docs/semantic-model.md`; record the audit result table there.
-- **Dependencies**: builds on `semantic-model-sidecar-cleanup` (mixin already removed, `PYTHON_VARIABLE_REF` on CONDITION available for expression hover parity) and on `semantic-model-tier1-completion` (repaired, non-vacuous semantic-tokens parity suite is the guard for the granularity audit); both are archived. Not breaking.
+- **Code**: `packages/robot/.../semantic_analyzer/model.py` (the lookup of the keyword call at a position); `_target_at_from_model` in `packages/language_server/.../parts/code_action_documentation.py`.
+- **Tests**: new `test_hover_model.py` (dual-protocol flag OFF/ON parity over the hover positions of the LSP test data, including the documents of `test_hover_test_metadata.py` and `test_hover_documentation_links.py`, and keywords in an inline IF body and in Run Keyword arguments with viewer links on); the documentation targets of those positions on both paths.
+- **Plans**: `semantic-model-switchover` and `semantic-model-cleanup` no longer expect a model branch in hover; the sub-token granularity audit, which a hover model branch was to trigger, moves to `semantic-model-completion`.
+- **Docs**: `dev-docs/semantic-model.md` records that hover needs no migration, like references and rename.
+- **Dependencies**: builds on `semantic-model-sidecar-cleanup` and `semantic-model-tier1-completion`, both archived. Not breaking.

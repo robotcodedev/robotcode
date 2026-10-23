@@ -9,10 +9,9 @@
 
 - [ ] 2.1 semantic_tokens, inlay_hint, signature_help — collapse to the model body, drop the `else`
 - [ ] 2.2 code_action_documentation, code_action_quick_fixes, code_action_refactor — collapse; remove the `ModelHelper` mixin/import once the fallback is gone
-- [ ] 2.3 hover (model branch from `semantic-model-hover`) — collapse to model-only
-- [ ] 2.4 completion — collapse to model-only; remove the `ModelHelper` mixin/import
-- [ ] 2.5 selection_range, inline_value, debugging_utils — collapse; remove residual `ModelHelper` usage
-- [ ] 2.6 After each: the feature's `test_*_model.py` (now single-path) stays green
+- [ ] 2.3 completion — collapse to model-only; remove the `ModelHelper` mixin/import
+- [ ] 2.4 selection_range, inline_value, debugging_utils — collapse; remove residual `ModelHelper` usage
+- [ ] 2.5 After each: the feature's `test_*_model.py` (now single-path) stays green
 
 ## 3. Migrate the Namespace scope API off ScopeTree
 

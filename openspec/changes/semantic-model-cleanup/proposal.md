@@ -8,7 +8,7 @@ The `Namespace` scope API (`find_variable`, `get_variable_matchers`, `get_resolv
 
 ## What Changes
 
-- **Remove legacy fallback paths** from every migrated LSP feature (the `else` branches that ran `ModelHelper`/AST when the flag was off): semantic tokens, inlay hints, signature help, all code actions, hover, completion, selection range, inline value, debugging utils. Each feature becomes model-only.
+- **Remove legacy fallback paths** from every migrated LSP feature (the `else` branches that ran `ModelHelper`/AST when the flag was off): semantic tokens, inlay hints, signature help, all code actions, completion, selection range, inline value, debugging utils. Each feature becomes model-only. Hover has no fallback to remove: it reads the reference lists, which stay (`semantic-model-hover`, design D1).
 - **Redirect the `Namespace` scope API** to the model: `find_variable` → `model.find_variable`, `get_variable_matchers` / `get_resolvable_variables` → `model.get_variables_at` (with resolution). Remove `ScopeTreeBuilder` usage and the `local_scopes` field from `NamespaceData` (the pickled model already carries `DefinitionBlock.local_variables`).
 - **Remove the feature flag** `robotcode.experimental.semanticModel` (`package.json`, `workspace_config.py`, `document_cache_helper.py`, `set_semantic_model_enabled`) — the model is unconditional.
 - **Delete** `namespace_analyzer.py`, `model_helper.py`, `scope_tree.py`.

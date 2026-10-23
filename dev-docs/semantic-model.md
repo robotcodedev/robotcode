@@ -1834,15 +1834,16 @@ between variables. This enables:
 - **Intelligent completion**: Inside `${...}` offers variable names, after `: ` offers types
 - **Precise error ranges**: Error on just the unresolved name, not the entire `${...}`
 
-> **Open question — granularity audit (Tier 2/3 follow-up):** the current
-> spec defines 28+ variable-related `TokenKind` values. Tier 1 Semantic
-> Tokens collapses many of them to the same LSP token type
+> **Open question — granularity audit (follow-up of `semantic-model-completion`):**
+> the current spec defines 28+ variable-related `TokenKind` values. Tier 1
+> Semantic Tokens collapses many of them to the same LSP token type
 > (`VARIABLE_PREFIX`, `VARIABLE_OPEN_BRACE`, `VARIABLE_INDEX_OPEN` →
 > all `VARIABLE_BEGIN`). Whether the finer split actually pays off should
-> be re-evaluated once Tier 2 (Inlay Hints, Signature Help, Doc Actions)
-> and Tier 3 (Hover, Rename) consume `token_path_at()` — those are the
-> features that benefit from finer leaves. If a kind is never branched
-> on by any consumer, it should be merged.
+> be re-evaluated with the consumers of `token_path_at()`: the Tier 2
+> features (Inlay Hints, Signature Help, Doc Actions) and completion,
+> whose change carries the audit. Hover and rename read the reference
+> dicts instead. If a kind is never branched on by any consumer, it
+> should be merged.
 
 **Key Principles:**
 1. Every character in a variable expression belongs to exactly one sub_token
@@ -3072,19 +3073,26 @@ These use pre-computed `keyword_references` and `variable_references` (def → l
 The `SemanticAnalyzer` produces the same reference dicts as part of `AnalyzerResult` —
 these features work unchanged because they consume references, not the model directly.
 
-### Hover / References / Rename (GRADUAL migration — Tier 3)
+### Hover / References / Rename (NO migration needed)
 
-These use pre-computed reference dicts for their core lookup. The dead
-`ModelHelper` mixin inheritance they still carried (zero member calls) was
-removed by `semantic-model-sidecar-cleanup`; the remaining Tier 3 work is the
-optional value-path migration (`model.token_at()` → `model.find_variable()` /
-`stmt.keyword_doc`).
+These read the pre-computed reference dicts, which both analyzers produce
+and which stay after the cleanup. The dead `ModelHelper` mixin inheritance
+they still carried (zero member calls) was removed by
+`semantic-model-sidecar-cleanup`.
 
-For variable hover and rename, `find_variable(name, line)` already does the
-heavy lifting via `enclosing_definition(line)`. Where the call site has a
-node in hand instead of a line (e.g. iterating `model.statements`), the new
-`SemanticModel.enclosing_definition_block(node)` saves a line-range scan
-and avoids ambiguity when multiple definitions overlap on one line.
+A model branch for hover (`token_path_at()` → `model.find_variable()` /
+`stmt.keyword_doc`) was planned and dropped in `semantic-model-hover`: it
+would have to rebuild from the model's tokens the ranges and definitions
+that the analyzer records as references (extended-syntax ranges,
+overridden variables, the keywords of an ambiguous call), for little speed
+(about 4 ms per hover in the test files). `test_hover_model.py` compares
+the hover under both flag states instead.
+
+On the model path the link in the heading of a keyword's hover and the
+documentation actions come from `_target_at_from_model`, which finds the
+call at the cursor with `SemanticModel.keyword_call_at()`: the statement of
+the line, the calls in the body of an inline IF and the inner calls of Run
+Keyword variants.
 
 ### Sidecar consumers (LOW impact) — ✅ resolved (`semantic-model-sidecar-cleanup`)
 

@@ -4,7 +4,7 @@
 
 ### Requirement: LSP features have no legacy fallback path
 
-Every migrated LSP feature SHALL run only the SemanticModel path — the legacy `else` fallback (AST walk + `ModelHelper`) SHALL be removed from semantic tokens, inlay hints, signature help, all code actions, hover, completion, selection range, inline value, and debugging utils. No feature SHALL branch on the presence of `namespace.semantic_model`.
+Every migrated LSP feature SHALL run only the SemanticModel path — the legacy `else` fallback (AST walk + `ModelHelper`) SHALL be removed from semantic tokens, inlay hints, signature help, all code actions, completion, selection range, inline value, and debugging utils. No feature SHALL branch on the presence of `namespace.semantic_model`.
 
 #### Scenario: No feature branches on the flag
 
