@@ -36,7 +36,7 @@ This change builds on the target `python` that `pypi-dev-builds` adds to `script
 
 ## 3. Verification with the maintainer
 
-- [ ] 3.1 After the push, the maintainer starts "publish" by hand. Check:
+- [x] 3.1 After the push, the maintainer starts "publish" by hand. Check:
   - while the latest run on `main` is red, the log says that there is no dev build, the upload steps are skipped, and the run is green;
   - after a green run, the step `build` logs its id, and all three upload steps use that id, so the stores get the same build number.
 
