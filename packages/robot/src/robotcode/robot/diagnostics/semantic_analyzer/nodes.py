@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, FrozenSet, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, FrozenSet, List, Optional, Tuple
 
 from robotcode.core.lsp.types import Position, Range
 
+from ..entities import library_entry_key
 from .enums import (
     ForFlavor,
     ForZipMode,
@@ -17,6 +18,16 @@ from .enums import (
 if TYPE_CHECKING:
     from ..entities import LibraryEntry, VariableDefinition
     from ..library_doc import ArgumentSpec, KeywordDoc
+
+
+def _slot_values(node: object) -> Dict[str, Any]:
+    """The values of all slots of a node, the base of a statement's pickled state."""
+    return {slot: getattr(node, slot) for cls in type(node).__mro__ for slot in getattr(cls, "__slots__", ())}
+
+
+def _set_slot_values(node: object, state: Dict[str, Any]) -> None:
+    for slot, value in state.items():
+        setattr(node, slot, value)
 
 
 @dataclass(slots=True)
@@ -135,6 +146,21 @@ class KeywordCallStatement(SemanticStatement):
 
     # Variables that receive the return value: ${result}=    My Keyword
     assign_variables: List[SemanticToken] = field(default_factory=list)
+
+    def __getstate__(self) -> Dict[str, Any]:
+        # The namespace disk cache stores ids for the keyword and the library
+        # entry, which belong to the analysis of the imports;
+        # `resolve_references()` maps them back to the restored namespace's
+        # objects. Inner calls replace their own references.
+        state = _slot_values(self)
+        if self.keyword_doc is not None:
+            state["keyword_doc"] = self.keyword_doc.stable_id
+        if self.lib_entry is not None:
+            state["lib_entry"] = library_entry_key(self.lib_entry)
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        _set_slot_values(self, state)
 
 
 @dataclass(slots=True)
@@ -274,6 +300,18 @@ class ImportStatement(SemanticStatement):
     # second AST walk + libdoc lookup.
     init_keyword_doc: Optional["KeywordDoc"] = None
 
+    def __getstate__(self) -> Dict[str, Any]:
+        # ids in the namespace disk cache, see `KeywordCallStatement.__getstate__`
+        state = _slot_values(self)
+        if self.lib_entry is not None:
+            state["lib_entry"] = library_entry_key(self.lib_entry)
+        if self.init_keyword_doc is not None:
+            state["init_keyword_doc"] = self.init_keyword_doc.stable_id
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        _set_slot_values(self, state)
+
 
 # --- Settings ---
 
@@ -327,6 +365,16 @@ class TemplateDataStatement(SemanticStatement):
     """
 
     template_keyword_doc: Optional["KeywordDoc"] = None
+
+    def __getstate__(self) -> Dict[str, Any]:
+        # an id in the namespace disk cache, see `KeywordCallStatement.__getstate__`
+        state = _slot_values(self)
+        if self.template_keyword_doc is not None:
+            state["template_keyword_doc"] = self.template_keyword_doc.stable_id
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        _set_slot_values(self, state)
 
 
 # --- Blocks (structural containers) ---

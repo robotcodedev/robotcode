@@ -5,13 +5,14 @@ stable_id strings back to live objects, and pickle helper utilities.
 
 The SemanticModel is designed to be pickle-friendly:
 - SemanticToken is a pure value object (no live references) - pickles natively
-- SemanticStatement subclasses hold keyword_doc/lib_entry references which
-  are live objects that cannot survive pickle/unpickle across sessions
+- SemanticStatement subclasses hold keyword_doc/lib_entry/init_keyword_doc/
+  template_keyword_doc references which are live objects that cannot survive
+  pickle/unpickle across sessions
 
 For serialization:
-1. Before pickling: replace live object references with stable_id strings
-2. Pickle normally
-3. After unpickling: call resolve_references() to restore live objects
+1. When pickled, the statements store stable_id strings and library entry
+   keys instead of these references (`__getstate__` in nodes.py)
+2. After unpickling: call resolve_references() to restore live objects
 """
 
 from typing import TYPE_CHECKING, Dict, Optional
@@ -24,6 +25,7 @@ from .nodes import (
     RunKeywordCallStatement,
     SemanticBlock,
     SemanticStatement,
+    TemplateDataStatement,
 )
 
 if TYPE_CHECKING:
@@ -39,10 +41,11 @@ def resolve_references(
 ) -> None:
     """Resolve stable_id strings back to live objects after unpickling.
 
-    After unpickling a SemanticModel, keyword_doc and lib_entry fields
-    contain stable_id strings instead of live objects. This function
+    After unpickling a SemanticModel, the keyword_doc, lib_entry,
+    init_keyword_doc and template_keyword_doc fields contain stable_id
+    strings and library entry keys instead of live objects. This function
     walks the model and replaces them with the actual objects from the
-    provided lookup dicts.
+    provided lookup dicts; an id that is not in them resolves to None.
 
     Args:
         model: The unpickled SemanticModel to resolve.
@@ -85,6 +88,9 @@ def _resolve_statement(
         _resolve_keyword_call(stmt, kw_by_id, entry_by_key)
     elif isinstance(stmt, ImportStatement):
         stmt.lib_entry = _resolve_entry(stmt.lib_entry, entry_by_key)
+        stmt.init_keyword_doc = _resolve_keyword(stmt.init_keyword_doc, kw_by_id)
+    elif isinstance(stmt, TemplateDataStatement):
+        stmt.template_keyword_doc = _resolve_keyword(stmt.template_keyword_doc, kw_by_id)
     elif isinstance(stmt, DefinitionStatement):
         if isinstance(stmt.arguments_spec, str):
             # arguments_spec should not be serialized as string,
@@ -98,14 +104,22 @@ def _resolve_keyword_call(
     entry_by_key: Dict[str, "LibraryEntry"],
 ) -> None:
     """Resolve references in a keyword call statement."""
-    if isinstance(stmt.keyword_doc, str):
-        stmt.keyword_doc = kw_by_id.get(stmt.keyword_doc)  # type: ignore[unreachable]
-
+    stmt.keyword_doc = _resolve_keyword(stmt.keyword_doc, kw_by_id)
     stmt.lib_entry = _resolve_entry(stmt.lib_entry, entry_by_key)
 
     if isinstance(stmt, RunKeywordCallStatement):
         for inner in stmt.inner_calls:
             _resolve_keyword_call(inner, kw_by_id, entry_by_key)
+
+
+def _resolve_keyword(
+    keyword_doc: Optional["KeywordDoc"],
+    kw_by_id: Dict[str, "KeywordDoc"],
+) -> Optional["KeywordDoc"]:
+    """Resolve a single keyword reference."""
+    if isinstance(keyword_doc, str):
+        return kw_by_id.get(keyword_doc)  # type: ignore[unreachable]
+    return keyword_doc
 
 
 def _resolve_entry(

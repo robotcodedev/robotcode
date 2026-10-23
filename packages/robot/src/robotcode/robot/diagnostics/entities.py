@@ -360,6 +360,26 @@ class VariablesEntry(LibraryEntry):
         )
 
 
+def library_entry_key(entry: LibraryEntry) -> str:
+    """The key of a library entry in the namespace disk cache: of a
+    `namespace_references` entry in `NamespaceData` and of a `lib_entry` in
+    a pickled semantic model.
+
+    Like `LibraryEntry.__hash__`, it includes the import position, so it tells
+    apart the entries of one library: the implicitly imported BuiltIn and an
+    explicit import of it, or a library imported by a resource file and the
+    same library imported directly.
+    """
+
+    def position(r: Range) -> str:
+        return f"{r.start.line}.{r.start.character}-{r.end.line}.{r.end.character}"
+
+    return (
+        f"{type(entry).__name__}:{entry.name}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
+        f":{entry.import_source or ''}:{position(entry.import_range)}:{position(entry.alias_range)}"
+    )
+
+
 @dataclass(slots=True)
 class TestCaseDefinition(SourceEntity):
     name: str

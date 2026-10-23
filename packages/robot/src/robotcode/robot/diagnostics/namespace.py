@@ -44,6 +44,7 @@ from .entities import (
     VariableDefinition,
     VariablesEntry,
     VariablesImport,
+    library_entry_key,
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME
 from .import_resolver import FailedImport, ImportResolver
@@ -145,24 +146,6 @@ class NamespaceData:
     # for variables with '=' suffix, or keyword argument definitions from
     # imported keywords that aren't in the file's own scope).
     variable_definitions: Dict[str, VariableDefinition] = field(default_factory=dict)
-
-
-def _namespace_reference_key(entry: LibraryEntry) -> str:
-    """The key of a `namespace_references` entry in `NamespaceData`.
-
-    Like `LibraryEntry.__hash__`, it includes the import position, so it tells
-    apart the entries of one library: the implicitly imported BuiltIn and an
-    explicit import of it, or a library imported by a resource file and the
-    same library imported directly.
-    """
-
-    def position(r: Range) -> str:
-        return f"{r.start.line}.{r.start.character}-{r.end.line}.{r.end.character}"
-
-    return (
-        f"{type(entry).__name__}:{entry.name}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
-        f":{entry.import_source or ''}:{position(entry.import_range)}:{position(entry.alias_range)}"
-    )
 
 
 class Namespace:
@@ -516,7 +499,7 @@ class Namespace:
         """
         # Build namespace_references key from LibraryEntry identity
         ns_refs: Dict[str, Set[Location]] = {
-            _namespace_reference_key(entry): locs for entry, locs in self._namespace_references.items()
+            library_entry_key(entry): locs for entry, locs in self._namespace_references.items()
         }
 
         # Collect all referenced variable definitions for stable_id → object lookup
@@ -637,6 +620,11 @@ class Namespace:
         for kw in library_doc.keywords:
             kw_by_id[kw.stable_id] = kw
 
+        # the init of a variables file, which the import statement of the semantic model refers to
+        for variables_entry in resolved.variables_imports.values():
+            for kw in variables_entry.library_doc.inits:
+                kw_by_id[kw.stable_id] = kw
+
         # Variables from scope layers (command_line, own, imported, builtin)
         for var in scope.iter_all():
             var_by_id[var.stable_id] = var
@@ -685,7 +673,7 @@ class Namespace:
         # the other maps add the implicit default libraries and the imports of
         # resource files.
         all_entries: Dict[str, LibraryEntry] = {
-            _namespace_reference_key(entry): entry
+            library_entry_key(entry): entry
             for entry in itertools.chain(
                 resolved.libraries.values(),
                 resolved.resources.values(),

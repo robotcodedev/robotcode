@@ -1,7 +1,12 @@
-"""Tests for serialization module — post-pickle reference resolution."""
+"""Tests for serialization module — pickled state and post-pickle reference resolution."""
+
+import pickle
+from typing import Any, Tuple
 
 from pytest_mock import MockerFixture
 
+from robotcode.robot.diagnostics.entities import LibraryEntry, library_entry_key
+from robotcode.robot.diagnostics.library_doc import KeywordDoc
 from robotcode.robot.diagnostics.semantic_analyzer.enums import ImportType, NodeKind
 from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
@@ -9,8 +14,10 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     ImportStatement,
     KeywordCallStatement,
     RunKeywordCallStatement,
+    SemanticBlock,
     SemanticStatement,
     SettingStatement,
+    TemplateDataStatement,
 )
 from robotcode.robot.diagnostics.semantic_analyzer.serialization import resolve_references
 
@@ -19,6 +26,98 @@ def _make_model(*stmts: SemanticStatement) -> SemanticModel:
     m = SemanticModel()
     m.statements = list(stmts)
     return m
+
+
+def _keyword(name: str) -> KeywordDoc:
+    return KeywordDoc(
+        line_no=1,
+        col_offset=0,
+        end_line_no=1,
+        end_col_offset=0,
+        source="/lib.py",
+        name=name,
+        libname="Lib",
+        arguments=[],
+        arguments_spec=None,
+    )
+
+
+def _field(stmt: SemanticStatement, name: str) -> Any:
+    """A field as pickled, where an id stands in for a keyword or a library entry."""
+    return getattr(stmt, name)
+
+
+class TestPickledState:
+    """The namespace disk cache pickles the model; keywords and library entries become ids."""
+
+    def _model(self, mocker: MockerFixture) -> Tuple[SemanticModel, LibraryEntry, Tuple[KeywordDoc, ...]]:
+        log, run_keyword, init, template = (_keyword(n) for n in ("Log", "Run Keyword", "__init__", "Template"))
+        entry = LibraryEntry(name="Lib", import_name="Lib", library_doc=mocker.MagicMock())
+        imp = ImportStatement(
+            kind=NodeKind.IMPORT,
+            line_start=1,
+            line_end=1,
+            import_type=ImportType.LIBRARY,
+            lib_entry=entry,
+            init_keyword_doc=init,
+        )
+        inner = KeywordCallStatement(
+            kind=NodeKind.KEYWORD_CALL, line_start=2, line_end=2, keyword_doc=log, lib_entry=entry
+        )
+        call = RunKeywordCallStatement(
+            kind=NodeKind.KEYWORD_CALL, line_start=2, line_end=2, keyword_doc=run_keyword, inner_calls=[inner]
+        )
+        row = TemplateDataStatement(
+            kind=NodeKind.TEMPLATE_DATA, line_start=3, line_end=3, template_keyword_doc=template
+        )
+        root = SemanticBlock(kind=NodeKind.FILE, line_start=1, line_end=3, body=[imp, call, row])
+        return SemanticModel(root=root, statements=[imp, call, row]), entry, (log, run_keyword, init, template)
+
+    @staticmethod
+    def _assert_objects(model: SemanticModel, entry: LibraryEntry, keywords: Tuple[KeywordDoc, ...]) -> None:
+        log, run_keyword, init, template = keywords
+        imp, call, row = model.statements
+        assert isinstance(imp, ImportStatement)
+        assert isinstance(call, RunKeywordCallStatement)
+        assert isinstance(row, TemplateDataStatement)
+        assert imp.lib_entry is entry
+        assert imp.init_keyword_doc is init
+        assert call.keyword_doc is run_keyword
+        assert call.inner_calls[0].keyword_doc is log
+        assert call.inner_calls[0].lib_entry is entry
+        assert row.template_keyword_doc is template
+
+    def test_references_are_pickled_as_ids(self, mocker: MockerFixture) -> None:
+        model, entry, (log, run_keyword, init, template) = self._model(mocker)
+
+        restored = pickle.loads(pickle.dumps(model))
+
+        imp, call, row = restored.statements
+        assert isinstance(call, RunKeywordCallStatement)
+        inner = call.inner_calls[0]
+        assert (_field(imp, "lib_entry"), _field(imp, "init_keyword_doc")) == (library_entry_key(entry), init.stable_id)
+        assert (_field(call, "keyword_doc"), call.lib_entry) == (run_keyword.stable_id, None)
+        assert (_field(inner, "keyword_doc"), _field(inner, "lib_entry")) == (log.stable_id, library_entry_key(entry))
+        assert inner.parent is call
+        assert _field(row, "template_keyword_doc") == template.stable_id
+        # the tree and the flat list still share their statements
+        assert restored.root is not None
+        assert all(a is b for a, b in zip(restored.root.body, restored.statements))
+
+    def test_the_model_in_memory_keeps_its_objects(self, mocker: MockerFixture) -> None:
+        model, entry, keywords = self._model(mocker)
+
+        pickle.dumps(model)
+
+        self._assert_objects(model, entry, keywords)
+
+    def test_resolved_after_the_round_trip(self, mocker: MockerFixture) -> None:
+        model, entry, keywords = self._model(mocker)
+
+        restored = pickle.loads(pickle.dumps(model))
+        resolve_references(restored, {k.stable_id: k for k in keywords}, {library_entry_key(entry): entry})
+
+        self._assert_objects(restored, entry, keywords)
 
 
 class TestResolveReferencesKeywordCall:
@@ -130,6 +229,37 @@ class TestResolveReferencesImport:
 
         resolve_references(model, {}, {})
         assert stmt.lib_entry is None
+
+
+class TestResolveReferencesInitAndTemplate:
+    def test_resolve_init_keyword_doc(self, mocker: MockerFixture) -> None:
+        init = mocker.MagicMock()
+        stmt = ImportStatement(kind=NodeKind.IMPORT, line_start=1, line_end=1, import_type=ImportType.VARIABLES)
+        object.__setattr__(stmt, "init_keyword_doc", "init_id")
+
+        resolve_references(_make_model(stmt), {"init_id": init}, {})
+
+        assert stmt.init_keyword_doc is init
+
+    def test_resolve_template_keyword_doc(self, mocker: MockerFixture) -> None:
+        template = mocker.MagicMock()
+        stmt = TemplateDataStatement(kind=NodeKind.TEMPLATE_DATA, line_start=1, line_end=1)
+        object.__setattr__(stmt, "template_keyword_doc", "template_id")
+
+        resolve_references(_make_model(stmt), {"template_id": template}, {})
+
+        assert stmt.template_keyword_doc is template
+
+    def test_missing_ids_resolve_to_none(self) -> None:
+        imp = ImportStatement(kind=NodeKind.IMPORT, line_start=1, line_end=1, import_type=ImportType.LIBRARY)
+        object.__setattr__(imp, "init_keyword_doc", "nonexistent_id")
+        row = TemplateDataStatement(kind=NodeKind.TEMPLATE_DATA, line_start=2, line_end=2)
+        object.__setattr__(row, "template_keyword_doc", "nonexistent_id")
+
+        resolve_references(_make_model(imp, row), {}, {})
+
+        assert imp.init_keyword_doc is None
+        assert row.template_keyword_doc is None
 
 
 class TestResolveReferencesNonTarget:
