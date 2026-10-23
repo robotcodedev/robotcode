@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting RobotCode in VS Code
-description: 'Find RobotCode''s output and logs in VS Code, check the versions in use, restart the language servers, clear the cache and report an issue.'
+description: 'Find RobotCode''s output and logs in VS Code, check and copy the versions in use, restart the language servers, clear the cache and report an issue.'
 sidebar:
   label: Troubleshooting
   order: 9
@@ -27,7 +27,7 @@ If Robot Framework shows "not installed", or the Python environment is not the o
 
 <ThemeImage
   name="troubleshooting-tool-menu"
-  alt="The RobotCode Menu with Select Configuration Profiles, Start Terminal REPL, Disable Robocop, Enable Workspace Wide Diagnostics, Select Python Environment, Restart Language Server, Clear Cache and Restart, Open Log, Open Language Server Log, Enable Debug Log and Report Issue."
+  alt="The RobotCode Menu with Select Configuration Profiles, Start Terminal REPL, Disable Robocop, Enable Workspace Wide Diagnostics, Select Python Environment, Restart Language Server, Clear Cache and Restart, Open Log, Open Language Server Log, Enable Debug Log, Copy Environment Info and Report Issue."
 />
 
 ## Output and logs
@@ -49,3 +49,5 @@ The RobotCode menu offers both for the workspace folder of the active file.
 ## Report an issue
 
 **RobotCode: Report Issue...**, also in the RobotCode menu, opens VS Code's issue reporter for RobotCode, with the versions of Python, Robot Framework and Robocop of your workspace filled in. Describe what you did, what you expected and what happened; a small example project and the logs from above help to find the cause. You can also open an issue directly on [GitHub](https://github.com/robotcodedev/robotcode/issues).
+
+**RobotCode: Copy Environment Info**, also in the RobotCode menu, copies the versions of the workspace folder of the active file to the clipboard: VS Code, RobotCode, the operating system, Python, Robot Framework and Robocop, as a list with the fields of RobotCode's bug report template. Paste it into an issue, a forum post or a chat. An extra line names the editor when it isn't VS Code, the remote, for example WSL, and the language server's RobotCode version when it differs from the extension's. The command also works while the language server doesn't run, for example because Robot Framework is missing in the environment, and the list contains no paths.

@@ -17,12 +17,14 @@ import {
 import { PythonManager } from "./pythonmanger";
 import { LanguageStatusSeverity } from "vscode";
 import { TestControllerManager } from "./testcontrollermanager";
+import { NOT_INSTALLED, environmentInfoText, robotFrameworkVersionText } from "./environmentInfo";
 
+import * as os from "os";
 import * as path from "path";
 import * as fs from "fs-extra";
 
-const NOT_INSTALLED = "not installed";
-const UNKNOWN = "unknown";
+// how long the copy of the environment info waits for the language server's versions
+const PROJECT_INFO_TIMEOUT = 5000;
 
 type QuickPickActionItem = {
   label?: string;
@@ -181,6 +183,13 @@ export class LanguageToolsManager {
             .getConfiguration(CONFIG_SECTION, folder)
             .update("languageServer.extraArgs", ["--verbose", "--log", "--log-level", "DEBUG"]);
         }
+      },
+    },
+    {
+      label: "Copy Environment Info",
+      description: "Copies the versions in use to the clipboard",
+      action: async (folder?: vscode.WorkspaceFolder): Promise<void> => {
+        await vscode.commands.executeCommand("robotcode.copyEnvironmentInfo", folder);
       },
     },
     {
@@ -346,6 +355,43 @@ export class LanguageToolsManager {
         };
 
         await vscode.commands.executeCommand("workbench.action.openIssueReporter", args);
+      }),
+
+      // also without a running language server: a broken environment is when a report is needed most
+      vscode.commands.registerCommand("robotcode.copyEnvironmentInfo", async (folder?: vscode.WorkspaceFolder) => {
+        if (folder === undefined && vscode.window.activeTextEditor !== undefined) {
+          folder = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
+        }
+        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+        if (folder === undefined && workspaceFolders.length === 1) {
+          folder = workspaceFolders[0];
+        } else if (folder === undefined && workspaceFolders.length > 1) {
+          folder = await vscode.window.showWorkspaceFolderPick();
+          if (folder === undefined) return;
+        }
+
+        const pythonInfo = folder !== undefined ? await this.pythonManager.getPythonInfo(folder) : undefined;
+        const text = environmentInfoText({
+          vscodeVersion: vscode.version,
+          appName: vscode.env.appName,
+          remoteName: vscode.env.remoteName,
+          os: `${os.type()} ${os.arch()} ${os.release()}`,
+          extensionVersion: this.extensionContext.extension.packageJSON.version,
+          projectInfo: folder !== undefined ? await this.getProjectInfoWithin(folder, PROJECT_INFO_TIMEOUT) : undefined,
+          environment: folder !== undefined ? this.languageClientsManager.getRobotEnvironmentState(folder) : undefined,
+          provisional:
+            folder !== undefined &&
+            this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder) &&
+            this.languageClientsManager.isInStartupPhase(folder),
+          python: pythonInfo !== undefined ? { version: pythonInfo.version, kind: pythonInfo.type } : undefined,
+        });
+
+        await vscode.env.clipboard.writeText(text);
+        void vscode.window.showInformationMessage(
+          folder !== undefined
+            ? `Copied the environment info of ${folder.name} to the clipboard.`
+            : "Copied the environment info to the clipboard.",
+        );
       }),
 
       vscode.commands.registerCommand("robotcode.showToolMenu", async (folder?: vscode.WorkspaceFolder) => {
@@ -515,6 +561,31 @@ export class LanguageToolsManager {
     return doc;
   }
 
+  // the project info of the folder's language server, or nothing when there is none or it doesn't answer in time
+  private async getProjectInfoWithin(
+    folder: vscode.WorkspaceFolder,
+    timeout: number,
+  ): Promise<ProjectInfo | undefined> {
+    const tokenSource = new vscode.CancellationTokenSource();
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        this.languageClientsManager.getProjectInfo(folder, tokenSource.token),
+        new Promise<undefined>((resolve) => {
+          timer = setTimeout(() => {
+            tokenSource.cancel();
+            resolve(undefined);
+          }, timeout);
+        }),
+      ]);
+    } catch {
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+      tokenSource.dispose();
+    }
+  }
+
   private removeFolder(folder: vscode.WorkspaceFolder) {
     if (this._workspaceFolderLanguageStatuses.has(folder)) {
       this._workspaceFolderLanguageStatuses.delete(folder);
@@ -633,20 +704,14 @@ export class LanguageToolsManager {
       this.languageClientsManager.isRobotEnvironmentKnownInvalid(folder) &&
       this.languageClientsManager.isInStartupPhase(folder);
     const robotProblem = provisional ? undefined : environmentState?.problem;
-    const installedRobotVersion = environmentState?.robotVersion;
 
     // the version of the language server, else the one the environment check found; while Robot Framework cannot be
     // checked, because the interpreter has a problem or the first check runs, it is unknown
-    this.robotVersion.text = `$(robotcode-robot) ${
-      projectInfo?.robotVersionString ??
-      (environmentState?.state === "usable" && installedRobotVersion !== undefined
-        ? installedRobotVersion
-        : robotProblem === "robotTooOld" && installedRobotVersion !== undefined
-          ? `${installedRobotVersion} (not supported)`
-          : robotProblem === "robotMissing"
-            ? NOT_INSTALLED
-            : UNKNOWN)
-    }`;
+    this.robotVersion.text = `$(robotcode-robot) ${robotFrameworkVersionText(
+      projectInfo?.robotVersionString,
+      environmentState,
+      provisional,
+    )}`;
     this.robotVersion.detail = `Robot Framework Version${
       robotProblem === "robotMissing"
         ? " - not installed in the Python environment"

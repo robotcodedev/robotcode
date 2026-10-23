@@ -1431,6 +1431,11 @@
         "enablement": "resourceLangId == robotframework && !config.robotcode.robocop.enabled"
       },
       {
+        "title": "Copy Environment Info",
+        "category": "RobotCode",
+        "command": "robotcode.copyEnvironmentInfo"
+      },
+      {
         "title": "Report Issue...",
         "category": "RobotCode",
         "command": "robotcode.reportIssue"
