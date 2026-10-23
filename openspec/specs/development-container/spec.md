@@ -1,10 +1,10 @@
-# Spec Delta
+# development-container Specification
 
 ## Purpose
 
 Defines what the repository's dev container, which GitHub Codespaces also uses, provides for working on RobotCode, so that a contributor can run the checks that the contribution guide asks for without setting up a machine of their own.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Every test suite runs in the dev container
 
@@ -24,3 +24,17 @@ After the repository's dev container (`.devcontainer/devcontainer.json`) has bee
 
 - **WHEN** a contributor runs `hatch run test:test` in the dev container
 - **THEN** the Python tests run with every supported Robot Framework version, as on any other machine
+
+### Requirement: The pre-commit hooks work in the dev container
+
+In the dev container, the repository's pre-commit hooks SHALL install with `pre-commit install --install-hooks` and SHALL check every commit there as they do on any other machine, without a particular Python version on the `PATH`.
+
+#### Scenario: Commit with a valid message
+
+- **WHEN** a contributor in the dev container has installed the hooks and commits a change with the message `docs: fix a typo`
+- **THEN** the hooks run, and the commit is made
+
+#### Scenario: Commit with an invalid message
+
+- **WHEN** a contributor in the dev container has installed the hooks and commits with a message that doesn't follow Conventional Commits
+- **THEN** the commit-message hook rejects the commit

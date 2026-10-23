@@ -9,7 +9,8 @@ The dev container, which GitHub Codespaces also uses and which CONTRIBUTING.md o
 ## What Changes
 
 - The `code-quality` job of the CI runs `npm run lint`, the same command as the pre-commit hook, next to `hatch run lint:style` and `hatch run lint:typing`. An ESLint error fails the job.
-- The dev container installs a JDK 21 and xvfb with the libraries that VS Code needs to start, so that `./gradlew test` and `xvfb-run -a npm test` run in it and in Codespaces.
+- The dev container moves from Ubuntu 22.04 to Ubuntu 26.04, the newest LTS. It installs a JDK 21 and xvfb with the libraries that VS Code needs to start, all from apt, so that `./gradlew test` and `xvfb-run -a npm test` run in it and in Codespaces.
+- The pre-commit hooks take any Python 3 (`python3` instead of `python3.10` in `.pre-commit-config.yaml`), because the container has no Python 3.10 and pre-commit could not set up the commit-message hook there. `conventional-pre-commit` moves from v4.0.0 to v4.4.0.
 - CONTRIBUTING.md lists ESLint among the CI's checks, names `npm run lint` for the VS Code extension in the development workflow and in the PR checklist, and names the JDK and xvfb among the dev container's tools. The PR template's linting line names `npm run lint` as well.
 
 Not part of this change:
@@ -32,5 +33,8 @@ Not part of this change:
 ## Impact
 
 - `.github/workflows/build-test-package.yml`: one step in `code-quality`, which already installs Node.js and the npm dependencies. `npm run lint` takes about 2 seconds locally and finds nothing on `main` (2026-10-23).
-- `.devcontainer/devcontainer.json`: the feature `ghcr.io/devcontainers/features/java:1` and more packages in the `apt install` of `postCreateCommand`. Creating a container takes longer, and the first `./gradlew test` downloads PyCharm, as on any other machine.
+- `.devcontainer/devcontainer.json`: the base image `mcr.microsoft.com/devcontainers/base:resolute` instead of `base:jammy`, and more packages in the `apt install` of `postCreateCommand`.
+  - The container's system Python becomes 3.14 instead of 3.10; Hatch downloads the other Python versions that its environments ask for.
+  - Creating a container takes longer, and the first `./gradlew test` downloads PyCharm, as on any other machine.
+- `.pre-commit-config.yaml`: the Python of the hooks and the version of `conventional-pre-commit`. pre-commit sets up the hook's environment again on the next commit.
 - `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`.
