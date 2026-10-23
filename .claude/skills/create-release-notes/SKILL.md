@@ -69,11 +69,11 @@ Readers want to know three things: what will I notice, what can I do now, and do
     2. a new Robot Framework version and its features
     3. VS Code
     4. PyCharm, IntelliJ IDEA and other IDEs
-    5. language server features that every editor gets
+    5. the language server and `robotcode analyze`, under "Language Server and Analysis"
     6. AI agents
     7. command-line tools and the terminal, such as the REPL
     8. the website
-    9. everything else that fits none of these chapters
+    9. everything else that fits none of these chapters, such as support for a new Python version. Keep a new Python version out of the Robot Framework chapter, and describe a smaller CI test matrix as what is tested, not as which combinations work.
     10. Bug Fixes
     11. Under the Hood, for experimental features that users can opt into
 
@@ -90,11 +90,12 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
     Thanks to everyone who reported issues, contributed ideas, and tested pre-release builds. Your feedback drives every release.
 
+    If you like **RobotCode**, please help others find it: we need more reviews in the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) and the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216), and more stars on [GitHub](https://github.com/robotcodedev/robotcode). Donations through [GitHub Sponsors](https://github.com/sponsors/robotcodedev) or [Open Collective](https://opencollective.com/robotcode) are very welcome too and help keep the project sustainable.
+
     For the full list of changes, see the [Changelog](https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md).
 
     - [Report issues](https://github.com/robotcodedev/robotcode/issues)
     - [Discussions & Q&A](https://github.com/robotcodedev/robotcode/discussions)
-    - [Sponsor RobotCode](https://opencollective.com/robotcode)
     ```
 
 9. **Update an existing draft.** When the user says that new commits have landed:
@@ -136,12 +137,12 @@ Readers want to know three things: what will I notice, what can I do now, and do
 - `description:` names the main changes in one sentence, the headline chapters in a few words each, not their details. The site does not show it: it is the page's meta description for search results and link previews, and the summary of the post in the RSS feed. The news list shows the lede instead.
 - `tags:` has exactly one kind tag, `release` for a release post (the other kinds are `tips` and `april-fools`), followed by one topic tag for each topic the post has its own section about. Use only these topic tags: `analysis`, `editor`, `vscode`, `intellij`, `cli`, `configuration`, `ci`, `debugging`, `ai-agents`, `performance`.
 - No heading of level 1: the page shows `title:` as its heading, and the post starts with the lede.
-- Put `<!-- excerpt -->` on a line of its own after the first paragraph, or `{/* excerpt */}` in an `.mdx` post. The news list shows the post up to that marker.
+- Put `<!-- excerpt -->` (`{/* excerpt */}` in an `.mdx` post) on a line of its own after the lede, or after the feedback paragraph if the post has one. The news list shows the post up to that marker.
 - Write in English. Write the product name in prose as `**RobotCode**`.
 - Link documentation pages by their path on the site, with the trailing slash (`/guides/repl/#exit-code-and-session-status`). Link issues as `([#123](https://github.com/robotcodedev/robotcode/issues/123))`.
 - Anchors follow Starlight: the heading in lowercase, spaces turned into `-`, other punctuation dropped. `Robot Framework 7.5 Support` becomes `#robot-framework-75-support`, and `In VS Code: the Documentation Viewer` becomes `#in-vs-code-the-documentation-viewer`.
 - Use code blocks only for commands and configuration that users can run. One to three lines are usually enough.
-- No videos in the post. A video that shows how a feature works belongs in the documentation, which the post links. A screenshot of a headline feature is fine when the user asks for one: reuse a screenshot of the VS Code guide with the `ThemeImage` component, which shows the light or dark variant to match the site's theme. Import it after the frontmatter (`import ThemeImage from "../../../components/ThemeImage.astro";`), write `<ThemeImage name="…" alt="…" full />` after the text it shows, and name the post `.mdx`. For PyCharm, capture the dialog with the PyCharm harness of the demo project (`playground/robotcode-demo/pycharm`, see its README), put it next to the other `pycharm-*.png` in `docs/src/assets/screenshots/`, and embed it as a Markdown image, indented under the list item it shows. In `.mdx`, `{`, `}` and `<` outside code are syntax.
+- No videos in the post. A video that shows how a feature works belongs in the documentation, which the post links. A screenshot of a headline feature is fine when the user asks for one: reuse a screenshot of the VS Code guide, or take a new one with the VS Code harness of the demo project (`playground/robotcode-demo/vscode`, see its README; each shot is a `ctx.pair` block in a `guide-<page>.js`), and show it with the `ThemeImage` component, which shows the light or dark variant to match the site's theme. Import it after the frontmatter (`import ThemeImage from "../../../components/ThemeImage.astro";`), write `<ThemeImage name="…" alt="…" />` after the text it shows, with `full` for a shot of the whole window, and name the post `.mdx`. For PyCharm, capture the dialog with the PyCharm harness of the demo project (`playground/robotcode-demo/pycharm`, see its README), put it next to the other `pycharm-*.png` in `docs/src/assets/screenshots/`, and embed it as a Markdown image, indented under the list item it shows. In `.mdx`, `{`, `}` and `<` outside code are syntax.
 - Put something the reader must do into a `caution` aside, with what to do as its title:
 
     ```markdown
@@ -165,10 +166,10 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 ## Quality Criteria
 
-- The lede states RobotCode's news in about 50 words: the version, each headline chapter in a few words, and "along with much more" or similar at the end.
+- The lede states RobotCode's news in 50 to 80 words: the version, each headline chapter in a few words, and "along with much more" or similar; a big release may follow it with a short paragraph that asks for feedback.
 - Chapters, subsections and list items are ordered by user impact.
 - The post describes what RobotCode does. Robot Framework's own features are explained only as far as the reader needs them to understand RobotCode's part.
-- The text is factual, concise and neutral, with no hype and no "would otherwise have failed" framing.
+- The text is factual, concise, positive and confident, with no hype words and no "would otherwise have failed" framing.
 - Every Bug Fixes entry links an issue that the commit closes.
 - The Markdown or MDX is valid for Starlight, with YAML frontmatter. Exactly one post is created or changed.
 - No docs build, changelog update, version edit, commit, tag or push happened.

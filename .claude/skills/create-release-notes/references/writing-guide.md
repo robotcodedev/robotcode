@@ -20,6 +20,8 @@ tags:
 
 <lede: a short paragraph>
 
+<optional, for a big release: a short paragraph that asks for feedback>
+
 <!-- excerpt -->
 
 ## Highlights
@@ -34,10 +36,10 @@ tags:
 ## VS Code
 ### <big VS Code feature>
 ### Also in VS Code
-## PyCharm and IntelliJ IDEA
-## In Every Editor
+## PyCharm
+## Language Server and Analysis
 ### <language server feature>
-### Also in every editor
+### Also in the language server and analysis
 ## AI Agents
 ## Command Line and REPL
 ### <command-line feature>
@@ -57,15 +59,20 @@ Not every post has every chapter. A patch release is mostly Bug Fixes, with a sh
 
 ### The lede
 
-The lede is the opening paragraph, and the news list shows it as the post's excerpt. In two or three sentences, about 50 words, it states RobotCode's own news: the version, then each headline chapter in a few words, in the order of the chapters, and it ends with "along with much more" or similar. For v2.8.0, one sentence that only named three features was too short and too vague, and four sentences of about 90 words with the details of each chapter were too fine-grained.
+The lede is the opening paragraph, and the news list shows it as the post's excerpt. In two to four sentences, about 50 to 80 words, it states RobotCode's own news: the version, then each headline chapter in a few words, and it ends with "along with much more" or similar. For v2.8.0, one sentence that only named three features was too short and too vague, and four sentences of about 90 words with the details of each chapter were too fine-grained.
+
+A big release can follow the lede with a short paragraph that admits not everything is perfect yet, says that the work on it goes on, and asks the community for feedback. It is a paragraph of its own, not appended to the lede, so that it stands out, and it comes before the excerpt marker, so that the news list shows it too. The maintainer asked for it in v2.8.0.
 
 - Start with **RobotCode** and the version. Don't start with background, a date, a slogan or another project's release.
-- Name what RobotCode does ("adds support for Robot Framework 7.5"), not what Robot Framework added.
+- Name what RobotCode does ("supports Robot Framework 7.5"), not what Robot Framework added. A new Robot Framework version gets its name only; its features belong in its chapter.
+- When a release is a big step for one part of RobotCode, say so plainly and with a fact behind it, without hype words: for v2.8.0, "the biggest update yet for PyCharm", after a release with 46 changes to the plugin where every earlier release had at most one.
 - "Most important" means what most readers notice. Editor features usually rank above command-line tools.
 
-The lede of v2.8.0:
+The lede of v2.8.0 and its feedback paragraph:
 
-> **RobotCode** v2.8.0 supports Robot Framework 7.5, with argument documentation right in the editor and test selection by metadata. VS Code gets a Documentation Viewer, PyCharm and IntelliJ IDEA follow your color scheme and get many new settings, and the website has moved to a new platform with a new structure and a polished design, along with much more.
+> **RobotCode** v2.8.0 is a big release. It supports Robot Framework 7.5 and is the biggest update yet for PyCharm, where **RobotCode** now offers nearly everything it offers in VS Code, from run configurations and debugging to test results and settings. VS Code gets a Documentation Viewer and follows your Python environment by itself, and the website has moved to a new platform with a new structure, a polished design and new guides, along with much more.
+>
+> Not everything is perfect yet, and there is still quite a bit of work ahead, but we are working on it. I look forward to feedback, reviews and suggestions for improvement from the community.
 
 Openings the maintainer rejected for v2.8.0, and why:
 
@@ -80,7 +87,7 @@ Other projects use the same structure: their own news first, then a short list o
 - Django: one sentence that announces the release, then "A few highlights are:" and three bullets.
 - VS Code: a "Release highlights" block with one theme sentence and bullets of the form "Feature: one benefit sentence".
 
-The Robot Framework ecosystem (Robot Framework, SeleniumLibrary, the Browser library, Robocop) opens matter-of-factly; none of its recent release posts says "excited" or "proud". RobotCode uses the same tone.
+The Robot Framework ecosystem (Robot Framework, SeleniumLibrary, the Browser library, Robocop) opens matter-of-factly; none of its recent release posts says "excited" or "proud". RobotCode avoids those words too, but writes more warmly; see Wording.
 
 The lede stands alone. No sentence that introduces RobotCode follows it: "**RobotCode** brings Robot Framework support to VS Code, PyCharm, IntelliJ IDEA and the command line" was cut from the v2.8.0 post.
 
@@ -94,7 +101,7 @@ A commit body says how the code changed. The post says what changes for the user
 
 ## Ordering
 
-- Order by what users see first: a new Robot Framework version and its features, then VS Code, PyCharm, IntelliJ IDEA and other IDEs, language server features for every editor, AI agents, command-line tools and the terminal, the website, everything else, Bug Fixes and Under the Hood. SKILL.md lists this order.
+- Order by what users see first: a new Robot Framework version and its features, then VS Code, PyCharm, IntelliJ IDEA and other IDEs, the language server and `robotcode analyze`, AI agents, command-line tools and the terminal, the website, everything else, Bug Fixes and Under the Hood. SKILL.md lists this order.
 - Use tiers. Headline features get a chapter or subsection with an explanation and, if useful, an example. Secondary changes get one bullet. The long tail stays in the changelog. Not every change needs a highlight.
 - Space signals importance: a long section reads as an important feature. Don't spend a paragraph on a deprecation or a cosmetic fix.
 - Inside each list, what most readers notice comes first. Rarely used features and deprecations come last; cosmetic changes are left out.
@@ -114,7 +121,7 @@ One bullet per change. A bold lead sentence says what changed; the rest says wha
 
 The chapter is called "Robot Framework X.Y Support". It opens with what RobotCode does and one general pointer, without a link, to the Robot Framework documentation for what is new in Robot Framework itself. The pointer covers the whole chapter; don't repeat it in the subsections:
 
-> **RobotCode** now supports Robot Framework 7.5. What is new in Robot Framework 7.5 itself is described in the Robot Framework documentation. Here is what changes in **RobotCode**.
+> **RobotCode** now supports Robot Framework 7.5 and brings its new features into your editor and onto the command line. What is new in Robot Framework 7.5 itself is described in the Robot Framework documentation; here is what you get in **RobotCode**.
 
 - Only things that need the new version, or that matter mainly because of it, belong in this chapter. In v2.8.0 these were the keyword documentation, test metadata, Markdown resource files, the new `robot.toml` values and the `Tags:` deprecation. The rendering of Markdown documentation works on every version, but it stayed in the chapter because the standard libraries switched to Markdown in 7.5. Improvements that also apply to older versions go into other chapters.
 - The big RobotCode features that the new version makes possible get subsections, the most visible first. For v2.8.0 these were argument descriptions in hover, signature help and completion, then test metadata.
@@ -129,22 +136,25 @@ The chapter is called "Robot Framework X.Y Support". It opens with what RobotCod
 A feature chapter says what the user can do now, how to open or use it (commands, menus, views), and links the guide for details.
 
 - When a change shows up in several places, name the one most users know; it stands for the rest. "A click on a link in a **hover**" replaced a list of hovers, completion details, signature help and the tooltips of the Keywords view.
+- A place where the change shows something of its own gets its own sentence. The argument descriptions of Robot Framework 7.5 appear in the hover as a column of the argument list, and in the signature help as the description of the argument you are typing; the v2.8.0 post first named only the hover, and the maintainer asked for the signature help, with a screenshot of each.
 - When a new feature replaces an old one, say that the old one is deprecated in favour of the new one and keeps working, and nothing more about it. In v2.8.0, the fixes to *Open Documentation* were cut once it was deprecated.
 
-The chapter for PyCharm and IntelliJ IDEA uses bullets with a bold lead sentence:
+The chapter is called "PyCharm". Its first sentence names IntelliJ IDEA once; everywhere else the post says PyCharm, because most users of the plugin use PyCharm, and it names IntelliJ IDEA again only where requirements are stated, as in Breaking Changes. The chapter uses bullets with a bold lead sentence:
 
 > - **Colors come from the active color scheme.** Variables, keyword calls, operators and numbers get colors from your scheme instead of plain text, …
 
 ### Power-User Tools
 
-Keep changes to the command line, the REPL and `robotcode doc` short: what the tool does, one or two example commands, and a link to the reference. When the AI chat plugins start using a new command or behave differently, say so in one sentence where the feature is described.
+Keep changes to the command line, the REPL and `robotcode doc` short: what the tool does, one or two example commands, and a link to the reference. When the AI chat plugins start using a new command or behave differently, say so in the AI Agents chapter, in a few sentences: that RobotCode ships the plugin (in the VS Code extension for GitHub Copilot Chat, from the marketplace for other agents), what its skill learned in this release, and what changed in how the plugin is delivered, such as its version. In v2.8.0, one sentence about the plugin was too little for the maintainer.
 
 ### Small Items: the "Also in …" Lists
 
-Small changes go into an "Also in …" list at the end of the chapter of their category, such as "Also in VS Code", "Also in every editor" or "Also on the command line", not into one list for everything. One short line per item, saying in a few words what the user notices now. No error messages, internals, reasons or lists of the places where it shows:
+Small changes go into an "Also in …" list at the end of the chapter of their category, such as "Also in VS Code", "Also in the language server and analysis" or "Also on the command line", not into one list for everything. One short line per item, saying in a few words what the user notices now. No error messages, internals, reasons or lists of the places where it shows:
 
 > - On Windows, paths on another drive no longer break commands.
 > - Two library classes from one Python module are no longer mixed up.
+
+Where a guide explains an item, link the section. An item that needs more than a line, or that users want to see, becomes a subsection of its chapter with a screenshot: in v2.8.0, the failures in the Test Explorer moved from "Also in VS Code" to "See Where a Test Failed", with the guide's screenshot of the failure peek.
 
 ### Bug Fixes
 
@@ -158,6 +168,7 @@ Experimental or internal work that users can opt into. One paragraph, last befor
 
 - Describe what RobotCode does now. Use "no longer" only for bugs that users had in a released version. For support of something new, don't describe what would have gone wrong without it. "Several things that 7.5 changed would otherwise have caused lost information or false errors" was rejected for that reason.
 - Stay non-technical. Leave out diagnostic codes, cache details and class or module names unless the reader acts on them. For v2.8.0, the library-loading section went from four bullets with error codes and cache details to one paragraph: "A library that hangs or exits while it loads no longer holds up the editor or `robotcode analyze code`. …"
+- Write positively and with confidence, but don't make it lurid. Say what the reader gains, and open a chapter with the good news: the website chapter of v2.8.0 first listed what was wrong with VitePress; it now leads with the new site and gives the reasons for the move after it. A feature sentence names its benefit: the Documentation Viewer "matches your project, because it is generated with the installed library versions and your project's settings".
 - No hype: no "excited", "proud", "ultimate" or "powerful", and no exclamation marks. Address the reader as "you".
 - A heading names what the user gets: "Richer Keyword Documentation", "More Robust Library Loading".
 - Give a reason only if a commit, the code or the docs back it.
