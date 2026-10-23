@@ -151,6 +151,7 @@ You don't need to sponsor to help. Every contribution — feedback, code, advoca
 - Leave a review on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) and [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216)
 - Ask questions & help others on [Slack #robotcode](https://slack.robotframework.org/), the [Forum](https://forum.robotframework.org), or [Discussions](https://github.com/robotcodedev/robotcode/discussions)
 - Report bugs in the [issue tracker](https://github.com/robotcodedev/robotcode/issues)
+- Try the [dev builds](https://robotcode.io/getting-started/dev-builds/) and report what you find
 - Suggest enhancements or features (issues or [Discussions](https://github.com/robotcodedev/robotcode/discussions))
 - Share usage patterns & integration ideas in [Discussions](https://github.com/robotcodedev/robotcode/discussions)
 - Improve tests (edge cases, large suites, multi-root, versions)
