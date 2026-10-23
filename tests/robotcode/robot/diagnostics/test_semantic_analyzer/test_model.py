@@ -1,5 +1,11 @@
 """Tests for SemanticModel query API and data structures."""
 
+from typing import Any, Callable, Optional
+
+import pytest
+
+from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
+from robotcode.robot.diagnostics.library_doc import BUILTIN_LIBRARY_NAME, KeywordDoc
 from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind, TokenKind
 from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
@@ -370,6 +376,115 @@ class TestSemanticModelTokenQueries:
         model = SemanticModel(statements=[])
         model.build_index()
         assert model.token_path_at(1, 0) == []
+
+
+def _builtin_keyword(name: str) -> KeywordDoc:
+    return KeywordDoc(
+        line_no=-1,
+        col_offset=-1,
+        end_line_no=-1,
+        end_col_offset=-1,
+        source=None,
+        name=name,
+        libname=BUILTIN_LIBRARY_NAME,
+        arguments=[],
+        arguments_spec=None,
+    )
+
+
+_KEYWORDS: dict[str, Optional[KeywordDoc]] = {
+    name: _builtin_keyword(name) for name in ("Log", "No Operation", "Run Keyword", "Run Keyword If")
+}
+
+
+@pytest.fixture
+def analyzed_model(
+    analyzer_factory: Callable[..., AnalyzerResult], make_library_doc_mock: Callable[..., Any]
+) -> Callable[[str], SemanticModel]:
+    def factory(text: str) -> SemanticModel:
+        result = analyzer_factory(text, keyword_map=_KEYWORDS, library_doc=make_library_doc_mock())
+        assert result.semantic_model is not None
+        return result.semantic_model
+
+    return factory
+
+
+def _name(call: Optional[KeywordCallStatement]) -> Optional[str]:
+    return call.keyword_doc.name if call is not None and call.keyword_doc is not None else None
+
+
+class TestKeywordCallAt:
+    def test_call_in_the_body_of_an_inline_if(self, analyzed_model: Callable[[str], SemanticModel]) -> None:
+        line = "    IF    ${TRUE}    Log    a    ELSE    No Operation"
+        model = analyzed_model(f"*** Test Cases ***\nExample\n{line}\n")
+
+        log = line.index("Log")
+        # the end of the name counts, as in the legacy check of a keyword token
+        assert [_name(model.keyword_call_at(3, col)) for col in (log, log + 1, log + 3)] == ["Log", "Log", "Log"]
+        assert _name(model.keyword_call_at(3, line.index("No Operation") + 3)) == "No Operation"
+        assert model.keyword_call_at(3, line.index("IF")) is None
+        assert model.keyword_call_at(3, line.index("    a    ") + 4) is None
+
+    def test_inner_call_of_run_keyword(self, analyzed_model: Callable[[str], SemanticModel]) -> None:
+        line = "    Run Keyword    Log    hi"
+        model = analyzed_model(f"*** Test Cases ***\nExample\n{line}\n")
+
+        outer = model.keyword_call_at(3, line.index("Run Keyword"))
+
+        assert isinstance(outer, RunKeywordCallStatement)
+        assert _name(outer) == "Run Keyword"
+        assert model.keyword_call_at(3, line.index("Log") + 1) is outer.inner_calls[0]
+        assert model.keyword_call_at(3, line.index("hi")) is None
+
+    def test_call_in_a_nested_run_keyword_if(self, analyzed_model: Callable[[str], SemanticModel]) -> None:
+        line = "    Run Keyword    Run Keyword If    ${TRUE}    Log    hi"
+        model = analyzed_model(f"*** Test Cases ***\nExample\n{line}\n")
+
+        assert _name(model.keyword_call_at(3, line.index("Run Keyword If") + 12)) == "Run Keyword If"
+        assert _name(model.keyword_call_at(3, line.index("Log"))) == "Log"
+        assert model.keyword_call_at(3, line.index("${TRUE}")) is None
+
+    def test_inner_call_on_a_continuation_line(self, analyzed_model: Callable[[str], SemanticModel]) -> None:
+        model = analyzed_model("*** Test Cases ***\nExample\n    Run Keyword If    ${TRUE}\n    ...    Log    hi\n")
+
+        assert _name(model.keyword_call_at(4, len("    ...    "))) == "Log"
+        assert _name(model.keyword_call_at(3, len("    "))) == "Run Keyword If"
+
+    def test_namespace_and_bdd_prefix(self) -> None:
+        # `    Given Run Keyword    BuiltIn.Log    hi`; built by hand, because the analyzer
+        # splits a namespace and a BDD prefix only for keywords found through real imports
+        inner = KeywordCallStatement(
+            kind=NodeKind.KEYWORD_CALL,
+            line_start=3,
+            line_end=3,
+            tokens=[
+                _token(TokenKind.NAMESPACE, "BuiltIn", 3, 25, 7),
+                _token(TokenKind.OPERATOR, ".", 3, 32, 1),
+                _token(TokenKind.KEYWORD_INNER, "Log", 3, 33, 3),
+                _token(TokenKind.ARGUMENT, "hi", 3, 40, 2),
+            ],
+        )
+        outer = RunKeywordCallStatement(
+            kind=NodeKind.KEYWORD_CALL,
+            line_start=3,
+            line_end=3,
+            tokens=[
+                _token(TokenKind.BDD_PREFIX, "Given", 3, 4, 5),
+                _token(TokenKind.KEYWORD, "Run Keyword", 3, 10, 11),
+                _token(TokenKind.ARGUMENT, "BuiltIn.Log", 3, 25, 11),
+                _token(TokenKind.ARGUMENT, "hi", 3, 40, 2),
+            ],
+            inner_calls=[inner],
+        )
+        model = SemanticModel(statements=[outer])
+        model.build_index()
+
+        assert model.keyword_call_at(3, 5) is None
+        assert model.keyword_call_at(3, 10) is outer
+        assert model.keyword_call_at(3, 21) is outer
+        assert [model.keyword_call_at(3, col) for col in (25, 32, 33, 36)] == [inner] * 4
+        assert model.keyword_call_at(3, 37) is None
+        assert model.keyword_call_at(4, 25) is None
 
 
 class TestNormalizeVariableName:

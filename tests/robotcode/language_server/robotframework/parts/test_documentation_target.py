@@ -117,6 +117,19 @@ class faillib:
         pass
 """
 
+# keywords that are not the keyword of their line's statement
+CALLS_SUITE = """\
+*** Settings ***
+Library     Collections
+
+*** Test Cases ***
+First
+    IF    ${TRUE}    Log    a    ELSE    No Operation
+    Run Keyword    Log    hi
+    Run Keyword    Run Keyword If    ${TRUE}    Append To List    ${LIST}    1
+    Run Keyword    BuiltIn.Log    hi
+"""
+
 
 @pytest.fixture(scope="module")
 def project(tmp_path_factory: pytest.TempPathFactory) -> Path:
@@ -133,6 +146,7 @@ def project(tmp_path_factory: pytest.TempPathFactory) -> Path:
             "with_keywords.robot": SUITE_WITH_KEYWORDS,
             "failing.robot": FAILING_SUITE,
             "faillib.py": FAILLIB,
+            "calls.robot": CALLS_SUITE,
         },
     )
 
@@ -325,6 +339,39 @@ def test_a_library_whose_arguments_fail_is_documented_without_them(
     # the page shows the library as the editor does, `robotcode doc lib` refuses the arguments
     assert (library.name, library.args, library.keyword) == ("./faillib.py", [], None)
     assert (keyword.name, keyword.args, keyword.keyword) == ("./faillib.py", [], "Connect")
+
+
+@pytest.mark.parametrize("semantic_model", [False, True], ids=["legacy", "model"])
+@pytest.mark.parametrize(
+    ("line_start", "word", "name", "keyword"),
+    [
+        ("IF    ${TRUE}", "Log", "BuiltIn", "Log"),
+        ("IF    ${TRUE}", "No Operation", "BuiltIn", "No Operation"),
+        ("Run Keyword    Log", "Log", "BuiltIn", "Log"),
+        ("Run Keyword    Run Keyword If", "Run Keyword If", "BuiltIn", "Run Keyword If"),
+        ("Run Keyword    Run Keyword If", "Append To List", "Collections", "Append To List"),
+        ("Run Keyword    BuiltIn.Log", "BuiltIn", "BuiltIn", "Log"),
+    ],
+)
+def test_keyword_in_an_inline_if_or_in_run_keyword_arguments(
+    protocol: RobotLanguageServerProtocol,
+    open_temp_document: Callable[[Path], TextDocument],
+    project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    semantic_model: bool,
+    line_start: str,
+    word: str,
+    name: str,
+    keyword: str,
+) -> None:
+    monkeypatch.setattr(protocol.documents_cache.analysis_config, "semantic_model", semantic_model)
+    document = open_temp_document(project / "calls.robot")
+    assert (protocol.documents_cache.get_namespace(document).semantic_model is not None) == semantic_model
+
+    line, text = next((i, t) for i, t in enumerate(document.text().splitlines()) if t.strip().startswith(line_start))
+    target = _target(_actions(protocol, document, Position(line=line, character=text.rindex(word) + 1)))
+
+    assert (target.name, target.args, target.keyword) == (name, [], keyword)
 
 
 def test_call_without_prefix_uses_the_import_of_the_search_order(

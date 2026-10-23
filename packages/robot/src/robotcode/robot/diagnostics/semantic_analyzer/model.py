@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, FrozenSet, List, Optional
 
-from .enums import NodeKind
+from .enums import NodeKind, TokenKind
 from .nodes import (
     DefinitionBlock,
     DefinitionStatement,
+    KeywordCallStatement,
+    RunKeywordCallStatement,
     SemanticBlock,
     SemanticNode,
     SemanticStatement,
@@ -21,6 +23,13 @@ _SECTION_KINDS: FrozenSet[NodeKind] = frozenset(
         NodeKind.COMMENT_SECTION,
         NodeKind.INVALID_SECTION,
     }
+)
+
+# The namespace and the name of a keyword reference; the span from the first to the
+# last of them also covers the "." between. An inner call of a Run Keyword variant
+# carries its name as KEYWORD_INNER.
+_KEYWORD_REFERENCE_KINDS: FrozenSet[TokenKind] = frozenset(
+    {TokenKind.NAMESPACE, TokenKind.KEYWORD, TokenKind.KEYWORD_INNER}
 )
 
 if TYPE_CHECKING:
@@ -192,6 +201,37 @@ class SemanticModel:
                     path.append(sub)
                     SemanticModel._collect_token_path(sub, line, col, path)
                     return
+
+    def keyword_call_at(self, line: int, col: int) -> Optional[KeywordCallStatement]:
+        """Get the keyword call whose keyword reference covers a position.
+
+        The keyword reference is the namespace and the keyword name with the
+        "." between them, without a BDD prefix; its end counts as covered, as
+        in the legacy check of a keyword token. Besides the call that
+        `statement_at()` returns, this finds the calls in the body of an
+        inline IF, which are statements of their own on the line, and the
+        inner calls of a Run Keyword variant, searched recursively.
+        O(n) in statements.
+        """
+        for stmt in self.statements:
+            if isinstance(stmt, KeywordCallStatement) and stmt.line_start <= line <= stmt.line_end:
+                call = self._keyword_call_covering(stmt, line, col)
+                if call is not None:
+                    return call
+        return None
+
+    @staticmethod
+    def _keyword_call_covering(stmt: KeywordCallStatement, line: int, col: int) -> Optional[KeywordCallStatement]:
+        reference = [token for token in stmt.tokens if token.kind in _KEYWORD_REFERENCE_KINDS]
+        if reference and reference[0].line == line:
+            if reference[0].col_offset <= col <= reference[-1].col_offset + reference[-1].length:
+                return stmt
+        if isinstance(stmt, RunKeywordCallStatement):
+            for inner in stmt.inner_calls:
+                call = SemanticModel._keyword_call_covering(inner, line, col)
+                if call is not None:
+                    return call
+        return None
 
     def enclosing_definition(self, line: int) -> Optional["DefinitionBlock | DefinitionStatement"]:
         """Find the enclosing definition (Keyword/TestCase) containing the given line.

@@ -14,7 +14,6 @@ from robotcode.core.lsp.types import (
     CodeActionContext,
     CodeActionKind,
     Command,
-    Position,
     Range,
 )
 from robotcode.core.text_document import TextDocument
@@ -36,7 +35,6 @@ from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     DefinitionStatement,
     ImportStatement,
-    KeywordCallStatement,
 )
 from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 from robotcode.robot.utils.markdown_docs import (
@@ -374,16 +372,13 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         if isinstance(stmt, ImportStatement) and stmt.import_type in (ImportType.LIBRARY, ImportType.RESOURCE):
             return self._import_target_from_model(stmt, document, range, namespace)
 
-        # Branch 2: keyword call / fixture / template.
-        if isinstance(stmt, KeywordCallStatement):
-            if range.start != range.end:
+        # Branch 2: keyword call / fixture / template, also a call in the body
+        # of an inline IF and an inner call of a Run Keyword variant.
+        call = model.keyword_call_at(range.start.line + 1, range.start.character)
+        if call is not None:
+            if range.start != range.end or call.keyword_doc is None:
                 return None
-            kw_doc = stmt.keyword_doc
-            if kw_doc is None:
-                return None
-            if not self._cursor_on_keyword_reference(range.start, stmt):
-                return None
-            return self.keyword_target(kw_doc, stmt.lib_entry, document, namespace)
+            return self.keyword_target(call.keyword_doc, call.lib_entry, document, namespace)
 
         # Branch 3: keyword definition header.
         if isinstance(stmt, DefinitionStatement) and stmt.kind is NodeKind.KEYWORD_DEF:
@@ -435,21 +430,6 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             namespace,
             stmt.lib_entry.library_doc if stmt.lib_entry is not None else None,
         )
-
-    @staticmethod
-    def _cursor_on_keyword_reference(pos: Position, stmt: KeywordCallStatement) -> bool:
-        """Cursor is within the NAMESPACE / "." / KEYWORD SemanticTokens
-        that make up the keyword reference (BDD prefix excluded). Mirrors
-        the legacy `position.is_in_range(range_from_token(keyword_token))`
-        after the BDD-prefix strip that
-        `get_keyworddoc_and_token_from_position` does.
-        """
-        ref_toks = [t for t in stmt.tokens if t.kind in (TokenKind.NAMESPACE, TokenKind.KEYWORD)]
-        if not ref_toks:
-            return False
-        # Contiguous span from namespace start to keyword end also covers the
-        # "." operator between them.
-        return pos in Range(start=ref_toks[0].range.start, end=ref_toks[-1].range.end)
 
     def keyword_target(
         self,
