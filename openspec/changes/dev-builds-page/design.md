@@ -28,7 +28,7 @@ All three come from the same CI run. Neither the extension nor the plugin shows 
 **Non-Goals:**
 
 - Explaining the version scheme beyond what a user needs to recognize a dev build.
-- Instructions for other tools, such as uv, pipx or Poetry. The page shows pip and says that other installers need their own option for pre-releases.
+- Instructions for other tools, such as pipx or Poetry, and for `uv tool install` or `uvx`: RobotCode runs in the project's environment, next to its Robot Framework and libraries. The page shows pip and uv (`uv add`, `uv pip install`), at the maintainer's request.
 
 ## Decisions
 
@@ -43,7 +43,7 @@ Alternatives:
 ### The page's content
 
 - **Intro:**
-  - a dev build is built every night from the latest successful CI run of `main`, after all of its tests have passed;
+  - a new dev build comes out in the night after `main` has changed, from the latest CI run of `main`, if that run has passed; a night without changes brings none (`release-publishing`, and the change `dev-builds-latest-run`);
   - it brings fixes and features before the next release, and can still contain bugs;
   - it shows no What's New notification.
 - **VS Code:**
@@ -56,16 +56,19 @@ Alternatives:
   - to go back, remove the repository. Because the IDE counts a dev build as newer than the release with the same version number, it keeps the dev build until a newer release appears. Uninstalling RobotCode and installing it again from the Marketplace switches at once.
 - **Python packages:**
   - pin the exact dev version, for example `pip install "robotcode[runner,analyze]==2.8.0.dev631"`; the newest one is in the release history on PyPI;
-  - to go back, pin a release version. The next release counts as newer than the dev versions before it, so a plain `pip install --upgrade` gets it once it is out.
+  - with uv, the same pin in `uv add` for a project that uv manages, or in `uv pip install` for an environment;
+  - as the alternative for the newest dev version without its number, `pip install --pre` and uv's `--prerelease allow`, with the caveat that they allow pre-releases of every package; `uv add` then writes the found version as the lower bound, such as `>=2.8.0.dev631`;
+  - to go back with pip, `pip install --upgrade` without `--pre`: pip takes the newest release, also when its version number is lower than the dev version's (checked with pip 26.2.1). With uv, pin the release: `uv add …==2.7.0` or `uv pip install …==2.7.0`; `uv pip install --upgrade` keeps the dev version. In a uv project, putting back a version range keeps the dev version in `uv.lock`, because it matches the range; `uv sync --upgrade-package robotcode` then installs the newest release.
+  - Each of these ways has its own code block.
 - **Reporting:** name the version from the extension's or plugin's details, or `robotcode --version`, in the issue.
 
 ### The plugin's own channel URL, not the channel list
 
 `https://plugins.jetbrains.com/plugins/dev/26216` subscribes the IDE to RobotCode's channel `dev` only. `https://plugins.jetbrains.com/plugins/dev/list` would also bring the dev builds of every other installed plugin that publishes a channel named `dev` (see Context).
 
-### An exact version for pip, not `--pre`
+### An exact version first, allowing pre-releases as the alternative
 
-`--pre` lets pip choose pre-releases of every package it installs, Robot Framework's release candidates among them. A pinned dev version allows a pre-release only where the pin asks for one. RobotCode's packages require each other in exactly the same version, so the pin takes all of them along (`release-publishing`, "A dev version of robotcode is published only together with the packages it requires").
+`--pre`, and uv's `--prerelease allow`, let the installer choose pre-releases of every package it installs, Robot Framework's release candidates among them. A pinned dev version allows a pre-release only where the pin asks for one, so the page leads with the pin. At the maintainer's request it also shows both options, as the way to the newest dev version without looking up its number, and names their caveat. On 2026-10-23 both installed Robot Framework 7.5, because its newest pre-release, 7.5rc1, is older than the release. RobotCode's packages require each other in exactly the same version, so the pin takes all of them along (`release-publishing`, "A dev version of robotcode is published only together with the packages it requires").
 
 ### Labels from the sources
 

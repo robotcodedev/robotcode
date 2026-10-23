@@ -2,7 +2,7 @@
 
 ## Why
 
-Every night the CI publishes dev builds of `main`: the VS Code extension as a pre-release on the VS Code Marketplace and Open VSX, the PyCharm plugin to the JetBrains Marketplace channel `dev`, and the Python packages as `.devN` versions on PyPI. Neither the README nor robotcode.io says that they exist or how to get them. A user who wants a fix before the release, or who wants to help test, cannot find them. Each tool also has its own way in and its own way back: a switch in VS Code, a plugin repository URL in PyCharm, a version pin for pip.
+In the night after `main` has changed, the CI publishes dev builds of its latest state, if that state's CI run has passed: the VS Code extension as a pre-release on the VS Code Marketplace and Open VSX, the PyCharm plugin to the JetBrains Marketplace channel `dev`, and the Python packages as `.devN` versions on PyPI. Neither the README nor robotcode.io says that they exist or how to get them. A user who wants a fix before the release, or who wants to help test, cannot find them. Each tool also has its own way in and its own way back: a switch in VS Code, a plugin repository URL in PyCharm, a version pin for pip.
 
 ## What Changes
 
