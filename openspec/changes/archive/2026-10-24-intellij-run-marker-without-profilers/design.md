@@ -54,3 +54,14 @@ The sentence in `running-tests.mdx` names the menu's entries without Profile, an
 - [The executor ids `Profiler` and `ConcurrencyExecutor` are PyCharm's and could change] → the run marker filters by the ids of Run and Debug, which are the platform's; only the block of the two runs depends on PyCharm's ids, as the block of Profile already does.
 - [Profile and Concurrency Diagram stay under "More Run/Debug" and in the run widget] → they end with a message there; see the non-goals.
 - [A plugin's executor that could run Robot Framework configurations disappears from the run marker] → RobotCode's runners take only Run and Debug, so such an executor would run the configuration as a Python script.
+
+## Verification
+
+Harness rounds of 2026-10-24 in the UI-test PyCharm 2026.1 with the demo project, the first with `RobotCodeRunLineMarkerContributor.kt`, `RobotCodeProgramRunner.kt` and `RobotCode.properties` from HEAD, the second with the change. The entries of "More Run/Debug" were started as the entry does, with `ExecutionUtil.doRunConfiguration` for the configuration of the test.
+
+- **Run marker, test "Order Coffee" and line 1 of `tests/orders.robot`:** before, Run, Debug, Profile, Concurrency Diagram, Run with Profile..., Debug with Profile... and Modify Run Configuration…; after, the same without Profile and Concurrency Diagram, on both markers.
+- **"More Run/Debug" on the test:** Profile, Concurrency Diagram and Modify Run Configuration…, before and after.
+- **Runners that take the configuration of the test** (all of them, not only the first): for `Profiler`, `RobotCodeProfileRunner` and PyCharm's `com.intellij.python.profiler.PythonProfileRunner`; for `ConcurrencyExecutor`, before only PyCharm's `PyConcurrencyDebugRunner`, after `RobotCodeProfileRunner` first. PyCharm's own runners take Robot Framework run configurations for both executors, so the entries cannot be hidden outside the run marker, as the non-goals say.
+- **Profile:** before and after the notification "Error running 'Test Order Coffee': Robot Framework runs cannot be profiled.", no process.
+- **Concurrency Diagram:** before, the test ran under PyCharm's debugger (exit 0, "Tests passed: 1"), and `idea.log` got an error of the Python plugin ("[Split debugger] RunContentDescriptor should not be used in split mode"), shown as "IDE error occurred". After, the notification "Error running 'Test Order Coffee': Robot Framework runs have no concurrency diagram.", no process, no IDE error.
+- **`idea.log`:** in both rounds only a SlowOperations error at startup, blamed on the harness's Robot server plugin; besides it, before the change the error of the Concurrency Diagram run, after it nothing.
