@@ -139,7 +139,7 @@ How inheritance works in detail:
 - **Several levels** work as well: if `ci` inherits from `staging` and `staging` from `base`, `-p ci` applies `base`, `staging` and `ci`, in this order.
 - **A single parent** can also be given as text: `inherits = "staging"`.
 - **A profile selected twice**, once directly and once through inheritance, applies once.
-- **A disabled profile** brings no parents along: if `ci` is [disabled](#enabling-profiles), selecting it applies neither `ci` nor `staging` and `headless`, which it inherits from. A disabled parent is left out, and the profile that inherits from it applies without it.
+- **A disabled profile** brings no parents along, at any level: if `ci` is [disabled](#enabling-profiles), selecting it applies neither `ci` nor `staging` and `headless`, which it inherits from, nor the profiles they inherit from. A disabled parent is left out with its own parents, and the profile that inherits from it applies without them. A parent that another profile in use also inherits from still applies.
 - **`precedence`** comes before inheritance: a parent with a higher precedence than the inheriting profile applies after it, and wins where both set the same setting.
 - **`detached`** in the inheriting profile also drops its parents, because they apply before it; see [Detached profiles](#detached-profiles).
 

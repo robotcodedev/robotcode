@@ -3398,47 +3398,54 @@ class RobotConfig(RobotExtendBaseProfile):
             else:
                 verbose_callback("No profiles selected.")
 
+        # whether a selected profile is enabled; None when its condition has an error, which is reported only once
+        enabled_states: Dict[str, Optional[bool]] = {}
+
+        def is_enabled(name: str) -> Optional[bool]:
+            if name not in enabled_states:
+                try:
+                    enabled_states[name] = selected_profiles[name][0].is_enabled()
+                except EvaluationError as e:
+                    message = f"Error evaluating 'enabled' condition for profile '{name}': {e}"
+
+                    if error_callback is None:
+                        raise ValueError(message) from e
+
+                    error_callback(message)
+                    enabled_states[name] = None
+            return enabled_states[name]
+
+        # a profile is used when it is enabled and selected itself, or when one of the profiles that inherit it is
+        # used, so that a disabled profile brings none of the profiles it inherits from along, at any depth
+        used_states: Dict[str, bool] = {}
+
+        def is_used(name: str) -> bool:
+            if name not in used_states:
+                parents = selected_profiles[name][1]
+                used_states[name] = bool(is_enabled(name)) and (
+                    parents is None or any(is_used(parent_name) for parent_name, _ in parents)
+                )
+            return used_states[name]
+
         for profile_name, (profile, parent_profiles) in sorted(
             selected_profiles.items(), key=lambda x: x[1][0].precedence or 0
         ):
-            try:
-                if not profile.is_enabled():
-                    if verbose_callback:
-                        verbose_callback(f'Skipping profile "{profile_name}" because it\'s disabled.')
-                    continue
-            except EvaluationError as e:
-                message = f"Error evaluating 'enabled' condition for profile '{profile_name}': {e}"
-
-                if error_callback is None:
-                    raise ValueError(message) from e
-
-                error_callback(message)
+            profile_enabled = is_enabled(profile_name)
+            if profile_enabled is None:
                 continue
 
-            if parent_profiles is not None:
-                disabled_profiles = []
-                skip = False
-                for parent_profile in parent_profiles:
-                    try:
-                        if not parent_profile[1].is_enabled():
-                            disabled_profiles.append(parent_profile[0])
-                    except EvaluationError as e:
-                        message = f"Error evaluating 'enabled' condition for profile '{parent_profile[0]}': {e}"
+            if not profile_enabled:
+                if verbose_callback:
+                    verbose_callback(f'Skipping profile "{profile_name}" because it\'s disabled.')
+                continue
 
-                        if error_callback is None:
-                            raise ValueError(message) from e
-
-                        error_callback(message)
-                        skip = True
-                        break
-
-                if skip or len(disabled_profiles) == len(parent_profiles):
-                    if verbose_callback:
-                        verbose_callback(
-                            f"Skipping profile inherited '{profile_name}' because no parent is enabled."
-                            f" Disabled profiles: {', '.join(disabled_profiles)}."
-                        )
-                    continue
+            if not is_used(profile_name):
+                if verbose_callback:
+                    verbose_callback(
+                        f"Skipping inherited profile '{profile_name}' because none of the profiles that inherit it"
+                        f" is used: {', '.join(sorted(name for name, _ in parent_profiles or ()))}."
+                    )
+                continue
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')

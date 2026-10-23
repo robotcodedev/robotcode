@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List
 
 import pytest
 
@@ -246,6 +247,88 @@ def test_profiles_enabled_cant_be_an_invalid_condition() -> None:
     os.environ["CI"] = "true"
     with pytest.raises(ValueError, match=r".*invalid syntax.*"):
         config.combine_profiles("*")
+
+
+INHERITANCE_CHAIN = """\
+    args = ["orig"]
+
+    [profiles.base]
+    extend-args = ["base"]
+
+    [profiles.staging]
+    inherits = ["base"]
+    extend-args = ["staging"]
+
+    [profiles.ci]
+    inherits = ["staging"]
+    extend-args = ["ci"]
+
+    [profiles.nightly]
+    inherits = ["staging"]
+    extend-args = ["nightly"]
+    """
+
+
+def _chain(*disabled: str) -> RobotConfig:
+    """The profiles of INHERITANCE_CHAIN, with the given ones disabled."""
+    config = load_robot_config_from_robot_toml_str(INHERITANCE_CHAIN)
+    assert config.profiles
+    for name in disabled:
+        config.profiles[name].enabled = False
+    return config
+
+
+def test_a_profile_brings_the_profiles_it_inherits_from_along() -> None:
+    profile = _chain().combine_profiles("ci")
+
+    assert profile.args == ["orig", "base", "staging", "ci"]
+
+
+def test_a_disabled_profile_brings_no_profiles_it_inherits_from_along_at_any_depth() -> None:
+    profile = _chain("ci").combine_profiles("ci")
+
+    assert profile.args == ["orig"]
+
+
+def test_a_disabled_inherited_profile_is_left_out_with_the_profiles_it_inherits_from() -> None:
+    profile = _chain("staging").combine_profiles("ci")
+
+    assert profile.args == ["orig", "ci"]
+
+
+def test_an_inherited_profile_is_used_when_one_of_the_profiles_that_inherit_it_is_used() -> None:
+    profile = _chain("ci").combine_profiles("ci", "nightly")
+
+    assert profile.args == ["orig", "base", "staging", "nightly"]
+
+
+def test_a_selected_profile_is_used_although_a_disabled_profile_inherits_it() -> None:
+    profile = _chain("ci").combine_profiles("ci", "base")
+
+    assert profile.args == ["orig", "base"]
+
+
+def test_an_error_in_the_condition_of_an_inheriting_profile_is_reported_once() -> None:
+    data = """\
+        args = ["orig"]
+
+        [profiles.base]
+        extend-args = ["base"]
+
+        [profiles.ci]
+        enabled = {if = 'environ.get("CI") = "true"'}
+        inherits = ["base"]
+        extend-args = ["ci"]
+        """
+    errors: List[str] = []
+
+    profile = load_robot_config_from_robot_toml_str(data).combine_profiles(
+        "ci", error_callback=lambda message: errors.append(str(message))
+    )
+
+    assert profile.args == ["orig"]
+    assert len(errors) == 1
+    assert errors[0].startswith("Error evaluating 'enabled' condition for profile 'ci'")
 
 
 def test_profiles_precedence_defines_the_order() -> None:
