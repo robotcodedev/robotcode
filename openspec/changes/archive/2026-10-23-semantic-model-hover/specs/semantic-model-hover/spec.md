@@ -1,5 +1,9 @@
 # Spec: semantic-model-hover
 
+## Purpose
+
+Hover and the documentation target behind it (the documentation source actions and the link in the hover's heading) answer the same with the semantic-model analysis path enabled as with it disabled, also for keywords in inline IF bodies and Run Keyword arguments.
+
 ## ADDED Requirements
 
 ### Requirement: Keywords in inline IF bodies and Run Keyword arguments have a documentation target on the model path
