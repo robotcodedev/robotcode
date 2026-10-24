@@ -53,9 +53,11 @@ Alternative: the editor's color scheme. The preview shows no text of the editor,
 
 ### D3: Color scheme first, page second; again on every theme change
 
-- **First load:** the browser is built without a URL. When JCEF reports it created (`CefLifeSpanHandler.onAfterCreated` on the browser's client), the preview sends the color scheme and loads the file when the call has completed. It also loads the file when the call failed or there is no DevTools client; the page then looks as it does today.
+- **First load:** the browser is built without a URL. When JCEF reports it created (`CefLifeSpanHandler.onAfterCreated` on the browser's client), the preview sends the color scheme and loads the file when the call has completed.
+  - It also loads the file when the call failed, has not answered within a second, or there is no DevTools client. The page then looks as it does today.
+  - JCEF's DevTools client throws for a browser that is not one of JCEF's own; the preview treats that like a missing client.
 - **Theme changes:** the editor subscribes to `LafManagerListener.TOPIC` on the application's message bus, with itself as the parent disposable, and sends the new color scheme to its browser.
-- **Disposal:** the editor closes the DevTools client when it is disposed, before the browser.
+- **Disposal:** nothing to close. Both of JCEF's browsers, `CefBrowser_N` and `RemoteBrowser`, close their DevTools client in `onBeforeClose`, and the subscription ends with the editor.
 
 Alternative: keep the URL in the builder and send the color scheme after the browser is created. The page's first load then races the call, and when the call comes second, the page first shows the other theme. Robot Framework then also keeps the switched value as if it were a choice.
 
