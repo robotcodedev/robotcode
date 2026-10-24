@@ -18,8 +18,8 @@
 
 ## 3. Integration
 
-- [ ] 3.1 Delete the `.robotcode_cache` folders in the repository once no process has them open (`lsof +D`), then run `hatch run test:test` and `hatch run lint:all`; verify both are green.
-- [ ] 3.2 Repeat the reproduction of the proposal with `robotcode analyze code` (the four cases, warm cache against `--no-cache-namespaces`) and the timing on a synthetic project like the one in design.md; verify that every case reports what the fresh analysis reports and that a warm run keeps all hits within about 0.1 s of today.
+- [x] 3.1 Delete the `.robotcode_cache` folders in the repository once no process has them open (`lsof +D`), then run `hatch run test:test` and `hatch run lint:all`; verify both are green.
+- [x] 3.2 Repeat the reproduction of the proposal with `robotcode analyze code` (the four cases, warm cache against `--no-cache-namespaces`) and the timing on a synthetic project like the one in design.md; verify that every case reports what the fresh analysis reports and that a warm run keeps all hits within about 0.1 s of today.
 
 ## Workflow follow-up
 
