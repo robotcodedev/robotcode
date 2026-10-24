@@ -44,6 +44,16 @@ class RobotCodeOutputPreviewTest : BasePlatformTestCase() {
         assertNull(pagePath(null))
     }
 
+    // the pages' prefers-color-scheme, which the preview sets over the browser's DevTools client
+    fun testTheColorSchemeOfThePages() {
+        assertEquals(
+            """{"features":[{"name":"prefers-color-scheme","value":"light"}]}""", colorSchemeParameters(dark = false)
+        )
+        assertEquals(
+            """{"features":[{"name":"prefers-color-scheme","value":"dark"}]}""", colorSchemeParameters(dark = true)
+        )
+    }
+
     // LSP4IJ offers language servers for files of a user-defined type and for files whose PSI has the plain text or the
     // TextMate language; a binary PSI has no language
     fun testThePreviewIsNoTextFile() {

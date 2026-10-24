@@ -1,6 +1,7 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -24,10 +25,12 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.jcef.JBCefBrowser
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import org.cef.browser.CefBrowser
+import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
 import java.awt.BorderLayout
 import java.awt.event.KeyAdapter
@@ -36,6 +39,8 @@ import java.beans.PropertyChangeListener
 import java.net.URI
 import java.net.URISyntaxException
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -92,6 +97,13 @@ internal fun pagePath(url: String?): Path? {
 }
 
 /**
+ * The parameters of the DevTools method `Emulation.setEmulatedMedia` that give the pages of the preview the IDE's light
+ * or [dark] theme as `prefers-color-scheme`, which reports and logs of Robot Framework 7.0 and later follow.
+ */
+internal fun colorSchemeParameters(dark: Boolean): String =
+    """{"features":[{"name":"prefers-color-scheme","value":"${if (dark) "dark" else "light"}"}]}"""
+
+/**
  * Shows the report or log of [file] in a browser, below a toolbar to go back and forward, reload, find in the page and
  * open the shown page in the default browser; [reload] loads the file's current content after a run.
  */
@@ -99,7 +111,8 @@ internal class RobotCodeOutputPreviewEditor(
     private val project: Project, private val file: RobotCodeOutputPreviewFile
 ) : UserDataHolderBase(), FileEditor {
 
-    private val browser = JBCefBrowser.createBuilder().setUrl(file.pageUrl).build()
+    // without the page, which loads once the browser has the IDE's color scheme, so that it shows its theme at once
+    private val browser = JBCefBrowser.createBuilder().build()
 
     // the browser's history, as its last change of the loading state reported it
     @Volatile
@@ -118,6 +131,15 @@ internal class RobotCodeOutputPreviewEditor(
 
     init {
         Disposer.register(this, browser)
+
+        browser.jbCefClient.addLifeSpanHandler(object : CefLifeSpanHandlerAdapter() {
+            override fun onAfterCreated(cefBrowser: CefBrowser?) {
+                // the page also loads when the color scheme cannot be set, and waits for it at most a second
+                applyColorScheme().orTimeout(1, TimeUnit.SECONDS).whenComplete { _, _ -> browser.loadURL(file.pageUrl) }
+            }
+        }, browser.cefBrowser)
+        ApplicationManager.getApplication().messageBus.connect(this)
+            .subscribe(LafManagerListener.TOPIC, LafManagerListener { applyColorScheme() })
 
         val find = action("run.preview.find", AllIcons.Actions.Find) { openFind() }
         toolbar = toolbarOf(
@@ -181,6 +203,16 @@ internal class RobotCodeOutputPreviewEditor(
         } else {
             browser.loadURL(file.pageUrl)
         }
+    }
+
+    // the IDE's light or dark theme as the pages' prefers-color-scheme, for every page of the tab and every later load;
+    // without a DevTools client the pages keep the browser's own, and JCEF's client takes no browser of another kind
+    private fun applyColorScheme(): CompletableFuture<*> = try {
+        browser.cefBrowser.devToolsClient
+            ?.executeDevToolsMethod("Emulation.setEmulatedMedia", colorSchemeParameters(dark = !JBColor.isBright()))
+            ?: CompletableFuture.completedFuture(null)
+    } catch (_: IllegalArgumentException) {
+        CompletableFuture.completedFuture(null)
     }
 
     // the browser's own goBack does nothing in the IDE's JCEF, while the page's history moves
