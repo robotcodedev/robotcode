@@ -15,6 +15,7 @@ PyCharm and VS Code use the same RobotCode language server, so the language feat
 | Completion, signature help, hover, quick fixes, rename, formatting | Yes | Yes |
 | Go to definition, references, outline, workspace symbols, references code lens | Yes | Yes |
 | Highlighting by meaning | Colors from the theme, changeable in `settings.json` | **Settings \| Editor \| Color Scheme \| Robot Framework** |
+| Robot Framework code blocks in Markdown | Highlighted when marked `robotframework` or `robot`, in the editor and the preview | Highlighted when marked `robotframework` or `robot`, in the editor and the preview |
 | Inlay hints | On, shown while <kbd>Ctrl+Alt</kbd> (<kbd>Ctrl+Option</kbd> on macOS) is held | Off by default, shown all the time when switched on |
 | Keywords view | In the Explorer | Not available |
 | Documentation Viewer | Yes | Not available; the documentation shows on hover and with **Quick Documentation** |
@@ -36,6 +37,7 @@ PyCharm and VS Code use the same RobotCode language server, so the language feat
 | Python environment | From the Python extension; RobotCode notices a new environment and a later install of Robot Framework | The Python interpreter of the project; after an install, **Retry** in the banner checks it again |
 | Several projects in one window | Workspace folders, each with its own language server | Attached projects are modules of one project, which has one language server with the interpreter of the first module that has one |
 | Settings | User, workspace and folder settings | Shared project settings and personal settings |
+| Completion in `robot.toml` | With the extension Even Better TOML, from RobotCode's JSON schema | From RobotCode's JSON schema, without further setup |
 | Switching Robocop, workspace diagnostics and debug logging on and off | Commands in the RobotCode menu | Robocop and workspace diagnostics on the settings pages, debug logging with **Extra args** on the page **Language Server** |
 | Reporting an issue | **RobotCode: Report Issue...** | On [GitHub](https://github.com/robotcodedev/robotcode/issues) |
 | New files | Suite file, resource file, `__init__.robot` | Suite file, resource file, your own file templates |

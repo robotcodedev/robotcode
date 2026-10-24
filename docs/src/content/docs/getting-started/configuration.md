@@ -29,7 +29,7 @@ BASE_URL = "http://localhost:8080"
 
 Each setting is a command line option of Robot Framework, written with its long name in words separated by hyphens: `--outputdir` becomes `output-dir`, and `--pythonpath` becomes `python-path`. Relative paths count from the project folder.
 
-In VS Code, the extension Even Better TOML completes the settings and shows their documentation, see [Editing `robot.toml`](/guides/vscode/configuration/#editing-robottoml).
+In VS Code, the extension Even Better TOML completes the settings and shows their documentation, see [Editing `robot.toml`](/guides/vscode/configuration/#editing-robottoml). PyCharm completes the settings without further setup.
 
 ## Running the tests
 

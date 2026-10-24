@@ -12,7 +12,7 @@ RobotCode takes its configuration from two places: the `robot.toml` of your proj
 
 ## `robot.toml` or a setting?
 
-**`robot.toml`** describes how your project runs: the paths of the tests, the Python path, variables, the output directory and the profiles for different environments. RobotCode reads it in PyCharm, in VS Code and on the command line alike, so a run in the IDE and a run in CI see the same options. Put everything there that the project needs to run; see [Configuring Projects with robot.toml](/guides/robot-toml/).
+**`robot.toml`** describes how your project runs: the paths of the tests, the Python path, variables, the output directory and the profiles for different environments. RobotCode reads it in PyCharm, in VS Code and on the command line alike, so a run in the IDE and a run in CI see the same options. Put everything there that the project needs to run; see [Configuring Projects with robot.toml](/guides/robot-toml/). PyCharm completes the settings of `robot.toml` and `.robot.toml` from RobotCode's JSON schema, which it downloads the first time you open such a file.
 
 **The settings pages of PyCharm** decide how RobotCode behaves in the IDE: the analysis and its cache, completion, inlay hints, the report after a run, the launch wrapper and the output of runs. Some of them also pass options to the runs and the analysis, but only in PyCharm.
 
