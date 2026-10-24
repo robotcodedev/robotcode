@@ -59,7 +59,7 @@ from ..__version__ import __version__
 from ..utils import RF_VERSION
 from ..utils.robot_path import find_file_ex
 from ..utils.stubs import Languages
-from ..utils.variables import contains_variable
+from ..utils.variables import contains_variable, environment_value_hash
 from .data_cache import CACHE_DIR_NAME, CacheSection, build_cache_dir
 from .data_cache import SqliteDataCache as DefaultDataCache
 from .entities import (
@@ -722,6 +722,10 @@ class NamespaceMetaData:
     config_fingerprint: Any
     dependency_fingerprints: Dict[str, Any] = field(default_factory=dict)
     semantic_model_enabled: bool = False
+    # the environment variables the analysis read: whether each one checked without a default value was set, and the
+    # hash of each one whose value it used (see environment_value_hash)
+    environment_set: Dict[str, bool] = field(default_factory=dict)
+    environment_values: Dict[str, Optional[str]] = field(default_factory=dict)
 
 
 class ImportsManager:
@@ -808,7 +812,6 @@ class ImportsManager:
         self._config_fingerprint: Any = (
             tuple(sorted(self.cmd_variables.items())),
             tuple(self.cmd_variable_files),
-            tuple(sorted((k, v) for k, v in self._environment.items() if k not in os.environ)),
             tuple(self.global_library_search_order),
             self._languages_fingerprint,
         )
@@ -895,8 +898,9 @@ class ImportsManager:
         """Cached configuration snapshot.
 
         Computed once at init from cmd_variables, cmd_variable_files,
-        environment, and global_library_search_order. Changes are
-        detected via direct ``==`` comparison.
+        global_library_search_order and the language settings. Changes are
+        detected via direct ``==`` comparison. Environment variables are
+        not part of it: each namespace keeps the ones its analysis read.
         """
         return self._config_fingerprint
 
@@ -949,13 +953,15 @@ class ImportsManager:
             config_fingerprint=self.config_fingerprint,
             dependency_fingerprints=dict(dependency_metas),
             semantic_model_enabled=semantic_model_enabled,
+            environment_set=dict(namespace.environment_set),
+            environment_values=dict(namespace.environment_values),
         )
 
     def validate_namespace_meta(self, meta: NamespaceMetaData, source_disk_info: Optional[DiskInfo]) -> bool:
         """Check whether a cached NamespaceMetaData is fresh for the given content.
 
         Performs a 2-level validation:
-        Level 1 (fast): source_disk_info, config_fingerprint
+        Level 1 (fast): source_disk_info, config_fingerprint, the environment variables the analysis read
         Level 2 (dependency check): each dependency fingerprint
 
         Validation is against the *effective* content: the source is compared
@@ -989,6 +995,25 @@ class ImportsManager:
                 context_name="cache",
             )
             return False
+
+        # the analysis reads os.environ itself, so it does not matter where a variable was set
+        for env_name, was_set in meta.environment_set.items():
+            if (os.environ.get(env_name) is not None) != was_set:
+                name = env_name
+                self._logger.debug(
+                    lambda: f"Cache miss for {source}: environment variable {name!r} was set or unset",
+                    context_name="cache",
+                )
+                return False
+
+        for env_name, value_hash in meta.environment_values.items():
+            if environment_value_hash(os.environ.get(env_name)) != value_hash:
+                name = env_name
+                self._logger.debug(
+                    lambda: f"Cache miss for {source}: environment variable {name!r} changed",
+                    context_name="cache",
+                )
+                return False
 
         # Level 2: dependency checks — direct comparison, no hashing
         for key, saved_value in meta.dependency_fingerprints.items():
@@ -2211,10 +2236,8 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
-        *,
-        source: Optional[str] = None,
     ) -> _ResourcesEntry:
-        source = source or self.find_resource(name, base_dir, variables=variables)
+        source = self.find_resource(name, base_dir, variables=variables)
         normalized_source = os.path.normpath(os.path.abspath(source))
 
         entry_key = _ResourcesEntryKey(normalized_source)
@@ -2238,12 +2261,10 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
-        *,
-        source: Optional[str] = None,
     ) -> Tuple["Namespace", LibraryDoc]:
         with self._logger.measure_time(lambda: f"getting namespace and libdoc for {name}", context_name="import"):
             with self._logger.measure_time(lambda: f"getting resource entry {name}", context_name="import"):
-                entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
+                entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
             with self._logger.measure_time(lambda: f"getting namespace {name}", context_name="import"):
                 namespace = entry.get_namespace()
@@ -2258,11 +2279,9 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
-        *,
-        source: Optional[str] = None,
     ) -> Tuple[ResourceDoc, Optional[RobotFileMeta]]:
         with self._logger.measure_time(lambda: f"getting resource doc for {name}", context_name="import"):
-            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
+            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
             return entry.get_resource_doc_with_meta()
 
@@ -2272,12 +2291,8 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
-        *,
-        source: Optional[str] = None,
     ) -> ResourceDoc:
-        return self.get_resource_doc_for_resource_import_with_meta(name, base_dir, sentinel, variables, source=source)[
-            0
-        ]
+        return self.get_resource_doc_for_resource_import_with_meta(name, base_dir, sentinel, variables)[0]
 
     def complete_library_import(
         self,

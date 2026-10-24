@@ -1,4 +1,5 @@
 import functools
+import hashlib
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, cast
 
@@ -275,3 +276,11 @@ def replace_curdir_in_variable_values(values: Sequence[str], source: str) -> Tup
     """Replace ${CURDIR} in variable values with the escaped parent directory of source."""
     curdir = str(Path(source).parent).replace("\\", "\\\\")
     return tuple(s.replace("${CURDIR}", curdir) for s in values)
+
+
+def environment_value_hash(value: Optional[str]) -> Optional[str]:
+    """The SHA-256 of the value of an environment variable, or None when it is not set.
+
+    What the analysis cache keeps instead of the value, so that no value of the environment ends up in it.
+    """
+    return hashlib.sha256(value.encode("utf-8", "surrogateescape")).hexdigest() if value is not None else None

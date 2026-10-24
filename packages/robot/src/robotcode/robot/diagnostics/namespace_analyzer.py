@@ -61,6 +61,7 @@ from ..utils.variables import (
     InvalidVariableError,
     VariableMatcher,
     contains_variable,
+    environment_value_hash,
     is_number_literal,
     replace_curdir_in_variable_values,
     search_variable,
@@ -145,6 +146,8 @@ class NamespaceAnalyzer(Visitor):
         self._testcase_tag_references: Dict[str, Set[Location]] = defaultdict(set)
         self._metadata_references: Dict[str, Set[Location]] = defaultdict(set)
         self._testcase_metadata_references: Dict[str, Set[Location]] = defaultdict(set)
+        self._environment_set: Dict[str, bool] = {}
+        self._environment_values: Dict[str, Optional[str]] = {}
 
         # Phase 1+2 results (set by resolve())
         self._library_doc: ResourceDoc = cast(ResourceDoc, None)  # set by resolve()
@@ -245,6 +248,8 @@ class NamespaceAnalyzer(Visitor):
             self._metadata_references,
             self._testcase_metadata_references,
             self._scope_builder.build(self._variable_scope),
+            environment_set=self._environment_set,
+            environment_values=self._environment_values,
         )
 
     def _visit_VariableSection(self, node: VariableSection) -> None:  # noqa: N802
@@ -673,7 +678,10 @@ class NamespaceAnalyzer(Visitor):
                 and cast(EnvironmentVariableDefinition, var).default_value is None
             ):
                 env_name = var.name[2:-1]
-                if os.environ.get(env_name, None) is None:
+                # the namespace cache compares every read of the environment when it restores the analysis
+                env_value = os.environ.get(env_name, None)
+                self._environment_set[env_name] = env_value is not None
+                if env_value is None:
                     self._append_diagnostics(
                         range=range_from_token(var_token),
                         message=(
@@ -2039,7 +2047,9 @@ class NamespaceAnalyzer(Visitor):
                     return name_default
                 return False
             env_name, sep, default = env_inner.partition("=")
+            # the namespace cache compares every read of the environment when it restores the analysis
             env_val = os.environ.get(env_name)
+            self._environment_values[env_name] = environment_value_hash(env_val)
             if env_val is not None:
                 return env_val
             if sep:

@@ -4,17 +4,21 @@ Each test runs two language-server sessions on the same workspace, one after
 the other, as after a restart of the editor. The first session stores the
 namespace of the closed suite in the cache. The second one restores it from
 there only when none of the files the namespace depends on has changed, also
-when two of them are imported with the same name from different folders.
+when two of them are imported with the same name from different folders, and
+when its imports still find the same files.
 """
 
 import os
+import sys
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Set
+from typing import Dict, List, NamedTuple, Sequence, Set
 
+import pytest
 from pytest_mock import MockerFixture
 
 from robotcode.robot.diagnostics.errors import Error
-from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.diagnostics.namespace import NamespaceBuilder
+from robotcode.robot.utils.robot_path import invalidate_sys_path_cache
 from tests.robotcode.language_server.robotframework.tools import start_language_server, write_project
 
 
@@ -24,11 +28,11 @@ class _Session(NamedTuple):
     files: Set[Path]  # the library and variable files the suite's namespace depends on, by their path
 
 
-def _session(project: Path, mocker: MockerFixture) -> _Session:
-    """Run a session and return what it gives for the suite."""
+def _session(project: Path, mocker: MockerFixture, python_path: Sequence[str] = ()) -> _Session:
+    """Run a session with the setting `robotcode.robot.pythonPath` and return what it gives for the suite."""
     suite = project / "suite.robot"
-    from_data = mocker.spy(Namespace, "from_data")
-    protocol = start_language_server(project)
+    build = mocker.spy(NamespaceBuilder, "build")
+    protocol = start_language_server(project, python_path=python_path)
     try:
         namespace = protocol.documents_cache.get_namespace(protocol.documents.get_or_open_document(suite))
         not_found = sorted(
@@ -42,9 +46,10 @@ def _session(project: Path, mocker: MockerFixture) -> _Session:
         }
     finally:
         protocol._shutdown()
-        mocker.stop(from_data)
+        mocker.stop(build)
+    # restored means not built: the restore resolves the imports again and can reject the entry afterwards;
     # compared as paths, because on Windows the source of a namespace has a lower-case drive letter
-    restored = any(Path(call.args[0].source) == suite for call in from_data.call_args_list)
+    restored = not any(Path(call.args[0]._source) == suite for call in build.call_args_list)
     return _Session(restored, not_found, files)
 
 
@@ -121,3 +126,37 @@ def test_a_resource_created_between_two_sessions_is_found(tmp_path: Path, mocker
     # a namespace with a failed import is not cached, so it cannot keep the import's old error
     second = _session(tmp_path, mocker)
     assert (second.restored, second.not_found) == (False, [])
+
+
+def test_a_python_path_entry_removed_between_two_sessions_is_noticed(
+    tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # the server puts the Python path on sys.path, and the file search keeps the valid entries of sys.path for the
+    # process; each session starts from the same sys.path and an empty search cache, as a new server process does
+    original_path = list(sys.path)
+
+    def new_process() -> None:
+        monkeypatch.setattr(sys, "path", list(original_path))
+        invalidate_sys_path_cache()
+
+    write_project(
+        tmp_path,
+        {
+            "extra/anotherres.resource": "*** Keywords ***\nAnother Keyword\n    No Operation\n",
+            "suite.robot": "*** Settings ***\nResource    anotherres.resource\n\n"
+            "*** Test Cases ***\nFirst\n    Another Keyword\n",
+        },
+    )
+    try:
+        new_process()
+        first = _session(tmp_path, mocker, ["extra"])
+        assert (first.restored, first.not_found) == (False, [])
+
+        new_process()
+        second = _session(tmp_path, mocker)
+    finally:
+        invalidate_sys_path_cache()
+
+    # without the resource file its keyword is not found
+    assert second.restored is False
+    assert [m for m in second.not_found if "'Another Keyword'" in m]

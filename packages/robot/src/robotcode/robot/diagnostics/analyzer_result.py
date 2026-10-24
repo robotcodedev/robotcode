@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 from robotcode.core.lsp.types import Diagnostic, Location, Range
@@ -25,3 +25,7 @@ class AnalyzerResult:
     testcase_metadata_references: Dict[str, Set[Location]]
     scope_tree: ScopeTree
     semantic_model: Optional["SemanticModel"] = None
+    # the environment variables the analysis read, which the namespace cache compares when it restores the analysis:
+    # whether each one checked without a default value is set, and the hash of each one whose value the analysis used
+    environment_set: Dict[str, bool] = field(default_factory=dict)
+    environment_values: Dict[str, Optional[str]] = field(default_factory=dict)

@@ -640,6 +640,16 @@ class DocumentsCacheHelper:
             )
             return None
 
+        # from_data resolved the imports again with the current Python path and environment variables. A namespace
+        # with a failed import is never stored and the dependency keys name the files found, so a failed import or
+        # other keys mean that an import finds another file or none now.
+        if result.failed_imports or set(result.dependency_metas or {}) != set(meta.dependency_fingerprints):
+            self._logger.debug(
+                lambda: f"Cache miss for {source}: the imports find other files now, re-analyzing",
+                context_name="cache",
+            )
+            return None
+
         self._logger.debug(
             lambda: f"Loaded namespace from disk cache for {source}",
             context_name="import",

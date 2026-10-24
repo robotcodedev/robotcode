@@ -11,8 +11,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import pytest
 from pytest_mock import MockerFixture
 
+from robotcode.core.documents_manager import DocumentsManager
 from robotcode.core.utils.path import DiskInfo, normalized_path, probe_disk_info
 from robotcode.robot.diagnostics.data_cache import CacheSection, SqliteDataCache
 from robotcode.robot.diagnostics.imports_manager import (
@@ -21,6 +23,9 @@ from robotcode.robot.diagnostics.imports_manager import (
     NamespaceMetaData,
     RobotFileMeta,
 )
+from robotcode.robot.utils.variables import environment_value_hash
+
+ENV_NAME = "ROBOTCODE_TEST_CACHE_ENV_VAR"
 
 
 def _shift_mtime(info: DiskInfo, delta_ns: int = -1) -> DiskInfo:
@@ -80,7 +85,6 @@ def _mock_imports_manager(
     im._config_fingerprint = (
         tuple(sorted(im.cmd_variables.items())),
         tuple(im.cmd_variable_files),
-        tuple(sorted((k, v) for k, v in im.environment.items() if k not in os.environ)),
         tuple(im.global_library_search_order),
         None,  # languages_fingerprint — no workspace languages in default mock
     )
@@ -102,12 +106,16 @@ def _mock_namespace(
     mocker: MockerFixture,
     source: str = "/project/test.robot",
     dependency_metas: Optional[Dict[str, Optional[Any]]] = None,
+    environment_set: Optional[Dict[str, bool]] = None,
+    environment_values: Optional[Dict[str, Optional[str]]] = None,
 ) -> Any:
-    """Create a mock Namespace with the dependency metas recorded at resolve time."""
+    """Create a mock Namespace with the dependency metas and environment variables its analysis recorded."""
     ns = mocker.MagicMock()
     ns.source = source
     ns.dependency_metas = dependency_metas if dependency_metas is not None else {}
     ns.failed_imports = []
+    ns.environment_set = environment_set or {}
+    ns.environment_values = environment_values or {}
     return ns
 
 
@@ -191,6 +199,22 @@ class TestConfigFingerprint:
         im = _mock_imports_manager(mocker)
         fp = im.config_fingerprint
         assert isinstance(fp, tuple)
+
+    def test_configured_environment_is_not_part_of_it(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """Each namespace keeps the environment variables its analysis read, see validate_namespace_meta."""
+        fingerprints = []
+        for value in ("a", "b"):
+            root = tmp_path / value
+            root.mkdir()
+            document_cache_helper = mocker.MagicMock()
+            document_cache_helper.get_languages_for_document.return_value = None
+            im = ImportsManager(
+                DocumentsManager(), None, document_cache_helper, root, {}, [], {ENV_NAME: value}, [], [], [], [], root
+            )
+            fingerprints.append(im.config_fingerprint)
+            im.data_cache.close()
+
+        assert fingerprints[0] == fingerprints[1]
 
 
 # ===========================================================================
@@ -566,6 +590,59 @@ class TestValidateNamespaceMeta:
         im.documents_manager.get.return_value = clean_document
 
         assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is True
+
+    # the environment variables the analysis read
+
+    def _validate_after(
+        self,
+        tmp_path: Path,
+        mocker: MockerFixture,
+        monkeypatch: pytest.MonkeyPatch,
+        environment_set: Dict[str, bool],
+        environment_values: Dict[str, Optional[str]],
+        now: Optional[str],
+    ) -> bool:
+        """Store the namespace with what its analysis recorded, set `ENV_NAME` to `now`, validate."""
+        source = tmp_path / "test.robot"
+        source.write_text("*** Test Cases ***\n")
+        ns = _mock_namespace(
+            mocker, source=str(source), environment_set=environment_set, environment_values=environment_values
+        )
+        im = _mock_imports_manager(mocker)
+        meta = self._build(im, source, ns)
+
+        if now is None:
+            monkeypatch.delenv(ENV_NAME, raising=False)
+        else:
+            monkeypatch.setenv(ENV_NAME, now)
+        return ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source))
+
+    def test_variable_set_since_fails(
+        self, tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._validate_after(tmp_path, mocker, monkeypatch, {ENV_NAME: False}, {}, "x") is False
+
+    def test_variable_unset_since_fails(
+        self, tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._validate_after(tmp_path, mocker, monkeypatch, {ENV_NAME: True}, {}, None) is False
+
+    def test_new_value_where_the_value_was_used_fails(
+        self, tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        values = {ENV_NAME: environment_value_hash("a")}
+        assert self._validate_after(tmp_path, mocker, monkeypatch, {}, values, "b") is False
+
+    def test_unchanged_variables_pass(
+        self, tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        values = {ENV_NAME: environment_value_hash("a")}
+        assert self._validate_after(tmp_path, mocker, monkeypatch, {ENV_NAME: True}, values, "a") is True
+
+    def test_new_value_where_only_presence_was_recorded_passes(
+        self, tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._validate_after(tmp_path, mocker, monkeypatch, {ENV_NAME: True}, {}, "b") is True
 
 
 # ===========================================================================
