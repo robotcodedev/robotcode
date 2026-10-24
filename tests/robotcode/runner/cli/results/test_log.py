@@ -273,6 +273,25 @@ def test_log_extract_external_missing_source_reported(
     assert "missing-source" in reasons
 
 
+def test_log_extract_screenshot_messages(json_result: JsonRunner, artifacts_output: Path, tmp_path: Path) -> None:
+    """Screenshot messages that start by closing the table row of log.html,
+    as SeleniumLibrary and Browser log them, keep their text and artefacts."""
+    extract = tmp_path / "extracted"
+    data = json_result("log", "--extract", str(extract), output_path=artifacts_output)
+    test = find_test(data["tests"], "Artifacts.Screenshot Test")
+    assert test is not None
+    artifacts = test.get("artifacts") or []
+    embedded = [ref for ref in artifacts if ref.get("embedded")]
+    linked = [ref for ref in artifacts if ref.get("src") == "screenshot-1.png"]
+    assert len(embedded) == 1
+    assert len(linked) == 1
+    for ref in embedded + linked:
+        assert ref.get("extractedTo")
+        assert Path(ref["extractedTo"]).is_file()
+    texts = [e.get("text") or "" for e in _entries_of_type(test.get("body") or [], "MESSAGE")]
+    assert any("_(embedded image — see artefacts: screenshot)_" in text for text in texts)
+
+
 def test_log_raw_html_skips_extraction(json_result: JsonRunner, artifacts_output: Path) -> None:
     """With `--raw-html`, embedded data URIs are NOT decoded into ArtifactRefs."""
     data = json_result("log", "--raw-html", output_path=artifacts_output)

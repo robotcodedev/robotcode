@@ -84,7 +84,7 @@ repl = ["robotcode-repl"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=6.0.0"]
 rest = ["docutils"]
-html = ["html-to-markdown>=2.0"]
+html = ["html-to-markdown>=3.18"]
 all = [
   { "include-group" = "debugger" },
   { "include-group" = "languageserver" },

@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-html = ["html-to-markdown>=2.0"]
+html = ["html-to-markdown>=3.18"]
 
 [project.entry-points.robotcode]
 runner = "robotcode.runner.hooks"

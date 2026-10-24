@@ -1,8 +1,12 @@
 """HTML to Markdown conversion for Robot Framework log messages.
 
 Two-stage strategy:
-1. If `html-to-markdown` (optional dep) is installed, use it — better quality,
-   handles base64 image extraction natively.
+1. If `html-to-markdown` (optional dep) 3.18 or newer is installed, use it —
+   better quality, handles base64 image extraction natively. Older versions,
+   and versions that cannot be read, count as not installed: up to 3.17 the
+   converter drops everything after the `</td></tr><tr><td colspan="3">` that
+   SeleniumLibrary and Browser put in front of their screenshots, and up to
+   3.1 it also has another API.
 2. Otherwise fall back to a minimal stdlib `html.parser`-based converter for
    the small HTML subset Robot Framework actually emits (Selenium screenshots,
    bold/italic, links, lists, simple tables).
@@ -24,14 +28,18 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import unquote, urlparse
 
+from robotcode.core.utils.version import InvalidVersionError, create_version_from_str
+
 from ._models import ArtifactRef
 
 try:
     from html_to_markdown import ConversionOptions as _ExtOpts
+    from html_to_markdown import __version__ as _ext_version
     from html_to_markdown import convert as _ext_convert
 
-    _HAS_EXT = True
-except ImportError:
+    _ext_ver = create_version_from_str(_ext_version)
+    _HAS_EXT = (_ext_ver.major, _ext_ver.minor) >= (3, 18)
+except (ImportError, InvalidVersionError):
     _HAS_EXT = False
 
 
