@@ -562,7 +562,7 @@ Good commit messages help maintain a clean project history and make it easier to
 - **chore:** Other changes that touch neither the source code nor the tests, such as auxiliary tools
 - **revert:** Reverting an earlier commit
 
-The changelog leaves out `build`, `chore`, `ci`, `style` and `test` commits (see `cliff.toml`), so a change that users notice, such as a new minimum IDE version, is a `feat` or `fix`.
+The changelog leaves out `build`, `chore`, `ci`, `style` and `test` commits and `docs(openspec)` commits (see `cliff.toml`), so a change that users notice, such as a new minimum IDE version, is a `feat` or `fix`.
 
 #### Scope
 
@@ -571,6 +571,8 @@ The scope names the package or area that the change mostly touches; `git log` sh
 - **Editors:** `vscode` for the VS Code extension, `intellij` for the PyCharm plugin, `textmate` for the syntax grammars
 - **Documentation:** `website` for robotcode.io, or the area that a page documents, such as `vscode` or `repl`; `contributing` for this guide; `openspec` for the planning artifacts under `openspec/`
 - **Repository:** `github` for the GitHub workflows, `chat-plugin` for the bundled chat plugin
+
+The changelog lists the entries of each type under a heading per scope, such as "PyCharm" for `intellij`. `cliff.toml` names these headings; a new scope gets its heading there, otherwise it is listed after the others under its own name.
 
 #### Examples
 

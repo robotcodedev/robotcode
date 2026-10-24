@@ -1,4 +1,3 @@
-import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.Constants.Constraints
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
@@ -82,20 +81,23 @@ intellijPlatform {
             }
         }
 
-        val changelog = project.changelog
-
-        // local variable for configuration cache compatibility // Get the latest available change notes from the changelog file
-        changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
-            with(changelog) {
-                val item = (getOrNull(pluginVersion) ?: getUnreleased()).withHeader(false).withEmptySections(false)
-                val notes = renderItem(item, Changelog.OutputType.HTML)
+        // The change notes are the changelog section of this version, or Unreleased for prereleases. The changelog plugin
+        // can't read it: git-cliff writes a heading per scope, like "#### PyCharm", below the one per type.
+        changeNotes = providers.fileContents(layout.projectDirectory.file("../CHANGELOG.md")).asText
+            .zip(providers.gradleProperty("pluginVersion")) { changelog, pluginVersion ->
+                val lines = changelog.lines()
+                val start = lines.indexOfFirst { it.startsWith("## [$pluginVersion]") }.takeIf { it >= 0 }
+                    ?: lines.indexOfFirst { it.startsWith("## [Unreleased]") }.takeIf { it >= 0 }
+                    ?: throw GradleException("Neither $pluginVersion nor Unreleased found in CHANGELOG.md")
+                val section = lines.drop(start + 1).takeWhile { !it.startsWith("## ") }
+                val notes = markdownToHTML(section.joinToString("\n"))
 
                 // the Marketplace rejects longer change notes; then only the subject lines of what users notice
                 val maxLength = 65535
                 if (notes.length <= maxLength) {
                     notes
                 } else {
-                    val fullList = if (item.isUnreleased) {
+                    val fullList = if (lines[start].startsWith("## [Unreleased]")) {
                         "https://github.com/robotcodedev/robotcode/commits/main"
                     } else {
                         "https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md"
@@ -104,22 +106,49 @@ intellijPlatform {
                         "This list shows only the features, bug fixes and performance improvements. " +
                             "See the [full list of changes]($fullList).",
                     )
-                    // git-cliff writes the headings with an ordering prefix, like "<!-- 0 -->Features"
-                    val subjects = item.sections
-                        .filterKeys { it.substringAfter("-->").trim() in listOf("Features", "Bug Fixes", "Performance") }
-                        .flatMap { (section, entries) -> entries.map { section to it.lineSequence().first() } }
+                    // each subject line with the headings of its type and its scope; git-cliff writes the type headings
+                    // with an ordering prefix, like "### <!-- 0 -->Features", and subject lines without indentation
+                    var type = ""
+                    var scope: String? = null
+                    val subjects = buildList {
+                        for (line in section) {
+                            when {
+                                line.startsWith("### ") -> {
+                                    type = line
+                                    scope = null
+                                }
+                                line.startsWith("#### ") -> scope = line
+                                line.startsWith("- ") &&
+                                    type.substringAfter("-->").trim() in listOf("Features", "Bug Fixes", "Performance") ->
+                                    add(Triple(type, scope, line))
+                            }
+                        }
+                    }
 
                     generateSequence(subjects.size) { it - 1 }
                         .takeWhile { it >= 0 }
                         .map { count ->
-                            val sections = subjects.take(count).groupBy({ it.first }, { it.second }).mapValues { it.value.toSet() }
-                            renderItem(Changelog.Item(item.version, item.header, items = sections).withHeader(false), Changelog.OutputType.HTML) +
-                                footer
+                            val outline = buildList {
+                                var lastType: String? = null
+                                var lastScope: String? = null
+                                for ((subjectType, subjectScope, subject) in subjects.take(count)) {
+                                    if (subjectType != lastType) {
+                                        add(subjectType)
+                                        lastType = subjectType
+                                        lastScope = null
+                                    }
+                                    if (subjectScope != lastScope) {
+                                        subjectScope?.let(::add)
+                                        lastScope = subjectScope
+                                    }
+                                    add(subject)
+                                }
+                            }
+                            markdownToHTML(outline.joinToString("\n")) + footer
                         }
                         .first { it.length <= maxLength }
                 }
             }
-        }
 
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")

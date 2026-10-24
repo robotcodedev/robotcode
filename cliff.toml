@@ -25,27 +25,26 @@ body = """
 {% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | upper_first }}
-    {% for commit in commits
-    | filter(attribute="scope")
-    | sort(attribute="scope") %}
-        - **{{commit.scope}}:** {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}]($REPO/commit/{{ commit.id }}))
-        {%- if commit.breaking %}
-        {% raw %}  {% endraw %}- **BREAKING**: {{commit.breaking_description}}
-        {%- endif -%}
-        {% if commit.body %}\n\n{{ commit.body | trim | indent(prefix="  ", first=true) }}\n{% endif -%}
-    {%- endfor -%}
-    {% raw %}\n{% endraw %}\
-    {%- for commit in commits %}
-        {%- if commit.scope -%}
-        {% else -%}
+    {% for commit in commits %}
+        {%- if not commit.scope %}
             - {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}]($REPO/commit/{{ commit.id }}))
-            {% if commit.breaking -%}
+            {%- if commit.breaking %}
             {% raw %}  {% endraw %}- **BREAKING**: {{commit.breaking_description}}
-            {% endif -%}
+            {%- endif -%}
             {% if commit.body %}\n\n{{ commit.body | trim | indent(prefix="  ", first=true) }}\n{% endif -%}
-        {% endif -%}
+        {%- endif -%}
     {% endfor -%}
-    {% raw %}\n{% endraw %}\
+    {% for scope, commits in commits | group_by(attribute="scope") %}
+        #### {{ scope | upper_first }}
+        {% for commit in commits %}
+            - {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}]($REPO/commit/{{ commit.id }}))
+            {%- if commit.breaking %}
+            {% raw %}  {% endraw %}- **BREAKING**: {{commit.breaking_description}}
+            {%- endif -%}
+            {% if commit.body %}\n\n{{ commit.body | trim | indent(prefix="  ", first=true) }}\n{% endif -%}
+        {%- endfor -%}
+        {% raw %}\n{% endraw %}\
+    {% endfor %}
 {% endfor %}\n
 """
 # remove the leading and trailing whitespace from the template
@@ -71,10 +70,28 @@ commit_preprocessors = [
 ]
 # regex for parsing and grouping commits
 commit_parsers = [
+  # the headings of the scopes; the scopes not listed here follow them
+  { field = "scope", pattern = "^analyze$", scope = "Analyze", continue = true },
+  { field = "scope", pattern = "^chat-plugin$", scope = "Chat Plugin", continue = true },
+  { field = "scope", pattern = "^cli$", scope = "CLI", continue = true },
+  { field = "scope", pattern = "^config$", scope = "Config", continue = true },
+  { field = "scope", pattern = "^core$", scope = "Core", continue = true },
+  { field = "scope", pattern = "^debugger$", scope = "Debugger", continue = true },
+  { field = "scope", pattern = "^intellij$", scope = "PyCharm", continue = true },
+  { field = "scope", pattern = "^(language-server|langserver|language_server)$", scope = "Language Server", continue = true },
+  { field = "scope", pattern = "^plugin$", scope = "Plugin", continue = true },
+  { field = "scope", pattern = "^repl$", scope = "REPL", continue = true },
+  { field = "scope", pattern = "^robot$", scope = "Robot", continue = true },
+  { field = "scope", pattern = "^robotcode$", scope = "RobotCode", continue = true },
+  { field = "scope", pattern = "^runner$", scope = "Runner", continue = true },
+  { field = "scope", pattern = "^textmate$", scope = "TextMate", continue = true },
+  { field = "scope", pattern = "^vscode$", scope = "VS Code", continue = true },
+  { field = "scope", pattern = "^(docs|website)$", scope = "Website", continue = true },
   { message = "^feat", group = "<!-- 0 -->Features" },
   { message = "^Feat", group = "<!-- 0 -->Features" },
   { message = "^Feature", group = "<!-- 0 -->Features" },
   { message = "^fix", group = "<!-- 1 -->Bug Fixes" },
+  { message = "^docs\\(openspec\\)", skip = true },
   { message = "^doc", group = "<!-- 2 -->Documentation" },
   { message = "^docs", group = "<!-- 2 -->Documentation" },
   { message = "^perf", group = "<!-- 3 -->Performance" },
@@ -88,6 +105,8 @@ commit_parsers = [
   { message = "^bump", skip = true },
   { body = ".*security", group = "Security" },
   { message = "^revert", group = "Revert" },
+  # a commit that only a scope parser matched would otherwise get a group named after its type
+  { message = ".*", skip = true },
 ]
 # protect breaking changes from being skipped due to matching a skipping commit_parser
 protect_breaking_commits = false
