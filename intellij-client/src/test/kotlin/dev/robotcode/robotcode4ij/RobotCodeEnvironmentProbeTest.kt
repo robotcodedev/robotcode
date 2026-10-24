@@ -55,23 +55,42 @@ class RobotCodeEnvironmentProbeTest {
         assertEquals(listOf(7), versionNumbers("7.dev1"))
     }
 
+    // the results whose texts name whose interpreter it is; a run refuses a remote interpreter before it is checked,
+    // and only the project has a module to choose
+    private val ownedResults = listOf(
+        EnvironmentResult.NoInterpreter,
+        EnvironmentResult.PathNotFound("/usr/bin/python3"),
+        PythonTooOld("3.9"),
+        RobotNotInstalled,
+        RobotTooOld("4.1"),
+    )
+
     @Test
     fun everyResultTextNamesTheRequirement() {
-        val results = listOf(
-            EnvironmentResult.NoInterpreter,
-            EnvironmentResult.PathNotFound("/usr/bin/python3"),
-            PythonTooOld("3.9"),
-            RobotNotInstalled,
-            RobotTooOld("4.1"),
-            EnvironmentResult.Remote,
-        )
-        for (result in results) {
-            assertTrue(result.toString(), EnvironmentState.Checked(result).message.contains(REQUIREMENT))
+        for (owner in InterpreterOwner.entries) {
+            for (result in ownedResults + EnvironmentResult.Remote) {
+                assertTrue("$result $owner", EnvironmentState.Checked(result).messageFor(owner).contains(REQUIREMENT))
+            }
+            val failed = EnvironmentState.Failed("it did not answer within 30 seconds.").messageFor(owner)
+            assertTrue(failed, failed.contains(REQUIREMENT) && failed.contains("it did not answer within 30 seconds."))
+            val notFound = EnvironmentResult.PathNotFound("/usr/bin/python3").messageFor(owner)
+            assertTrue(notFound, notFound.contains("/usr/bin/python3"))
+            assertTrue(PythonTooOld("3.9").messageFor(owner).contains("Python 3.9"))
+            assertTrue(RobotTooOld("4.1").messageFor(owner).contains("Robot Framework 4.1"))
+            assertEquals(null, Usable.messageFor(owner))
         }
-        assertTrue(EnvironmentState.Failed("it did not answer within 30 seconds.").message.contains(REQUIREMENT))
-        assertTrue(PythonTooOld("3.9").message.contains("Python 3.9"))
-        assertTrue(RobotTooOld("4.1").message.contains("Robot Framework 4.1"))
-        assertEquals(null, Usable.message)
+    }
+
+    @Test
+    fun resultTextsNameWhoseInterpreterItIs() {
+        val failed = EnvironmentState.Failed("it could not be started.")
+        for (state in ownedResults.map { EnvironmentState.Checked(it) } + failed) {
+            val project = state.messageFor(InterpreterOwner.PROJECT)
+            val run = state.messageFor(InterpreterOwner.RUN_CONFIGURATION)
+            assertTrue(project, project.contains("for the project") || project.contains("of the project"))
+            assertTrue(run, run.contains("for the run configuration") || run.contains("of the run configuration"))
+            assertEquals(project, state.message)
+        }
     }
 
     // Set ROBOTCODE_TEST_PYTHON to a Python with Robot Framework, such as the one of the `test.rf75` hatch environment.

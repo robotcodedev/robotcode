@@ -18,6 +18,7 @@ import com.jetbrains.python.sdk.PyRemoteSdkAdditionalDataMarker
 import com.jetbrains.python.sdk.PythonSdkType
 import dev.robotcode.robotcode4ij.EnvironmentResult
 import dev.robotcode.robotcode4ij.EnvironmentState
+import dev.robotcode.robotcode4ij.InterpreterOwner
 import dev.robotcode.robotcode4ij.PythonInterpreter
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
@@ -120,7 +121,7 @@ class RobotCodeRunConfigurationCheckTest : BasePlatformTestCase() {
             val problem = problem(configuration)
 
             assertInstanceOf(problem, RuntimeConfigurationError::class.java)
-            assertEquals(result.message, problem!!.localizedMessage)
+            assertEquals(result.messageFor(InterpreterOwner.RUN_CONFIGURATION), problem!!.localizedMessage)
             assertNotNull(problem.configurationQuickFix)
         }
     }
@@ -156,7 +157,7 @@ class RobotCodeRunConfigurationCheckTest : BasePlatformTestCase() {
         val problem = problem(configuration)
 
         assertInstanceOf(problem, RuntimeConfigurationWarning::class.java)
-        assertEquals(failed.message, problem!!.localizedMessage)
+        assertEquals(failed.messageFor(InterpreterOwner.RUN_CONFIGURATION), problem!!.localizedMessage)
     }
 
     fun testInterpreterWithoutAResultIsCheckedInTheBackgroundAndReportsNothing() {
@@ -184,7 +185,8 @@ class RobotCodeRunConfigurationCheckTest : BasePlatformTestCase() {
     fun testConfigurationWithoutAnInterpreterGetsOnlyPyCharmsError() {
         // the module of the light test has no interpreter
         val configuration = RobotCodeRunConfiguration(project, factory)
-        val ours = listOf(EnvironmentResult.NoInterpreter.message, RobotCodeBundle.message("run.remoteInterpreter"))
+        val ours = InterpreterOwner.entries.map { EnvironmentResult.NoInterpreter.messageFor(it) } +
+            RobotCodeBundle.message("run.remoteInterpreter")
 
         val problem = problem(configuration)
 
@@ -209,7 +211,7 @@ class RobotCodeRunConfigurationCheckTest : BasePlatformTestCase() {
         environment.checks.setState(environment.projectInterpreter, usable)
 
         val error = Assert.assertThrows(CantRunException::class.java) { stateOf(configuration) }
-        assertEquals(notInstalled.message, error.message)
+        assertEquals(notInstalled.messageFor(InterpreterOwner.RUN_CONFIGURATION), error.message)
     }
 
     // the target, with a usable interpreter

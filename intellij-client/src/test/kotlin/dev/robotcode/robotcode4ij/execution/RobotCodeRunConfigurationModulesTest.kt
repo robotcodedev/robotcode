@@ -1,6 +1,10 @@
 package dev.robotcode.robotcode4ij.execution
 
+import com.intellij.execution.CantRunException
+import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.configurations.runConfigurationType
+import com.intellij.execution.executors.DefaultRunExecutor
+import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.projectRoots.ProjectJdkTable
@@ -12,10 +16,14 @@ import com.intellij.testFramework.IndexingTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.jetbrains.python.sdk.PythonSdkType
+import dev.robotcode.robotcode4ij.EnvironmentResult
+import dev.robotcode.robotcode4ij.EnvironmentState
+import dev.robotcode.robotcode4ij.InterpreterOwner
 import dev.robotcode.robotcode4ij.ModuleChoice
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import org.jdom.Element
+import org.junit.Assert
 import java.io.File
 
 /** The interpreter of new Robot Framework run configurations in a project with several modules, as in #489. */
@@ -72,6 +80,35 @@ class RobotCodeRunConfigurationModulesTest : HeavyPlatformTestCase() {
             assertEquals(kind, "ModuleB", configuration.module?.name)
             assertTrue(kind, configuration.isUseModuleSdk)
             assertEquals(kind, pythonInterpreterOf(sdkB), pythonInterpreterOf(configuration.sdk))
+        }
+    }
+
+    // the texts name the project only for the interpreter of the chosen module, before a run and when it starts
+    fun testTextsNameTheRunConfigurationUnlessItHasTheInterpreterOfTheProject() {
+        val environment = project.robotCodeEnvironment
+        val notInstalled = EnvironmentState.Checked(EnvironmentResult.RobotNotInstalled)
+        val texts = listOf(
+            RobotCodeRunConfiguration(project, factory) to notInstalled.message,
+            RobotCodeRunConfiguration(project, factory).apply { module = moduleA } to
+                notInstalled.messageFor(InterpreterOwner.RUN_CONFIGURATION),
+        )
+
+        for ((configuration, text) in texts) {
+            environment.checks.setState(pythonInterpreterOf(configuration.sdk), notInstalled)
+            val problem = Assert.assertThrows(RuntimeConfigurationError::class.java) {
+                configuration.checkConfiguration()
+            }
+            val error = Assert.assertThrows(CantRunException::class.java) {
+                configuration.getState(
+                    DefaultRunExecutor.getRunExecutorInstance(),
+                    ExecutionEnvironmentBuilder.create(
+                        project, DefaultRunExecutor.getRunExecutorInstance(), configuration
+                    ).build()
+                )
+            }
+
+            assertEquals(configuration.module?.name, text, problem.localizedMessage)
+            assertEquals(configuration.module?.name, text, error.message)
         }
     }
 

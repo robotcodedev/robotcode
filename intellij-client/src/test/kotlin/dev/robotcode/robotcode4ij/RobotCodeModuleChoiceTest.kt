@@ -265,11 +265,14 @@ class RobotCodeModuleChoiceTest : HeavyPlatformTestCase() {
 
         assertEquals(environment.projectState.message, error.message)
         assertTrue(error.message, error.message!!.startsWith("Several modules"))
-        // a run configuration without an interpreter gets the result of its own interpreter
+        // a run configuration without an interpreter gets the result of its own interpreter, which is not the
+        // project's while the module is not chosen
         val none = PythonInterpreter(InterpreterKind.NONE, null, null)
         environment.checks.setState(none, EnvironmentState.Checked(EnvironmentResult.NoInterpreter))
         val noInterpreter = Assert.assertThrows(CantRunException::class.java) { environment.ensureUsableForRun(none) }
-        assertEquals(EnvironmentResult.NoInterpreter.message, noInterpreter.message)
+        assertEquals(
+            EnvironmentResult.NoInterpreter.messageFor(InterpreterOwner.RUN_CONFIGURATION), noInterpreter.message
+        )
     }
 
     fun testRunCheckOfTheProjectDuringTheDetectionSaysThatRobotCodeStillChecks() {

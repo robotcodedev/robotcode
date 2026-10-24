@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.annotations.PropertyKey
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.annotations.VisibleForTesting
 import java.util.concurrent.atomic.AtomicBoolean
@@ -44,45 +45,66 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
+/** Whose interpreter a check is about, which its texts name. */
+enum class InterpreterOwner { PROJECT, RUN_CONFIGURATION }
+
+/** The text of [projectKey] for the interpreter of the project, else the text of [runKey]. */
+private fun ownerMessage(
+    owner: InterpreterOwner,
+    @PropertyKey(resourceBundle = "messages.RobotCode") projectKey: String,
+    @PropertyKey(resourceBundle = "messages.RobotCode") runKey: String,
+    vararg params: Any
+): String = RobotCodeBundle.message(if (owner == InterpreterOwner.PROJECT) projectKey else runKey, *params)
+
 /**
  * What the check found out about an interpreter, or, for the project, that the module whose interpreter RobotCode uses
  * is not chosen yet.
  */
 sealed class EnvironmentResult {
-    /** The text for the user, or null when the interpreter is usable. */
-    abstract val message: String?
+    /** The text for the user about the interpreter of the project, or null when it is usable. */
+    val message: String? get() = messageFor(InterpreterOwner.PROJECT)
+
+    /** The text for the user about the interpreter of [owner], or null when it is usable. */
+    abstract fun messageFor(owner: InterpreterOwner): String?
 
     data object Usable : EnvironmentResult() {
-        override val message: String? = null
+        override fun messageFor(owner: InterpreterOwner): String? = null
     }
 
     data object NoInterpreter : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.noInterpreter")
+        override fun messageFor(owner: InterpreterOwner) =
+            ownerMessage(owner, "python.noInterpreter", "run.python.noInterpreter")
     }
 
     data class PathNotFound(val path: String) : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.interpreterNotFound", path)
+        override fun messageFor(owner: InterpreterOwner) =
+            ownerMessage(owner, "python.interpreterNotFound", "run.python.interpreterNotFound", path)
     }
 
     data class PythonTooOld(val version: String) : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.tooOld", version)
+        override fun messageFor(owner: InterpreterOwner) =
+            ownerMessage(owner, "python.tooOld", "run.python.tooOld", version)
     }
 
     data object RobotNotInstalled : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.noRobotFramework")
+        override fun messageFor(owner: InterpreterOwner) =
+            ownerMessage(owner, "python.noRobotFramework", "run.python.noRobotFramework")
     }
 
     data class RobotTooOld(val version: String) : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.robotTooOld", version)
+        override fun messageFor(owner: InterpreterOwner) =
+            ownerMessage(owner, "python.robotTooOld", "run.python.robotTooOld", version)
     }
 
+    // a run refuses a remote interpreter before it is checked, with a text of its own
     data object Remote : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.remote")
+        override fun messageFor(owner: InterpreterOwner) = RobotCodeBundle.message("python.remote")
     }
 
     /** Several modules are Robot Framework projects, and the user has not chosen one of [candidates] yet. */
     data class ModuleNotChosen(val candidates: List<String>) : EnvironmentResult() {
-        override val message get() = RobotCodeBundle.message("python.moduleNotChosen", candidates.joinToString(", "))
+        override fun messageFor(owner: InterpreterOwner) =
+            RobotCodeBundle.message("python.moduleNotChosen", candidates.joinToString(", "))
     }
 }
 
@@ -100,12 +122,19 @@ sealed class EnvironmentState {
     val isUsable: Boolean
         get() = this is Checked && result == EnvironmentResult.Usable
 
+    /** The text for the user about the interpreter of the project. */
     val message: String
-        get() = when (this) {
-            is Checked -> result.message ?: ""
-            is Failed -> RobotCodeBundle.message("python.checkFailed", reason)
-            else -> RobotCodeBundle.message("python.checking")
-        }
+        get() = messageFor(InterpreterOwner.PROJECT)
+
+    /**
+     * The text for the user about the interpreter of [owner]. A run waits for the check of its interpreter, so only the
+     * project's interpreter is still being checked when its text is shown.
+     */
+    fun messageFor(owner: InterpreterOwner): String = when (this) {
+        is Checked -> result.messageFor(owner) ?: ""
+        is Failed -> ownerMessage(owner, "python.checkFailed", "run.python.checkFailed", reason)
+        else -> RobotCodeBundle.message("python.checking")
+    }
 }
 
 enum class InterpreterKind { NONE, LOCAL, REMOTE }
@@ -363,6 +392,16 @@ class RobotCodeEnvironment(private val project: Project, private val scope: Coro
     val projectInterpreter: PythonInterpreter
         get() = projectChoice().interpreter
 
+    /** The project, when [interpreter] is the interpreter of the chosen module, else the run configuration. */
+    fun ownerOf(interpreter: PythonInterpreter): InterpreterOwner {
+        val current = projectChoice()
+        return if (current.resolution.choice is ModuleChoice.Resolved && current.interpreter == interpreter) {
+            InterpreterOwner.PROJECT
+        } else {
+            InterpreterOwner.RUN_CONFIGURATION
+        }
+    }
+
     /** The state of the project's interpreter, see [projectInterpreterAndState]. */
     val projectState: EnvironmentState
         get() = stateOf(projectChoice())
@@ -432,6 +471,7 @@ class RobotCodeEnvironment(private val project: Project, private val scope: Coro
      * Throws [CantRunException] with the text of the result unless [interpreter] is usable, or without one the
      * project's interpreter. Without a result, or after a failed check, it checks first, with a progress dialog that
      * can be cancelled on the EDT. While the project's module is not chosen, there is nothing to check, and it says so.
+     * The texts name the run configuration when [interpreter] is not the project's, see [ownerOf].
      */
     fun ensureUsableForRun(interpreter: PythonInterpreter? = null) {
         val checked = interpreter ?: projectChoice().let { current ->
@@ -440,22 +480,24 @@ class RobotCodeEnvironment(private val project: Project, private val scope: Coro
             }
             current.interpreter
         }
+        val owner = if (interpreter == null) InterpreterOwner.PROJECT else ownerOf(interpreter)
         var state = checks.state(checked)
         if (state !is EnvironmentState.Checked) {
             state = try {
                 if (ApplicationManager.getApplication().isDispatchThread) {
-                    runWithModalProgressBlocking(project, RobotCodeBundle.message("python.check.progress")) {
+                    val title = ownerMessage(owner, "python.check.progress", "run.python.check.progress")
+                    runWithModalProgressBlocking(project, title) {
                         resultForRun(checked)
                     }
                 } else {
                     runBlockingCancellable { resultForRun(checked) }
                 }
             } catch (_: CancellationException) {
-                throw CantRunException(RobotCodeBundle.message("python.check.cancelled"))
+                throw CantRunException(ownerMessage(owner, "python.check.cancelled", "run.python.check.cancelled"))
             }
         }
         if (!state.isUsable) {
-            throw CantRunException(state.message)
+            throw CantRunException(state.messageFor(owner))
         }
     }
 

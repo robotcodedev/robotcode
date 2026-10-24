@@ -98,11 +98,12 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
 
             // the Runnable fix, because the constructor with ConfigurationQuickFix is experimental
             is EnvironmentState.Checked -> if (state.isUsable) null else RuntimeConfigurationError(
-                state.message,
+                state.messageFor(environment.ownerOf(interpreter)),
                 Runnable { RobotCodeConfigurePythonInterpreterAction.showPythonInterpreterSettings(project) }
             )
 
-            is EnvironmentState.Failed -> RuntimeConfigurationWarning(state.message)
+            is EnvironmentState.Failed ->
+                RuntimeConfigurationWarning(state.messageFor(environment.ownerOf(interpreter)))
             EnvironmentState.Checking -> null
         }
     }

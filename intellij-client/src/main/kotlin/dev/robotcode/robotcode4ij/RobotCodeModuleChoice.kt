@@ -134,7 +134,9 @@ internal fun moduleChoiceNotification(project: Project, candidates: List<String>
     val notification = NotificationGroupManager.getInstance().getNotificationGroup(MODULE_NOTIFICATION_GROUP)
         .createNotification(
             RobotCodeBundle.message("python.module.notification.title"),
-            StringUtil.escapeXmlEntities(EnvironmentResult.ModuleNotChosen(candidates).message),
+            StringUtil.escapeXmlEntities(
+                EnvironmentResult.ModuleNotChosen(candidates).messageFor(InterpreterOwner.PROJECT)
+            ),
             NotificationType.WARNING
         )
     candidates.forEach { name ->
