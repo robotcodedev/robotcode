@@ -10,6 +10,9 @@
 	<depends>com.intellij.modules.python</depends>
 	<depends>com.redhat.devtools.lsp4ij</depends>
 	<depends>org.jetbrains.plugins.textmate</depends>
+	<!-- RobotCode works without them; they add the schema of robot.toml and Robot Framework code blocks in Markdown -->
+	<depends optional="true" config-file="robotcode-json.xml">com.intellij.modules.json</depends>
+	<depends optional="true" config-file="robotcode-markdown.xml">org.intellij.plugins.markdown</depends>
 
 	<incompatible-with>robocorp.lsp.intellij</incompatible-with>
 	<incompatible-with>com.github.jnhyperion.hyperrobotframeworkplugin</incompatible-with>

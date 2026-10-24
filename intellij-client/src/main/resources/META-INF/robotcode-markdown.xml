@@ -1,0 +1,6 @@
+<!-- Robot Framework code blocks in Markdown, loaded with PyCharm's Markdown support -->
+<idea-plugin>
+	<extensions defaultExtensionNs="org.intellij.markdown">
+		<fenceLanguageProvider implementation="dev.robotcode.robotcode4ij.markdown.RobotCodeFenceLanguageProvider"/>
+	</extensions>
+</idea-plugin>

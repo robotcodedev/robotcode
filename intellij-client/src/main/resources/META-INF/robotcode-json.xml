@@ -1,0 +1,6 @@
+<!-- the schema of robot.toml, loaded with PyCharm's JSON support -->
+<idea-plugin>
+	<extensions defaultExtensionNs="JavaScript">
+		<JsonSchema.ProviderFactory implementation="dev.robotcode.robotcode4ij.json.RobotTomlSchemaProviderFactory"/>
+	</extensions>
+</idea-plugin>
