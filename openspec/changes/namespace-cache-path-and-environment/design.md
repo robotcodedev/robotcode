@@ -74,7 +74,7 @@ Removed with it:
 - `NamespaceData.resolved_resource_sources` and where the data export fills it;
 - `source_hints` of `ImportResolver.resolve` and `ImportResolver._source_hints`;
 - `Import.hint_key`, which nothing else uses;
-- the `source` keyword of `ImportsManager.get_resource_doc_for_resource_import`, `get_resource_doc_for_resource_import_with_meta` and `_get_entry_for_resource_import`, if no other caller passes it.
+- the `source` keyword of `ImportsManager.get_resource_doc_for_resource_import`, `get_resource_doc_for_resource_import_with_meta`, `get_namespace_and_libdoc_for_resource_import` and `_get_entry_for_resource_import`. It is older than the stored paths (25ef49c3), but they were its last user.
 
 The other parts of 1d4ba6b7 stay: only top-level imports are stored, and paths are normalized as strings.
 

@@ -21,7 +21,7 @@ RobotCode SHALL NOT restore a namespace from the namespace disk cache when one o
 
 #### Scenario: Python path setting changed while the language server is stopped
 
-- **WHEN** a closed suite imports `anotherres.resource`, which only the `python-path` entry `extra` in robot.toml makes findable, a language server session stores the suite's namespace, and the entry is removed before the next session
+- **WHEN** a closed suite imports `anotherres.resource`, which only the entry `extra` of the setting `robotcode.robot.pythonPath` makes findable, a language server session stores the suite's namespace, and the entry is removed before the next session
 - **THEN** the next session reports the resource file as not found for the closed suite
 
 ### Requirement: A namespace is not restored when an environment variable it uses has changed
