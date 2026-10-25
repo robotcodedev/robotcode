@@ -623,6 +623,9 @@ export class LanguageToolsManager {
       return;
     }
 
+    // a selected profile that does not exist would stop the REPL, and VS Code closes the terminal with its error
+    if (await this.testControllerManger.reportUnknownSelectedProfiles(folder)) return;
+
     const shellArgs = [
       "-u",
       "-X",

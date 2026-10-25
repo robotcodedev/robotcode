@@ -368,6 +368,11 @@
         "view": "testing",
         "contents": "RobotCode needs a Python environment with Robot Framework for this folder to find its tests.\n[Select Python Environment](command:robotcode.selectPythonEnvironment)",
         "when": "robotcode.testExplorer.state == noEnvironment"
+      },
+      {
+        "view": "testing",
+        "contents": "A configuration profile selected for this folder in robotcode.profiles is not defined in the folder's configuration, so RobotCode cannot look for its tests.\n[Select Configuration Profiles](command:robotcode.selectConfigurationProfiles)",
+        "when": "robotcode.testExplorer.state == profileNotFound"
       }
     ],
     "tomlValidation": [

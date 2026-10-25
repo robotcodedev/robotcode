@@ -234,3 +234,22 @@ export function escapeRobotGlobPatterns(str: string): string {
   // Ersetze Zeichen, die in Globs speziell interpretiert werden, durch ihre escaped-Variante
   return str.replace(/([*?[\]])/g, "[$1]");
 }
+
+// The text of the notification about the names in a folder's `robotcode.profiles` that select no profile.
+export function unknownSelectedProfilesMessage(names: string[], folderName: string): string {
+  return names.length === 1
+    ? `The selected profile "${names[0]}" is not defined in the configuration of the folder "${folderName}".`
+    : `The selected profiles ${names.map((name) => `"${name}"`).join(", ")} are not defined in the configuration of ` +
+        `the folder "${folderName}".`;
+}
+
+// The selection without the names that select no profile.
+export function selectionWithout(selection: string[], names: string[]): string[] {
+  return selection.filter((name) => !names.includes(name));
+}
+
+// The names of the selection that `robotcode profiles list` reports as selecting no profile; the list also reports the
+// names of other `-p` options, such as those of `robotcode.extraArgs`, which are no part of the selection.
+export function unknownNamesOfSelection(selection: string[], unknownSelected: string[] | undefined): string[] {
+  return (unknownSelected ?? []).filter((name) => selection.includes(name));
+}

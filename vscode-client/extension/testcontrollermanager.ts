@@ -5,7 +5,15 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
-import { filterAsync, Mutex, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
+import {
+  filterAsync,
+  Mutex,
+  selectionWithout,
+  truncateAndReplaceNewlines,
+  unknownNamesOfSelection,
+  unknownSelectedProfilesMessage,
+  WeakValueMap,
+} from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
 import {
@@ -26,7 +34,9 @@ import { folderUriOf, TestTreeBuilder } from "./testtree";
 // Why the Testing view is empty; the manifest's viewsWelcome entries pick their hint by this key.
 const CONTEXT_TEST_EXPLORER_STATE = "robotcode.testExplorer.state";
 
-function setTestExplorerState(state: "noTests" | "noEnvironment" | "disabled" | "hasTests" | undefined): void {
+function setTestExplorerState(
+  state: "noTests" | "noEnvironment" | "profileNotFound" | "disabled" | "hasTests" | undefined,
+): void {
   void vscode.commands.executeCommand("setContext", CONTEXT_TEST_EXPLORER_STATE, state);
 }
 
@@ -70,6 +80,8 @@ interface RobotCodeProfileInfo {
 interface RobotCodeProfilesResult {
   profiles: RobotCodeProfileInfo[];
   messages: string[] | undefined;
+  // the names and patterns of the selection that select no profile
+  unknownSelected?: string[];
 }
 
 interface RobotExecutionAttributes {
@@ -214,6 +226,9 @@ export class TestControllerManager {
   private activeStepDecorationType: vscode.TextEditorDecorationType;
   showEditorRunDecorations = false;
   private readonly profilesCache = new WeakMap<vscode.WorkspaceFolder, RobotCodeProfilesResult>();
+  // The folders whose last discovery failed because their selection names a profile that does not exist; such a
+  // folder leaves the tree as a folder without a valid environment does.
+  private readonly unknownProfileFolders = new WeakSet<vscode.WorkspaceFolder>();
   // The items of the folders' models by ID, and their suites by URI; derived from robotTestItems.
   private readonly itemIndex = new RobotItemIndex((uri) => vscode.Uri.parse(uri).toString());
   // The one way from the models to the items of the controller.
@@ -293,7 +308,10 @@ export class TestControllerManager {
         const folder = vscode.workspace.getWorkspaceFolder(event.uri);
         switch (event.state) {
           case ClientState.Running: {
-            if (folder) await this.discoverFolders([folder]);
+            if (folder) {
+              void this.reportUnknownSelectedProfiles(folder);
+              await this.discoverFolders([folder]);
+            }
             break;
           }
           case ClientState.Refreshed: {
@@ -613,16 +631,13 @@ export class TestControllerManager {
       const selectedProfiles = config.get<string[]>("profiles", []);
       const result = await this.getRobotCodeProfiles(folder, selectedProfiles.length ? selectedProfiles : undefined);
 
-      // Drop configured profiles that are no longer defined in the configuration so they don't
-      // linger as an unselectable, active selection. Skip this when the available profiles could
-      // not be determined (e.g. invalid environment) to avoid clearing a still-valid selection.
-      const couldNotDetermine = result.profiles.length === 0 && !result.messages?.length;
-      const availableNames = new Set(result.profiles.map((p) => p.name));
-      const removedProfiles = couldNotDetermine ? [] : selectedProfiles.filter((name) => !availableNames.has(name));
+      // Drop the selected names that select no profile of the configuration, as `profiles list` reports them, so they
+      // don't linger as an unselectable, active selection. Patterns and hidden profiles that select a profile stay.
+      const removedProfiles = unknownNamesOfSelection(selectedProfiles, result.unknownSelected);
       if (removedProfiles.length > 0) {
         await config.update(
           "profiles",
-          selectedProfiles.filter((name) => availableNames.has(name)),
+          selectionWithout(selectedProfiles, removedProfiles),
           vscode.ConfigurationTarget.WorkspaceFolder,
         );
       }
@@ -636,11 +651,13 @@ export class TestControllerManager {
                 .map((p) => `"${p}"`)
                 .join(", ")} were removed because they are no longer defined in the configuration.`;
 
+      // the list shows a shortened label; the selection gets the name
       const options = result.profiles.map((p) => {
         return {
           label: truncateAndReplaceNewlines(p.name.trim()),
           description: truncateAndReplaceNewlines(p.description.trim()),
           picked: p.selected,
+          name: p.name,
         };
       });
 
@@ -664,7 +681,7 @@ export class TestControllerManager {
 
       await config.update(
         "profiles",
-        profiles.map((p) => p.label),
+        profiles.map((p) => p.name),
         vscode.ConfigurationTarget.WorkspaceFolder,
       );
     } catch (e) {
@@ -672,6 +689,57 @@ export class TestControllerManager {
         modal: true,
         detail: (e as Error).toString(),
       });
+    }
+  }
+
+  // The names in the folder's `robotcode.profiles` that select no profile of its configuration, as `robotcode
+  // profiles list` reports them; none when the list cannot be read.
+  private async unknownSelectedProfiles(folder: vscode.WorkspaceFolder): Promise<string[]> {
+    const selection = vscode.workspace.getConfiguration(CONFIG_SECTION, folder).get<string[]>("profiles", []);
+    if (selection.length === 0) return [];
+    try {
+      return unknownNamesOfSelection(selection, (await this.getRobotCodeProfiles(folder, selection)).unknownSelected);
+    } catch {
+      return [];
+    }
+  }
+
+  // Reports the names of the folder's selection that select no profile, after its language server has started and
+  // before the REPL starts. Returns whether there are any; the notification does not wait for the user's answer.
+  public async reportUnknownSelectedProfiles(folder: vscode.WorkspaceFolder): Promise<boolean> {
+    const names = await this.unknownSelectedProfiles(folder);
+    if (names.length === 0) return false;
+
+    void this.showUnknownSelectedProfiles(folder, names);
+    return true;
+  }
+
+  private async showUnknownSelectedProfiles(folder: vscode.WorkspaceFolder, names: string[]): Promise<void> {
+    const remove = "Remove from Selection";
+    const select = "Select Configuration Profiles";
+    const answer = await vscode.window.showErrorMessage(
+      unknownSelectedProfilesMessage(names, folder.name),
+      remove,
+      select,
+    );
+    if (answer === remove) {
+      // at the scope of the folder, as selectConfigurationProfiles writes it, so a selection of the user settings
+      // stays for the other folders
+      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+      try {
+        await config.update(
+          "profiles",
+          selectionWithout(config.get<string[]>("profiles", []), names),
+          vscode.ConfigurationTarget.WorkspaceFolder,
+        );
+      } catch (e) {
+        // nothing else reports it, since the notification does not wait for the answer
+        void vscode.window.showErrorMessage(
+          `Cannot remove the profiles from the selection of the folder "${folder.name}": ${String(e)}`,
+        );
+      }
+    } else if (answer === select) {
+      await this.selectConfigurationProfiles(folder);
     }
   }
 
@@ -802,10 +870,18 @@ export class TestControllerManager {
     const workspaceItem = workspaceRobotItem ? this.treeBuilder.get(workspaceRobotItem.id) : undefined;
     if (workspaceItem !== undefined) workspaceItem.busy = true;
     const tokenSource = tokenSourceOf(signal);
+    this.unknownProfileFolders.delete(folder);
     try {
       const result = await this.getTestsFromWorkspaceFolder(folder, tokenSource.token);
       // An aborted discovery leaves the model as it is; the discovery that replaced it builds the tree.
       if (result === undefined || signal.aborted) return;
+
+      if (this.unknownProfileFolders.has(folder)) {
+        // No discovery can run with such a selection; the hint of the Testing view and the notification about the
+        // selection say why, instead of an item with the error.
+        this.removeFolderModel(folder);
+        return;
+      }
 
       const oldRootIds = (this.robotTestItems.get(folder)?.items ?? []).map((i) => i.id);
       this.setFolderModel(folder, result);
@@ -864,6 +940,8 @@ export class TestControllerManager {
       setTestExplorerState("hasTests");
     } else if (enabled.some((folder) => this.hasKnownEnvironmentProblem(folder))) {
       setTestExplorerState("noEnvironment");
+    } else if (enabled.some((folder) => this.unknownProfileFolders.has(folder))) {
+      setTestExplorerState("profileNotFound");
     } else if (enabled.every((folder) => this.robotTestItems.get(folder) !== undefined)) {
       setTestExplorerState("noTests");
     }
@@ -1007,6 +1085,9 @@ export class TestControllerManager {
       return result.items !== undefined ? result : undefined;
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return undefined;
+
+      // A selection that names a profile that does not exist marks the folder, so that it leaves the tree.
+      if ((await this.unknownSelectedProfiles(folder)).length > 0) this.unknownProfileFolders.add(folder);
 
       return {
         items: [
