@@ -264,12 +264,13 @@ DIR/
 ├── MyProject.Login.Bad_Password/
 │   ├── embedded-0.png        # first data:image/png base64 blob in the test
 │   ├── embedded-1.png        # second one
+│   ├── report.json           # embedded <a href="data:…" download="report.json">
 │   └── screenshot.png        # external <img src="screenshot.png">
 ├── MyProject.Checkout.Empty_Cart/
 │   └── ...
 ```
 
-Test names are sanitised to filesystem-safe directory names (every run of characters other than letters, digits, `_`, `.` and `-` becomes one underscore, and leading and trailing underscores are dropped). External file references are resolved relative to the directory containing the result file; if the referenced file doesn't exist, the artefact is recorded as skipped with reason `missing-source` and nothing is copied. References that would escape the base directory via `..` are blocked — there is no way to overwrite files outside `DIR`.
+Test names are sanitised to filesystem-safe directory names (every run of characters other than letters, digits, `_`, `.` and `-` becomes one underscore, and leading and trailing underscores are dropped). An embedded file whose link has a `download` attribute keeps that file name, sanitised the same way and with a leading `_` when Windows reserves the name for a device (such as `con.txt`); other embedded files, and those whose name leaves nothing usable, are numbered `embedded-N`. External file references, including the files of `<video>` and `<audio>` elements such as the videos Browser records, are resolved relative to the directory containing the result file, with percent escapes such as `%20` decoded; if the referenced file doesn't exist, the artefact is recorded as skipped with reason `missing-source` and nothing is copied. A file that a test references several times is copied once, and every reference to it points to the copy, or gives the reason it was skipped. `file:` links, which OperatingSystem logs for the files it touches, count only when they point into that directory; other `file:` links, and links to folders, stay plain links in the message. References that would escape the base directory via `..` are blocked — there is no way to overwrite files outside `DIR`.
 
 ### `--raw-html` vs default
 
