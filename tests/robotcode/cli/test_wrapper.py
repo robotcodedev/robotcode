@@ -69,7 +69,9 @@ def _run_robotcode(
     return subprocess.run(
         [sys.executable, "-m", "robotcode.cli", *args],
         cwd=project,
-        stdin=subprocess.DEVNULL,
+        # An empty pipe rather than DEVNULL: Windows reports the NUL device as a
+        # terminal, so `repl` and `robot-debug` would pick prompt_toolkit.
+        input="",
         capture_output=True,
         text=True,
         timeout=120,
