@@ -123,6 +123,22 @@ export interface FolderMessage {
   folder: string;
 }
 
+// A completion of the text in the target field: `label` replaces the text from `start` on. `kind` is the name of its
+// kind, `FOLDER` for a directory, and `detail` the text the editor's completion shows for it.
+export interface TargetCompletion {
+  label: string;
+  kind: string;
+  detail: string;
+  start: number;
+}
+
+// The completion of the text of the `suggest` with the same `seq`.
+export interface SuggestionsMessage {
+  type: "suggestions";
+  seq: number;
+  completions: TargetCompletion[];
+}
+
 export type ExtensionMessage =
   | PageMessage
   | StatusMessage
@@ -131,7 +147,8 @@ export type ExtensionMessage =
   | FocusMessage
   | FoldersMessage
   | FolderMessage
-  | ReloadMessage;
+  | ReloadMessage
+  | SuggestionsMessage;
 
 export type ViewerMessage =
   | { type: "ready"; state?: ViewerState }
@@ -143,7 +160,9 @@ export type ViewerMessage =
   // The page of the load `seq`, as a Markdown document.
   | { type: "openMarkdown"; seq: number }
   // A new viewer on `BuiltIn`, in the folder of this viewer.
-  | { type: "newViewer" };
+  | { type: "newViewer" }
+  // The completion of the text in the target field.
+  | { type: "suggest"; seq: number; folder?: string; text: string };
 
 const api = acquireVsCodeApi();
 

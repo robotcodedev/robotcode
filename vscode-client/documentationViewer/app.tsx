@@ -1,4 +1,4 @@
-import { JSX } from "preact";
+import { JSX, TargetedKeyboardEvent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { PageFinder } from "./find";
 import { Outline } from "./outline";
@@ -11,12 +11,16 @@ import {
   post,
   saveState,
   ShowMessage,
+  TargetCompletion,
   ViewerState,
   WorkspaceFolderInfo,
 } from "./protocol";
+import { SuggestionList } from "./suggestions";
 
 const MAX_HISTORY = 50;
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
+// How long the target field waits after the last input before it asks for the completion.
+const SUGGEST_DELAY = 100;
 
 interface Target {
   folder: string;
@@ -39,6 +43,19 @@ function stopWaiting(entry: HistoryEntry): void {
   delete entry.keyword;
   delete entry.dataType;
   delete entry.fragment;
+}
+
+// The keys of the editor's Trigger Suggest: Ctrl+Space, and on macOS also Option+Escape, as macOS often takes
+// Ctrl+Space for switching the input source.
+function opensSuggestions(event: KeyboardEvent): boolean {
+  if (event.shiftKey || event.metaKey) return false;
+  if (event.ctrlKey && !event.altKey && (event.key === " " || event.code === "Space")) return true;
+  return IS_MAC && event.altKey && !event.ctrlKey && event.key === "Escape";
+}
+
+// The text of the target field with a completion in place of the part it continues; a directory ends with `/`.
+function completedText(text: string, completion: TargetCompletion): string {
+  return text.slice(0, completion.start) + completion.label + (completion.kind === "FOLDER" ? "/" : "");
 }
 
 function newId(): string {
@@ -71,6 +88,10 @@ export class Controller {
   focusTarget = 0;
   focusFind = 0;
   folders: WorkspaceFolderInfo[] = [];
+  // The completion of the text in the target field while its list is open, and the selected one; as in the editor,
+  // the first is selected when the list opens.
+  suggestions: TargetCompletion[] = [];
+  activeSuggestion = -1;
 
   // Not from 0: a recreated page would reuse the numbers of its previous instance, and a load of that instance that
   // is still waiting in the extension would answer this page.
@@ -89,6 +110,12 @@ export class Controller {
   // The headings of the page with their offsets, for the width they were measured at.
   private _headings: { id: string; top: number }[] | undefined;
   private _headingsWidth = -1;
+  // The `suggest` asked last and its text, until its answer arrives; the answers of older ones are dropped. And the
+  // text that the suggestions shown complete.
+  private _suggestSeq = -1;
+  private _suggestText = "";
+  private _suggestionsText = "";
+  private _suggestTimer: number | undefined;
 
   constructor() {
     this.state = loadState() ?? { v: 1, id: "", history: [], index: -1, filter: "", collapsed: [], pinned: false };
@@ -271,6 +298,78 @@ export class Controller {
     this.changed();
   }
 
+  get suggestionsOpen(): boolean {
+    return this.suggestions.length > 0;
+  }
+
+  // Whether a `suggest` waits for the pause after typing or for its answer.
+  get suggestionsPending(): boolean {
+    return this._suggestTimer !== undefined || this._suggestSeq !== -1;
+  }
+
+  // Asks for the completion of the target field's text; `now` without the pause after typing. An answer still on its
+  // way is for an older text and is dropped; until the answer for this text, the list keeps the suggestions that still
+  // complete it. An empty text gets no list.
+  suggest(text: string, now: boolean): void {
+    window.clearTimeout(this._suggestTimer);
+    this._suggestTimer = undefined;
+    this._suggestSeq = -1;
+    if (text === "") {
+      this.closeSuggestions();
+      return;
+    }
+    this.keepCompleting(text);
+
+    const ask = () => {
+      this._suggestTimer = undefined;
+      this._suggestSeq = ++this._seq;
+      this._suggestText = text;
+      post({ type: "suggest", seq: this._suggestSeq, folder: this.entry?.folder || undefined, text });
+    };
+    if (now) ask();
+    else this._suggestTimer = window.setTimeout(ask, SUGGEST_DELAY);
+  }
+
+  closeSuggestions(): void {
+    if (this.dropSuggestions()) this.changed();
+  }
+
+  // Selects the next or the previous suggestion, from the last to the first and back.
+  moveSuggestion(step: 1 | -1): void {
+    const count = this.suggestions.length;
+    if (count === 0) return;
+    this.activeSuggestion = (this.activeSuggestion + step + count) % count;
+    this.changed();
+  }
+
+  // Keeps the suggestions that still complete `text`: the text before their start is unchanged, and their label starts
+  // with the part after it. When some are dropped, the first of the others is selected.
+  private keepCompleting(text: string): void {
+    if (this.suggestions.length === 0) return;
+    const before = this._suggestionsText;
+    const kept = this.suggestions.filter(
+      (s) =>
+        text.slice(0, s.start) === before.slice(0, s.start) &&
+        s.label.toLowerCase().startsWith(text.slice(s.start).toLowerCase()),
+    );
+    if (kept.length === this.suggestions.length) return;
+    this.suggestions = kept;
+    this.activeSuggestion = kept.length > 0 ? 0 : -1;
+    this.changed();
+  }
+
+  // Closes the list without telling the listeners, and drops an answer that is still on its way. Returns whether the
+  // list was open.
+  private dropSuggestions(): boolean {
+    window.clearTimeout(this._suggestTimer);
+    this._suggestTimer = undefined;
+    this._suggestSeq = -1;
+    const open = this.suggestions.length > 0;
+    this.suggestions = [];
+    this.activeSuggestion = -1;
+    return open;
+  }
+
   private changed(): void {
     for (const listener of this._listeners) listener();
   }
@@ -337,11 +436,13 @@ export class Controller {
     this.save();
   }
 
-  // Before the viewer leaves the current entry: its position, and no place that is still waiting for a page.
+  // Before the viewer leaves the current entry: its position, no place that is still waiting for a page, and no list of
+  // suggestions, as the target field then shows the text of the next entry.
   private leave(): void {
     this.recordPosition();
     const entry = this.entry;
     if (entry !== undefined) stopWaiting(entry);
+    this.dropSuggestions();
   }
 
   private navigate(entry: HistoryEntry, typed = false): void {
@@ -398,6 +499,7 @@ export class Controller {
   }
 
   private load(entry: HistoryEntry, refresh: boolean, typed = false): void {
+    this.dropSuggestions();
     this._loading = ++this._seq;
     this.busy = true;
     this.error = undefined;
@@ -467,6 +569,14 @@ export class Controller {
         break;
       case "folder":
         this.changeFolder(message.folder);
+        break;
+      case "suggestions":
+        if (message.seq !== this._suggestSeq) return;
+        this._suggestSeq = -1;
+        this._suggestionsText = this._suggestText;
+        this.suggestions = message.completions;
+        this.activeSuggestion = message.completions.length > 0 ? 0 : -1;
+        this.changed();
         break;
       case "focus":
         // The focus VS Code gives a webview while its page loads does not stick; the page takes it itself, unless
@@ -628,6 +738,7 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
   const main = useRef<HTMLElement>(null);
   const split = useRef<HTMLElement>(null);
   const targetField = useRef<TextField>(null);
+  const suggestionList = useRef<HTMLDivElement>(null);
   const findField = useRef<TextField>(null);
 
   useEffect(() => controller.subscribe(() => setVersion((v) => v + 1)), [controller]);
@@ -683,6 +794,80 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
   useFocus(targetField, controller.focusTarget);
   useFocus(findField, controller.focusFind);
 
+  // The target field as a combobox of its suggestion list. Its input lies in the shadow root of `vscode-textfield`, so
+  // the list and the selected option are linked as elements: an id would not reach out of the shadow root.
+  useEffect(() => {
+    const field = targetField.current;
+    if (field === null) return;
+    const link = () => {
+      const input = field.wrappedElement;
+      if (input === undefined || input === null) return;
+      const list = suggestionList.current;
+      input.setAttribute("role", "combobox");
+      input.setAttribute("aria-autocomplete", "list");
+      input.setAttribute("aria-expanded", String(list !== null));
+      input.ariaControlsElements = list !== null ? [list] : null;
+      input.ariaActiveDescendantElement = list?.querySelector<HTMLElement>(".target-suggestion.active") ?? null;
+    };
+    if (field.wrappedElement) link();
+    else void field.updateComplete.then(link);
+  });
+
+  // Puts a suggestion into the target field. A directory gets its content listed next; any other suggestion is loaded
+  // by Enter and a click, and only put in by Tab.
+  const choose = (index: number, load: boolean): void => {
+    const completion = controller.suggestions[index];
+    const field = targetField.current;
+    if (completion === undefined || field === null) return;
+
+    const text = completedText(field.value, completion);
+    if (completion.kind === "FOLDER") {
+      setEdit({ index: controller.state.index, text });
+      controller.suggest(text, true);
+    } else if (load) {
+      controller.closeSuggestions();
+      controller.submit(text);
+      setEdit(undefined);
+    } else {
+      setEdit({ index: controller.state.index, text });
+      controller.closeSuggestions();
+    }
+  };
+
+  const onTargetKeyDown = (event: TargetedKeyboardEvent<HTMLElement>): void => {
+    // The keys of an IME composition belong to the IME.
+    if (event.isComposing) return;
+    const text = (event.currentTarget as TextField).value;
+    const plain = !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+    const active = controller.activeSuggestion;
+
+    if (plain && event.key === "ArrowDown") {
+      if (controller.suggestionsOpen) controller.moveSuggestion(1);
+      else controller.suggest(text, true);
+    } else if (plain && event.key === "ArrowUp" && controller.suggestionsOpen) {
+      controller.moveSuggestion(-1);
+    } else if (opensSuggestions(event)) {
+      controller.suggest(text, true);
+    } else if (plain && event.key === "Escape" && (controller.suggestionsOpen || controller.suggestionsPending)) {
+      controller.closeSuggestions();
+    } else if (plain && event.key === "Tab" && active >= 0) {
+      choose(active, false);
+    } else if (event.key === "Enter") {
+      if (active >= 0) {
+        choose(active, true);
+      } else {
+        controller.closeSuggestions();
+        controller.submit(text);
+        setEdit(undefined);
+      }
+    } else {
+      return;
+    }
+    // stopPropagation keeps the key from VS Code's keybindings.
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const { page, error, waiting, environmentError, busy, state } = controller;
   const pinLabel = state.pinned
     ? "Unpin: actions use the viewer used last"
@@ -724,16 +909,13 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           value={targetText}
           placeholder="Library, resource or suite file, as Name::arg1::arg2 or path"
           aria-label="Target"
-          onInput={(event) =>
-            setEdit({ index: controller.state.index, text: (event.currentTarget as TextField).value })
-          }
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              controller.submit((event.currentTarget as TextField).value);
-              setEdit(undefined);
-            }
+          onInput={(event) => {
+            const text = (event.currentTarget as TextField).value;
+            setEdit({ index: controller.state.index, text });
+            controller.suggest(text, false);
           }}
+          onKeyDown={onTargetKeyDown}
+          onBlur={() => controller.closeSuggestions()}
         />
         <vscode-toolbar-button icon="refresh" label="Refresh" title="Refresh" onClick={() => controller.refresh()} />
         <vscode-toolbar-button
@@ -771,6 +953,16 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           onClick={() => post({ type: "newViewer" })}
         />
       </vscode-toolbar-container>
+      {controller.suggestionsOpen && targetField.current !== null && (
+        <SuggestionList
+          listRef={suggestionList}
+          field={targetField.current}
+          text={targetText}
+          completions={controller.suggestions}
+          active={controller.activeSuggestion}
+          onChoose={(index) => choose(index, true)}
+        />
+      )}
       <div class="progress">
         {busy && <vscode-progress-bar indeterminate aria-label="Generating the documentation" />}
       </div>

@@ -74,6 +74,8 @@ The links show the documentation of the import that the analysis used, also for 
 
 The field in the toolbar shows what the viewer documents and takes a new target, as the [targets](/guides/browsing-documentation/#targets) of `robotcode doc`: `Name`, `Name::arg1::arg2`, or the path of a library, resource or suite file, relative to the workspace folder or absolute. `Enter` shows it in the same tab, which takes the name of the library or file as its title. Entering the target that is shown generates it again.
 
+While you type, a list under the field completes the name before `::` as the editor completes the names of `Library` and `Resource` imports: modules on the Python path, the standard libraries, and library, resource and suite files and directories, relative to the workspace folder or absolute, one level at a time. `Ctrl+Space` and `↓` open the list too; on macOS, where `Ctrl+Space` usually switches the input source, `Option+Esc` opens it as well. As in the editor, the names in the case you typed come first, and the first suggestion is selected. `↑` and `↓` select another, `Enter` or a click shows it, and `Tab` only puts it into the field. A directory is put in with a `/`, and the list then offers its content. `Esc` closes the list, and `Enter` then shows the text as you typed it. The list needs a running language server for the folder: it stays closed while RobotCode waits for the folder's Python environment, and when RobotCode is switched off for the folder.
+
 ## Workspace folders
 
 Each viewer belongs to a workspace folder: its pages are generated with the Python environment, the profiles and the settings of that folder. A viewer that shows documentation for an action from the editor or the Keywords view belongs to the folder of the file the action came from, also when the documented file lies in another folder. Typing an absolute path that lies in another folder switches the viewer to that folder.
@@ -135,6 +137,7 @@ The viewer generates pages only when the Python environment of the workspace fol
 ## Limits
 
 - Import arguments are passed to `robotcode doc` as text, so typed values such as `${True}` or lists arrive in their string form.
+- The completion in the target field lists every module on the Python path, as the editor's import completion does, also modules that are no libraries, such as Python's `collections` next to the standard library `Collections`.
 - Pages are generated from the saved files; unsaved changes in an editor are not shown.
 - Libraries whose keywords exist only while a test runs cannot be documented; see [Libraries that need a running test](/guides/browsing-documentation/#libraries-that-need-a-running-test).
 - The page needs VS Code's built-in extension *Markdown Language Features*. Without it, the viewer shows a notice and the page as plain Markdown text.

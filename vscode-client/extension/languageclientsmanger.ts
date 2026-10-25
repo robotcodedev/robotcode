@@ -149,6 +149,16 @@ export interface ProjectInfo {
   robotCodeVersionString?: string;
 }
 
+// A completion of the target field of the Documentation Viewer.
+export interface DocumentationTargetCompletion {
+  label: string;
+  // The kind's name, such as `FOLDER` or `MODULE`, and the text the editor's completion shows for it.
+  kind: string;
+  detail: string;
+  // The index in the text from which the label replaces it.
+  start: number;
+}
+
 interface RobotCodeContributions {
   contributes?: {
     robotCode?: {
@@ -1635,6 +1645,28 @@ export class LanguageClientsManager {
       (await client.sendRequest<ProjectInfo>(
         "robot/projectInfo",
         {},
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? []
+    );
+  }
+
+  // Only from a language server that runs already: the Documentation Viewer starts none for its completion. A client
+  // that stopped, as after a crash, stays in the list of clients.
+  public async getDocumentationTargetCompletions(
+    workspaceFolder: vscode.WorkspaceFolder,
+    text: string,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<DocumentationTargetCompletion[]> {
+    if (!this.hasClientForResource(workspaceFolder.uri)) return [];
+
+    const client = await this.getLanguageClientForResource(workspaceFolder.uri);
+
+    if (client === undefined || !client.isRunning()) return [];
+
+    return (
+      (await client.sendRequest<DocumentationTargetCompletion[]>(
+        "robot/documentationViewer/completeTarget",
+        { workspaceFolderUri: workspaceFolder.uri.toString(), text },
         token ?? new vscode.CancellationTokenSource().token,
       )) ?? []
     );

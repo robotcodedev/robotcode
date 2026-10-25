@@ -37,6 +37,59 @@ body {
   vertical-align: middle;
 }
 
+/* The suggestions under the target field, in the colours of the editor's suggest widget. */
+.target-suggestions {
+  position: fixed;
+  z-index: 20;
+  box-sizing: border-box;
+  max-height: 40vh;
+  overflow-y: auto;
+  color: var(--vscode-editorSuggestWidget-foreground);
+  background-color: var(--vscode-editorSuggestWidget-background);
+  border: 1px solid var(--vscode-editorSuggestWidget-border, transparent);
+  box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
+}
+
+.target-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.target-suggestion:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.target-suggestion.active {
+  color: var(--vscode-editorSuggestWidget-selectedForeground);
+  background-color: var(--vscode-editorSuggestWidget-selectedBackground);
+  outline: 1px solid var(--vscode-list-focusOutline, transparent);
+  outline-offset: -1px;
+}
+
+.target-suggestion .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.target-suggestion .label b {
+  color: var(--vscode-editorSuggestWidget-highlightForeground);
+}
+
+.target-suggestion.active .label b {
+  color: var(--vscode-editorSuggestWidget-focusHighlightForeground);
+}
+
+.target-suggestion .detail {
+  margin-left: auto;
+  padding-left: 12px;
+  opacity: 0.7;
+}
+
 vscode-toolbar-button[aria-disabled="true"] {
   opacity: 0.4;
   pointer-events: none;

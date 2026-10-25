@@ -1,10 +1,12 @@
 import * as crypto from "crypto";
 import * as path from "path";
 import * as vscode from "vscode";
+import { LSPErrorCodes, ResponseError } from "vscode-languageclient/node";
 import { CONFIG_SECTION } from "./config";
 import {
   describeRobotEnvironmentProblem,
   DocumentationTarget,
+  DocumentationTargetCompletion,
   LanguageClientsManager,
   RobotEnvironmentState,
 } from "./languageclientsmanger";
@@ -73,7 +75,8 @@ type ViewerMessage =
   | { type: "pin"; pinned: boolean }
   | { type: "pickFolder" }
   | { type: "openMarkdown"; seq: number }
-  | { type: "newViewer" };
+  | { type: "newViewer" }
+  | { type: "suggest"; seq: number; folder?: string; text: string };
 
 // What a generation depends on besides the folder and the Python command.
 interface GenerationCommand {
@@ -111,6 +114,8 @@ class Viewer {
   waiting: { seq: number; refresh: boolean } | undefined;
   // Turns the note that the load waits into the error when the problem has lasted ENVIRONMENT_ERROR_DELAY.
   notice: ReturnType<typeof setTimeout> | undefined;
+  // The completion of the target field asked last; a newer text cancels it.
+  suggestions: vscode.CancellationTokenSource | undefined;
 
   constructor(
     readonly panel: vscode.WebviewPanel,
@@ -594,6 +599,9 @@ export class DocumentationViewerManager implements vscode.Disposable {
       case "newViewer":
         void this.openViewerFrom(viewer);
         break;
+      case "suggest":
+        void this.suggest(viewer, message.seq, message.folder, message.text);
+        break;
       case "pin":
         if (message.pinned) {
           if (this._pinned !== undefined && this._pinned !== viewer) this._pinned.post({ type: "pin", pinned: false });
@@ -605,6 +613,37 @@ export class DocumentationViewerManager implements vscode.Disposable {
         }
         break;
     }
+  }
+
+  // The completion of the text in a viewer's target field. The folder is never asked for, and an answer that a newer
+  // text has replaced is not sent.
+  private async suggest(viewer: Viewer, seq: number, folderUri: string | undefined, text: string): Promise<void> {
+    viewer.suggestions?.cancel();
+    const source = new vscode.CancellationTokenSource();
+    viewer.suggestions = source;
+
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const folder = folderOf(folderUri) ?? viewer.folder ?? (folders.length === 1 ? folders[0] : undefined);
+
+    let completions: DocumentationTargetCompletion[] = [];
+    if (folder !== undefined && text !== "" && !text.includes("::")) {
+      try {
+        completions = await this.languageClientsManager.getDocumentationTargetCompletions(folder, text, source.token);
+      } catch (error) {
+        // a newer text, or the language server, has canceled the request, which is no error
+        const canceled =
+          source.token.isCancellationRequested ||
+          (error instanceof ResponseError && error.code === LSPErrorCodes.RequestCancelled);
+        if (!canceled) {
+          this.pythonManager.outputChannel.appendLine(
+            `Documentation Viewer: completing '${text}' failed: ${errorMessage(error)}`,
+          );
+        }
+      }
+    }
+    if (source.token.isCancellationRequested) return;
+
+    viewer.post({ type: "suggestions", seq, completions });
   }
 
   private async load(

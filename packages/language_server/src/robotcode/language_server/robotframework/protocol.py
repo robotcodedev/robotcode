@@ -35,6 +35,7 @@ from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.document_highlight import RobotDocumentHighlightProtocolPart
 from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
+from .parts.documentation_viewer import RobotDocumentationViewerPart
 from .parts.documents_cache import DocumentsCachePart
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.formatting import RobotFormattingProtocolPart
@@ -121,6 +122,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
     robot_keywords_treeview = ProtocolPartDescriptor(RobotKeywordsTreeViewPart)
+    robot_documentation_viewer = ProtocolPartDescriptor(RobotDocumentationViewerPart)
     robot_project_info = ProtocolPartDescriptor(ProjectInfoPart)
     robot_workspace_symbols = ProtocolPartDescriptor(RobotWorkspaceSymbolsProtocolPart)
 
