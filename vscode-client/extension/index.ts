@@ -9,6 +9,8 @@ import { LanguageModelToolsManager } from "./languageModelToolsManager";
 import { ChatPluginsManager } from "./chatPluginsManager";
 import { NotebookManager } from "./notebook";
 import { DocumentationViewerManager } from "./documentationViewer";
+import { DocumentationBookmarks } from "./documentationViewerBookmarks";
+import { DocumentationBookmarksView } from "./documentationBookmarksView";
 import { createExtendMarkdownIt } from "./markdownHighlighting";
 import path from "path";
 
@@ -102,6 +104,9 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
 
   const testControllerManger = new TestControllerManager(context, languageClientManger, debugManager, outputChannel);
 
+  const documentationBookmarks = new DocumentationBookmarks(context.globalState, context.workspaceState);
+  void documentationBookmarks.createDefaults();
+
   context.subscriptions.push(
     pythonManager,
     languageClientManger,
@@ -111,7 +116,9 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
     new LanguageModelToolsManager(context, languageClientManger, outputChannel),
     new ChatPluginsManager(context, outputChannel),
     new NotebookManager(context, pythonManager, languageClientManger, outputChannel),
-    new DocumentationViewerManager(context, pythonManager, languageClientManger),
+    documentationBookmarks,
+    new DocumentationViewerManager(context, pythonManager, languageClientManger, documentationBookmarks),
+    new DocumentationBookmarksView(documentationBookmarks),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
         url = url.replace("%24%7Btheme%7D", getDocTheme());

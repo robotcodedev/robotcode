@@ -2,8 +2,9 @@ import { JSX, TargetedKeyboardEvent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { PageFinder } from "./find";
 import { Outline } from "./outline";
-import { buildOutline, findHeading, OutlineSection, renderPage, scrollToTop } from "./page";
+import { buildOutline, findHeading, headingTitle, OutlineSection, renderPage, scrollToTop } from "./page";
 import {
+  Bookmark,
   ExtensionMessage,
   HistoryEntry,
   loadState,
@@ -15,7 +16,7 @@ import {
   ViewerState,
   WorkspaceFolderInfo,
 } from "./protocol";
-import { SuggestionList } from "./suggestions";
+import { bookmarkLabel, SuggestionList } from "./suggestions";
 
 const MAX_HISTORY = 50;
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -29,6 +30,10 @@ interface Target {
 
 function sameTarget(a: Target | undefined, b: Target | undefined): boolean {
   return a !== undefined && b !== undefined && a.folder === b.folder && a.text === b.text;
+}
+
+function samePlace(a: Bookmark, b: Bookmark): boolean {
+  return a.text === b.text && a.heading === b.heading;
 }
 
 function normalizeName(name: string): string {
@@ -58,6 +63,21 @@ function completedText(text: string, completion: TargetCompletion): string {
   return text.slice(0, completion.start) + completion.label + (completion.kind === "FOLDER" ? "/" : "");
 }
 
+// The text of the target field for a target and the id of a place: the place after a `#`. Without a place, a target
+// with a `#` of its own ends with a `#`, so that the text after the last `#` is always the place.
+function targetFieldText(text: string, place: string | undefined): string {
+  if (place !== undefined) return `${text}#${place}`;
+  return text.includes("#") ? `${text}#` : text;
+}
+
+// The target of a text of the target field, and its place, the text after the last `#`; without one, or with an empty
+// one, the top of the page.
+function splitPlace(text: string): { target: string; place: string | undefined } {
+  const at = text.lastIndexOf("#");
+  if (at < 0) return { target: text, place: undefined };
+  return { target: text.slice(0, at).trim(), place: text.slice(at + 1).trim() || undefined };
+}
+
 function newId(): string {
   return typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -68,6 +88,12 @@ interface TextField extends HTMLElement {
   value: string;
   updateComplete: Promise<boolean>;
   wrappedElement: HTMLInputElement;
+}
+
+interface HeadingTop {
+  id: string;
+  top: number;
+  element: HTMLElement;
 }
 
 export class Controller {
@@ -88,8 +114,11 @@ export class Controller {
   focusTarget = 0;
   focusFind = 0;
   folders: WorkspaceFolderInfo[] = [];
-  // The completion of the text in the target field while its list is open, and the selected one; as in the editor,
-  // the first is selected when the list opens.
+  // The bookmarks that hold for the viewer's folder, sorted by label.
+  bookmarks: Bookmark[] = [];
+  // The list under the target field while it is open: the bookmarks that match the field's text, then the completion
+  // of the text. And the selected entry of both; as in the editor, the first is selected when the list opens.
+  suggestedBookmarks: Bookmark[] = [];
   suggestions: TargetCompletion[] = [];
   activeSuggestion = -1;
 
@@ -108,8 +137,14 @@ export class Controller {
   private _saveTimer: number | undefined;
   private _lastSave = 0;
   // The headings of the page with their offsets, for the width they were measured at.
-  private _headings: { id: string; top: number }[] | undefined;
+  private _headings: HeadingTop[] | undefined;
   private _headingsWidth = -1;
+  // The heading of the place that the star shows; the scroll listener renders again when the heading at the top of the
+  // view is another one.
+  private _placeHeading: string | undefined;
+  // Whether the list under the target field is open, and the text that its bookmarks match.
+  private _listOpen = false;
+  private _listText = "";
   // The `suggest` asked last and its text, until its answer arrives; the answers of older ones are dropped. And the
   // text that the suggestions shown complete.
   private _suggestSeq = -1;
@@ -178,9 +213,13 @@ export class Controller {
       "scroll",
       () => {
         if (this.recordPosition()) this.save(true);
+        // The star follows the heading at the top of the view.
+        if (this.placeHeading()?.id !== this._placeHeading) this.changed();
       },
       { passive: true },
     );
+    // An image that loads after the headings were measured moves the headings below it.
+    main.addEventListener("load", () => (this._headings = undefined), true);
     window.addEventListener("message", (event: MessageEvent<ExtensionMessage>) => this.onMessage(event.data));
     window.addEventListener("click", this.onClick, true);
     window.addEventListener("keydown", this.onKeyDown, true);
@@ -192,17 +231,35 @@ export class Controller {
     if (entry !== undefined) this.load(entry, false);
   }
 
+  // Shows the text of the target field: its target at the place after its last `#`. For the target shown, the place
+  // shown only refreshes it, and another place that the page has is a new entry without a load, as an outline entry is.
   submit(text: string): void {
-    text = text.trim();
-    if (!text) return;
+    const { target, place } = splitPlace(text.trim());
+    if (!target) return;
 
     const entry = this.entry;
-    // Entering the target that is shown only refreshes it.
-    if (entry !== undefined && entry.text === text) {
-      this.load(entry, true);
-      return;
+    const page = this.page;
+    if (entry !== undefined && entry.text === target && page !== undefined && sameTarget(entry, page)) {
+      const anchor = place !== undefined ? this.placeOnPage(place, page) : undefined;
+      if (place === undefined || anchor !== undefined) {
+        if (anchor === this.placeHeading()?.id) this.load(entry, true);
+        else this.showPlace(anchor);
+        return;
+      }
     }
-    this.navigate({ folder: entry?.folder ?? "", text }, true);
+    this.navigate(
+      { folder: entry?.folder ?? "", text: target, ...(place !== undefined ? { fragment: place } : {}) },
+      true,
+    );
+  }
+
+  // The text the target field shows for the current entry while nothing is typed: the target, and the place at the top
+  // of the view, or the place the entry goes to while its page is not shown.
+  get fieldText(): string {
+    const entry = this.entry;
+    if (entry === undefined) return "";
+    const place = sameTarget(entry, this.page) ? this.placeHeading()?.id : (entry.fragment ?? entry.anchor);
+    return targetFieldText(entry.text, place);
   }
 
   refresh(): void {
@@ -298,8 +355,12 @@ export class Controller {
     this.changed();
   }
 
+  get suggestionCount(): number {
+    return this.suggestedBookmarks.length + this.suggestions.length;
+  }
+
   get suggestionsOpen(): boolean {
-    return this.suggestions.length > 0;
+    return this._listOpen && this.suggestionCount > 0;
   }
 
   // Whether a `suggest` waits for the pause after typing or for its answer.
@@ -307,18 +368,59 @@ export class Controller {
     return this._suggestTimer !== undefined || this._suggestSeq !== -1;
   }
 
-  // Asks for the completion of the target field's text; `now` without the pause after typing. An answer still on its
-  // way is for an older text and is dropped; until the answer for this text, the list keeps the suggestions that still
-  // complete it. An empty text gets no list.
+  // The place the star bookmarks: the target of the current entry, and the heading at the top of the view with the
+  // title the outline shows for it. None without a page of the current entry.
+  get place(): Bookmark | undefined {
+    const entry = this.entry;
+    if (entry === undefined || !sameTarget(entry, this.page)) return undefined;
+    const heading = this.placeHeading();
+    return heading !== undefined
+      ? { text: entry.text, heading: heading.id, title: headingTitle(heading.element) }
+      : { text: entry.text };
+  }
+
+  get bookmarked(): boolean {
+    const place = this.place;
+    return place !== undefined && this.bookmarks.some((b) => samePlace(b, place));
+  }
+
+  // The star: bookmarks the place, or removes the bookmark of a bookmarked place.
+  toggleBookmark(): void {
+    const place = this.place;
+    if (place !== undefined) this.setBookmark(place, !this.bookmarked);
+  }
+
+  removeBookmark(bookmark: Bookmark): void {
+    this.setBookmark(bookmark, false);
+  }
+
+  // Opens a bookmark at its place, as a link opens one.
+  openBookmark(bookmark: Bookmark): void {
+    this.navigate({
+      folder: this.entry?.folder ?? "",
+      text: bookmark.text,
+      ...(bookmark.heading !== undefined ? { fragment: bookmark.heading } : {}),
+    });
+  }
+
+  // Opens the list for the target field's text: the bookmarks that match it at once, and the completion of the text
+  // after the pause after typing, or at once with `now`. An answer still on its way is for an older text and is
+  // dropped; until the answer for this text, the list keeps the completions that still complete it. An empty text gets
+  // all bookmarks and no completion.
   suggest(text: string, now: boolean): void {
     window.clearTimeout(this._suggestTimer);
     this._suggestTimer = undefined;
     this._suggestSeq = -1;
-    if (text === "") {
-      this.closeSuggestions();
-      return;
-    }
-    this.keepCompleting(text);
+    this._listOpen = true;
+    this._listText = text;
+    this.matchBookmarks();
+    if (text === "") this.suggestions = [];
+    else this.keepCompleting(text);
+    this.activeSuggestion = this.suggestionCount > 0 ? 0 : -1;
+    // Without a bookmark, the list of an empty text stays closed, also when bookmarks arrive.
+    if (text === "") this._listOpen = this.suggestionCount > 0;
+    this.changed();
+    if (text === "") return;
 
     const ask = () => {
       this._suggestTimer = undefined;
@@ -336,25 +438,49 @@ export class Controller {
 
   // Selects the next or the previous suggestion, from the last to the first and back.
   moveSuggestion(step: 1 | -1): void {
-    const count = this.suggestions.length;
+    const count = this.suggestionCount;
     if (count === 0) return;
     this.activeSuggestion = (this.activeSuggestion + step + count) % count;
     this.changed();
   }
 
-  // Keeps the suggestions that still complete `text`: the text before their start is unchanged, and their label starts
-  // with the part after it. When some are dropped, the first of the others is selected.
+  // The bookmarks whose label or text in the target field contains the list's text without regard to case; all of
+  // them for an empty text.
+  private matchBookmarks(): void {
+    const text = this._listText.toLowerCase();
+    this.suggestedBookmarks = this.bookmarks.filter(
+      (b) =>
+        bookmarkLabel(b).toLowerCase().includes(text) ||
+        targetFieldText(b.text, b.heading).toLowerCase().includes(text),
+    );
+  }
+
+  // Keeps the completions that still complete `text`: the text before their start is unchanged, and their label starts
+  // with the part after it.
   private keepCompleting(text: string): void {
-    if (this.suggestions.length === 0) return;
     const before = this._suggestionsText;
-    const kept = this.suggestions.filter(
+    this.suggestions = this.suggestions.filter(
       (s) =>
         text.slice(0, s.start) === before.slice(0, s.start) &&
         s.label.toLowerCase().startsWith(text.slice(s.start).toLowerCase()),
     );
-    if (kept.length === this.suggestions.length) return;
-    this.suggestions = kept;
-    this.activeSuggestion = kept.length > 0 ? 0 : -1;
+  }
+
+  // The bookmarks have changed while the list is open: the selection stays where it is, within the list.
+  private bookmarksChanged(): void {
+    if (!this._listOpen) return;
+    this.matchBookmarks();
+    const count = this.suggestionCount;
+    this.activeSuggestion = count > 0 ? Math.min(Math.max(this.activeSuggestion, 0), count - 1) : -1;
+  }
+
+  // Until the extension sends the bookmarks again, the change is made here, so that the star and the list follow it at
+  // once.
+  private setBookmark(bookmark: Bookmark, add: boolean): void {
+    post({ type: "bookmark", folder: this.entry?.folder || undefined, ...bookmark, add });
+    const others = this.bookmarks.filter((b) => !samePlace(b, bookmark));
+    this.bookmarks = add ? [...others, bookmark] : others;
+    this.bookmarksChanged();
     this.changed();
   }
 
@@ -364,13 +490,17 @@ export class Controller {
     window.clearTimeout(this._suggestTimer);
     this._suggestTimer = undefined;
     this._suggestSeq = -1;
-    const open = this.suggestions.length > 0;
+    const open = this.suggestionsOpen;
+    this._listOpen = false;
+    this.suggestedBookmarks = [];
     this.suggestions = [];
     this.activeSuggestion = -1;
     return open;
   }
 
+  // Tells the listeners, and remembers the heading of the place that the star shows then.
   private changed(): void {
+    this._placeHeading = this.placeHeading()?.id;
     for (const listener of this._listeners) listener();
   }
 
@@ -389,17 +519,43 @@ export class Controller {
     saveState(this.state);
   }
 
-  private headingTops(): { id: string; top: number }[] {
+  private headingTops(): HeadingTop[] {
     const width = this._main.clientWidth;
     if (this._headings === undefined || this._headingsWidth !== width) {
       const origin = this._main.getBoundingClientRect().top - this._main.scrollTop;
       this._headings = Array.from(
         this._main.querySelectorAll<HTMLElement>("h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]"),
-        (heading) => ({ id: heading.id, top: heading.getBoundingClientRect().top - origin }),
+        (heading) => ({ id: heading.id, top: heading.getBoundingClientRect().top - origin, element: heading }),
       );
       this._headingsWidth = width;
     }
     return this._headings;
+  }
+
+  // The last heading whose top is at or above the top of the view.
+  private headingAtTop(): HeadingTop | undefined {
+    const scrollTop = this._main.scrollTop;
+    const headings = this.headingTops();
+    let heading: HeadingTop | undefined;
+    let low = 0;
+    let high = headings.length - 1;
+    while (low <= high) {
+      const middle = (low + high) >> 1;
+      if (headings[middle].top <= scrollTop + 1) {
+        heading = headings[middle];
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    return heading;
+  }
+
+  // The heading of the place at the top of the view; none at the top of the page, which begins with the `h1` that
+  // names the target.
+  private placeHeading(): HeadingTop | undefined {
+    const heading = this.headingAtTop();
+    return heading?.element.tagName === "H1" ? undefined : heading;
   }
 
   // Records where the current entry is: the offset, the width of the page and the heading at the top of the view.
@@ -407,21 +563,11 @@ export class Controller {
     const entry = this.entry;
     if (entry === undefined || !sameTarget(entry, this.page)) return false;
 
-    const scrollTop = this._main.scrollTop;
-    const headings = this.headingTops();
-    let heading: string | undefined;
-    let low = 0;
-    let high = headings.length - 1;
-    while (low <= high) {
-      const middle = (low + high) >> 1;
-      if (headings[middle].top <= scrollTop + 1) {
-        heading = headings[middle].id;
-        low = middle + 1;
-      } else {
-        high = middle - 1;
-      }
-    }
-    entry.position = { scrollTop, width: this._main.clientWidth, heading };
+    entry.position = {
+      scrollTop: this._main.scrollTop,
+      width: this._main.clientWidth,
+      heading: this.headingAtTop()?.id,
+    };
     return true;
   }
 
@@ -458,6 +604,21 @@ export class Controller {
       this.push({ folder: entry.folder, text: entry.text, anchor: id, keptPage: entry.keptPage });
     }
     this.reveal(id);
+    this.changed();
+  }
+
+  // Another place of the target shown, typed in the target field: a new entry at that heading, or at the top of the
+  // page without one.
+  private showPlace(anchor: string | undefined): void {
+    const entry = this.entry;
+    if (entry === undefined) return;
+    this.push({
+      folder: entry.folder,
+      text: entry.text,
+      ...(anchor !== undefined ? { anchor } : {}),
+      keptPage: entry.keptPage,
+    });
+    this.reveal(anchor);
     this.changed();
   }
 
@@ -575,7 +736,16 @@ export class Controller {
         this._suggestSeq = -1;
         this._suggestionsText = this._suggestText;
         this.suggestions = message.completions;
-        this.activeSuggestion = message.completions.length > 0 ? 0 : -1;
+        // The bookmarks are shown before the answer and stay as they are, so a bookmark selected meanwhile stays
+        // selected.
+        if (this.activeSuggestion < 0 || this.activeSuggestion >= this.suggestedBookmarks.length) {
+          this.activeSuggestion = this.suggestionCount > 0 ? 0 : -1;
+        }
+        this.changed();
+        break;
+      case "bookmarks":
+        this.bookmarks = message.bookmarks;
+        this.bookmarksChanged();
         this.changed();
         break;
       case "focus":
@@ -665,8 +835,20 @@ export class Controller {
       return page.keywords.find((k) => normalizeName(k.name) === keyword)?.anchor;
     }
     if (entry.dataType !== undefined) return page.types.find((t) => t.name === entry.dataType)?.anchor;
-    if (entry.fragment !== undefined) return findHeading(this._main, entry.fragment)?.id;
+    if (entry.fragment !== undefined) return this.placeOnPage(entry.fragment, page);
     return undefined;
+  }
+
+  // The anchor of a place on the rendered page: the heading with that id, else the keyword or data type with that name,
+  // compared as the keyword of a `show` is.
+  private placeOnPage(place: string, page: PageMessage): string | undefined {
+    const heading = findHeading(this._main, place);
+    if (heading !== undefined) return heading.id;
+    const name = normalizeName(place);
+    return (
+      page.keywords.find((k) => normalizeName(k.name) === name) ??
+      page.types.find((t) => normalizeName(t.name) === name)
+    )?.anchor;
   }
 
   private readonly onClick = (event: MouseEvent): void => {
@@ -784,10 +966,9 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
     };
   }, [controller]);
 
-  const entry = controller.entry;
-  // Typed text belongs to the history entry it was typed in; another entry shows its own target.
+  // Typed text belongs to the history entry it was typed in; another entry shows its own target and place.
   const [edit, setEdit] = useState<{ index: number; text: string } | undefined>(undefined);
-  const targetText = edit !== undefined && edit.index === controller.state.index ? edit.text : (entry?.text ?? "");
+  const targetText = edit !== undefined && edit.index === controller.state.index ? edit.text : controller.fieldText;
   // Text that was typed but not entered is dropped when the viewer navigates.
   useEffect(() => setEdit(undefined), [controller.state.index, controller.state.history]);
 
@@ -814,9 +995,22 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
   });
 
   // Puts a suggestion into the target field. A directory gets its content listed next; any other suggestion is loaded
-  // by Enter and a click, and only put in by Tab.
+  // by Enter and a click, and only put in by Tab. A bookmark is opened at its place, and Tab puts its target and place
+  // in.
   const choose = (index: number, load: boolean): void => {
-    const completion = controller.suggestions[index];
+    const bookmark = controller.suggestedBookmarks[index];
+    if (bookmark !== undefined) {
+      if (load) {
+        controller.openBookmark(bookmark);
+        setEdit(undefined);
+      } else {
+        setEdit({ index: controller.state.index, text: targetFieldText(bookmark.text, bookmark.heading) });
+        controller.closeSuggestions();
+      }
+      return;
+    }
+
+    const completion = controller.suggestions[index - controller.suggestedBookmarks.length];
     const field = targetField.current;
     if (completion === undefined || field === null) return;
 
@@ -875,6 +1069,9 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
   const folderName = controller.folders.length > 1 ? controller.folderName : undefined;
   const outlineHidden = state.outlineHidden === true;
   const outlineLabel = outlineHidden ? "Show Outline" : "Hide Outline";
+  const place = controller.place;
+  const bookmarked = controller.bookmarked;
+  const starLabel = bookmarked ? "Remove Bookmark" : "Add Bookmark";
 
   return (
     <>
@@ -917,6 +1114,19 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           onKeyDown={onTargetKeyDown}
           onBlur={() => controller.closeSuggestions()}
         />
+        <vscode-toolbar-button
+          icon={bookmarked ? "star-full" : "star-empty"}
+          label={starLabel}
+          title={starLabel}
+          toggleable
+          checked={bookmarked}
+          aria-disabled={place === undefined}
+          onChange={(event) => {
+            controller.toggleBookmark();
+            // Without a page, Enter or Space on the button change nothing.
+            (event.currentTarget as HTMLElement & { checked: boolean }).checked = controller.bookmarked;
+          }}
+        />
         <vscode-toolbar-button icon="refresh" label="Refresh" title="Refresh" onClick={() => controller.refresh()} />
         <vscode-toolbar-button
           icon="markdown"
@@ -958,9 +1168,11 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           listRef={suggestionList}
           field={targetField.current}
           text={targetText}
+          bookmarks={controller.suggestedBookmarks}
           completions={controller.suggestions}
           active={controller.activeSuggestion}
           onChoose={(index) => choose(index, true)}
+          onRemove={(bookmark) => controller.removeBookmark(bookmark)}
         />
       )}
       <div class="progress">

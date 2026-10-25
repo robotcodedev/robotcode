@@ -3,6 +3,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { LSPErrorCodes, ResponseError } from "vscode-languageclient/node";
 import { CONFIG_SECTION } from "./config";
+import { DocumentationBookmark, DocumentationBookmarks } from "./documentationViewerBookmarks";
 import {
   describeRobotEnvironmentProblem,
   DocumentationTarget,
@@ -76,7 +77,8 @@ type ViewerMessage =
   | { type: "pickFolder" }
   | { type: "openMarkdown"; seq: number }
   | { type: "newViewer" }
-  | { type: "suggest"; seq: number; folder?: string; text: string };
+  | { type: "suggest"; seq: number; folder?: string; text: string }
+  | { type: "bookmark"; folder?: string; text: string; heading?: string; title?: string; add: boolean };
 
 // What a generation depends on besides the folder and the Python command.
 interface GenerationCommand {
@@ -338,11 +340,15 @@ export class DocumentationViewerManager implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
     private readonly pythonManager: PythonManager,
     private readonly languageClientsManager: LanguageClientsManager,
+    private readonly bookmarks: DocumentationBookmarks,
   ) {
     this._disposables = vscode.Disposable.from(
       languageClientsManager.onRobotEnvironmentStateChanged((event) =>
         this.onEnvironmentChanged(event.folder, event.state),
       ),
+      bookmarks.onDidChange(() => {
+        for (const viewer of this._viewers) if (viewer.ready) this.postBookmarks(viewer);
+      }),
       vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
         deserializeWebviewPanel: async (panel: vscode.WebviewPanel, state: unknown) => {
           const viewerState = state as ViewerState | undefined;
@@ -360,6 +366,10 @@ export class DocumentationViewerManager implements vscode.Disposable {
       ),
       vscode.commands.registerCommand("robotcode.showInNewDocumentationViewer", (target: DocumentationTarget) =>
         this.showTarget(target, true),
+      ),
+      vscode.commands.registerCommand(
+        "robotcode.documentationBookmarks.open",
+        (bookmark: DocumentationBookmark, folderUri?: string) => this.showBookmark(bookmark, folderUri),
       ),
       vscode.workspace.onDidChangeWorkspaceFolders(() => {
         for (const viewer of this._viewers) if (viewer.ready) postFolders(viewer);
@@ -422,17 +432,7 @@ export class DocumentationViewerManager implements vscode.Disposable {
 
     const text = await targetText(target, folder);
 
-    let viewer = newViewer ? undefined : (this._pinned ?? this.lastUsedViewer());
-    if (viewer !== undefined) {
-      viewer.panel.reveal(viewer.panel.viewColumn, true);
-      this.markUsed(viewer);
-    } else {
-      // Beside the editor, the editor keeps the focus; in its own group, the new viewer covers it and takes it.
-      const column = openColumn();
-      viewer = this.createViewer(column, column !== vscode.ViewColumn.Active, folder, text);
-    }
-
-    viewer.show({
+    this.viewerToShow(newViewer, folder, text).show({
       type: "show",
       folder: folder.uri.toString(),
       text,
@@ -440,6 +440,34 @@ export class DocumentationViewerManager implements vscode.Disposable {
       anchor: target.anchor,
       dataType: target.dataType,
     });
+  }
+
+  // A bookmark of the view Documentation Bookmarks, shown as an action of the editor shows its target. A bookmark of
+  // All Workspaces opens in the folder of that viewer, else in the folder of the active editor.
+  private async showBookmark(bookmark: DocumentationBookmark, folderUri: string | undefined): Promise<void> {
+    const used = this._pinned ?? this.lastUsedViewer();
+    const folder = folderOf(folderUri) ?? folderOf(used?.current?.folder) ?? used?.folder ?? (await pickFolder());
+    if (folder === undefined) return;
+
+    this.viewerToShow(false, folder, bookmark.text).show({
+      type: "show",
+      folder: folder.uri.toString(),
+      text: bookmark.text,
+      anchor: bookmark.heading,
+    });
+  }
+
+  // The viewer that shows documentation from the editor: the pinned one, else the one used last, else a new one.
+  private viewerToShow(newViewer: boolean, folder: vscode.WorkspaceFolder, title: string): Viewer {
+    const viewer = newViewer ? undefined : (this._pinned ?? this.lastUsedViewer());
+    if (viewer !== undefined) {
+      viewer.panel.reveal(viewer.panel.viewColumn, true);
+      this.markUsed(viewer);
+      return viewer;
+    }
+    // Beside the editor, the editor keeps the focus; in its own group, the new viewer covers it and takes it.
+    const column = openColumn();
+    return this.createViewer(column, column !== vscode.ViewColumn.Active, folder, title);
   }
 
   private lastUsedViewer(): Viewer | undefined {
@@ -557,6 +585,7 @@ export class DocumentationViewerManager implements vscode.Disposable {
       case "ready": {
         viewer.ready = true;
         postFolders(viewer);
+        this.postBookmarks(viewer);
         const state = message.state;
         viewer.id = state?.id ?? viewer.id;
         viewer.current = state?.history?.[state.index ?? -1] ?? viewer.current;
@@ -602,6 +631,9 @@ export class DocumentationViewerManager implements vscode.Disposable {
       case "suggest":
         void this.suggest(viewer, message.seq, message.folder, message.text);
         break;
+      case "bookmark":
+        void this.setBookmark(viewer, message);
+        break;
       case "pin":
         if (message.pinned) {
           if (this._pinned !== undefined && this._pinned !== viewer) this._pinned.post({ type: "pin", pinned: false });
@@ -646,6 +678,25 @@ export class DocumentationViewerManager implements vscode.Disposable {
     viewer.post({ type: "suggestions", seq, completions });
   }
 
+  // The bookmarks that hold for the viewer's folder.
+  private postBookmarks(viewer: Viewer): void {
+    viewer.post({ type: "bookmarks", bookmarks: this.bookmarks.forFolder(viewer.folder?.uri.toString()) });
+  }
+
+  // The star of a viewer, and the remove button of its suggestion list. A new bookmark goes into the folder of the
+  // viewer's page, never into All Workspaces; a removed one leaves the folder and All Workspaces, which the viewer shows
+  // as one. The viewer gets the bookmarks also when nothing has changed, since its star has changed already.
+  private async setBookmark(
+    viewer: Viewer,
+    message: { folder?: string; text: string; heading?: string; title?: string; add: boolean },
+  ): Promise<void> {
+    const folder = (folderOf(message.folder) ?? viewer.folder)?.uri.toString();
+    const bookmark = { text: message.text, heading: message.heading, title: message.title };
+    if (!message.add) await this.bookmarks.removePlace(folder, bookmark);
+    else if (folder !== undefined) await this.bookmarks.add(folder, bookmark);
+    if (viewer.ready) this.postBookmarks(viewer);
+  }
+
   private async load(
     viewer: Viewer,
     seq: number,
@@ -669,8 +720,10 @@ export class DocumentationViewerManager implements vscode.Disposable {
       return;
     }
 
+    const switched = viewer.folder?.uri.toString() !== folder.uri.toString();
     viewer.folder = folder;
     viewer.current = { folder: folder.uri.toString(), text };
+    if (switched) this.postBookmarks(viewer);
 
     const pythonCommand = await this.usableInterpreter(viewer, seq, folder, text, refresh, keptPage);
     if (pythonCommand === undefined || viewer.seq !== seq) return;

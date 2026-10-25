@@ -339,10 +339,21 @@
           "contextualTitle": "Robot Framework",
           "icon": "icons/svg/robot_light.svg",
           "when": "resourceLangId == robotframework"
+        },
+        {
+          "id": "robotcode.documentationBookmarksView",
+          "name": "Documentation Bookmarks",
+          "contextualTitle": "Robot Framework",
+          "icon": "icons/svg/robot_light.svg",
+          "when": "resourceLangId == robotframework || activeWebviewPanelId == 'robotcode.documentationViewer'"
         }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "robotcode.documentationBookmarksView",
+        "contents": "There are no documentation bookmarks. The star in the toolbar of a Documentation Viewer bookmarks the place the viewer shows.\n[Reset Documentation Bookmarks](command:robotcode.documentationBookmarks.reset)"
+      },
       {
         "view": "testing",
         "contents": "RobotCode found no tests or tasks in this workspace. Tests are looked for as robotcode discover does, with the paths, profiles and .robotignore of the folder's robot.toml. Problems while reading them are listed in the Problems view.\n[Refresh Tests](command:testing.refreshTests)\n[Troubleshooting](https://robotcode.io/guides/vscode/troubleshooting/)",
@@ -1501,6 +1512,29 @@
         "icon": "$(empty-window)"
       },
       {
+        "title": "Open Bookmark",
+        "command": "robotcode.documentationBookmarks.open"
+      },
+      {
+        "title": "Remove Bookmark",
+        "command": "robotcode.documentationBookmarks.remove",
+        "icon": "$(close)"
+      },
+      {
+        "title": "Move to All Workspaces",
+        "command": "robotcode.documentationBookmarks.moveToAllWorkspaces"
+      },
+      {
+        "title": "Move to Workspace Folder",
+        "command": "robotcode.documentationBookmarks.moveToFolder"
+      },
+      {
+        "title": "Reset Documentation Bookmarks",
+        "category": "RobotCode",
+        "command": "robotcode.documentationBookmarks.reset",
+        "icon": "$(discard)"
+      },
+      {
         "title": "New Robot Framework File",
         "shortTitle": "Robot Framework File",
         "category": "RobotCode",
@@ -1547,6 +1581,22 @@
         {
           "command": "robotcode.chatPlugins.removeMarketplace",
           "when": "robotcode.chatPlugins.marketplaceRegistered"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.open",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.remove",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.moveToAllWorkspaces",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.moveToFolder",
+          "when": "false"
         }
       ],
       "explorer/context": [
@@ -1585,6 +1635,11 @@
           "command": "robotcode.keywordsTreeView.refresh",
           "when": "view == robotcode.keywordsTreeView",
           "group": "navigation"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.reset",
+          "when": "view == robotcode.documentationBookmarksView",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -1612,6 +1667,26 @@
           "command": "robotcode.keywordsTreeView.showDocumentation",
           "when": "view == robotcode.keywordsTreeView",
           "group": "documentation@3"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.remove",
+          "when": "view == robotcode.documentationBookmarksView && viewItem =~ /Bookmark$/",
+          "group": "inline"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.moveToAllWorkspaces",
+          "when": "view == robotcode.documentationBookmarksView && viewItem == folderBookmark",
+          "group": "move@1"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.moveToFolder",
+          "when": "view == robotcode.documentationBookmarksView && (viewItem == allWorkspacesBookmark && workspaceFolderCount > 0 || viewItem == folderBookmark && workspaceFolderCount > 1)",
+          "group": "move@2"
+        },
+        {
+          "command": "robotcode.documentationBookmarks.remove",
+          "when": "view == robotcode.documentationBookmarksView && viewItem =~ /Bookmark$/",
+          "group": "remove@1"
         }
       ],
       "editor/title/context": [

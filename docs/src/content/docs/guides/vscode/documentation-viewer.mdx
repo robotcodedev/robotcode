@@ -1,6 +1,6 @@
 ---
 title: The Documentation Viewer
-description: 'Read the documentation of libraries, resource files and keywords in VS Code, in an editor tab with an outline, links, search and history.'
+description: 'Read the documentation of libraries, resource files and keywords in VS Code, in an editor tab with an outline, links, search, bookmarks and history.'
 sidebar:
   label: Documentation Viewer
   order: 3
@@ -28,6 +28,7 @@ The **Documentation Viewer** shows the documentation of a library, a resource fi
 - **Show in Documentation Viewer** is the first source action (right-click → *Source Action…*). It is offered on the name of a `Library` or `Resource` import, on a keyword in a keyword call, setup, teardown or template, and on the name of a keyword definition. It shows the library, resource file or suite file and scrolls to the keyword. It is the preferred source action, so a key of your own can run it without the menu, see [A key for the source actions](#a-key-for-the-source-actions).
 - **Show in New Documentation Viewer**, offered next to it, shows the same in a new viewer, for example to keep two libraries side by side.
 - In the **Keywords** view, the book button of an import or keyword shows it in the Documentation Viewer, and its context menu has both actions, also for the keywords of the current file.
+- In the **Documentation Bookmarks** view, a click on a bookmark shows it, see [Bookmarks](#bookmarks).
 - The **links in documentation** that RobotCode shows in a hover, in the details of a completion item, in signature help and in the tooltips of the Keywords view open the viewer, see [Links in hovers and tooltips](#links-in-hovers-and-tooltips).
 - **RobotCode: Copy Documentation Viewer into New Window**, in the command palette and in the context menu of a viewer's tab, opens a second viewer in a new window, with the target of the active viewer, or else of the viewer you used last, or `BuiltIn` without any viewer. From a tab's context menu it also copies the active viewer, which need not be the viewer whose tab you clicked.
 
@@ -72,9 +73,23 @@ The links show the documentation of the import that the analysis used, also for 
 
 ## The target field
 
-The field in the toolbar shows what the viewer documents and takes a new target, as the [targets](/guides/browsing-documentation/#targets) of `robotcode doc`: `Name`, `Name::arg1::arg2`, or the path of a library, resource or suite file, relative to the workspace folder or absolute. `Enter` shows it in the same tab, which takes the name of the library or file as its title. Entering the target that is shown generates it again.
+The field in the toolbar shows what the viewer documents and takes a new target, as the [targets](/guides/browsing-documentation/#targets) of `robotcode doc`: `Name`, `Name::arg1::arg2`, or the path of a library, resource or suite file, relative to the workspace folder or absolute. `Enter` shows it in the same tab, which takes the name of the library or file as its title.
 
-While you type, a list under the field completes the name before `::` as the editor completes the names of `Library` and `Resource` imports: modules on the Python path, the standard libraries, and library, resource and suite files and directories, relative to the workspace folder or absolute, one level at a time. `Ctrl+Space` and `↓` open the list too; on macOS, where `Ctrl+Space` usually switches the input source, `Option+Esc` opens it as well. As in the editor, the names in the case you typed come first, and the first suggestion is selected. `↑` and `↓` select another, `Enter` or a click shows it, and `Tab` only puts it into the field. A directory is put in with a `/`, and the list then offers its content. `Esc` closes the list, and `Enter` then shows the text as you typed it. The list needs a running language server for the folder: it stays closed while RobotCode waits for the folder's Python environment, and when RobotCode is switched off for the folder.
+As a browser's address bar shows the part of a page, the field shows after a `#` the place at the top of the view, the id of its heading, such as `Collections#get-from-dictionary`; at the top of the page it shows the target alone. A text with a `#` opens the target at that place: the text after the last `#` is the id of a heading or the name of a keyword or data type, such as `BuiltIn#Should Be Equal`. Entering the target and place that are shown generates the page again; another place of the same target moves there, and back returns. A target with a `#` of its own, such as the path `issue#1/shop.resource`, ends with a `#`: `issue#1/shop.resource#`. So that also the last headings of a page can come to the top, the page scrolls past its end, as VS Code's editor does.
+
+While you type, a list under the field offers the [bookmarks](#bookmarks) whose name contains what you typed, and below them the completion of the name before `::`, as the editor completes the names of `Library` and `Resource` imports: modules on the Python path, the standard libraries, and library, resource and suite files and directories, relative to the workspace folder or absolute, one level at a time. `Ctrl+Space` and `↓` open the list too, and in an empty field it offers all bookmarks; on macOS, where `Ctrl+Space` usually switches the input source, `Option+Esc` opens it as well. As in the editor, the completions in the case you typed come first, and the first suggestion is selected. `↑` and `↓` select another, `Enter` or a click shows it, and `Tab` only puts it into the field, a bookmark with its place after a `#`. A directory is put in with a `/`, and the list then offers its content. `Esc` closes the list, and `Enter` then shows the text as you typed it. The completion needs a running language server for the folder: while RobotCode waits for the folder's Python environment, and when RobotCode is switched off for the folder, the list offers only the bookmarks.
+
+## Bookmarks
+
+The star after the target field bookmarks the place the viewer shows, in the workspace folder of the viewer: the target as the field shows it before the `#`, with its arguments, and the heading at the top of the view, such as the keyword `Get From Dictionary` of `Collections`. At the top of the page, the bookmark holds the target alone. The star is filled while the viewer shows a bookmarked place, and a click on the filled star removes the bookmark. A target can have several bookmarks, one for each place.
+
+A bookmark shows as `Collections › Get From Dictionary` and opens its target at its place. At first it holds only for its workspace folder. Whether it fits your other workspaces, such as a library of your project or a path relative to the folder, is yours to decide: moved to *All Workspaces* in the Documentation Bookmarks view, it holds in all your workspaces. VS Code's Settings Sync takes the bookmarks of *All Workspaces* to your other machines while it syncs extensions, between machines with the same version of RobotCode.
+
+In the list under the target field, a bookmark has a ✕ while the mouse rests on it and while it is selected, which removes the bookmark and keeps the list open. A bookmark of *All Workspaces* that you remove in a viewer, with the ✕ or with the star, is gone in all workspaces. With the keyboard, open the bookmark and switch its star off, or remove it in the view.
+
+The **Documentation Bookmarks** view in the Explorer lists the bookmarks while a Robot Framework file or a Documentation Viewer is the active editor, in the group *All Workspaces* and in a group for each workspace folder. A click on a bookmark shows it in the viewer that [an action from the editor uses](#which-viewer-an-action-uses); a bookmark of *All Workspaces* opens in the workspace folder of that viewer. *Move to All Workspaces* and *Move to Workspace Folder* in the context menu of a bookmark move it to the other group; in a workspace with several folders, *Move to Workspace Folder* asks for the folder. You can also drag a bookmark onto another group. The ✕ of a bookmark, also *Remove Bookmark* in its context menu, removes it from its group.
+
+The first start of RobotCode bookmarks the standard libraries of Robot Framework in *All Workspaces*: `BuiltIn`, `Collections`, `DateTime`, `Dialogs`, `OperatingSystem`, `Process`, `Remote`, `Screenshot`, `String`, `Telnet` and `XML`. They are bookmarks like your own, so one that you remove stays removed. **RobotCode: Reset Documentation Bookmarks**, in the command palette and in the title of the view, asks for a confirmation, removes the bookmarks of all workspaces and of the open workspace folders, and bookmarks the standard libraries again.
 
 ## Workspace folders
 
@@ -108,7 +123,7 @@ Several viewers can be open at the same time. You arrange them like editors: dra
 
 ## Which viewer an action uses
 
-*Show in Documentation Viewer*, the links in hovers and tooltips and the book button of the Keywords view use:
+*Show in Documentation Viewer*, the links in hovers and tooltips, the book button of the Keywords view and the bookmarks of the Documentation Bookmarks view use:
 
 1. the viewer you pinned with the pin button in its toolbar;
 2. otherwise the viewer you used last;
@@ -138,6 +153,7 @@ The viewer generates pages only when the Python environment of the workspace fol
 
 - Import arguments are passed to `robotcode doc` as text, so typed values such as `${True}` or lists arrive in their string form.
 - The completion in the target field lists every module on the Python path, as the editor's import completion does, also modules that are no libraries, such as Python's `collections` next to the standard library `Collections`.
+- Python 3.13 and newer have no `telnetlib`, so the standard library `Telnet` cannot be imported there; its bookmark then shows the import error, and you can remove it.
 - Pages are generated from the saved files; unsaved changes in an editor are not shown.
 - Libraries whose keywords exist only while a test runs cannot be documented; see [Libraries that need a running test](/guides/browsing-documentation/#libraries-that-need-a-running-test).
 - The page needs VS Code's built-in extension *Markdown Language Features*. Without it, the viewer shows a notice and the page as plain Markdown text.

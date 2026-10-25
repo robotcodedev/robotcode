@@ -90,6 +90,23 @@ body {
   opacity: 0.7;
 }
 
+/* The remove button of a bookmark, while the mouse rests on its row and while the row is selected. */
+.target-suggestion .remove {
+  flex: none;
+  visibility: hidden;
+  padding: 1px;
+  border-radius: 3px;
+}
+
+.target-suggestion:hover .remove,
+.target-suggestion.active .remove {
+  visibility: visible;
+}
+
+.target-suggestion .remove:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
 vscode-toolbar-button[aria-disabled="true"] {
   opacity: 0.4;
   pointer-events: none;
@@ -206,6 +223,14 @@ main.markdown-body {
   line-height: var(--markdown-line-height, 22px);
   word-wrap: break-word;
   outline: none;
+}
+
+/* As VS Code's editor scrolls beyond its last line, the page scrolls past its end, so that also its last headings come
+   to the top of the view, where the target field and the star take their place from. */
+main.markdown-body::after {
+  content: "";
+  display: block;
+  height: calc(100% - 2em);
 }
 
 .notice {

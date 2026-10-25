@@ -139,6 +139,21 @@ export interface SuggestionsMessage {
   completions: TargetCompletion[];
 }
 
+// A bookmarked place: the target as the target field shows it before its place, and the heading at the top of the view
+// with the title the outline shows for it; both are missing for the top of the page.
+export interface Bookmark {
+  text: string;
+  heading?: string;
+  title?: string;
+}
+
+// The bookmarks that hold for the viewer's folder, sorted by label: after each `ready`, after each change, and when the
+// viewer switches its folder.
+export interface BookmarksMessage {
+  type: "bookmarks";
+  bookmarks: Bookmark[];
+}
+
 export type ExtensionMessage =
   | PageMessage
   | StatusMessage
@@ -148,7 +163,8 @@ export type ExtensionMessage =
   | FoldersMessage
   | FolderMessage
   | ReloadMessage
-  | SuggestionsMessage;
+  | SuggestionsMessage
+  | BookmarksMessage;
 
 export type ViewerMessage =
   | { type: "ready"; state?: ViewerState }
@@ -162,7 +178,10 @@ export type ViewerMessage =
   // A new viewer on `BuiltIn`, in the folder of this viewer.
   | { type: "newViewer" }
   // The completion of the text in the target field.
-  | { type: "suggest"; seq: number; folder?: string; text: string };
+  | { type: "suggest"; seq: number; folder?: string; text: string }
+  // Adds the bookmark of a place to the folder of the viewer's page, or removes the place from that folder and from All
+  // Workspaces.
+  | ({ type: "bookmark"; folder?: string; add: boolean } & Bookmark);
 
 const api = acquireVsCodeApi();
 

@@ -49,6 +49,11 @@ function headingText(heading: Element): string {
   return (heading.textContent ?? "").trim();
 }
 
+// The title of a heading as the outline shows it: the name of a keyword or data type, else its text.
+export function headingTitle(heading: HTMLElement): string {
+  return heading.dataset.name ?? headingText(heading);
+}
+
 // The h3 headings under `Keywords` and `Data types` get the anchors of the JSON, so that keyword and type
 // links hold even where VS Code's heading ids differ. Only when the counts match.
 function assignAnchors(root: DocumentFragment, keywords: NamedAnchor[], types: NamedAnchor[]): void {
@@ -148,7 +153,7 @@ export function buildOutline(main: HTMLElement, page: PageMessage): OutlineSecti
 
     while (parents[parents.length - 1].level >= level) parents.pop();
     const kind = section.title === KEYWORDS ? "keyword" : section.title === DATA_TYPES ? "type" : "heading";
-    const entry: OutlineEntry = { id: heading.id, title: heading.dataset.name ?? headingText(heading), kind };
+    const entry: OutlineEntry = { id: heading.id, title: headingTitle(heading), kind };
     parents[parents.length - 1].children.push(entry);
     if (introduction) parents.push({ level, children: (entry.children = []) });
   }
