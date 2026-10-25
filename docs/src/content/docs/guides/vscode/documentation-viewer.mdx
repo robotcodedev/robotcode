@@ -81,11 +81,11 @@ While you type, a list under the field offers the [bookmarks](#bookmarks) whose 
 
 ## Bookmarks
 
-The star after the target field bookmarks the place the viewer shows, in the workspace folder of the viewer: the target as the field shows it before the `#`, with its arguments, and the heading at the top of the view, such as the keyword `Get From Dictionary` of `Collections`. At the top of the page, the bookmark holds the target alone. The star is filled while the viewer shows a bookmarked place, and a click on the filled star removes the bookmark. A target can have several bookmarks, one for each place.
+The star after the target field bookmarks the place the viewer shows, in the workspace folder of the viewer: the target as the field shows it before the `#`, with its arguments, and the heading at the top of the view, such as the keyword `Get From Dictionary` of `Collections`. At the top of the page, the bookmark holds the target alone. The star is filled while the viewer shows a bookmarked place, and a click on the filled star removes the bookmark. A target can have several bookmarks, one for each place. *Add Bookmark* in the context menu of the [outline](#outline-and-filter) bookmarks an entry without going to it.
 
 A bookmark shows as `Collections › Get From Dictionary` and opens its target at its place. At first it holds only for its workspace folder. Whether it fits your other workspaces, such as a library of your project or a path relative to the folder, is yours to decide: moved to *All Workspaces* in the Documentation Bookmarks view, it holds in all your workspaces. VS Code's Settings Sync takes the bookmarks of *All Workspaces* to your other machines while it syncs extensions, between machines with the same version of RobotCode.
 
-In the list under the target field, a bookmark has a ✕ while the mouse rests on it and while it is selected, which removes the bookmark and keeps the list open. A bookmark of *All Workspaces* that you remove in a viewer, with the ✕ or with the star, is gone in all workspaces. With the keyboard, open the bookmark and switch its star off, or remove it in the view.
+In the list under the target field, a bookmark has a ✕ while the mouse rests on it and while it is selected, which removes the bookmark and keeps the list open. A bookmark of *All Workspaces* that you remove in a viewer, with the ✕, with the star or with *Remove Bookmark* of the outline, is gone in all workspaces. With the keyboard, open the bookmark and switch its star off, or remove it in the view.
 
 The **Documentation Bookmarks** view in the Explorer lists the bookmarks while a Robot Framework file or a Documentation Viewer is the active editor, in the group *All Workspaces* and in a group for each workspace folder. A click on a bookmark shows it in the viewer that [an action from the editor uses](#which-viewer-an-action-uses); a bookmark of *All Workspaces* opens in the workspace folder of that viewer. *Move to All Workspaces* and *Move to Workspace Folder* in the context menu of a bookmark move it to the other group; in a workspace with several folders, *Move to Workspace Folder* asks for the folder. You can also drag a bookmark onto another group. The ✕ of a bookmark, also *Remove Bookmark* in its context menu, removes it from its group.
 
@@ -104,6 +104,13 @@ The outline on the left lists the sections of the page as a tree: below `Introdu
 - `↑` and `↓` move through the entries, `→` opens an entry or moves to the first entry below it, `←` closes an entry or moves to the entry it belongs to, `Home`, `End`, `Page Up` and `Page Down` move by more, and typing jumps to the next entry whose title starts with what you typed.
 - The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](/guides/browsing-documentation/#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. An entry stays while it or one of the entries below it matches.
 - The button at the start of the toolbar hides the outline with its filter field, so that the page gets the full width of the viewer, and shows them again. Each viewer keeps this, also after a reload of the window. The setting `robotcode.documentationViewer.showOutline` decides whether a new viewer starts with its outline.
+
+The context menu of an entry, opened with a right-click, with the context menu key or with `Shift+F10`, offers:
+
+- *Open*, which shows the entry as a click does.
+- *Open in New Documentation Viewer*, which shows the same target at the entry in a new viewer.
+- *Add Bookmark*, which bookmarks the place of the entry in the workspace folder of the viewer, as the star does while the entry is at the top of the view; the page stays where it is. While the place is bookmarked, *Remove Bookmark* takes its place and removes the bookmark, as the star does.
+- *Go to Source*, for a keyword whose file and line are known, which opens the file at the keyword: a resource or suite file, a library of your project, or a library of the Python environment, such as `Collections.py`. The file opens in the editor group of the text editor you used last, otherwise beside the viewer.
 
 ## Links, back and forward
 
@@ -129,7 +136,7 @@ Several viewers can be open at the same time. You arrange them like editors: dra
 2. otherwise the viewer you used last;
 3. otherwise a new viewer, beside the active editor, so that the focus stays in the editor.
 
-*Show in New Documentation Viewer* always opens a new viewer, also when a viewer is pinned; the new viewer is then the viewer used last. Only one viewer can be pinned at a time. With the setting `robotcode.documentationViewer.openLocation` set to `active`, a new viewer opens in the active editor group instead. Links, the outline, the target field, back and forward always stay in their own viewer.
+*Show in New Documentation Viewer*, and *Open in New Documentation Viewer* in the context menu of the outline, always open a new viewer, also when a viewer is pinned; the new viewer is then the viewer used last. Only one viewer can be pinned at a time. With the setting `robotcode.documentationViewer.openLocation` set to `active`, a new viewer opens in the active editor group instead. Links, the target field, back and forward, and the outline apart from *Open in New Documentation Viewer*, always stay in their own viewer.
 
 ## What a page is generated with
 

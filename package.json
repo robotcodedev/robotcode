@@ -1540,6 +1540,26 @@
         "icon": "$(discard)"
       },
       {
+        "title": "Open",
+        "command": "robotcode.documentationViewer.openEntry"
+      },
+      {
+        "title": "Open in New Documentation Viewer",
+        "command": "robotcode.documentationViewer.openEntryInNewViewer"
+      },
+      {
+        "title": "Go to Source",
+        "command": "robotcode.documentationViewer.goToEntrySource"
+      },
+      {
+        "title": "Add Bookmark",
+        "command": "robotcode.documentationViewer.addEntryBookmark"
+      },
+      {
+        "title": "Remove Bookmark",
+        "command": "robotcode.documentationViewer.removeEntryBookmark"
+      },
+      {
         "title": "New Robot Framework File",
         "shortTitle": "Robot Framework File",
         "category": "RobotCode",
@@ -1601,6 +1621,26 @@
         },
         {
           "command": "robotcode.documentationBookmarks.moveToFolder",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationViewer.openEntry",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationViewer.openEntryInNewViewer",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationViewer.goToEntrySource",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationViewer.addEntryBookmark",
+          "when": "false"
+        },
+        {
+          "command": "robotcode.documentationViewer.removeEntryBookmark",
           "when": "false"
         }
       ],
@@ -1698,6 +1738,33 @@
         {
           "command": "robotcode.copyDocumentationViewerToNewWindow",
           "when": "activeWebviewPanelId == 'robotcode.documentationViewer'"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "robotcode.documentationViewer.openEntry",
+          "when": "webviewId == 'robotcode.documentationViewer' && webviewSection == 'outlineEntry'",
+          "group": "1_open@1"
+        },
+        {
+          "command": "robotcode.documentationViewer.openEntryInNewViewer",
+          "when": "webviewId == 'robotcode.documentationViewer' && webviewSection == 'outlineEntry'",
+          "group": "1_open@2"
+        },
+        {
+          "command": "robotcode.documentationViewer.goToEntrySource",
+          "when": "webviewId == 'robotcode.documentationViewer' && webviewSection == 'outlineEntry' && entryHasSource",
+          "group": "2_source@1"
+        },
+        {
+          "command": "robotcode.documentationViewer.addEntryBookmark",
+          "when": "webviewId == 'robotcode.documentationViewer' && webviewSection == 'outlineEntry' && !entryBookmarked",
+          "group": "3_bookmark@1"
+        },
+        {
+          "command": "robotcode.documentationViewer.removeEntryBookmark",
+          "when": "webviewId == 'robotcode.documentationViewer' && webviewSection == 'outlineEntry' && entryBookmarked",
+          "group": "3_bookmark@1"
         }
       ],
       "file/newFile": [

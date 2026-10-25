@@ -1,8 +1,8 @@
 import { JSX, TargetedKeyboardEvent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { PageFinder } from "./find";
-import { Outline } from "./outline";
-import { buildOutline, findHeading, headingTitle, OutlineSection, renderPage, scrollToTop } from "./page";
+import { Outline, OutlineRowKind } from "./outline";
+import { buildOutline, findHeading, headingTitle, OutlineEntry, OutlineSection, renderPage, scrollToTop } from "./page";
 import {
   Bookmark,
   ExtensionMessage,
@@ -34,6 +34,10 @@ function sameTarget(a: Target | undefined, b: Target | undefined): boolean {
 
 function samePlace(a: Bookmark, b: Bookmark): boolean {
   return a.text === b.text && a.heading === b.heading;
+}
+
+function hasEntry(entries: OutlineEntry[], id: string): boolean {
+  return entries.some((entry) => entry.id === id || (entry.children !== undefined && hasEntry(entry.children, id)));
 }
 
 function normalizeName(name: string): string {
@@ -151,6 +155,8 @@ export class Controller {
   private _suggestText = "";
   private _suggestionsText = "";
   private _suggestTimer: number | undefined;
+  // The anchors of the page's keywords whose source the extension knows, for Go to Source in the outline's menu.
+  private _sourceAnchors = new Set<string>();
 
   constructor() {
     this.state = loadState() ?? { v: 1, id: "", history: [], index: -1, filter: "", collapsed: [], pinned: false };
@@ -392,6 +398,23 @@ export class Controller {
 
   removeBookmark(bookmark: Bookmark): void {
     this.setBookmark(bookmark, false);
+  }
+
+  // The context of VS Code's menu for a row of the outline, as its `data-vscode-context`: the viewer and the entry,
+  // whether the entry's place is bookmarked, and whether it is a keyword with a source. A static outline, whose entries
+  // only select, keeps VS Code's menu.
+  menuContext(id: string, title: string, kind: OutlineRowKind, section: OutlineSection): string | undefined {
+    const entry = this.entry;
+    if (section.static || entry === undefined || this.page === undefined) return undefined;
+    return JSON.stringify({
+      webviewSection: "outlineEntry",
+      preventDefaultContextMenuItems: true,
+      viewerId: this.state.id,
+      anchor: id,
+      title,
+      entryBookmarked: this.bookmarks.some((b) => b.text === entry.text && b.heading === id),
+      entryHasSource: kind === "keyword" && this._sourceAnchors.has(id),
+    });
   }
 
   // Opens a bookmark at its place, as a link opens one.
@@ -748,6 +771,12 @@ export class Controller {
         this.bookmarksChanged();
         this.changed();
         break;
+      case "openEntry": {
+        // Open in the context menu of an outline row: as a click on the row.
+        const section = this.sections.find((s) => s.id === message.anchor || hasEntry(s.children, message.anchor));
+        if (section !== undefined) this.choose(message.anchor, section);
+        break;
+      }
       case "focus":
         // The focus VS Code gives a webview while its page loads does not stick; the page takes it itself, unless
         // something in it has the focus already.
@@ -783,6 +812,7 @@ export class Controller {
     if (page.busy) this._generatedSeq = page.seq;
 
     this.page = page;
+    this._sourceAnchors = new Set(page.keywords.filter((k) => k.source).map((k) => k.anchor));
     this._pageSeq = page.seq;
     this.busy = page.busy;
     this.error = page.error;
@@ -1207,6 +1237,7 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
               selected={controller.selected}
               onChoose={(id, section) => controller.choose(id, section)}
               onToggle={(id) => controller.toggle(id)}
+              menuContext={(id, title, kind, section) => controller.menuContext(id, title, kind, section)}
             />
           </div>
         )}

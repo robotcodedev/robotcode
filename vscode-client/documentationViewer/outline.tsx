@@ -3,11 +3,15 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { createMatcher } from "./matcher";
 import { OutlineEntry, OutlineSection } from "./page";
 
+// The kind of a row: an entry's kind, or a row of a section.
+export type OutlineRowKind = OutlineEntry["kind"] | "section";
+
 interface Row {
   id: string;
   title: string;
   depth: number;
   icon: string;
+  kind: OutlineRowKind;
   section: OutlineSection;
   // The row the entry belongs to.
   parent?: string;
@@ -41,6 +45,7 @@ function visibleRows(sections: OutlineSection[], filter: string, collapsed: Set<
       title: entry.title,
       depth,
       icon: "kind" in entry ? ICONS[entry.kind] : "symbol-namespace",
+      kind: "kind" in entry ? entry.kind : "section",
       section,
       parent,
       expanded: children.length > 0 ? expanded : undefined,
@@ -58,9 +63,19 @@ export interface OutlineProps {
   selected: string | undefined;
   onChoose(id: string, section: OutlineSection): void;
   onToggle(id: string): void;
+  // The context of VS Code's menu for a row, as its `data-vscode-context`; without one, the row keeps VS Code's menu.
+  menuContext?(id: string, title: string, kind: OutlineRowKind, section: OutlineSection): string | undefined;
 }
 
-export function Outline({ sections, filter, collapsed, selected, onChoose, onToggle }: OutlineProps): JSX.Element {
+export function Outline({
+  sections,
+  filter,
+  collapsed,
+  selected,
+  onChoose,
+  onToggle,
+  menuContext,
+}: OutlineProps): JSX.Element {
   const rows = useMemo(() => visibleRows(sections, filter, new Set(collapsed)), [sections, filter, collapsed]);
   const [focused, setFocused] = useState<string | undefined>(undefined);
   const tree = useRef<HTMLDivElement>(null);
@@ -176,6 +191,7 @@ export function Outline({ sections, filter, collapsed, selected, onChoose, onTog
           aria-selected={row.id === selected}
           tabIndex={index === focusedIndex ? 0 : -1}
           title={row.title}
+          data-vscode-context={menuContext?.(row.id, row.title, row.kind, row.section)}
           onClick={() => {
             setFocused(row.id);
             onChoose(row.id, row.section);

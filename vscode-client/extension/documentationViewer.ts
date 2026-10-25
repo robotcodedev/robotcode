@@ -35,6 +35,12 @@ interface NamedAnchor {
   anchor: string;
 }
 
+// A keyword of a page, with the file and line of its definition when `robotcode doc` knows them.
+interface KeywordAnchor extends NamedAnchor {
+  source?: string;
+  lineno?: number;
+}
+
 interface DocumentationJson {
   name: string;
   type: string;
@@ -43,8 +49,15 @@ interface DocumentationJson {
   source?: string;
   lineno?: number;
   markdown: string;
-  keywords: NamedAnchor[];
+  keywords: KeywordAnchor[];
   types: NamedAnchor[];
+}
+
+// What a row of the outline gives the commands of its context menu, as its `data-vscode-context`.
+interface OutlineEntryContext {
+  viewerId?: string;
+  anchor?: string;
+  title?: string;
 }
 
 interface HistoryEntry {
@@ -107,8 +120,9 @@ class Viewer {
   seq = -1;
   key: string | undefined;
   current: HistoryEntry | undefined;
-  // The Markdown of the page sent last, for "Open as Markdown": the page itself only has its HTML.
-  lastPage: { seq: number; markdown: string } | undefined;
+  // The Markdown and the keywords of the page sent last, for "Open as Markdown" and "Go to Source": the page itself only
+  // has its HTML.
+  lastPage: { seq: number; markdown: string; keywords: KeywordAnchor[] } | undefined;
   // The interpreter of the last load in a usable environment; `undefined` while a load waits for the environment.
   python: string | undefined;
   // The load that waits for the folder's environment, and whether it was a refresh; the environment event loads the
@@ -269,7 +283,7 @@ async function sendPage(
   }
   if (viewer.seq !== seq || viewer.disposed) return;
 
-  viewer.lastPage = { seq, markdown: json.markdown };
+  viewer.lastPage = { seq, markdown: json.markdown, keywords: json.keywords ?? [] };
   viewer.panel.title = json.name;
   viewer.post({
     type: "page",
@@ -284,7 +298,12 @@ async function sendPage(
       source: json.source,
       lineno: json.lineno,
     },
-    keywords: (json.keywords ?? []).map(({ name, anchor }) => ({ name, anchor })),
+    // Go to Source needs the file and the line, so the page learns them only together.
+    keywords: (json.keywords ?? []).map(({ name, anchor, source, lineno }) => ({
+      name,
+      anchor,
+      ...(source && lineno !== undefined && lineno >= 1 ? { source, lineno } : {}),
+    })),
     types: (json.types ?? []).map(({ name, anchor }) => ({ name, anchor })),
     ...(renderError === undefined ? { html } : { renderError, markdown: json.markdown }),
     busy,
@@ -335,6 +354,8 @@ export class DocumentationViewerManager implements vscode.Disposable {
   private readonly _unusableSince = new Map<string, number>();
   private _pinned: Viewer | undefined;
   private _useCounter = 0;
+  // The editor group of the text editor used last, where Go to Source opens a keyword's file.
+  private _lastTextEditorColumn: vscode.ViewColumn | undefined = vscode.window.activeTextEditor?.viewColumn;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -371,10 +392,89 @@ export class DocumentationViewerManager implements vscode.Disposable {
         "robotcode.documentationBookmarks.open",
         (bookmark: DocumentationBookmark, folderUri?: string) => this.showBookmark(bookmark, folderUri),
       ),
+      vscode.commands.registerCommand("robotcode.documentationViewer.openEntry", (context?: OutlineEntryContext) => {
+        const entry = this.entryOf(context);
+        if (entry !== undefined) entry.viewer.post({ type: "openEntry", anchor: entry.anchor });
+      }),
+      vscode.commands.registerCommand(
+        "robotcode.documentationViewer.openEntryInNewViewer",
+        (context?: OutlineEntryContext) => {
+          const entry = this.entryOf(context);
+          const folder = entry !== undefined ? (folderOf(entry.folder) ?? entry.viewer.folder) : undefined;
+          if (entry === undefined || folder === undefined) return;
+          this.viewerToShow(true, folder, entry.text).show({
+            type: "show",
+            folder: folder.uri.toString(),
+            text: entry.text,
+            anchor: entry.anchor,
+          });
+        },
+      ),
+      vscode.commands.registerCommand(
+        "robotcode.documentationViewer.addEntryBookmark",
+        (context?: OutlineEntryContext) => {
+          const entry = this.entryOf(context);
+          if (entry !== undefined) {
+            void this.bookmarks.add(entry.folder, { text: entry.text, heading: entry.anchor, title: entry.title });
+          }
+        },
+      ),
+      vscode.commands.registerCommand(
+        "robotcode.documentationViewer.removeEntryBookmark",
+        (context?: OutlineEntryContext) => {
+          const entry = this.entryOf(context);
+          if (entry !== undefined)
+            void this.bookmarks.removePlace(entry.folder, { text: entry.text, heading: entry.anchor });
+        },
+      ),
+      vscode.commands.registerCommand(
+        "robotcode.documentationViewer.goToEntrySource",
+        (context?: OutlineEntryContext) => {
+          const entry = this.entryOf(context);
+          if (entry !== undefined) void this.goToSource(entry.viewer, entry.anchor);
+        },
+      ),
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
+        if (editor?.viewColumn !== undefined) this._lastTextEditorColumn = editor.viewColumn;
+      }),
       vscode.workspace.onDidChangeWorkspaceFolders(() => {
         for (const viewer of this._viewers) if (viewer.ready) postFolders(viewer);
       }),
     );
+  }
+
+  // The viewer of a row's context menu, found by the id in its context, with the target and folder it shows and the
+  // entry's anchor and title.
+  private entryOf(
+    context: OutlineEntryContext | undefined,
+  ): { viewer: Viewer; folder: string; text: string; anchor: string; title: string | undefined } | undefined {
+    const viewer = [...this._viewers].find((v) => v.id !== undefined && v.id === context?.viewerId);
+    const current = viewer?.current;
+    if (viewer === undefined || current === undefined || !context?.anchor) return undefined;
+    return { viewer, folder: current.folder, text: current.text, anchor: context.anchor, title: context.title };
+  }
+
+  // Go to Source of a keyword of the outline. The file and line come from the page this extension sent last, never from
+  // the menu's context, which the page sets. The file opens in the group of the text editor used last, else beside the
+  // viewer.
+  private async goToSource(viewer: Viewer, anchor: string): Promise<void> {
+    const keyword = viewer.lastPage?.keywords.find((k) => k.anchor === anchor);
+    if (!keyword?.source || keyword.lineno === undefined || keyword.lineno < 1) return;
+
+    const column = this._lastTextEditorColumn;
+    const viewColumn =
+      column !== undefined && vscode.window.tabGroups.all.some((group) => group.viewColumn === column)
+        ? column
+        : vscode.ViewColumn.Beside;
+    const position = new vscode.Position(keyword.lineno - 1, 0);
+    try {
+      await vscode.window.showTextDocument(vscode.Uri.file(keyword.source), {
+        viewColumn,
+        selection: new vscode.Range(position, position),
+      });
+    } catch (error) {
+      void vscode.window.showErrorMessage(`Cannot open the source of '${keyword.name}': ${errorMessage(error)}`);
+    }
   }
 
   dispose(): void {

@@ -26,9 +26,11 @@ const REMOVED_ELEMENTS = "script, style, link, meta, base, iframe, frame, frames
 const TAG = /<[A-Za-z][^\s/<>"']*(?:\s+[^\s"'<>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/g;
 const ATTRIBUTE = /(\s+)([^\s"'<>/=]+)(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
 
+// The context of VS Code's menu for webviews is the outline's own: documentation must not add the outline's entries to
+// its elements or take Cut, Copy and Paste away.
 function isBlocked(name: string): boolean {
   const lower = name.toLowerCase();
-  return lower === "style" || lower.startsWith("on");
+  return lower === "style" || lower.startsWith("on") || lower === "data-vscode-context";
 }
 
 // Chromium checks `style` attributes against the content security policy while it parses HTML, also into an

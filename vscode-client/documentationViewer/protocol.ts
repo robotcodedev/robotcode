@@ -41,6 +41,12 @@ export interface NamedAnchor {
   anchor: string;
 }
 
+// A keyword of the page, with the file and line of its definition when `robotcode doc` knows them.
+export interface KeywordAnchor extends NamedAnchor {
+  source?: string;
+  lineno?: number;
+}
+
 export interface PageMeta {
   name: string;
   type: string;
@@ -56,7 +62,7 @@ export interface PageMessage {
   folder: string;
   text: string;
   meta: PageMeta;
-  keywords: NamedAnchor[];
+  keywords: KeywordAnchor[];
   types: NamedAnchor[];
   html?: string;
   renderError?: string;
@@ -154,6 +160,12 @@ export interface BookmarksMessage {
   bookmarks: Bookmark[];
 }
 
+// Open in the context menu of an outline row: the entry, as a click on its row shows it.
+export interface OpenEntryMessage {
+  type: "openEntry";
+  anchor: string;
+}
+
 export type ExtensionMessage =
   | PageMessage
   | StatusMessage
@@ -164,7 +176,8 @@ export type ExtensionMessage =
   | FolderMessage
   | ReloadMessage
   | SuggestionsMessage
-  | BookmarksMessage;
+  | BookmarksMessage
+  | OpenEntryMessage;
 
 export type ViewerMessage =
   | { type: "ready"; state?: ViewerState }
