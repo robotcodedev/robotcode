@@ -18,7 +18,7 @@ The tooltip of RobotCode's widget in the status bar lists the versions of RobotC
 
 - **Tools | RobotCode | Restart RobotCode Language Server** checks the Python interpreter again, for example after you installed Robot Framework in a terminal, restarts the language server and reads the tests again. It also starts a language server again that was stopped in the **Language Servers** tool window.
 - **Tools | RobotCode | Clear Cache and Restart RobotCode Language Server** also deletes RobotCode's [analysis cache](/guides/pycharm/diagnostics-and-linting/#the-analysis-cache) while the language server runs, so that every library and file is loaded and analyzed again. Use it when diagnostics stay outdated although the files are right.
-- **Tools | RobotCode | Refresh Robot Framework Tests** reads the tests again when run markers are missing. When reading them fails, a notification "RobotCode could not discover the tests" shows the error, with **Retry** and, if the project folder contains a `robot.toml`, **Open robot.toml**.
+- **Tools | RobotCode | Refresh Robot Framework Tests** reads the tests again when run markers are missing. When reading them fails, a notification "RobotCode could not discover the tests" shows the error, with **Retry** and, if the project folder contains a `robot.toml`, **Open robot.toml**. When a selected configuration profile is the reason, because `robot.toml` does not define it, the notification "RobotCode cannot find the selected profile" appears instead, with **Remove from Selection** and **Select Configuration Profiles...**.
 
 ## Output and logs
 

@@ -85,7 +85,7 @@ RobotCode defines no keyboard shortcuts of its own; PyCharm's shortcuts work, fo
 
 ## Output and logs
 
-RobotCode has no tool window of its own. The log of its language server is in the **Language Servers** tool window of the LSP4IJ plugin, which RobotCode uses to talk to its language server; **Tools | RobotCode | Show Language Server Log** opens it. When RobotCode cannot read the tests of the project, a notification "RobotCode could not discover the tests" shows the error, with **Retry** and, if the project folder contains a `robot.toml`, **Open robot.toml**. See [Troubleshooting](/guides/pycharm/troubleshooting/).
+RobotCode has no tool window of its own. The log of its language server is in the **Language Servers** tool window of the LSP4IJ plugin, which RobotCode uses to talk to its language server; **Tools | RobotCode | Show Language Server Log** opens it. When RobotCode cannot read the tests of the project, a notification "RobotCode could not discover the tests" shows the error, with **Retry** and, if the project folder contains a `robot.toml`, **Open robot.toml**. When a selected configuration profile is the reason, because `robot.toml` does not define it, the notification "RobotCode cannot find the selected profile" appears instead, with **Remove from Selection** and **Select Configuration Profiles...**. See [Troubleshooting](/guides/pycharm/troubleshooting/).
 
 ## Pages of this guide
 

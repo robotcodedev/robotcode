@@ -73,6 +73,8 @@ The profiles of `robot.toml` let one project run against different environments,
 
 Without a selection, the `default-profiles` of `robot.toml` apply. The selection is personal, and the status bar widget shows it. A run configuration can choose its own profiles with the option **Configuration profiles**, and **Run with Profile...** runs once with another one, see [Running Tests](/guides/pycharm/running-tests/#running-with-a-profile).
 
+When the selection names a profile that `robot.toml` does not define, for example after it was renamed, test discovery and runs stop. RobotCode reports it after the language server has started, with **Remove from Selection** and **Select Configuration Profiles...**.
+
 ## Switching RobotCode off
 
 **Disable extension** on the settings page **General**, or **Disable RobotCode for This Project** in the banner, switches RobotCode off for the project: no language server, no test discovery and no run markers. **Tools | RobotCode | Enable RobotCode for This Project** switches it on again.

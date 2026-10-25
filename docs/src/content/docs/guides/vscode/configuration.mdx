@@ -73,6 +73,8 @@ The profiles of `robot.toml` let one project run against different environments,
   label="RobotCode: Select Configuration Profiles from the command palette selects the profile ci, Staging shop, for the folder robotcode-demo; Debug Test on Order Coffee then stops at a breakpoint in Open Shop As, where the values at the end of the lines show the BASE_URL of the profile, https://staging.shop.example."
 />
 
+The selection is the setting `robotcode.profiles` of the folder, which the user settings can also set for every folder. A name in it that the folder's configuration does not define stops the folder's test discovery, runs, REPL, notebooks and Documentation Viewer. RobotCode reports such a name when the folder's language server starts, with **Remove from Selection**, which removes it for this folder, and **Select Configuration Profiles**. Starting the REPL shows the same message instead of the REPL. The folder leaves the Testing view, which shows a hint instead while no other folder has tests.
+
 ## Several workspace folders
 
 In a workspace with several folders, RobotCode treats each folder as a project of its own: each has its own language server, with its own output channel, its own Python environment, `robot.toml`, profiles and folder settings. The Test Explorer shows each folder as an entry of its own, and the run profiles carry the folder's name. To leave a folder out, set [`robotcode.disableExtension`](/reference/vscode-settings/#robotcode.disableExtension) in its folder settings.

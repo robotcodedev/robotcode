@@ -60,6 +60,8 @@ The settings of a profile replace those outside of it, and with `extend-` before
 
 `robotcode profiles list` lists the profiles with their descriptions and shows which of them are selected and, of these, which are enabled.
 
+A name or pattern that selects no profile stops the command before it runs anything; see [Troubleshooting](/guides/robot-toml/troubleshooting/#no-profile-matches).
+
 ## Default profiles
 
 `default-profiles` names the profiles that apply when none is selected:

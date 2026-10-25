@@ -6,7 +6,7 @@ sidebar:
   order: 100.7
 ---
 
-When a setting does not do what you expect, the commands in [Checking what a run gets](/guides/robot-toml/command-line/#checking-what-a-run-gets) show where the configuration comes from and what a run gets. The sections below say which of them to use for which problem.
+When a setting does not do what you expect, the commands in [Checking what a run gets](/guides/robot-toml/command-line/#checking-what-a-run-gets) show where the configuration comes from and what a run gets. The sections below say which of them to use for which problem. The editors show the errors of the configuration as error messages when RobotCode's language server starts.
 
 ## The tests run without the configuration
 
@@ -37,9 +37,17 @@ See [Replacing and extending](/guides/robot-toml/combining/#replacing-and-extend
 - **Hidden:** a profile with `hidden = true`, or with a name that starts with `_`, is left out of `robotcode profiles list` and of the profile lists of the editors. `robotcode profiles list -h` shows it, and `-p` selects it by name.
 - **Replaced:** `[profiles.<name>]` in a later file replaces the profiles of the earlier files, see above.
 
-## "Can't find any configuration profiles matching the pattern"
+## "No profile matches"
 
-No profile has the name, or matches the pattern, that `-p`, `ROBOTCODE_PROFILES`, `default-profiles` or the editor selects. Check the spelling with `robotcode profiles list -h`.
+No profile has the name, or matches the pattern, that `-p`, `ROBOTCODE_PROFILES`, the editor's selection, `default-profiles` or `inherits` names. The message names it; check its spelling against the profiles that `robotcode profiles list -h` lists.
+
+For a name of `-p`, `ROBOTCODE_PROFILES`, the editor's selection or `inherits`, the command stops before it runs anything, `robotcode run` with exit code 252, while `robotcode profiles list` still lists the profiles. A name of `default-profiles` is only reported, and the command runs without it: the `default-profiles` of your [user configuration](/guides/robot-toml/files/#the-user-configuration) can name a profile of that file, which the `[profiles]` of a project replace.
+
+The language server starts anyway and shows the message for `ROBOTCODE_PROFILES`, `default-profiles` and `inherits` in the editor. A name of the editor's selection is reported by the editor itself, with **Remove from Selection** and **Select Configuration Profiles**; see [VS Code](/guides/vscode/configuration/#configuration-profiles) and [PyCharm](/guides/pycharm/configuration/#configuration-profiles).
+
+## "The profile 'a' inherits itself"
+
+A profile inherits itself, directly or through other profiles, for example `a` with `inherits = ["b"]` and `b` with `inherits = ["a"]`. The message shows the way, `a -> b -> a`. The command stops before it runs anything, `robotcode run` with exit code 252; the language server starts without the profiles and shows the message. A pattern in `inherits` never matches the profile that has it, so `ci-linux` with `inherits = ["ci-*"]` inherits the other `ci-` profiles.
 
 ## "Value '3' must be of type `str | StringExpression` but is `int`"
 

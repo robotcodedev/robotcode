@@ -18,7 +18,7 @@ RobotCode's REPL runs Robot Framework statements one by one: import a library, c
   alt="The terminal Robot REPL: robotcode repl at the prompt robotcode-demo $, the banner RobotCode REPL 2.7.0 (Robot Framework 7.5, Python 3.13.12 on linux) with its hint to type .help for commands and .exit to quit, the inputs Import Library ShopLibrary and ${price}= Price Of coffee, the output [ INFO ] ${price} = 4.5, and the next >>> prompt."
 />
 
-Type statements as you would write them in a test, with at least two spaces between the keyword and its arguments. In a workspace with several folders, the terminal carries the folder's name. `.exit` ends the REPL and closes the terminal; VS Code does not restore it after a restart. If the folder's Python environment cannot run the REPL, for example because Robot Framework is missing in it, an error message names the problem and no terminal opens.
+Type statements as you would write them in a test, with at least two spaces between the keyword and its arguments. In a workspace with several folders, the terminal carries the folder's name. `.exit` ends the REPL and closes the terminal; VS Code does not restore it after a restart. If the folder's Python environment cannot run the REPL, for example because Robot Framework is missing in it, an error message names the problem and no terminal opens. The same holds when a selected configuration profile is not defined in the folder's configuration: the message names it and offers **Remove from Selection** and **Select Configuration Profiles**.
 
 <ThemeVideo
   name="repl-start"
