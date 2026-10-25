@@ -27,7 +27,7 @@ The CI SHALL publish a version without a pre-release label to the Marketplace's 
 #### Scenario: Prerelease with the dev label
 
 - **WHEN** version 2.9.0-dev.3 is published
-- **THEN** it is uploaded to the channel `dev`, which IDEs get only when they have `https://plugins.jetbrains.com/plugins/dev/list` as a plugin repository, and not to the default channel
+- **THEN** it is uploaded to the channel `dev`, which IDEs get only when they have RobotCode's channel, `https://plugins.jetbrains.com/plugins/dev/26216`, as a plugin repository, and not to the default channel
 
 #### Scenario: Prerelease with another label
 

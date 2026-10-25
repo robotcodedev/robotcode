@@ -7,7 +7,7 @@ On every version tag the CI publishes the VS Code extension and the Python packa
 ## What Changes
 
 - On a version tag, the CI uploads the JetBrains plugin to the JetBrains Marketplace: the zip that the package job built, the same file that the GitHub release gets.
-- A release version goes to the Marketplace's default channel. A prerelease version, whatever its pre-release label (for example `2.9.0-dev.3`), goes to the channel `dev`. Users who want prereleases add `https://plugins.jetbrains.com/plugins/dev/list` as a plugin repository in their IDE.
+- A release version goes to the Marketplace's default channel. A prerelease version, whatever its pre-release label (for example `2.9.0-dev.3`), goes to the channel `dev`. Users who want prereleases add RobotCode's channel, `https://plugins.jetbrains.com/plugins/dev/26216`, as a plugin repository in their IDE.
 - Every night, and when the maintainer starts it by hand, a separate workflow uploads the plugin from the latest successful CI run on `main` to the channel `dev`, unless that version is there already. These dev builds carry the versions that the CI already gives builds without a tag, for example `2.8.0-dev.470`.
 - Pushes and pull requests upload nothing themselves. A dev build reaches the channel `dev` only through the nightly upload, and the release commit on `main`, whose build carries the release version, is left to the tag.
 - An upload happens only after the plugin's tests and the plugin verifier have passed in the run that built the plugin. This change builds on `intellij-ci-tests`, after which the package job waits for the plugin tests on Linux, Windows and macOS, and the publish job waits for the verifier gate in the code-quality job.
