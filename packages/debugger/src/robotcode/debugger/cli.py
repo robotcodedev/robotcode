@@ -145,7 +145,13 @@ def debug(
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """Starts a Robot Framework debug session and waits for incomming connections."""
+    from robotcode.runner.cli.robot import load_robot_profile
+
     from .run import run_debugger
+
+    # Before the debug server starts, so that it runs under the `wrapper` too; an error
+    # of the configuration shows when `robot` runs in the debug session.
+    load_robot_profile(app, robot_options_and_args)
 
     mode, port, bind, pipe_name = resolve_server_options(
         ctx,

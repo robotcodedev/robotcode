@@ -83,6 +83,8 @@ class CommonConfig:
     colored_output: ColoredOutput = ColoredOutput.AUTO
     default_paths: Optional[Sequence[str]] = None
     launcher_script: Optional[str] = None
+    wrapper: Optional[str] = None
+    no_wrapper: bool = False
     output_format: Optional[OutputFormat] = None
     pager: Optional[bool] = None
     log_enabled: bool = False

@@ -13,11 +13,15 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
+from click.testing import CliRunner
 
-from robotcode.plugin.click_helper.wrappable import is_wrappable
+import robotcode.robot.config.utils as config_utils
+from robotcode.cli import robotcode
+from robotcode.core.utils.net import find_free_port
+from robotcode.plugin.click_helper.wrappable import WRAPPER_APPLIED_ENV, is_wrappable
 
 # Records `SESSION_KIND` (to prove the profile env is applied *before* the
 # wrapper runs) into "<wrapper>.called", one line per invocation, then runs the
@@ -65,6 +69,7 @@ def _run_robotcode(
     return subprocess.run(
         [sys.executable, "-m", "robotcode.cli", *args],
         cwd=project,
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=120,
@@ -229,9 +234,8 @@ def test_dry_run_prints_the_wrapper_instead_of_running_it(project: Path) -> None
 
 
 def test_an_unknown_profile_stops_the_run_before_the_wrapper_of_a_valid_one_starts(project: Path) -> None:
-    """The wrapper detection leaves profile errors to the command, so the error
-    shows once, and a name that selects no profile stops the command before
-    anything starts, also the wrapper of a valid profile."""
+    """A name that selects no profile stops the command before anything starts,
+    also the wrapper of a valid profile, and the error shows once."""
     result = _run_robotcode(project, ["-p", "nope", "-p", "x11", "run", "suite.robot"])
     assert result.returncode == 252, result.stderr
     assert _calls(project / "wrap.py") == []
@@ -240,9 +244,8 @@ def test_an_unknown_profile_stops_the_run_before_the_wrapper_of_a_valid_one_star
 
 
 def test_a_reported_profile_error_keeps_the_wrapper_of_a_valid_profile(project: Path) -> None:
-    """The wrapper detection leaves errors that are only reported, such as an
-    `enabled` condition that cannot be evaluated, to the command, so the error
-    shows once and the wrapper of a valid profile still applies."""
+    """An error that is only reported, such as an `enabled` condition that cannot
+    be evaluated, shows once, and the wrapper of a valid profile still applies."""
     with (project / "robot.toml").open("a", encoding="utf-8") as f:
         f.write("[profiles.broken]\nenabled = { if = '1 +' }\n")
     result = _run_robotcode(project, ["-p", "broken", "-p", "x11", "run", "suite.robot"])
@@ -250,6 +253,132 @@ def test_a_reported_profile_error_keeps_the_wrapper_of_a_valid_profile(project: 
     assert _calls(project / "wrap.py") == ["xephyr"]
     output = result.stdout + result.stderr
     assert output.count("Error evaluating 'enabled' condition for profile 'broken'") == 1
+
+
+# --- the wrapper comes from the configuration of the command -----------------
+
+
+def _write_robot_toml(folder: Path, content: str) -> None:
+    (folder / "tests").mkdir(parents=True)
+    (folder / "tests" / "suite.robot").write_text("*** Test Cases ***\nT\n    Log    x\n", encoding="utf-8")
+    (folder / "robot.toml").write_text(content, encoding="utf-8")
+
+
+def test_tests_of_a_project_below_the_current_folder_run_under_its_wrapper(tmp_path: Path) -> None:
+    """robotcode finds the configuration of a run from the paths of its tests, here
+    from the root of a repository, and takes the wrapper from that configuration."""
+    (tmp_path / ".git").mkdir()
+    shop = tmp_path / "projects" / "shop"
+    wrapper = _write_wrapper(tmp_path / "wrap.py")
+    _write_robot_toml(
+        shop,
+        'default-profiles = ["gui"]\n'
+        "[profiles.gui]\n"
+        f"wrapper = {json.dumps([sys.executable, str(wrapper)])}\n"
+        "[profiles.gui.env]\n"
+        'SESSION_KIND = "shop"\n',
+    )
+
+    result = _run_robotcode(tmp_path, ["run", str(Path("projects", "shop", "tests"))])
+
+    assert result.returncode == 0, result.stderr
+    assert _calls(wrapper) == ["shop"]
+
+
+def test_tests_of_another_project_run_without_the_wrapper_of_the_current_one(tmp_path: Path) -> None:
+    wrapper = _write_wrapper(tmp_path / "wrap.py")
+    _write_robot_toml(
+        tmp_path / "a",
+        f'default-profiles = ["x11"]\n[profiles.x11]\nwrapper = {json.dumps([sys.executable, str(wrapper)])}\n',
+    )
+    _write_robot_toml(tmp_path / "b", 'output-dir = "results"\n')
+
+    result = _run_robotcode(tmp_path / "a", ["run", str(Path("..", "b", "tests"))])
+
+    assert result.returncode == 0, result.stderr
+    assert _calls(wrapper) == []
+
+
+@pytest.mark.parametrize(
+    ("args", "exit_code"),
+    [
+        (["run", "log.robot"], 0),
+        (["-p", "x11", "run", "log.robot"], 0),
+        (["debug", "--no-wait-for-client", "--tcp", "{port}", "log.robot"], 0),
+        (["--dry", "repl-server", "log.robot"], 251),  # the exit code of a dry run
+        (["repl"], 0),  # reads its input from the empty stdin
+        (["robot-debug", "--no-debugger-attached", "log.robot"], 0),
+    ],
+    ids=["run", "run under a wrapper", "debug", "repl-server", "repl", "robot-debug"],
+)
+def test_verbose_output_names_each_loaded_configuration_file_once(
+    project: Path, args: List[str], exit_code: int
+) -> None:
+    """The command loads its configuration once; under a wrapper, robotcode under
+    it shows the loading, and robotcode before the wrapper does not."""
+    (project / "log.robot").write_text("*** Test Cases ***\nT\n    Log    x\n", encoding="utf-8")
+    port = str(find_free_port())
+
+    result = _run_robotcode(project, ["-v", *(port if a == "{port}" else a for a in args)])
+
+    assert result.returncode == exit_code, result.stderr
+    output = result.stdout + result.stderr
+    loaded = [line for line in output.splitlines() if line.startswith("Load configuration from")]
+    assert loaded, output
+    assert len(loaded) == len(set(loaded)), output
+    assert output.count("Use root at:") == 1, output
+
+
+def test_a_configuration_that_cannot_be_loaded_starts_no_wrapper(project: Path) -> None:
+    (project / "robot.toml").write_text("output-dir = 5\n", encoding="utf-8")
+    cli_wrapper = _write_wrapper(project / "cliwrap.py")
+
+    result = _run_robotcode(
+        project, ["--wrapper", f"{shlex.quote(sys.executable)} {shlex.quote(str(cli_wrapper))}", "run", "suite.robot"]
+    )
+
+    assert result.returncode == 252, result.stderr
+    assert _calls(cli_wrapper) == []
+    assert result.stderr.count("Error:") == 1, result.stderr
+    assert "output_dir" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("args", "start"),
+    [
+        (["debug", "--no-wait-for-client", "suite.robot"], "robotcode.debugger.run.run_as_debugpy_hidden_task"),
+        (["repl-server", "suite.robot"], "robotcode.repl_server.cli.run_as_debugpy_hidden_task"),
+        (["repl"], "robotcode.repl.cli._pick_interpreter"),
+        (["robot-debug", "suite.robot"], "robotcode.repl.cli._pick_interpreter"),
+    ],
+    ids=["debug", "repl-server", "repl", "robot-debug"],
+)
+def test_a_command_starts_under_the_wrapper_before_it_starts_anything(
+    project: Path, monkeypatch: pytest.MonkeyPatch, args: List[str], start: str
+) -> None:
+    """Starting robotcode under the wrapper replaces this process, so a server or an
+    interpreter that the command started before would not run under the wrapper."""
+    monkeypatch.chdir(project)
+    monkeypatch.setattr(config_utils, "get_user_config_file", lambda *args, **kwargs: None)
+    # the command sets them in this process; with `setenv`, monkeypatch restores them afterwards
+    monkeypatch.setenv(WRAPPER_APPLIED_ENV, "")
+    monkeypatch.setenv("SESSION_KIND", "")
+    events: List[str] = []
+
+    def record(event: str) -> Any:
+        def stop(*args: Any, **kwargs: Any) -> None:
+            events.append(event)
+            raise SystemExit(0)
+
+        return stop
+
+    monkeypatch.setattr("robotcode.plugin.click_helper.wrappable.os.execvp", record("wrapper"))
+    monkeypatch.setattr("robotcode.plugin.click_helper.wrappable.subprocess.run", record("wrapper"))
+    monkeypatch.setattr(start, record("start"))
+
+    CliRunner().invoke(robotcode, ["-p", "x11", *args])
+
+    assert events == ["wrapper"]
 
 
 # --- the wrapper is ignored or disabled, with a warning ----------------------

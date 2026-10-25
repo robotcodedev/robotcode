@@ -10,7 +10,7 @@ from robotcode.plugin._agent_detection import is_running_in_ai_agent
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.plugin.click_helper.wrappable import wrappable
-from robotcode.runner.cli.robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS
+from robotcode.runner.cli.robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, load_robot_profile
 
 from .__version__ import __version__
 from ._backends import BACKEND_CHOICES
@@ -456,6 +456,9 @@ def repl(
     if files:
         files = tuple(f.absolute() for f in files)
 
+    # Before the interpreter is created, so that the session runs under the `wrapper`.
+    load_robot_profile(app, tuple(str(f) for f in files))
+
     # The shell starts with the debugger *detached* — a failing keyword prints
     # its error and you stay at the prompt — unless a pause trigger was given
     # (then attach so `--break …` just works) or `--debugger-attached` forces it.
@@ -559,6 +562,9 @@ def robot_debug(
     Takes the same arguments as `robotcode robot`, but pauses at breakpoints so
     you can inspect and step through the run at a debug prompt.
     """
+    # Before the interpreter and the debugger are created, so that the run runs under the `wrapper`.
+    load_robot_profile(app, robot_options_and_args)
+
     # Debugging a real run: the debugger is attached by default (the point of the
     # command), breaking on the first uncaught failure unless turned off. Only an
     # explicit `--no-debugger-attached` detaches it (then it runs like `robot`).

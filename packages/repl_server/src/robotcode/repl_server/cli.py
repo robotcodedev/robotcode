@@ -17,6 +17,7 @@ from robotcode.plugin.click_helper.options import (
 from robotcode.plugin.click_helper.types import AddressesPort, add_options
 from robotcode.plugin.click_helper.wrappable import wrappable
 from robotcode.repl.run import run_repl
+from robotcode.runner.cli.robot import load_robot_profile
 
 from .__version__ import __version__
 from .interpreter import Interpreter
@@ -201,6 +202,10 @@ def repl_server(
     """\
     Start a REPL server, client can connect to the server and run the REPL scripts.
     """
+
+    # Before the server starts, so that it runs under the `wrapper` too; an error of the
+    # configuration shows when `run_repl` uses it, after the server has started.
+    load_robot_profile(app, tuple(str(f.absolute()) for f in files))
 
     mode, port, bind, pipe_name = resolve_server_options(
         ctx,

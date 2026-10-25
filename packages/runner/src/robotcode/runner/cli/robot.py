@@ -1,7 +1,8 @@
 import os
 import weakref
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import click
 from robot.errors import DataError, Information
@@ -16,7 +17,7 @@ from robotcode.modifiers.metadata_modifiers import MetadataPattern
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
-from robotcode.plugin.click_helper.wrappable import wrappable
+from robotcode.plugin.click_helper.wrappable import invoked_command_is_wrappable, run_under_wrapper, wrappable
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
@@ -291,14 +292,36 @@ ROBOT_OPTIONS = [
 ]
 
 
-def handle_robot_options(
-    app: Application, robot_options_and_args: Tuple[str, ...]
-) -> Tuple[Optional[Path], RobotBaseProfile, List[str]]:
-    global _app
-    _app = app
+_LOADED_PROFILES = "robotcode.runner.loaded_profiles"
 
-    _patch()
+_Message = Union[str, Callable[[], Any]]
 
+
+@dataclass
+class LoadedRobotProfile:
+    """The configuration of a command, loaded once, with what loading it reported."""
+
+    root_folder: Optional[Path] = None
+    profile: Optional[RobotBaseProfile] = None
+    error: Optional[Exception] = None
+    messages: List[Tuple[Callable[[_Message], None], _Message]] = field(default_factory=list)
+
+    def show_messages(self) -> None:
+        messages, self.messages = self.messages, []
+        for show, message in messages:
+            show(message)
+
+
+def load_robot_profile(app: Application, robot_options_and_args: Tuple[str, ...]) -> LoadedRobotProfile:
+    """Load the configuration of a command once, from the paths among its arguments.
+
+    The result is kept for the whole command, with the messages and the error of the
+    loading, for later calls with the same paths, such as the one in `handle_robot_options`,
+    which shows them. A command that runs Robot Framework (`@wrappable`) is then started
+    again under its `wrapper`. Such a command calls this first, before it starts a server,
+    an interpreter or a debugger, so that they run under the `wrapper` too, while an error
+    of the configuration still appears where `handle_robot_options` raises it.
+    """
     robot_arguments: Optional[List[Union[str, Path]]] = None
 
     try:
@@ -307,21 +330,68 @@ def handle_robot_options(
     except (DataError, Information):
         pass
 
-    config_files, root_folder, _ = get_config_files(
-        robot_arguments,
-        app.config.config_files,
-        root_folder=app.config.root,
-        no_vcs=app.config.no_vcs,
-        verbose_callback=app.verbose,
+    ctx = click.get_current_context(silent=True)
+    loaded: Dict[Tuple[str, ...], LoadedRobotProfile] = (
+        ctx.find_root().meta.setdefault(_LOADED_PROFILES, {}) if ctx is not None else {}
     )
+    key = tuple(str(Path(a).absolute()) for a in robot_arguments or ())
+    if key in loaded:
+        return loaded[key]
+
+    result = LoadedRobotProfile()
+    loaded[key] = result
+
+    def verbose(message: _Message) -> None:
+        result.messages.append((app.verbose, message))
+
+    def error(message: _Message) -> None:
+        result.messages.append((app.error, message))
+
     try:
-        profile = (
-            load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
-            .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+        config_files, result.root_folder, _ = get_config_files(
+            robot_arguments,
+            app.config.config_files,
+            root_folder=app.config.root,
+            no_vcs=app.config.no_vcs,
+            verbose_callback=verbose,
         )
-    except (TypeError, ValueError) as e:
-        raise click.ClickException(str(e)) from e
+        result.profile = (
+            load_robot_config_from_path(*config_files, verbose_callback=verbose)
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=verbose, error_callback=error)
+            .evaluated_with_env(verbose_callback=verbose, error_callback=error)
+        )
+    except Exception as e:
+        result.error = e
+
+    if result.profile is not None and ctx is not None and invoked_command_is_wrappable(ctx):
+        try:
+            run_under_wrapper(app, result.profile.wrapper)
+        except click.ClickException:
+            # The wrapper did not start, so robotcode under it will not show them.
+            result.show_messages()
+            raise
+
+    return result
+
+
+def handle_robot_options(
+    app: Application, robot_options_and_args: Tuple[str, ...]
+) -> Tuple[Optional[Path], RobotBaseProfile, List[str]]:
+    global _app
+    _app = app
+
+    _patch()
+
+    loaded = load_robot_profile(app, robot_options_and_args)
+    loaded.show_messages()
+
+    if loaded.error is not None:
+        if isinstance(loaded.error, (TypeError, ValueError)):
+            raise click.ClickException(str(loaded.error)) from loaded.error
+        raise loaded.error
+
+    root_folder = loaded.root_folder
+    profile = cast(RobotBaseProfile, loaded.profile)
 
     cmd_options = profile.build_command_line()
 

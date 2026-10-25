@@ -126,3 +126,36 @@ def test_a_broken_configuration_ends_the_debug_command_with_252_and_one_error(tm
     assert result.returncode == 252, result.stderr
     assert result.stderr.count("Error:") == 1, result.stderr
     assert "output_dir" in result.stderr
+
+
+def test_a_profile_that_does_not_exist_ends_the_debug_command_with_252_after_the_server_started(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "robot.toml").write_text("[profiles.ci]\n", encoding="utf-8")
+    (tmp_path / "suite.robot").write_text("*** Test Cases ***\nT\n    Log    x\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "robotcode.cli",
+            "-v",
+            "-p",
+            "typo",
+            "debug",
+            "--no-wait-for-client",
+            "--tcp",
+            str(find_free_port()),
+            "suite.robot",
+        ],
+        cwd=tmp_path,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 252, result.stderr
+    assert result.stderr.count("Error: No profile matches 'typo'.") == 1, result.stderr
+    # in the debug session, where the debug launcher passes it on to the client
+    assert result.stderr.index("Start robotcode debugger thread") < result.stderr.index("Error:"), result.stderr
