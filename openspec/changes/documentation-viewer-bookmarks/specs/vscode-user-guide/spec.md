@@ -6,7 +6,7 @@ The page Documentation Viewer SHALL describe the Documentation Viewer with the c
 
 #### Scenario: Viewer page
 - **WHEN** a reader opens `/guides/vscode/documentation-viewer/`
-- **THEN** it explains how to open a viewer, the target field with its suggestions, the bookmarks with the view Documentation Bookmarks, the outline and filter, links, find, arranging viewers and Open as Markdown
+- **THEN** it explains how to open a viewer, the target field with its place and its suggestions, the bookmarks with the view Documentation Bookmarks, the outline and filter, links, find, arranging viewers and Open as Markdown
 - **AND** a screen recording shows a viewer in use
 
 #### Scenario: Guide without the viewer's description
