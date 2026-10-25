@@ -32,12 +32,12 @@ A helper resolves a non-external reference to `(path, absolute)`:
 
 `_make_external_artifact` then decides with the existing `relative_to(base_dir)` check:
 - **Inside, a file or missing:** an artefact as today. The message gets `as_uri()` of the decoded path, encoded once.
-- **Inside, an existing folder:** no artefact. The message gets the folder's `as_uri()`.
+- **An existing folder:** no artefact, also when a relative reference reaches it outside `base_dir`. The message gets the folder's `as_uri()`.
 - **Outside, from `file:`:** no artefact. The message keeps the original href.
-- **Outside, relative:** skipped `path-traversal` as today.
+- **Outside, relative:** skipped `path-traversal` as today, unless it is a folder.
 - **Host that is neither empty, `localhost` nor a drive:** no artefact, the href stays.
 
-Where a kept href contains a space (OperatingSystem's raw paths), both converters write it as `<…>`, as `html-to-markdown` does.
+Where a kept href contains a space (OperatingSystem's raw paths), both converters write it as `<…>`, as `html-to-markdown` does. An error while resolving, now also a `ValueError` such as from a decoded `%00`, gives `resolve-failed` as before.
 
 Alternatives considered:
 - Counting `file:` URLs as external (never an artefact): rejected by the user. Files that a test writes into the output directory are to be extracted.
@@ -46,7 +46,7 @@ Alternatives considered:
 ### D2: Media elements in the built-in converter
 
 `_StdlibToMd` keeps a stack of open `video`/`audio` elements.
-- A `src` on `video`/`audio`, or a `src` on a `source` inside one of them, emits `[video](url)` or `[audio](url)` through `_make_external_artifact` with kind `file`. A reference that resolves to nothing emits `[video]()`, as an unresolvable `<a>` emits `[text]()` today.
+- A `src` on `video`/`audio`, or a `src` on a `source` inside one of them, emits `[video](url)` or `[audio](url)` through `_make_external_artifact` with kind `file`. A reference that resolves to nothing emits `[video]()`, as an unresolvable `<a>` emits `[text]()` today. A `data:` source emits `_(embedded video — see artefacts)_`, which is what `html-to-markdown`'s `[video](data:…)` becomes through D3.
 - The `html-to-markdown` branch needs no own code. Its `[video](…)` goes through the link handling of D3.
 - The kind stays `file`, because the JSON contract documents `"image" | "file"`.
 
@@ -62,25 +62,34 @@ Rejected: the `visitor` option of `html-to-markdown` 3.18.6, which could rewrite
 
 ### D4: Embedded links in the built-in converter
 
-For an `<a>` with a `data:` href, `_StdlibToMd` emits `_(embedded ` at the start tag and ` — see artefacts)_` at the end tag, with the link text in between. When the link has no text it emits `data`. The `html-to-markdown` branch already renders `_(embedded {text or 'data'} — see artefacts)_`.
+For an `<a>` with a `data:` href, `_StdlibToMd` emits `_(embedded ` at the start tag and ` — see artefacts)_` at the end tag, with the link text in between. When the link has no text it emits `data`. The `html-to-markdown` branch already renders `_(embedded {text or 'data'} — see artefacts)_`. For a link that holds only spaces, `html-to-markdown` writes the URI as the text; that counts as no text too, instead of putting the base64 payload into the message.
 
 ### D5: download names
 
 `_make_embedded_artifact` takes an optional name and stores it next to the bytes in `_DataBox`. A `get_embedded_name(ref)` gives it to `_extract_artifacts`.
 - **No JSON field:** the name only matters for extraction, and `extractedTo` shows it.
-- **Where the name comes from:** the built-in converter passes `a.get("download")`. The `html-to-markdown` branch drops the attribute, so before converting it runs a small `HTMLParser` over the message and maps the `href` of every `<a>` with a `data:` href and a `download` attribute to that name. The pass runs only when the message contains `download`. `_replace_link` looks the URI up. A URI that `html-to-markdown` changed is not found and keeps `embedded-N`.
-- **In `_extract_artifacts`**, the name is the part after the last `/` or `\`, cleaned with `_slugify` (the rule for test directory names). A name that is empty or only dots counts as missing. A stem that Windows reserves (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, case-insensitive) gets a leading `_`.
+- **Where the name comes from:** the built-in converter passes `a.get("download")`. The `html-to-markdown` branch drops the attribute, so before converting it runs a small `HTMLParser` over the message and maps the `href` of every `<a>` with a `data:` href and a `download` attribute to that name. The pass runs only when the message contains `download`. `_replace_ref` looks the URI up. A URI that `html-to-markdown` changed is not found and keeps `embedded-N`.
+- **In `_extract_artifacts`**, the name is the part after the last `/` or `\`, cleaned by the rule for test directory names (`_safe_name`, the part of `_slugify` without its `_test` fallback). A name that is empty or only dots counts as missing. A stem that Windows reserves (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, case-insensitive) gets a leading `_`.
 - **Naming and safety:** `_unique_name` handles collisions, and the existing `relative_to(test_dir)` check stays. `seq_embedded` counts only embedded files without a name, so the first unnamed one is still `embedded-0`.
 
 ### D6: Tests with both converters
 
-- A new suite `tests/robotcode/runner/cli/results/suites/links.robot` with the fixture `links_output` writes its files into the folder of `${OUTPUT FILE}` and logs with OperatingSystem and `Log … HTML`, the way the libraries do: encoded names, `file:` links, a folder, a video with the table-row prefix, audio, linked images, a thumbnail, embedded files with `download`.
+- A new suite `tests/robotcode/runner/cli/results/suites/links.robot` with the fixture `links_output` writes its files into the folder of `${OUTPUT FILE}` and logs with OperatingSystem and `Log … HTML`, the way the libraries do: encoded names, `file:` links, a folder, a video with the table-row prefix, audio, linked images, a thumbnail, embedded files with `download`, repeated references.
 - On Windows CI, OperatingSystem's own messages produce the `file://C:\…` form, so no case has to imitate it.
 - The new tests in `test_log.py` run once per converter through a parametrized fixture `html_converter` in `conftest.py`:
   - the built-in converter by `monkeypatch.setitem(sys.modules, "html_to_markdown", None)` and `importlib.reload(_html)`;
   - `html-to-markdown`, skipped when it is not installed.
   - The fixture reloads `_html` after `monkeypatch` has restored `sys.modules`. `results.py` uses `_html` through its module attribute, so the reloaded module takes effect in the in-process CLI runner.
 - Unit tests for D1 build hrefs from `tmp_path` in both forms, `"file://" + str(path)` (OperatingSystem) and `path.as_uri()`. They run on every platform of the CI.
+
+### D7: Repeated references get the result of the extraction
+
+`dedup_artefacts` keeps, per test, the first reference to each target (key: `resolved_path` or `src`, `embedded`, `skipped_reason`), and `_extract_artifacts` writes `extracted_to` or `skipped_reason` only onto those. Each message keeps its own reference objects, so a later message that links the same target shows the original file, an embedded file as not extracted, or a missing file as a plain link.
+
+After a test is extracted, `_extract_artifacts` walks the test's entries and copies `extracted_to` and `skipped_reason` from the extracted reference to every message reference with the same key, as the key was before the extraction. A reference skipped at collection, such as for `path-traversal`, keeps its own reason.
+- The test-level list, `extractedCount` and the files written stay as they are: each target is still copied once.
+- Without `--extract` nothing changes.
+- Rejected: one shared reference object for the messages and the test, set up at collection. `dedup_artefacts` replaces a `file` reference by an `image` reference of the same target, so the objects held by the messages and the test would still differ.
 
 ## Risks / Trade-offs
 

@@ -106,3 +106,21 @@ An embedded `data:` link in an HTML message SHALL be shown as `_(embedded <link 
 #### Scenario: Unusable name
 - **WHEN** an embedded `text/plain` link has `download=".."` and is the first embedded file of the test without a usable name
 - **THEN** it is written as `embedded-0.txt`
+
+### Requirement: Repeated references
+
+After `--extract`, every reference in a test to the same file or to the same embedded data SHALL show the result of extracting it: the extracted file, or the reason it was skipped. The file SHALL be copied once. This SHALL hold with and without `html-to-markdown`.
+
+#### Scenario: File linked by two messages
+- **WHEN** a test runs OperatingSystem's `Create File    ${OUTPUT DIR}/data.csv`, then logs `See <a href="data.csv">data.csv</a>` as HTML, and `robotcode results log --extract DIR` is run on the result file in `${OUTPUT DIR}`
+- **THEN** the artefacts of both messages point to the copy of `data.csv` in the test's subdirectory of `DIR`
+- **AND** the subdirectory contains `data.csv` once
+
+#### Scenario: Embedded image logged twice
+- **WHEN** a test logs the same `<img src="data:image/png;base64,…">` in two messages and `robotcode results log --extract DIR` is run
+- **THEN** the artefacts of both messages point to `embedded-0.png`
+- **AND** no message says to use `--extract` to save the image
+
+#### Scenario: Missing file referenced twice
+- **WHEN** a test logs `<a href="missing.txt">missing</a>` in two messages, `missing.txt` does not exist, and `robotcode results log --extract DIR` is run
+- **THEN** the artefacts of both messages are skipped with reason `missing-source`
