@@ -2054,9 +2054,31 @@ def _make_message_entry(
     )
 
 
+def _safe_name(s: str) -> str:
+    return re.sub(r"[^\w.-]+", "_", s).strip("_")[:200]
+
+
 def _slugify(s: str) -> str:
-    slug = re.sub(r"[^\w.-]+", "_", s).strip("_")[:200]
-    return slug or "_test"
+    return _safe_name(s) or "_test"
+
+
+# Windows takes these names for devices, also with an extension.
+_WINDOWS_DEVICE_NAMES = frozenset(
+    ["CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))]
+)
+
+
+def _download_file_name(download: Optional[str]) -> Optional[str]:
+    """Return the file name for an embedded file from the `download` attribute
+    of its link, made safe like test directory names, or None when it gives none."""
+    if not download:
+        return None
+    name = _safe_name(re.split(r"[/\\]", download)[-1])
+    if not name.strip("."):
+        return None
+    if name.split(".", 1)[0].upper() in _WINDOWS_DEVICE_NAMES:
+        name = f"_{name}"
+    return name
 
 
 def _extract_artifacts(tests: List[LogTest], *, target: Path) -> int:
@@ -2065,6 +2087,9 @@ def _extract_artifacts(tests: List[LogTest], *, target: Path) -> int:
     for t in tests:
         if not t.artifacts:
             continue
+        # The test keeps one reference per target, its messages their own ones; those get
+        # the result of the extraction too. The keys are taken before it changes them.
+        by_key = {_html.artefact_key(ref): ref for ref in t.artifacts}
         slug = _slugify(t.full_name)
         test_dir = (target / slug).resolve()
         try:
@@ -2072,6 +2097,7 @@ def _extract_artifacts(tests: List[LogTest], *, target: Path) -> int:
         except ValueError:
             for ref in t.artifacts:
                 ref.skipped_reason = ref.skipped_reason or "target-traversal"
+            _share_extraction(t.body, by_key)
             continue
         test_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2085,9 +2111,11 @@ def _extract_artifacts(tests: List[LogTest], *, target: Path) -> int:
                 if data is None:
                     ref.skipped_reason = "no-data"
                     continue
-                ext = _html.ext_from_media_type(ref.media_type)
-                fname = _unique_name(f"embedded-{seq_embedded}{ext}", used_names)
-                seq_embedded += 1
+                name = _download_file_name(_html.get_embedded_name(ref))
+                if name is None:
+                    name = f"embedded-{seq_embedded}{_html.ext_from_media_type(ref.media_type)}"
+                    seq_embedded += 1
+                fname = _unique_name(name, used_names)
                 dest = (test_dir / fname).resolve()
                 try:
                     dest.relative_to(test_dir)
@@ -2112,7 +2140,20 @@ def _extract_artifacts(tests: List[LogTest], *, target: Path) -> int:
                 shutil.copy2(src_path, dest)
                 ref.extracted_to = str(dest)
                 count += 1
+        _share_extraction(t.body, by_key)
     return count
+
+
+def _share_extraction(entries: Optional[List[LogEntry]], by_key: Dict[Tuple[Any, ...], ArtifactRef]) -> None:
+    """Give every reference in `entries` the result of extracting the
+    test-level reference with the same key."""
+    for entry in entries or []:
+        for ref in entry.artifacts or []:
+            extracted = by_key.get(_html.artefact_key(ref))
+            if extracted is not None and extracted is not ref:
+                ref.extracted_to = extracted.extracted_to
+                ref.skipped_reason = extracted.skipped_reason
+        _share_extraction(entry.body, by_key)
 
 
 def _unique_name(name: str, used: Dict[str, int]) -> str:

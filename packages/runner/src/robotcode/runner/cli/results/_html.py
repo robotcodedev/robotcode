@@ -12,8 +12,9 @@ Two-stage strategy:
    bold/italic, links, lists, simple tables).
 
 In both paths, file-system references (relative `<img src="x.png">` or
-`<a href="x">`) are checked for path-traversal and resolved against `base_dir`,
-emitting absolute `file://` URLs for clickable terminal links (OSC 8).
+`<a href="x">`, and `file:` URLs) are resolved against `base_dir` and checked
+for path-traversal, emitting absolute `file://` URLs for clickable terminal
+links (OSC 8).
 
 Embedded data: URIs are recorded as ArtifactRefs (not extracted) unless the
 caller decides to extract via the artefact list afterwards.
@@ -26,7 +27,8 @@ import weakref
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urlsplit
+from urllib.request import url2pathname
 
 from robotcode.core.utils.version import InvalidVersionError, create_version_from_str
 
@@ -43,12 +45,14 @@ except (ImportError, InvalidVersionError):
     _HAS_EXT = False
 
 
-# `bytes` can't be weakref'd, so wrap them.
+# `bytes` can't be weakref'd, so wrap them, together with the `download` name
+# of the link, which only matters for extraction.
 class _DataBox:
-    __slots__ = ("__weakref__", "data")
+    __slots__ = ("__weakref__", "data", "name")
 
-    def __init__(self, data: bytes) -> None:
+    def __init__(self, data: bytes, name: Optional[str]) -> None:
         self.data = data
+        self.name = name
 
 
 # Out-of-band store keeps decoded payloads off the serialisable dataclass and
@@ -56,8 +60,8 @@ class _DataBox:
 _EMBEDDED_DATA: "weakref.WeakKeyDictionary[ArtifactRef, _DataBox]" = weakref.WeakKeyDictionary()
 
 
-def _store_embedded_data(ref: ArtifactRef, data: bytes) -> None:
-    _EMBEDDED_DATA[ref] = _DataBox(data)
+def _store_embedded_data(ref: ArtifactRef, data: bytes, name: Optional[str]) -> None:
+    _EMBEDDED_DATA[ref] = _DataBox(data, name)
 
 
 def get_embedded_data(ref: ArtifactRef) -> Optional[bytes]:
@@ -68,6 +72,17 @@ def get_embedded_data(ref: ArtifactRef) -> Optional[bytes]:
     """
     box = _EMBEDDED_DATA.get(ref)
     return box.data if box is not None else None
+
+
+def get_embedded_name(ref: ArtifactRef) -> Optional[str]:
+    """Return the `download` attribute of an embedded artefact's link, if any."""
+    box = _EMBEDDED_DATA.get(ref)
+    return box.name if box is not None else None
+
+
+def artefact_key(ref: ArtifactRef) -> Tuple[Any, ...]:
+    """Return the key by which references to the same target are merged."""
+    return (ref.resolved_path or ref.src, ref.embedded, ref.skipped_reason)
 
 
 def dedup_artefacts(refs: List[ArtifactRef]) -> List[ArtifactRef]:
@@ -81,7 +96,7 @@ def dedup_artefacts(refs: List[ArtifactRef]) -> List[ArtifactRef]:
     seen: Dict[Tuple[Any, ...], int] = {}
     out: List[ArtifactRef] = []
     for ref in refs:
-        key: Tuple[Any, ...] = (ref.resolved_path or ref.src, ref.embedded, ref.skipped_reason)
+        key = artefact_key(ref)
         idx = seen.get(key)
         if idx is None:
             seen[key] = len(out)
@@ -97,8 +112,17 @@ _DATA_URI_RE = re.compile(
     r"^data:(?P<mime>[^;,]+)?(?:;(?P<params>[^,]*))?,(?P<payload>.*)$",
     re.IGNORECASE | re.DOTALL,
 )
-_MD_IMG_RE = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<src>[^)\s]+)(?:\s+\"[^\"]*\")?\)")
-_MD_LINK_RE = re.compile(r"(?<!\!)\[(?P<text>[^\]]+)\]\((?P<href>[^)\s]+)(?:\s+\"[^\"]*\")?\)")
+# A Markdown link target, in angle brackets (as html-to-markdown writes one with
+# a space) or up to the next space or `)`, and an optional title.
+_MD_DEST = r"(?:<[^>\n]*>|[^)\s]+)"
+_MD_TITLE = r'(?:\s+"[^"]*")?'
+_MD_IMG_RE = re.compile(rf"!\[(?P<alt>[^\]]*)\]\((?P<src>{_MD_DEST}){_MD_TITLE}\)")
+# Links, whose text may hold images, and stand-alone images in one pass, so that
+# every target is resolved once.
+_MD_REF_RE = re.compile(
+    rf"(?<!!)\[(?P<text>(?:!\[[^\]]*\]\({_MD_DEST}{_MD_TITLE}\)|[^\]])*)\]\((?P<href>{_MD_DEST}){_MD_TITLE}\)"
+    rf"|{_MD_IMG_RE.pattern}"
+)
 _TAG_STRIP_RE = re.compile(r"<[^>]+>")
 
 
@@ -154,47 +178,117 @@ def _is_external_url(href: str) -> bool:
     return bool(parsed.scheme) and parsed.scheme not in ("file",)
 
 
-def _resolve_under(base_dir: Path, src: str) -> tuple[Optional[Path], Optional[str]]:
-    """Return (resolved_path, skipped_reason). resolved_path is None if traversal."""
-    if not src or src.startswith(("#", "?")):
-        return None, "empty-or-fragment"
+def _md_url(url: str) -> str:
+    """Return `url` as a Markdown link destination, in angle brackets when it contains whitespace."""
+    return f"<{url}>" if any(c.isspace() for c in url) else url
+
+
+# OperatingSystem links a path on Windows as `file://C:\dir\x`, which puts the
+# drive into the host of the URL.
+_DRIVE_HOST_RE = re.compile(r"[A-Za-z]:")
+
+
+def _file_url_paths(href: str) -> Optional[Tuple[str, str]]:
+    """Return the path a `file:` URL names, decoded and as written, or None
+    when the URL names another host."""
+    parts = urlsplit(href)
+    drive_host = _DRIVE_HOST_RE.match(parts.netloc) is not None
+    if parts.netloc and not drive_host and parts.netloc.lower() != "localhost":
+        return None
+    raw = href[len("file:") :]
+    if raw.startswith("//"):
+        raw = raw[2:] if drive_host else raw[2 + len(parts.netloc) :]
+    if drive_host:
+        return unquote(parts.netloc + parts.path), raw
+    return url2pathname(parts.path), raw
+
+
+def _exists(path: Path) -> bool:
     try:
-        candidate = (base_dir / src).resolve()
-        base_resolved = base_dir.resolve()
-    except (OSError, RuntimeError):
-        return None, "resolve-failed"
+        return path.exists()
+    except (OSError, ValueError):
+        return False
+
+
+def _is_dir(path: Path) -> bool:
     try:
-        candidate.relative_to(base_resolved)
-    except ValueError:
-        return None, "path-traversal"
-    return candidate, None
+        return path.is_dir()
+    except (OSError, ValueError):
+        return False
+
+
+def _local_path(href: str, base_dir: Path) -> Optional[Tuple[Path, bool]]:
+    """Return the path a file-system reference names and whether it is a
+    `file:` URL, or None for a `file:` URL of another host.
+
+    Percent escapes are decoded and query and fragment dropped. OperatingSystem
+    links its paths without encoding them, so when the decoded path does not
+    exist but the reference as written does, that one is taken.
+    """
+    is_file_url = urlsplit(href).scheme == "file"
+    if is_file_url:
+        paths = _file_url_paths(href)
+        if paths is None:
+            return None
+        decoded, raw = paths
+    else:
+        decoded, raw = unquote(urlsplit(href).path), href
+    path = base_dir / decoded
+    if not _exists(path) and _exists(base_dir / raw):
+        path = base_dir / raw
+    return path, is_file_url
 
 
 def _make_external_artifact(
     href: str, kind: str, base_dir: Path, on_artifact: Callable[[ArtifactRef], None]
 ) -> Optional[str]:
-    """Handle a non-data href. Returns a markdown-safe URL (file:// or None) or the
-    original href for external URLs. Records an ArtifactRef when the href points
-    into the filesystem."""
+    """Handle a non-data href. Returns the URL for the message: the `file://`
+    URL of the referenced file, the href itself, or None when the reference
+    can't be followed. Records an ArtifactRef for a file under `base_dir` and
+    for a relative reference that leaves it.
+
+    A `file:` URL outside `base_dir` or of another host keeps its href and is
+    no artefact, and neither is a link to a folder."""
     if _is_external_url(href):
         return href
 
-    resolved, skipped = _resolve_under(base_dir, href)
     ref = ArtifactRef(kind=kind, src=href)
-    if resolved is None:
-        ref.skipped_reason = skipped
+    if not href or href.startswith(("#", "?")):
+        ref.skipped_reason = "empty-or-fragment"
+        on_artifact(ref)
+        return None
+    try:
+        local = _local_path(href, base_dir)
+        if local is None:
+            return href
+        path, is_file_url = local
+        resolved = path.resolve()
+        base_resolved = base_dir.resolve()
+    except (OSError, RuntimeError, ValueError):
+        ref.skipped_reason = "resolve-failed"
+        on_artifact(ref)
+        return None
+    try:
+        rel: Optional[Path] = resolved.relative_to(base_resolved)
+    except ValueError:
+        rel = None
+    if rel is None and is_file_url:
+        return href
+    if _is_dir(resolved):
+        return resolved.as_uri()
+    if rel is None:
+        ref.skipped_reason = "path-traversal"
         on_artifact(ref)
         return None
     ref.resolved_path = str(resolved)
-    try:
-        ref.rel_path = str(resolved.relative_to(base_dir.resolve()))
-    except ValueError:
-        ref.rel_path = href
+    ref.rel_path = str(rel)
     on_artifact(ref)
     return resolved.as_uri()
 
 
-def _make_embedded_artifact(uri: str, kind: str, on_artifact: Callable[[ArtifactRef], None]) -> ArtifactRef:
+def _make_embedded_artifact(
+    uri: str, kind: str, on_artifact: Callable[[ArtifactRef], None], name: Optional[str] = None
+) -> ArtifactRef:
     ref = ArtifactRef(kind=kind, src=uri, embedded=True)
     parsed = _parse_data_uri(uri)
     if parsed is None:
@@ -204,7 +298,7 @@ def _make_embedded_artifact(uri: str, kind: str, on_artifact: Callable[[Artifact
     mime, data = parsed
     ref.media_type = mime
     ref.approx_bytes = len(data)
-    _store_embedded_data(ref, data)
+    _store_embedded_data(ref, data, name)
     on_artifact(ref)
     return ref
 
@@ -214,6 +308,27 @@ def _make_embedded_artifact(uri: str, kind: str, on_artifact: Callable[[Artifact
 # branch.
 
 if _HAS_EXT:
+
+    class _DownloadNames(HTMLParser):
+        """Collects the `download` attributes of `data:` links, which html-to-markdown drops."""
+
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=True)
+            self.names: Dict[str, str] = {}
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+            a = dict(attrs)
+            href, name = a.get("href"), a.get("download")
+            if tag == "a" and href and name and href.startswith("data:"):
+                self.names.setdefault(href, name)
+
+    def _download_names(text: str) -> Dict[str, str]:
+        if "download" not in text:
+            return {}
+        parser = _DownloadNames()
+        parser.feed(text)
+        parser.close()
+        return parser.names
 
     def _convert(
         text: str,
@@ -244,7 +359,13 @@ if _HAS_EXT:
                 embedded_urls.add(url)
                 _make_embedded_artifact(url, "image", on_artifact)
 
-        md = _post_process_refs(md, base_dir=base_dir, on_artifact=on_artifact, already_recorded=embedded_urls)
+        md = _post_process_refs(
+            md,
+            base_dir=base_dir,
+            on_artifact=on_artifact,
+            already_recorded=embedded_urls,
+            download_names=_download_names(text),
+        )
         return md.strip()
 
     def _post_process_refs(
@@ -253,14 +374,18 @@ if _HAS_EXT:
         base_dir: Path,
         on_artifact: Callable[[ArtifactRef], None],
         already_recorded: set[str],
+        download_names: Dict[str, str],
     ) -> str:
         """Replace relative file refs in markdown with absolute file:// URLs, and
         drop or annotate embedded data URIs in the rendered output (the binary
         payload is recorded via on_artifact instead)."""
 
+        def _target(dest: str) -> str:
+            return dest[1:-1] if dest.startswith("<") else dest
+
         def _replace_img(m: re.Match[str]) -> str:
             alt = m.group("alt")
-            src = m.group("src")
+            src = _target(m.group("src"))
             if src.startswith("data:"):
                 if src not in already_recorded:
                     _make_embedded_artifact(src, "image", on_artifact)
@@ -269,23 +394,26 @@ if _HAS_EXT:
             if _is_external_url(src):
                 return m.group(0)
             new = _make_external_artifact(src, "image", base_dir, on_artifact)
-            return f"![{alt}]({new})" if new else f"_(missing image: {src})_"
+            return f"![{alt}]({_md_url(new)})" if new else f"_(missing image: {src})_"
 
-        def _replace_link(m: re.Match[str]) -> str:
-            text = m.group("text")
-            href = m.group("href")
+        def _replace_ref(m: re.Match[str]) -> str:
+            if m.group("href") is None:
+                return _replace_img(m)
+            text = _MD_IMG_RE.sub(_replace_img, m.group("text"))
+            href = _target(m.group("href"))
             if href.startswith("data:"):
                 if href not in already_recorded:
-                    _make_embedded_artifact(href, "file", on_artifact)
+                    _make_embedded_artifact(href, "file", on_artifact, download_names.get(href))
                     already_recorded.add(href)
-                return f"_(embedded {text or 'data'} — see artefacts)_"
+                # html-to-markdown writes the URI as the text of a link with only spaces in it.
+                return f"_(embedded {text if text and text != href else 'data'} — see artefacts)_"
             if _is_external_url(href):
-                return m.group(0)
+                # The target stays, the images in the text may have been replaced.
+                return f"[{text}]" + m.group(0)[len(m.group("text")) + 2 :]
             new = _make_external_artifact(href, "file", base_dir, on_artifact)
-            return f"[{text}]({new})" if new else f"_(missing link: {href})_"
+            return f"[{text}]({_md_url(new)})" if new else f"_(missing link: {href})_"
 
-        md = _MD_IMG_RE.sub(_replace_img, md)
-        return _MD_LINK_RE.sub(_replace_link, md)
+        return _MD_REF_RE.sub(_replace_ref, md)
 
 else:
     _INLINE_TAGS = {"b", "strong", "i", "em", "u", "code", "kbd", "samp", "var"}
@@ -306,7 +434,9 @@ else:
             self._list_kind: List[str] = []
             self._list_counter: List[int] = []
             self._in_pre = False
-            self._link_href: List[Optional[str]] = []
+            # Per open <a>: whether it embeds a file, its URL, and where its output starts.
+            self._links: List[Tuple[bool, Optional[str], int]] = []
+            self._media: List[str] = []
             self._row_cells: Optional[List[str]] = None
             self._table_rows: Optional[List[List[str]]] = None
             self._suppress_text = 0
@@ -368,13 +498,23 @@ else:
                 self._emit("#" * int(tag[1]) + " ")
             elif tag == "a":
                 href = a.get("href") or ""
-                url = self._handle_href(href, kind="file")
-                self._link_href.append(url)
-                self._emit("[")
+                if href.startswith("data:"):
+                    _make_embedded_artifact(href, "file", self._on_artifact, a.get("download"))
+                    self._links.append((True, None, len(self._out)))
+                    self._emit("_(embedded ")
+                else:
+                    self._links.append((False, self._handle_href(href, kind="file"), len(self._out)))
+                    self._emit("[")
             elif tag == "img":
                 src = a.get("src") or ""
                 alt = a.get("alt") or ""
                 self._handle_img(src, alt)
+            elif tag in ("video", "audio"):
+                self._media.append(tag)
+                self._handle_media(tag, a.get("src") or "")
+            elif tag == "source":
+                if self._media:
+                    self._handle_media(self._media[-1], a.get("src") or "")
             elif tag == "table":
                 self._table_rows = []
                 self._blank_line()
@@ -414,12 +554,17 @@ else:
             elif tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
                 self._blank_line()
             elif tag == "a":
-                href = self._link_href.pop() if self._link_href else None
-                self._emit("]")
-                if href:
-                    self._emit(f"({href})")
+                embedded, href, start = self._links.pop() if self._links else (False, None, 0)
+                if embedded:
+                    if not "".join(self._out[start + 1 :]).strip():
+                        self._emit("data")
+                    self._emit(" — see artefacts)_")
                 else:
-                    self._emit("()")
+                    self._emit("]")
+                    self._emit(f"({_md_url(href)})" if href else "()")
+            elif tag in ("video", "audio"):
+                if self._media:
+                    self._media.pop()
             elif tag in ("td", "th"):
                 if self._stack and self._stack[-1] == "cell":
                     self._stack.pop()
@@ -467,9 +612,6 @@ else:
         def _handle_href(self, href: str, *, kind: str) -> Optional[str]:
             if not href:
                 return None
-            if href.startswith("data:"):
-                _make_embedded_artifact(href, kind, self._on_artifact)
-                return None
             if _is_external_url(href):
                 return href
             return _make_external_artifact(href, kind, self._base_dir, self._on_artifact)
@@ -482,13 +624,24 @@ else:
                 self._emit(f"_(embedded image — see artefacts: {alt or 'no alt text'})_")
                 return
             if _is_external_url(src):
-                self._emit(f"![{alt}]({src})")
+                self._emit(f"![{alt}]({_md_url(src)})")
                 return
             url = _make_external_artifact(src, "image", self._base_dir, self._on_artifact)
             if url:
-                self._emit(f"![{alt}]({url})")
+                self._emit(f"![{alt}]({_md_url(url)})")
             else:
                 self._emit(f"_(missing image: {src})_")
+
+        def _handle_media(self, kind: str, src: str) -> None:
+            # A link with the element name as its text, as html-to-markdown shows <video> and <audio>.
+            if not src:
+                return
+            if src.startswith("data:"):
+                _make_embedded_artifact(src, "file", self._on_artifact)
+                self._emit(f"_(embedded {kind} — see artefacts)_")
+                return
+            url = self._handle_href(src, kind="file")
+            self._emit(f"[{kind}]({_md_url(url)})" if url else f"[{kind}]()")
 
     def _inline_open(tag: str) -> str:
         return {

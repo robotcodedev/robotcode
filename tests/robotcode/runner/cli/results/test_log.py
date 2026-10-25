@@ -37,6 +37,17 @@ def _first_entry_of_type(body: List[Dict[str, Any]], type_name: str) -> Optional
     return matches[0] if matches else None
 
 
+def _message_with(test: Dict[str, Any], *needles: str) -> Dict[str, Any]:
+    messages = _entries_of_type(test.get("body") or [], "MESSAGE")
+    found = [m for m in messages if all(needle in (m.get("text") or "") for needle in needles)]
+    assert len(found) == 1, f"no single message with {needles} in {[m.get('text') for m in messages]}"
+    return found[0]
+
+
+def _extracted_names(message: Dict[str, Any]) -> List[str]:
+    return [Path(ref["extractedTo"]).name for ref in message.get("artifacts") or [] if ref.get("extractedTo")]
+
+
 # ---------------------------------------------------------------------------
 # Basic structure
 # ---------------------------------------------------------------------------
@@ -290,6 +301,117 @@ def test_log_extract_screenshot_messages(json_result: JsonRunner, artifacts_outp
         assert Path(ref["extractedTo"]).is_file()
     texts = [e.get("text") or "" for e in _entries_of_type(test.get("body") or [], "MESSAGE")]
     assert any("_(embedded image — see artefacts: screenshot)_" in text for text in texts)
+
+
+@pytest.mark.usefixtures("html_converter")
+def test_log_extract_file_references(json_result: JsonRunner, links_output: Path, tmp_path: Path) -> None:
+    """Encoded names, `file:` links and linked images name the files they
+    point to; `file:` links outside the result folder and folders are no
+    artefacts."""
+    extract = tmp_path / "extracted"
+    data = json_result("log", "--extract", str(extract), output_path=links_output)
+    test = find_test(data["tests"], "Links.File References")
+    assert test is not None
+
+    encoded = _message_with(test, "My%20Test-1.png")
+    assert [(ref["kind"], ref.get("skippedReason")) for ref in encoded["artifacts"]] == [("image", None)]
+    assert _extracted_names(encoded) == ["My Test-1.png"]
+    assert "My%2520Test-1.png" not in encoded["text"]
+
+    screenshot = _message_with(test, "selenium-screenshot-1.png")
+    assert [(ref["kind"], ref.get("skippedReason")) for ref in screenshot["artifacts"]] == [("image", None)]
+    assert _extracted_names(screenshot) == ["selenium-screenshot-1.png"]
+
+    assert _extracted_names(_message_with(test, "notes.txt")) == ["notes.txt"]
+
+    created = _message_with(test, "Created file", "my data.csv")
+    assert [ref.get("skippedReason") for ref in created["artifacts"]] == [None]
+    assert _extracted_names(created) == ["my data.csv"]
+
+    outside = _message_with(test, "Created file", "robotcode-links-outside.txt")
+    assert not outside.get("artifacts")
+    assert "file:" in outside["text"]
+    assert not _message_with(test, "Removed file", "robotcode-links-outside.txt").get("artifacts")
+    assert not _message_with(test, "Created directory", "downloads").get("artifacts")
+
+    traversal = _message_with(test, "../shot.png")
+    assert [ref.get("skippedReason") for ref in traversal["artifacts"]] == ["path-traversal"]
+
+    thumbnail = _message_with(test, "thumb.png")
+    assert sorted((ref["kind"], Path(ref["extractedTo"]).name) for ref in thumbnail["artifacts"]) == [
+        ("file", "full.png"),
+        ("image", "thumb.png"),
+    ]
+
+
+@pytest.mark.usefixtures("html_converter")
+def test_log_extract_media(json_result: JsonRunner, links_output: Path, tmp_path: Path) -> None:
+    """Videos, as Browser logs them, and audio show as links, and their files are extracted."""
+    extract = tmp_path / "extracted"
+    data = json_result("log", "--extract", str(extract), output_path=links_output)
+    test = find_test(data["tests"], "Links.Media")
+    assert test is not None
+
+    video = _message_with(test, "[video](")
+    assert [(ref["kind"], Path(ref["extractedTo"]).name) for ref in video["artifacts"]] == [("file", "clip@1.webm")]
+    audio = _message_with(test, "[audio](")
+    assert [(ref["kind"], Path(ref["extractedTo"]).name) for ref in audio["artifacts"]] == [("file", "sound.mp3")]
+
+
+@pytest.mark.usefixtures("html_converter")
+def test_log_extract_embedded_names(json_result: JsonRunner, links_output: Path, tmp_path: Path) -> None:
+    """Embedded files are written under the `download` name of their link,
+    made safe for every file system, or as `embedded-N` without a usable one."""
+    extract = tmp_path / "extracted"
+    json_result("log", "--extract", str(extract), output_path=links_output)
+    test_dir = extract / "Links.Embedded_Files"
+
+    assert sorted(path.name for path in test_dir.iterdir()) == [
+        "_con.txt",
+        "embedded-0.txt",
+        "evil.txt",
+        "hello-1.txt",
+        "hello.txt",
+    ]
+    assert (test_dir / "hello.txt").read_text() == "Hello world\n"
+    assert (test_dir / "hello-1.txt").read_text() == "Second\n"
+    assert (test_dir / "embedded-0.txt").read_text() == "Dots\n"
+
+
+@pytest.mark.usefixtures("html_converter")
+def test_log_extract_repeated_references(
+    json_result: JsonRunner, robotcode_cli: CliRunner, links_output: Path, tmp_path: Path
+) -> None:
+    """Every reference of a test to the same target shows the result of
+    extracting it, and the target is copied once."""
+    extract = tmp_path / "extracted"
+    data = json_result("log", "--extract", str(extract), output_path=links_output)
+    test = find_test(data["tests"], "Links.Repeated References")
+    assert test is not None
+    messages = _entries_of_type(test.get("body") or [], "MESSAGE")
+
+    created = _message_with(test, "Created file", "data.csv")
+    see = _message_with(test, "See ")
+    assert _extracted_names(created) == ["data.csv"]
+    assert [ref.get("extractedTo") for ref in see["artifacts"]] == [created["artifacts"][0]["extractedTo"]]
+    assert sorted(path.name for path in (extract / "Links.Repeated_References").iterdir()) == [
+        "data.csv",
+        "embedded-0.png",
+    ]
+
+    images = [m for m in messages if "embedded image" in (m.get("text") or "")]
+    assert [_extracted_names(m) for m in images] == [["embedded-0.png"], ["embedded-0.png"]]
+
+    missing = [m for m in messages if "missing.txt" in (m.get("text") or "")]
+    assert [[ref.get("skippedReason") for ref in m["artifacts"]] for m in missing] == [
+        ["missing-source"],
+        ["missing-source"],
+    ]
+
+    text = strip_ansi(
+        robotcode_cli(["results", "log", "--extract", str(tmp_path / "text"), "--output", str(links_output)]).stdout
+    )
+    assert "use `--extract` to save" not in text
 
 
 def test_log_raw_html_skips_extraction(json_result: JsonRunner, artifacts_output: Path) -> None:

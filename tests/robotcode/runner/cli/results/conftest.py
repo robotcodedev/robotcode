@@ -19,6 +19,7 @@ Three architectural choices:
    are pinned with regtest2.
 """
 
+import importlib
 import json
 import os
 import shutil
@@ -26,7 +27,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence
 
 import pytest
 from click.testing import CliRunner as _ClickCliRunner
@@ -34,6 +35,7 @@ from click.testing import CliRunner as _ClickCliRunner
 from robotcode.cli import robotcode as _robotcode_group
 from robotcode.core.utils.version import Version
 from robotcode.robot.utils import RF_VERSION
+from robotcode.runner.cli.results import _html
 
 SUITES_DIR = Path(__file__).parent / "suites"
 # Hand-trimmed result files that are read as they are instead of being
@@ -335,6 +337,13 @@ def artifacts_output(session_output_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def links_output(session_output_dir: Path) -> Path:
+    """`output.xml` from the links suite: file references, media and embedded
+    files the way SeleniumLibrary, Browser and OperatingSystem log them."""
+    return _run_robot(SUITES_DIR / "links.robot", session_output_dir, "links")
+
+
+@pytest.fixture(scope="session")
 def errors_output(session_output_dir: Path) -> Path:
     """`output.xml` from a suite with a deliberate import error."""
     return _run_robot(SUITES_DIR / "errors.robot", session_output_dir, "errors")
@@ -386,3 +395,26 @@ def rf_version() -> Version:
     etc. straight out of the box.
     """
     return RF_VERSION
+
+
+@pytest.fixture(params=["builtin", "html-to-markdown"])
+def html_converter(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    """Runs the test once with the built-in HTML converter of `robotcode
+    results` and once with `html-to-markdown` (skipped when not installed).
+
+    `_html` picks its converter at import, so the built-in one is selected
+    by blocking the import and reloading the module. `results.py` reaches
+    the module through its attribute, so the in-process CLI runner uses the
+    reloaded module.
+    """
+    if request.param == "html-to-markdown":
+        if not _html._HAS_EXT:
+            pytest.skip("html-to-markdown 3.18 or newer is not installed")
+        yield request.param
+        return
+    monkeypatch.setitem(sys.modules, "html_to_markdown", None)
+    importlib.reload(_html)
+    yield request.param
+    # `monkeypatch` is torn down after this fixture, so restore `sys.modules` first.
+    monkeypatch.undo()
+    importlib.reload(_html)
