@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.language_server.common.server import (
@@ -19,10 +19,12 @@ class RobotLanguageServer(LanguageServerBase[RobotLanguageServerProtocol]):
         pipe_name: Optional[str] = None,
         profile: Optional[RobotBaseProfile] = None,
         analysis_config: Optional[WorkspaceAnalysisConfig] = None,
+        configuration_errors: Optional[List[str]] = None,
     ):
         super().__init__(mode, tcp_params, pipe_name)
         self.profile = profile
         self.analysis_config = analysis_config
+        self.configuration_errors = configuration_errors
 
     def create_protocol(self) -> RobotLanguageServerProtocol:
-        return RobotLanguageServerProtocol(self, self.profile, self.analysis_config)
+        return RobotLanguageServerProtocol(self, self.profile, self.analysis_config, self.configuration_errors)

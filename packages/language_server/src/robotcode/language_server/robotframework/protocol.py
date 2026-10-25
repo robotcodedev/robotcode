@@ -15,7 +15,7 @@ from typing import (
 
 from robotcode.core.event import event
 from robotcode.core.language import LanguageDefinition
-from robotcode.core.lsp.types import InitializeError
+from robotcode.core.lsp.types import InitializeError, MessageType
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
@@ -161,13 +161,16 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         server: "RobotLanguageServer",
         profile: Optional[RobotBaseProfile] = None,
         analysis_config: Optional[WorkspaceAnalysisConfig] = None,
+        configuration_errors: Optional[List[str]] = None,
     ):
         super().__init__(server)
         self.robot_profile = profile if profile is not None else RobotBaseProfile()
         self.analysis_config = analysis_config if analysis_config is not None else WorkspaceAnalysisConfig()
+        self.configuration_errors = configuration_errors if configuration_errors is not None else []
         self.robot_initialization_options = RobotInitializationOptions()
         self.on_initialize.add(self._on_initialize)
         self.on_initialized.add(self.server_initialized)
+        self.on_initialized.add(self.show_configuration_errors)
         self._documents_cache: Optional[DocumentsCachePart] = None
 
     @_logger.call
@@ -224,6 +227,11 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     @event
     def on_robot_initialized(sender) -> None: ...
+
+    # the errors of the configuration that the start loaded, which the editors otherwise show only in the server's log
+    def show_configuration_errors(self, sender: Any) -> None:
+        for message in self.configuration_errors:
+            self.window.show_message(message, MessageType.ERROR)
 
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
