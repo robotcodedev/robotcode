@@ -23,9 +23,9 @@ Not everything is perfect yet, and there is still quite a bit of work ahead, but
 ## Highlights
 
 - [Robot Framework 7.5 support](#robot-framework-75-support): See the argument descriptions that libraries document while you type, and run, list or inspect only the tests with certain metadata.
-- [Documentation Viewer](#documentation-viewer): Read the documentation of any library or resource file in a VS Code editor tab, right next to your code, one click away from a hover.
+- [Documentation Viewer](#documentation-viewer): Read the documentation of any library or resource file in a VS Code editor tab, right next to your code, one click away from a hover, and bookmark what you look up often.
+- [PyCharm](#pycharm): The plugin's biggest update yet brings nearly everything the VS Code extension offers: run and debug your tests with run configurations and `robot.toml` profiles, see in the results where a test failed, use breakpoints with conditions and hit counts and the new Robot Debug Console, and set almost everything you can set in VS Code.
 - [Python environments in VS Code](#the-python-environment): **RobotCode** uses the environment of the new Python Environments extension and picks up another environment or a fresh Robot Framework installation by itself, without restarting VS Code.
-- [PyCharm](#pycharm): The plugin's biggest update yet: run and debug with run configurations and profiles, see where a test failed, and set almost everything you can set in VS Code.
 - [A new website](#a-new-website): robotcode.io has moved to Astro with Starlight, is reorganized, has a polished design and new guides for VS Code, PyCharm and `robot.toml`.
 
 ## Breaking Changes
@@ -33,7 +33,7 @@ Not everything is perfect yet, and there is still quite a bit of work ahead, but
 - **The VS Code extension needs VS Code 1.127 or newer.** Older VS Code versions keep the newest **RobotCode** release they can install.
 - **The PyCharm plugin needs PyCharm or IntelliJ IDEA 2026.1 or newer.** Older IDE versions no longer receive plugin updates.
 - **`--tags` is now `--show-tags`.** In `robotcode discover` and `robotcode results show`, the switch that prints the tags of each test is renamed to `--show-tags / --no-show-tags`, to match the new `--show-metadata`. The old name is no longer accepted, so update any scripts that use it.
-- **A profile name that selects no profile now stops the command.** A name or pattern from `-p`, `ROBOTCODE_PROFILES`, the editor's selection or `inherits` that matches no profile in `robot.toml` ends the command with exit code 252 and "No profile matches '…'" before anything runs; until now, the command ran without that profile, that is, with a different configuration. A name in `default-profiles` is only reported. VS Code and PyCharm report a selected profile that `robot.toml` doesn't define and offer to remove it from the selection, and errors in `robot.toml` now show in the editor, not only in a log. ["No profile matches"](/guides/robot-toml/troubleshooting/#no-profile-matches) explains what to do.
+- **A profile name that selects no profile now stops the command.** If a name or pattern from `-p`, `ROBOTCODE_PROFILES`, the editor's selection or `inherits` matches no profile, the command ends with exit code 252 before anything runs, instead of running with a different configuration. ["No profile matches"](/guides/robot-toml/troubleshooting/#no-profile-matches) explains what to do.
 
 ## Robot Framework 7.5 Support
 
@@ -114,7 +114,15 @@ You can open several viewers at the same time, each with its own library or file
   full
 />
 
-A star after the target field bookmarks the place a viewer shows. The new *Documentation Bookmarks* view in the Explorer lists your bookmarks, starting with the standard libraries, and buttons in its title bring the viewer to the front or open a new one. Bookmarks under *All Workspaces* reach your other machines with Settings Sync. While you type a target, the field completes the names of libraries, resource files and suite files, and the context menu of the outline opens the file that defines a keyword, also the Python file of a library such as `Collections.py`. [Documentation Viewer](/guides/vscode/documentation-viewer/) in the VS Code guide has the details.
+Bookmarks take you back to the documentation you look up often. The star after the target field bookmarks the place a viewer shows, such as a library or a keyword in it, and the new **Documentation Bookmarks** view in the Explorer lists your bookmarks: a click shows one in the viewer, and buttons in its title bring the viewer to the front or open a new one. A bookmark holds for its workspace folder until you move it to *All Workspaces*, where it holds in all your workspaces and reaches your other machines with Settings Sync. On its first start, **RobotCode** bookmarks the standard libraries in *All Workspaces*.
+
+<ThemeImage
+  name="viewer-bookmarks"
+  alt="The Documentation Bookmarks view in the Explorer, with the standard libraries from BuiltIn to XML under All Workspaces and, under the workspace folder robotcode-demo, the bookmarks Collections › Get From Dictionary and ShopLibrary. On the right, the Documentation Viewer shows the selected bookmark, the keyword Get From Dictionary, with a filled star after the target field."
+  full
+/>
+
+While you type a target, the field offers your bookmarks and completes the names of libraries, resource files and suite files, and the context menu of the outline opens the file that defines a keyword, also the Python file of a library such as `Collections.py`. [Documentation Viewer](/guides/vscode/documentation-viewer/) in the VS Code guide has the details.
 
 *Open Documentation*, which shows Robot Framework's Libdoc HTML, is now marked as deprecated in favor of the viewer, as is *Show Documentation* in the context menu of the **Keywords** view. Both keep working.
 
@@ -198,6 +206,7 @@ Keyword completion no longer offers keywords tagged `robot:private` from other f
 
 - Find References, Rename and the unused hints keep up with the files on disk, also with files created, changed or deleted outside the editor and with all files that import a changed resource file; a check every five minutes, set by `robotcode.analysis.fileCheckInterval`, finds the changes the editor doesn't report.
 - Find References also works on the library or resource name in front of a keyword call, such as `BuiltIn` in `BuiltIn.Log`, and lists `EXCEPT AS` and item assignments such as `${items}[0]=` with the variable they set, so Rename renames them too.
+- The language server now also starts when `robot.toml` can't be loaded or a profile name selects no profile, and reports the problem as an error message instead of only in its log. VS Code and PyCharm report a selected profile that `robot.toml` doesn't define and offer to remove it from the selection.
 - A library import that Robot Framework 7.4 and newer ignores, because an earlier import already uses its name, is now reported.
 - A file that you edited, saved and closed is no longer analyzed with the text from before your edit.
 - After a change of the Python path or of an environment variable, files whose imports or variables it affects are analyzed again instead of keeping their old diagnostics, also closed ones.
