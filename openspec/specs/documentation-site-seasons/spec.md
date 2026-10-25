@@ -68,7 +68,7 @@ When the visitor's system asks for reduced motion, the seasonal decorations SHAL
 
 ### Requirement: Decorations stay out of the way
 
-Seasonal decorations SHALL NOT take clicks, taps or keyboard focus away from the page, except where a visitor clicks a spider, the ghost or the pumpkin itself. Text under the fog SHALL stay readable, and every decoration SHALL be visible and readable in the light and in the dark theme. Decorations SHALL pause while the browser tab is hidden.
+Seasonal decorations SHALL NOT take clicks, taps or keyboard focus away from the page, except where a visitor clicks a spider, a spider's speech bubble, the ghost or the pumpkin itself. Text under the fog SHALL stay readable, and every decoration SHALL be visible and readable in the light and in the dark theme. Decorations SHALL pause while the browser tab is hidden.
 
 #### Scenario: Clicking a button under the fog
 - **WHEN** a visitor clicks a link or button in the part of the window covered by fog
@@ -178,6 +178,40 @@ During the Halloween season, clicking a walking spider, the hanging spider, the 
 #### Scenario: Boo after picking a theme
 - **WHEN** a visitor has just picked a theme in the theme selector and types "boo"
 - **THEN** bats fly across the page
+
+### Requirement: Spiders ask for a poke
+
+During the Halloween season the home page and the news pages SHALL now and then show a spider saying "Trick or treat? Poke me!" in a speech bubble next to it, for about six seconds: first about five seconds after the page opens, then about every 15 seconds, until the visitor has got a treat on the page. The hanging spider, the resting spider and the walking spiders SHALL take turns. With reduced motion no spider SHALL ask.
+
+#### Scenario: First invitation
+- **WHEN** a visitor stays on the home page or a news post for about five seconds without clicking a creature
+- **THEN** a spider in the window says "Trick or treat? Poke me!" in a speech bubble next to it
+- **AND** the bubble disappears after about six seconds
+
+#### Scenario: Taking turns
+- **WHEN** the visitor stays on the home page for a minute, with the hanging and the resting spider in the window
+- **THEN** the hanging spider, the resting spider and a walking spider ask in turn, about every 15 seconds
+
+#### Scenario: Walking spider asks
+- **WHEN** it is a walking spider's turn
+- **THEN** the spider stops while its bubble is shown and walks on afterwards
+
+#### Scenario: Spider out of view
+- **WHEN** the spider whose turn it is is not in the window, such as the hanging spider after the visitor scrolled down
+- **THEN** the next spider in the window asks instead
+
+#### Scenario: Poking the bubble
+- **WHEN** the visitor clicks the speech bubble
+- **THEN** its spider reacts as when it is clicked, and a treat appears
+
+#### Scenario: After a treat
+- **WHEN** the visitor clicks a spider, the ghost or the pumpkin and gets a treat
+- **THEN** a speech bubble shown at that moment disappears
+- **AND** no spider asks again on that page
+
+#### Scenario: Reduced motion
+- **WHEN** a visitor whose system asks for reduced motion stays on the home page
+- **THEN** no spider asks
 
 ### Requirement: Lightning bolts
 
