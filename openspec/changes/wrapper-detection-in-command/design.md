@@ -54,7 +54,7 @@ See proposal.md - Why. The current state in the code:
 ### D2: Load once per command and keep the outcome with its messages
 
 - **New step:** next to `handle_robot_options`, the runner gets a step that parses the paths as `handle_robot_options` does and loads, combines and evaluates the configuration. Instead of printing what the callbacks report, it records it in order: `-v` messages and errors.
-  - It keeps the outcome on the `Application`, keyed by the positional arguments made absolute: either the root folder and the profile, or the error.
+  - It keeps the outcome in the `meta` of the root Click context, which nested commands such as `robot` in `debug` share, keyed by the positional arguments made absolute: either the root folder and the profile, or the error. That needs no attribute for the runner on the `Application` of `robotcode.plugin`.
   - It then decides about the `wrapper` (D1). When robotcode starts again under the `wrapper`, the recorded messages are dropped, because robotcode under the `wrapper` loads and prints them itself. When the `wrapper` cannot be started, they are printed before that error.
 - **`handle_robot_options`** takes the kept outcome for the same paths, or runs the step itself. It prints the recorded messages and either raises the recorded error or goes on as today: `build_command_line`, the `-v` line with the options, `app.root_folder`.
 - **Result:**
