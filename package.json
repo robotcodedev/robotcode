@@ -1505,10 +1505,16 @@
         "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView"
       },
       {
+        "title": "Show Documentation Viewer",
+        "category": "RobotCode",
+        "command": "robotcode.showDocumentationViewer",
+        "icon": "$(book)"
+      },
+      {
         "title": "New Documentation Viewer",
         "category": "RobotCode",
         "command": "robotcode.newDocumentationViewer",
-        "icon": "$(book)"
+        "icon": "$(new-file)"
       },
       {
         "title": "Copy Documentation Viewer into New Window",
@@ -1682,9 +1688,19 @@
           "group": "navigation"
         },
         {
+          "command": "robotcode.showDocumentationViewer",
+          "when": "view == robotcode.documentationBookmarksView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "robotcode.newDocumentationViewer",
+          "when": "view == robotcode.documentationBookmarksView",
+          "group": "navigation@2"
+        },
+        {
           "command": "robotcode.documentationBookmarks.reset",
           "when": "view == robotcode.documentationBookmarksView",
-          "group": "navigation"
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [

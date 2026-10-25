@@ -378,6 +378,7 @@ export class DocumentationViewerManager implements vscode.Disposable {
           if (panel.active) this.markUsed(viewer);
         },
       }),
+      vscode.commands.registerCommand("robotcode.showDocumentationViewer", () => this.showViewer()),
       vscode.commands.registerCommand("robotcode.newDocumentationViewer", () => this.openViewer()),
       vscode.commands.registerCommand("robotcode.copyDocumentationViewerToNewWindow", () =>
         this.openViewerInNewWindow(),
@@ -490,6 +491,18 @@ export class DocumentationViewerManager implements vscode.Disposable {
 
     const viewer = this.createViewer(openColumn(), false, folder, DEFAULT_TARGET);
     viewer.show({ type: "show", folder: folder.uri.toString(), text: DEFAULT_TARGET, focusTarget: true });
+  }
+
+  // The viewer that the actions use, with the focus, as a click on its tab gives it, in its own group and window;
+  // without one, a new viewer.
+  private async showViewer(): Promise<void> {
+    const viewer = this._pinned ?? this.lastUsedViewer();
+    if (viewer === undefined) {
+      await this.openViewer();
+      return;
+    }
+    viewer.panel.reveal(viewer.panel.viewColumn, false);
+    this.markUsed(viewer);
   }
 
   // When the button is the first click into the viewer, its message reaches the extension before VS Code reports the

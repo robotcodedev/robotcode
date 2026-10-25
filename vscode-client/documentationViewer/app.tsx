@@ -1187,7 +1187,7 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           }
         />
         <vscode-toolbar-button
-          icon="add"
+          icon="new-file"
           label="New Documentation Viewer"
           title="New Documentation Viewer"
           onClick={() => post({ type: "newViewer" })}
