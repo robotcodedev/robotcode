@@ -41,9 +41,9 @@ interface KeywordResultData extends ResultData {
 }
 
 export interface ExpandableContextType {
-  registerChild: (ref: RefObject<Expandable>) => void;
-  unregisterChild: (ref: RefObject<Expandable>) => void;
-  get parentThis(): RefObject<Expandable> | null;
+  registerChild: (ref: RefObject<Expandable | null>) => void;
+  unregisterChild: (ref: RefObject<Expandable | null>) => void;
+  get parentThis(): RefObject<Expandable | null> | null;
 }
 
 const ExpandableContext = createContext<Partial<ExpandableContextType>>({
@@ -64,19 +64,19 @@ interface ExpandableProps {
 }
 
 class Expandable extends Component<ExpandableProps> {
-  private childRefs: RefObject<Expandable>[] = [];
-  private ref: RefObject<Expandable> = createRef();
+  private childRefs: RefObject<Expandable | null>[] = [];
+  private ref: RefObject<Expandable | null> = createRef();
   private childrenRef = createRef<HTMLDivElement>();
   private togglerRef = createRef<HTMLDivElement>();
   private headerRef = createRef<HTMLDivElement>();
 
-  public registerChild(ref: RefObject<Expandable>): void {
+  public registerChild(ref: RefObject<Expandable | null>): void {
     if (ref && !this.childRefs.includes(ref)) {
       this.childRefs.push(ref);
     }
   }
 
-  public unregisterChild(ref: RefObject<Expandable>): void {
+  public unregisterChild(ref: RefObject<Expandable | null>): void {
     this.childRefs = this.childRefs.filter((childRef) => childRef !== ref);
   }
 
