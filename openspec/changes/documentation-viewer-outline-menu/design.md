@@ -60,7 +60,7 @@ The extension finds the viewer by `viewerId` among its viewers, and takes the ta
 ### D4: The source in `robotcode doc`
 
 - **Fields.** `KeywordEntry` gets `source`, `kw.source` or empty, and `lineno`, `kw.line_no`, or `-1` when it is unknown, as the JSON has them for the library. The JSON of `keywords` and `keyword` gets them too, since it has the same entries.
-- **Into the page.** The extension passes `source` and `lineno` of each keyword into the page message, from which the page sets `entryHasSource`, and keeps them with the page for Go to Source.
+- **Into the page.** The extension passes `source` and `lineno` of each keyword whose file and line are both known into the page message, from which the page sets `entryHasSource`, and keeps them with the page for Go to Source. A dynamic library can name the file of a keyword without its line (`lineno` `-1`); such a keyword has no Go to Source.
 
 ### D5: Tests
 
