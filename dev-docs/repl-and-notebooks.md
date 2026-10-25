@@ -264,14 +264,14 @@ The keywords of a cell become keywords of the session's suite file, as if they w
 ```python
 new = list(TestSuite.from_model(model).resource.keywords)
 keywords = session_suite.resource.keywords
-keywords[:] = [kw for kw in keywords if not defined_by(cell, kw)] + new   # drops the keyword cache on RF 7
+keywords[:] = [kw for kw in keywords if not defined_by(cell, kw)] + new  # drops the keyword cache on RF 7
 if RF_VERSION < (7, 0):
     # the suite file's keywords are built once at suite start; build them again
     # with the arguments the namespace of this version uses
     namespace._kw_store.user_keywords = (
-        UserLibrary(session_suite.resource, UserLibrary.TEST_CASE_FILE_TYPE)   # RF 5.0
+        UserLibrary(session_suite.resource, UserLibrary.TEST_CASE_FILE_TYPE)  # RF 5.0
         if RF_VERSION < (6, 0)
-        else UserLibrary(session_suite.resource, resource_file=False)        # RF 6.x
+        else UserLibrary(session_suite.resource, resource_file=False)  # RF 6.x
     )
 ```
 
