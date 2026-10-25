@@ -638,6 +638,61 @@ rc-hero-gallery[data-picture-moon] .rc-hw-moon {
   transform: translateY(-6px);
 }
 
+/* a spider asking for a poke (invite.ts): the look of a treat, with a tail towards the spider; the script moves it,
+   sets the place of the tail (`--tail`) and `data-below` while it shows below the spider */
+.rc-hw-invite {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--sl-color-text-accent);
+  border-radius: 0.75rem;
+  background: var(--sl-color-bg-nav);
+  box-shadow: 0 0.8rem 2rem var(--hw-shadow);
+  color: var(--sl-color-white);
+  font-size: var(--sl-text-sm);
+  line-height: 1.45;
+  white-space: nowrap;
+  cursor: pointer;
+  animation: rc-hw-fade-in 0.3s ease-out;
+  transition: opacity 0.3s;
+}
+
+.rc-hw-invite strong {
+  color: var(--sl-color-text-accent);
+}
+
+/* the tail: a small square turned by 45 degrees, half under the bubble, with its border on the two outer sides */
+.rc-hw-invite::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: var(--tail, 50%);
+  width: 0.6rem;
+  height: 0.6rem;
+  border: solid var(--sl-color-text-accent);
+  border-width: 0 1px 1px 0;
+  background: inherit;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.rc-hw-invite[data-below]::after {
+  top: 0;
+  transform: translate(-50%, -50%) rotate(225deg);
+}
+
+.rc-hw-invite.rc-hw-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes rc-hw-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rc-hw-ghost,
   .rc-hw-treat {

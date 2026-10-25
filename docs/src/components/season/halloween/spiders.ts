@@ -1,6 +1,8 @@
 // Spiders and webs: a web in a corner of the hero with a spider hanging from it, a web in a corner of the first band
 // with a spider resting in it, and robot spiders walking over the page with legs that step like a spider's. The robot
-// spider's head is the Robot Framework face. Everything is drawn in body units facing +x.
+// spider's head is the Robot Framework face. Everything is drawn in body units facing +x. Now and then a spider asks
+// for a poke (invite.ts).
+import { invitations, type Speaker, type Speakers } from "./invite";
 import { patter, pop, scurry } from "./sound";
 import { clamp, el, put, rand, RF_FACE, treat, windowLayer, world, type Part } from "./world";
 
@@ -172,19 +174,25 @@ export function createWeb(host: HTMLElement, corner: "top-right" | "bottom-left"
 }
 
 // the spider on its thread below the hero web: it climbs up when the pointer comes near and drops on a click
-function hangingSpider(web: Web, origin: [number, number]): Part {
+function hangingSpider(web: Web, origin: [number, number]): Part & { speakers: Speakers } {
   const [ax, ay] = web.at(3, 4);
   const thread = el("line", { class: "rc-hw-thread", x1: ax, y1: ay, x2: ax, y2: ay + 170 }, web.svg);
   const spider = stillSpider(web.svg, 0.82);
   const s = { L: 170, Lt: 170, vL: 0, th: 0.12, vth: 0, nearAt: -1e9, phase: 0 };
-  spider.hit.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
+  const poke = (e: PointerEvent) => {
     s.vL += 650;
     s.nearAt = -1e9;
     scurry(4);
     treat(e.clientX, e.clientY);
+  };
+  spider.hit.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    poke(e);
   });
+  // it may always ask, and keeps climbing up when the pointer comes near
+  const speaker: Speaker = { box: () => spider.hit.getBoundingClientRect(), hold() {}, poke };
   return {
+    speakers: () => [speaker],
     update(dt, now) {
       const m = web.svg.getScreenCTM();
       const ex = ax + Math.sin(s.th) * s.L, ey = ay + Math.cos(s.th) * s.L;
@@ -220,19 +228,25 @@ function hangingSpider(web: Web, origin: [number, number]): Part {
 }
 
 // the spider resting in the band web: on a click it hides in the corner and comes back after a few seconds
-function restingSpider(web: Web, origin: [number, number]): Part {
+function restingSpider(web: Web, origin: [number, number]): Part & { speakers: Speakers } {
   const [nx, ny] = web.at(2, 3);
   const spider = stillSpider(web.svg, 0.9);
   const s = { t: 0, mode: "sit" as "sit" | "hide" | "away" | "back", until: 0, phase: 0, twitch: 0 };
-  spider.hit.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
+  const poke = (e: PointerEvent) => {
     if (s.mode !== "sit") return;
     // with reduced motion the spider stays where it is
     if (!world.reduced()) s.mode = "hide";
     scurry();
     treat(e.clientX, e.clientY);
+  };
+  spider.hit.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    poke(e);
   });
+  const speaker: Speaker = { box: () => spider.hit.getBoundingClientRect(), hold() {}, poke };
   return {
+    // it asks only while it sits in its web
+    speakers: () => (s.mode === "sit" ? [speaker] : []),
     update(dt, now) {
       const speed = dt === 0 ? 100 : 2.6;
       const step = dt === 0 ? 1 : dt;
@@ -294,10 +308,13 @@ class Walker {
   fleeSpeed = 340;
   sinceTap = 0;
   gone = false;
+  // held still while it asks for a poke
+  held = false;
   g: SVGGElement;
   body: SVGGElement;
   legs: Leg[] = [];
   lines: LegParts;
+  speaker: Speaker;
 
   // `hatch`: a hatchling of the egg sac, small, that runs off from where it hatched in the direction `angle`
   constructor(layer: SVGSVGElement, hatch?: { x: number; y: number; angle: number }) {
@@ -327,6 +344,7 @@ class Walker {
       e.preventDefault();
       this.flee(e);
     });
+    this.speaker = { box: () => hit.getBoundingClientRect(), hold: (on) => (this.held = on), poke: (e) => this.flee(e) };
     for (let i = 0; i < 4; i++) {
       for (const s of [-1, 1]) {
         const leg: Leg = { i, s, grp: (i + (s > 0 ? 1 : 0)) % 2, fx: 0, fy: 0, lift: 0, st: null };
@@ -372,6 +390,7 @@ class Walker {
     if (!this.fleeing && p && Math.hypot(p.x - this.x, p.y - this.y) < 80 * this.k) {
       this.freeze = Math.max(this.freeze, rand(0.8, 1.6));
     }
+    if (this.held && !this.fleeing) this.freeze = Math.max(this.freeze, 0.3);
     let target = 0;
     if (this.fleeing) target = this.fleeSpeed;
     else if (this.freeze > 0) this.freeze -= dt;
@@ -453,14 +472,21 @@ class Walker {
 }
 
 // the walking spiders of the page: two (one on narrow screens), and a spider that ran off comes back later
-function walkers(): Part {
+function walkers(): Part & { speakers: Speakers } {
   const layer = windowLayer("rc-hw-layer");
   const list: Walker[] = [];
   const due: number[] = [];
   const wanted = innerWidth < 600 ? 1 : 2;
   const start = performance.now();
   for (let i = 0; i < wanted; i++) due.push(start + 500 + i * 1100);
+  const fromMiddle = (w: Walker) => Math.hypot(w.x - innerWidth / 2, w.y - innerHeight / 2);
   return {
+    // the spiders that walk, not those running off, the one nearest the middle of the window first
+    speakers: () =>
+      list
+        .filter((w) => !w.fleeing)
+        .sort((a, b) => fromMiddle(a) - fromMiddle(b))
+        .map((w) => w.speaker),
     update(dt, now) {
       for (let i = due.length - 1; i >= 0; i--) {
         if (now >= due[i] && list.length < 3) {
@@ -566,9 +592,12 @@ function eggSac(web: Web): Part {
 }
 
 // the web in the top right corner of the window with the hanging spider and the egg sac, held by `corner` (the hero,
-// or a layer over the top of a news page), the web of a band with the resting spider, and the walking spiders
+// or a layer over the top of a news page), the web of a band with the resting spider, the walking spiders, and their
+// invitation to a poke
 export function spiders(corner: HTMLElement | null, band: HTMLElement | null): Part[] {
   const parts: Part[] = [];
+  // the kinds of spiders in the order they take turns to ask for a poke
+  const kinds: Speakers[] = [];
   if (corner) {
     const web = createWeb(corner, "top-right", 320);
     // the web hangs in the top right corner of the window, below the header, whatever the width of the window
@@ -580,9 +609,17 @@ export function spiders(corner: HTMLElement | null, band: HTMLElement | null): P
     };
     pin();
     new ResizeObserver(pin).observe(document.documentElement);
-    parts.push(hangingSpider(web, [320, 0]), eggSac(web));
+    const hanging = hangingSpider(web, [320, 0]);
+    parts.push(hanging, eggSac(web));
+    kinds.push(hanging.speakers);
   }
-  if (band) parts.push(restingSpider(createWeb(band, "bottom-left", 230), [0, 230]));
-  parts.push(walkers());
+  if (band) {
+    const resting = restingSpider(createWeb(band, "bottom-left", 230), [0, 230]);
+    parts.push(resting);
+    kinds.push(resting.speakers);
+  }
+  const walking = walkers();
+  kinds.push(walking.speakers);
+  parts.push(walking, invitations(kinds));
   return parts;
 }

@@ -1,5 +1,5 @@
 // What the parts of the Halloween decorations share: the page kind, the pointer, the wind, the state of the season
-// and of Spooky mode, small SVG helpers, and the treat bubble that clicked creatures leave.
+// and of Spooky mode, small SVG helpers, and the treat bubble that clicked creatures leave, and whether one was left.
 import { TIPS } from "./treats";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
@@ -25,6 +25,8 @@ export const world = {
   pointer: null as { x: number; y: number } | null,
   // the wind of a gust: `s` its strength from 0 to 1, `v` the signed push (positive blows to the right)
   wind: { s: 0, v: 0 },
+  // whether the visitor has got a treat on this page; then the spiders stop asking for a poke (invite.ts)
+  treated: false,
   reduced: () => motionQuery.matches,
   motionQuery,
 };
@@ -70,6 +72,7 @@ let tipAt = Math.floor(Math.random() * TIPS.length);
 // A tip as a treat near the click, above it, or above the whole `anchor` box so that it does not cover what was
 // clicked; it fades after a few seconds.
 export function treat(x: number, y: number, title = "Treat!", anchor?: DOMRect): void {
+  world.treated = true;
   tipAt = (tipAt + 1) % TIPS.length;
   const bubble = document.createElement("div");
   bubble.className = "rc-halloween rc-hw-treat";
