@@ -91,6 +91,21 @@ suite("RunTerminals", function () {
     });
   }
 
+  function running(pid: number): boolean {
+    try {
+      // signal 0 only looks whether the process is there
+      return process.kill(pid, 0);
+    } catch (e) {
+      return (e as NodeJS.ErrnoException).code !== "ESRCH";
+    }
+  }
+
+  // until the process `pid` has ended, then a moment more, in which the extension sees the process's connection close
+  async function exited(pid: number): Promise<void> {
+    while (running(pid)) await new Promise((resolve) => setTimeout(resolve, 20));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
   suiteSetup(() => {
     python = findPython();
   });
@@ -164,10 +179,12 @@ suite("RunTerminals", function () {
   test("runs in a new terminal when the previous one was closed by a key just before", async () => {
     const started = await start("pass");
     await started.ended;
+    const pid = await started.terminal.processId;
+    assert.ok(pid !== undefined);
 
     started.terminal.sendText("x", false);
     // the script has ended, VS Code may not have reported the terminal closed yet
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await exited(pid);
 
     const next = await start("import sys; sys.exit(7)");
     assert.notStrictEqual(next.terminal, started.terminal);
