@@ -11,6 +11,8 @@ import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.defaultPathArguments
+import dev.robotcode.robotcode4ij.editor.updateRobotCodeStatusBar
+import dev.robotcode.robotcode4ij.publishRobotCodeSettingsChanged
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.robotSettings
 import kotlinx.coroutines.CancellationException
@@ -24,9 +26,16 @@ import kotlinx.serialization.json.Json
 @Serializable
 internal data class ProfileInfo(val name: String, val description: String = "", val selected: Boolean = false)
 
-/** The output of `robotcode --format json profiles list`. The messages explain an empty list. */
+/**
+ * The output of `robotcode --format json profiles list`. The messages explain an empty list; [unknownSelected] names the
+ * names and patterns of the selection that select no profile.
+ */
 @Serializable
-internal data class ProfileList(val profiles: List<ProfileInfo> = emptyList(), val messages: List<String> = emptyList())
+internal data class ProfileList(
+    val profiles: List<ProfileInfo> = emptyList(),
+    val messages: List<String> = emptyList(),
+    val unknownSelected: List<String> = emptyList()
+)
 
 private val profileListJson = Json { ignoreUnknownKeys = true }
 
@@ -51,13 +60,12 @@ internal data class ProfileChoice(
 }
 
 /**
- * The choice for [selection] and the [list] that `robotcode` read for it. A list with neither profiles nor messages
- * could not be read, so it removes nothing from the selection.
+ * The choice for [selection] and the [list] that `robotcode` read for it. Only the names that the list reports as
+ * selecting no profile leave the selection: patterns and hidden profiles that select a profile stay, and a list that
+ * could not be read removes nothing.
  */
 internal fun profileChoice(selection: List<String>, list: ProfileList): ProfileChoice {
-    val listed = list.profiles.map { it.name }.toSet()
-    val unknown = list.profiles.isEmpty() && list.messages.isEmpty()
-    val removed = if (unknown) emptyList() else selection.filter { it !in listed }
+    val removed = selection.filter { it in list.unknownSelected }
     return ProfileChoice(list.profiles, list.messages, removed, selection.filter { it !in removed })
 }
 
@@ -169,4 +177,20 @@ internal fun Project.chooseProfiles(selection: List<String>, cleaned: (List<Stri
         return null
     }
     return choice.confirm(dialog.checkedNames)
+}
+
+/** Stores [profiles] as the project's selection, which restarts the language server and the discovery. */
+internal fun Project.storeProfileSelection(profiles: List<String>) {
+    val settings = RobotCodePersonalConfiguration.getInstance(this)
+    if (profiles != settings.profiles) {
+        settings.profiles = profiles.toMutableList()
+        publishRobotCodeSettingsChanged()
+        updateRobotCodeStatusBar()
+    }
+}
+
+/** Opens the profile list for the project's selection and stores the selection at once, as VS Code's command does. */
+internal fun Project.selectConfigurationProfiles() {
+    val selection = RobotCodePersonalConfiguration.getInstance(this).profiles.toList()
+    chooseProfiles(selection) { storeProfileSelection(it) }?.let { storeProfileSelection(it) }
 }

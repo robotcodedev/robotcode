@@ -31,6 +31,12 @@ class RobotCodeProfilesTest {
     }
 
     @Test
+    fun theNamesOfTheSelectionThatSelectNoProfileAreRead() {
+        assertEquals(listOf("typo", "ci-*"), read("""{"profiles":[],"unknownSelected":["typo","ci-*"]}""").unknownSelected)
+        assertEquals(emptyList<String>(), read(defaultOutput).unknownSelected)
+    }
+
+    @Test
     fun profilesThatRobotcodeReportsAsSelectedAreChecked() {
         // without a selection, those of default-profiles
         assertEquals(listOf("dev"), profileChoice(emptyList(), read(defaultOutput)).checked)
@@ -41,8 +47,8 @@ class RobotCodeProfilesTest {
     }
 
     @Test
-    fun selectedNamesThatAreNotListedAreRemoved() {
-        val list = ProfileList(listOf(profile("ci"), profile("dev", selected = true)))
+    fun selectedNamesThatSelectNoProfileAreRemoved() {
+        val list = ProfileList(listOf(profile("ci"), profile("dev", selected = true)), unknownSelected = listOf("gone"))
 
         val choice = profileChoice(listOf("gone", "dev"), list)
 
@@ -51,13 +57,26 @@ class RobotCodeProfilesTest {
     }
 
     @Test
+    fun patternsAndHiddenProfilesThatSelectAProfileStay() {
+        // `ci-*` selects `ci-linux`, and `_local` is hidden, so the list shows neither name
+        val list = ProfileList(listOf(profile("ci-linux", selected = true)), unknownSelected = listOf("typo"))
+
+        val choice = profileChoice(listOf("ci-*", "_local", "typo"), list)
+
+        assertEquals(listOf("typo"), choice.removed)
+        assertEquals(listOf("ci-*", "_local"), choice.selection)
+    }
+
+    @Test
     fun aListThatCouldNotBeReadRemovesNothing() {
         val unknown = profileChoice(listOf("dev"), ProfileList())
         assertEquals(emptyList<String>(), unknown.removed)
         assertEquals(listOf("dev"), unknown.selection)
 
-        // messages say why the list is empty, so the names are gone
-        val noProfiles = profileChoice(listOf("dev"), ProfileList(messages = listOf("No profiles defined.")))
+        // without profiles, every selected name selects none, and the messages say why the list is empty
+        val noProfiles = profileChoice(
+            listOf("dev"), ProfileList(messages = listOf("No profiles defined."), unknownSelected = listOf("dev"))
+        )
         assertEquals(listOf("dev"), noProfiles.removed)
         assertEquals(emptyList<String>(), noProfiles.selection)
         assertEquals(listOf("No profiles defined."), noProfiles.messages)

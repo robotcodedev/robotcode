@@ -9,6 +9,8 @@ import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
+import dev.robotcode.robotcode4ij.configuration.selectionCheck
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -144,5 +146,25 @@ class RobotCodeDiscoveryEngineTest : BasePlatformTestCase() {
         manager.discoverySucceeded()
         assertTrue(second.isExpired)
         assertNull(manager.failureNotification)
+    }
+
+    // the notification about the selection offers to fix it, the one about the failure does not
+    fun testAFailureBecauseOfTheSelectionShowsTheNotificationAboutTheSelection() {
+        val settings = RobotCodePersonalConfiguration.getInstance(project)
+        settings.profiles = mutableListOf("typo")
+        try {
+            manager.reportFailure("Error: something else")
+            val failure = manager.failureNotification!!
+
+            manager.reportFailure("Error: No profile matches 'typo'", listOf("typo"))
+
+            assertTrue(failure.isExpired)
+            assertNull(manager.failureNotification)
+            val selection = project.selectionCheck.notification!!
+            assertFalse(selection.isExpired)
+            selection.expire()
+        } finally {
+            settings.profiles = mutableListOf()
+        }
     }
 }

@@ -49,6 +49,8 @@ import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotCodeEnvironmentListener
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.configuration.selectionCheck
+import dev.robotcode.robotcode4ij.configuration.unknownSelectedProfiles
 import dev.robotcode.robotcode4ij.isRobotCodeDisabled
 import dev.robotcode.robotcode4ij.listeners.ownsEvent
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
@@ -379,7 +381,8 @@ class RobotCodeTestManager(private val project: Project, private val scope: Coro
             val lines = output.stderr.lines().filter { it.isNotBlank() }.take(ERROR_LINES).joinToString("\n")
             discoveryFailed(
                 commandLine, output,
-                lines.ifEmpty { RobotCodeBundle.message("discovery.failed.exitCode", output.exitCode.toString()) }
+                lines.ifEmpty { RobotCodeBundle.message("discovery.failed.exitCode", output.exitCode.toString()) },
+                project.unknownSelectedProfiles()
             )
             return null
         }
@@ -393,19 +396,28 @@ class RobotCodeTestManager(private val project: Project, private val scope: Coro
         return result
     }
     
-    private fun discoveryFailed(commandLine: GeneralCommandLine, output: ProcessOutput?, text: String) {
+    private fun discoveryFailed(
+        commandLine: GeneralCommandLine, output: ProcessOutput?, text: String, unknownSelected: List<String> = emptyList()
+    ) {
         thisLogger().warn(
             "Discovery failed: ${commandLine.commandLineString}\n" +
                 (output?.let { "exit code: ${it.exitCode}\nstdout: ${it.stdout}\nstderr: ${it.stderr}" } ?: text)
         )
-        reportFailure(text)
+        reportFailure(text, unknownSelected)
     }
     
     /**
-     * Shows one notification for a failure: the same failure again shows nothing new, another one replaces it.
+     * Shows one notification for a failure: the same failure again shows nothing new, another one replaces it. A failure
+     * because the selection names profiles that robot.toml does not define shows the notification about the selection
+     * instead, which offers to fix it.
      */
     @VisibleForTesting
-    internal fun reportFailure(text: String) {
+    internal fun reportFailure(text: String, unknownSelected: List<String> = emptyList()) {
+        if (unknownSelected.isNotEmpty()) {
+            discoverySucceeded()
+            project.selectionCheck.report(unknownSelected)
+            return
+        }
         if (text == failureText && failureNotification?.isExpired == false) {
             return
         }
