@@ -220,17 +220,21 @@ class RobotCodeEnvironmentTest : BasePlatformTestCase() {
     // as for the interpreter of a run configuration, which no module has
     fun testSdkChangeChecksAnyInterpreterThatIsNotUsable() {
         environment.watchWorkspaceModel()
-        val sdk = registeredPythonSdk("Python E", missingPython("e"))
+        val sdk = pythonSdk("Python E", missingPython("e"))
         val interpreter = pythonInterpreterOf(sdk)
-        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        // registering the SDK is an SDK change too, which the workspace model reports on another thread; with the state
+        // set first, it starts one check that is awaited here instead of an extra one at any later point of the test
+        environment.checks.setState(interpreter, tooOld)
+        WriteAction.run<Throwable> { ProjectJdkTable.getInstance().addJdk(sdk, testRootDisposable) }
+        waitForChecks(interpreter, 1)
 
         environment.checks.setState(interpreter, tooOld)
         changeSdk(sdk, "Python 3.12.3")
-        waitForChecks(interpreter, 1)
+        waitForChecks(interpreter, 2)
 
         environment.checks.setState(interpreter, usable)
         changeSdk(sdk, "Python 3.12.4")
-        waitForChecks(interpreter, 1)
+        waitForChecks(interpreter, 2)
     }
 
     fun testRestartWithResetChecksTheInterpretersThatAreNotUsable() {
