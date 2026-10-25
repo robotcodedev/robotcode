@@ -136,7 +136,7 @@ With the global `--format json` (or `json_indent`), `lib` prints one object:
 | `keywords` | One entry per keyword, in the order of the page. |
 | `types` | One entry per data type, in the order of the page, with `name` and `anchor`: the anchor of its heading in `markdown`, to which the links to the type point. |
 
-A keyword entry has `name`, `anchor` (the anchor of its heading in `markdown`), `args` (the arguments as one line of text), `short_doc` (the first paragraph of the documentation, as one line), `tags` and `doc` (the documentation as Markdown). References in `doc` and `short_doc` are written as inline code.
+A keyword entry has `name`, `anchor` (the anchor of its heading in `markdown`), `args` (the arguments as one line of text), `short_doc` (the first paragraph of the documentation, as one line), `tags`, `doc` (the documentation as Markdown), and `source` and `lineno`, the file of the keyword and the line in it, empty and `-1` when they are unknown. References in `doc` and `short_doc` are written as inline code.
 
 `keywords` and `keyword` print an object with the same fields except `markdown` and `types`; its `keywords` holds only the selected keywords.
 

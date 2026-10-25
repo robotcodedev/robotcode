@@ -491,9 +491,32 @@ class TestJsonOutput:
         assert (keywords[0]["name"], keywords[0]["anchor"]) == ("Append To List", "append-to-list")
         anchors = {anchor for _, _, anchor in heading_anchors(data["markdown"])}
         assert all(entry["anchor"] in anchors for entry in [*keywords, *data["types"]])
-        assert all(set(entry) == {"name", "anchor", "args", "short_doc", "tags", "doc"} for entry in keywords)
+        assert all(
+            set(entry) == {"name", "anchor", "args", "short_doc", "tags", "doc", "source", "lineno"}
+            for entry in keywords
+        )
         assert all("‍" not in entry["args"] and "\n" not in entry["short_doc"] for entry in keywords)
         assert all(set(entry) == {"name", "anchor"} for entry in data["types"])
+
+    def test_keyword_source_of_a_library(self, doc_project: Project) -> None:
+        entry = _json("doc", "lib", "Collections")["keywords"][0]
+
+        assert entry["name"] == "Append To List"
+        source = Path(entry["source"])
+        assert source.name == "Collections.py"
+        line = source.read_text(encoding="utf-8").splitlines()[entry["lineno"] - 1]
+        assert line.strip().startswith("def append_to_list(")
+
+    def test_keyword_source_of_a_resource(self, doc_project: Project) -> None:
+        data = _json("doc", "lib", "resources/common.resource")
+
+        resource = (doc_project.root / "resources" / "common.resource").resolve()
+        assert all(Path(entry["source"]).resolve() == resource for entry in data["keywords"])
+        assert [(entry["name"], entry["lineno"]) for entry in data["keywords"]] == [
+            ("Open ${browser} Browser", 5),
+            ("Other Kw", 12),
+            ("Smoke Kw", 8),
+        ]
 
     def test_keyword_anchors_after_a_name_with_a_variable(self, doc_project: Project) -> None:
         data = _json("doc", "lib", "resources/common.resource")

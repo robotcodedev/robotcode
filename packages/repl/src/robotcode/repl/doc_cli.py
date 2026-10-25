@@ -88,6 +88,8 @@ class KeywordEntry:
     short_doc: str
     tags: List[str]
     doc: str
+    source: str
+    lineno: int
 
 
 @dataclass
@@ -394,6 +396,8 @@ def _keyword_entries(library: LibraryDoc, page: str, keywords: List[KeywordDoc])
             short_doc=_one_line(kw.format_text(getshortdoc(kw.doc))),
             tags=list(kw.tags),
             doc=kw.format_text(kw.doc),
+            source=kw.source or "",
+            lineno=kw.line_no,
         )
         for kw in keywords
     ]
