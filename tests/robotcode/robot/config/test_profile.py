@@ -5,7 +5,7 @@ from typing import List
 import pytest
 
 from robotcode.robot.config.loader import load_robot_config_from_path, load_robot_config_from_robot_toml_str
-from robotcode.robot.config.model import RobotConfig
+from robotcode.robot.config.model import ProfileInheritanceError, ProfileNotFoundError, RobotConfig, UnknownProfile
 
 
 def test_can_parse_profiles() -> None:
@@ -114,11 +114,183 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
     """
     config = load_robot_config_from_robot_toml_str(data)
 
-    with pytest.raises(
-        ValueError,
-        match=r"Can't find any configuration profiles matching the pattern 'nonexistent'.",
-    ):
+    with pytest.raises(ValueError, match=r"No profile matches 'nonexistent'\."):
         config.combine_profiles("nonexistent")
+
+
+# the commands pass an error_callback for the errors that are only reported, such as those of `enabled` conditions
+def test_a_name_that_selects_no_profile_is_an_error_also_with_an_error_callback() -> None:
+    data = """\
+        [profiles.ci]
+        extend-args = ["ci"]
+        """
+    errors: List[str] = []
+
+    with pytest.raises(ProfileNotFoundError) as e:
+        load_robot_config_from_robot_toml_str(data).combine_profiles(
+            "missing", error_callback=lambda message: errors.append(str(message))
+        )
+
+    assert e.value.unknown == UnknownProfile("missing")
+    assert errors == []
+
+
+def test_a_default_profile_that_does_not_exist_is_reported_and_the_other_default_profiles_apply() -> None:
+    data = """\
+        args = ["orig"]
+        default-profiles = ["typo", "ci"]
+
+        [profiles.ci]
+        extend-args = ["ci"]
+        """
+    errors: List[str] = []
+
+    profile = load_robot_config_from_robot_toml_str(data).combine_profiles(
+        error_callback=lambda message: errors.append(str(message))
+    )
+
+    assert profile.args == ["orig", "ci"]
+    assert errors == ["No profile matches 'typo'."]
+
+
+def test_a_default_profile_that_does_not_exist_is_an_error_without_an_error_callback() -> None:
+    data = """\
+        default-profiles = ["typo"]
+
+        [profiles.ci]
+        extend-args = ["ci"]
+        """
+
+    with pytest.raises(ProfileNotFoundError) as e:
+        load_robot_config_from_robot_toml_str(data).combine_profiles()
+
+    assert e.value.unknown == UnknownProfile("typo", default=True)
+
+
+# a later file's `profiles` replace those of the user configuration, while its `default-profiles` stay
+def test_a_default_profile_of_the_user_configuration_that_the_project_replaces_is_reported(tmp_path: Path) -> None:
+    user_config = tmp_path / "user.toml"
+    user_config.write_text('default-profiles = ["mine"]\n\n[profiles.mine]\nextend-args = ["mine"]\n', encoding="utf-8")
+    project_config = tmp_path / "robot.toml"
+    project_config.write_text('[profiles.ci]\nextend-args = ["ci"]\n', encoding="utf-8")
+    errors: List[str] = []
+
+    load_robot_config_from_path(user_config, project_config).combine_profiles(
+        error_callback=lambda message: errors.append(str(message))
+    )
+
+    assert errors == ["No profile matches 'mine'."]
+
+
+def test_an_inherited_profile_that_does_not_exist_is_an_error() -> None:
+    data = """\
+        [profiles.ci]
+        inherits = ["typo"]
+        extend-args = ["ci"]
+        """
+
+    with pytest.raises(ProfileNotFoundError) as e:
+        load_robot_config_from_robot_toml_str(data).combine_profiles("ci", error_callback=lambda message: None)
+
+    assert e.value.unknown == UnknownProfile("typo", inherited_by="ci")
+
+
+def test_names_that_select_no_profile_go_to_the_callback_and_the_other_profiles_apply() -> None:
+    data = """\
+        args = ["orig"]
+
+        [profiles.ci]
+        inherits = ["typo"]
+        extend-args = ["ci"]
+        """
+    unknown: List[UnknownProfile] = []
+
+    profile = load_robot_config_from_robot_toml_str(data).combine_profiles(
+        "missing", "ci", unknown_profile_callback=unknown.append
+    )
+
+    assert profile.args == ["orig", "ci"]
+    assert [(u.name, u.selected, u.inherited_by) for u in unknown] == [("missing", True, None), ("typo", False, "ci")]
+
+
+def test_a_name_that_selects_no_profile_is_reported_once_for_each_place_it_comes_from() -> None:
+    data = """\
+        [profiles.chrome]
+        inherits = ["base"]
+
+        [profiles.firefox]
+        inherits = ["base"]
+
+        [profiles.base]
+        inherits = ["comon"]
+        """
+    unknown: List[UnknownProfile] = []
+
+    load_robot_config_from_robot_toml_str(data).combine_profiles(
+        "chrome", "firefox", "typo", "typo", unknown_profile_callback=unknown.append
+    )
+
+    assert [(u.name, u.inherited_by) for u in unknown] == [("comon", "base"), ("typo", None)]
+
+
+def test_an_exact_name_selects_its_profile_also_with_pattern_characters() -> None:
+    data = """\
+        args = ["orig"]
+
+        [profiles."ci[eu]"]
+        extend-args = ["eu"]
+
+        [profiles.cie]
+        extend-args = ["cie"]
+        """
+
+    profile = load_robot_config_from_robot_toml_str(data).combine_profiles("ci[eu]")
+
+    assert profile.args == ["orig", "eu"]
+
+
+def test_a_pattern_in_inherits_does_not_match_the_profile_that_has_it() -> None:
+    data = """\
+        args = ["orig"]
+
+        [profiles.ci-base]
+        extend-args = ["base"]
+
+        [profiles.ci-linux]
+        inherits = ["ci-*"]
+        extend-args = ["linux"]
+        """
+
+    profile = load_robot_config_from_robot_toml_str(data).combine_profiles("ci-linux")
+
+    assert profile.args == ["orig", "base", "linux"]
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (
+            '[profiles.a]\ninherits = ["b"]\n\n[profiles.b]\ninherits = ["a"]\n',
+            "The profile 'a' inherits itself: a -> b -> a.",
+        ),
+        ('[profiles.a]\ninherits = ["a"]\n', "The profile 'a' inherits itself: a -> a."),
+    ],
+)
+def test_a_profile_that_inherits_itself_is_an_error_also_for_callers_that_go_on(data: str, message: str) -> None:
+    with pytest.raises(ProfileInheritanceError) as e:
+        load_robot_config_from_robot_toml_str(data).combine_profiles(
+            "a", error_callback=lambda message: None, unknown_profile_callback=lambda unknown: None
+        )
+
+    assert str(e.value) == message
+
+
+@pytest.mark.parametrize(
+    "unknown",
+    [UnknownProfile("typo"), UnknownProfile("typo", default=True), UnknownProfile("typo", inherited_by="ci")],
+)
+def test_the_message_names_only_the_name_whatever_it_comes_from(unknown: UnknownProfile) -> None:
+    assert unknown.message == "No profile matches 'typo'."
 
 
 def test_profiles_can_be_selected_by_wildcards() -> None:

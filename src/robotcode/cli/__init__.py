@@ -95,10 +95,12 @@ def _maybe_reexec_under_wrapper(
             verbose_callback=app.verbose,
         )
         # `evaluated_with_env` also applies the profile's `env` to `os.environ`,
-        # so the wrapper command can rely on it. Profile errors are swallowed
+        # so the wrapper command can rely on it. Errors that are only reported,
+        # such as an `enabled` condition that cannot be evaluated, are swallowed
         # here: the command loads the config again and reports them, so they
-        # show up once. (Without a callback they would raise, and an unknown
-        # profile would make us skip the wrapper of a valid one.)
+        # show up once. (Without a callback they would raise, and such an error
+        # would make us skip the wrapper of a valid profile.) A name that selects
+        # no profile raises anyway, and the command stops with it.
         profile = (
             load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
             .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=lambda _: None)

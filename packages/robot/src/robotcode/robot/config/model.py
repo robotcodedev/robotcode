@@ -3222,6 +3222,42 @@ class RobotProfile(RobotExtendBaseProfile):
     )
 
 
+@dataclass(frozen=True)
+class UnknownProfile:
+    """A profile name or pattern that selects no profile, and where it comes from."""
+
+    name: str
+    # the profile whose `inherits` names it; None for a name of the selection or of `default-profiles`
+    inherited_by: Optional[str] = None
+    # whether it comes from `default-profiles`
+    default: bool = False
+
+    @property
+    def selected(self) -> bool:
+        """Whether the name comes from the selection: `-p`, `ROBOTCODE_PROFILES` or an editor."""
+        return self.inherited_by is None and not self.default
+
+    @property
+    def message(self) -> str:
+        return f"No profile matches '{self.name}'."
+
+
+class ProfileNotFoundError(ValueError):
+    """A profile name or pattern that selects no profile."""
+
+    def __init__(self, unknown: UnknownProfile) -> None:
+        super().__init__(unknown.message)
+        self.unknown = unknown
+
+
+class ProfileInheritanceError(ValueError):
+    """A profile that inherits itself, directly or through other profiles."""
+
+    def __init__(self, path: Tuple[str, ...]) -> None:
+        super().__init__(f"The profile '{path[0]}' inherits itself: {' -> '.join(path)}.")
+        self.path = path
+
+
 @dataclass
 class RobotConfig(RobotExtendBaseProfile):
     """Robot Framework configuration."""
@@ -3288,11 +3324,13 @@ class RobotConfig(RobotExtendBaseProfile):
         *names: str,
         verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
         error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        unknown_profile_callback: Optional[Callable[[UnknownProfile], None]] = None,
     ) -> Dict[str, Tuple[RobotProfile, Optional[Set[Tuple[str, RobotProfile]]]]]:
         result: Dict[str, Tuple[RobotProfile, Optional[Set[Tuple[str, RobotProfile]]]]] = {}
 
         profiles = self.profiles or {}
 
+        from_default_profiles = not names
         if not names:
             if verbose_callback:
                 verbose_callback("No profiles given, try to check if there are default profiles specified.")
@@ -3306,40 +3344,65 @@ class RobotConfig(RobotExtendBaseProfile):
 
             names = (*(default_profile or ()),)
 
-        def select(name: str, parent_profiles: Optional[Set[Tuple[str, RobotProfile]]] = None) -> None:
+        # each name that selects no profile is reported once for each place it comes from
+        reported: Set[UnknownProfile] = set()
+
+        def report(unknown: UnknownProfile) -> None:
+            if unknown in reported:
+                return
+            reported.add(unknown)
+
+            # a name that selects no profile is an error of the configuration; only callers that must go on, such as
+            # the language server, take it and go on without it
+            if unknown_profile_callback is not None:
+                unknown_profile_callback(unknown)
+            # a name of `default-profiles` is only reported: the `default-profiles` of the user configuration can name
+            # a profile of that file, which the `[profiles]` of a project replace
+            elif unknown.default and error_callback is not None:
+                error_callback(unknown.message)
+            else:
+                raise ProfileNotFoundError(unknown)
+
+        # `path` holds the profiles whose `inherits` lead to the name; the last one names it
+        def select(name: str, path: Tuple[str, ...] = ()) -> None:
             if not name:
                 return
 
             nonlocal result
 
+            parent = path[-1] if path else None
+
             if verbose_callback:
-                if parent_profiles is not None:
-                    verbose_callback(
-                        f"Selecting profiles matching '{name}'"
-                        f" for parent profile '{next(f for f in parent_profiles)[0]}'."
-                    )
+                if parent is not None:
+                    verbose_callback(f"Selecting profiles matching '{name}' for parent profile '{parent}'.")
                 else:
                     verbose_callback(f"Selecting profiles matching '{name}'.")
 
-            profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
+            if name in profiles:
+                # an exact name selects its profile, also when it contains `*`, `?` or `[`
+                profile_names = [name]
+            else:
+                # a pattern in `inherits` does not match the profile that has it
+                profile_names = [p for p in profiles.keys() if p != parent and fnmatch.fnmatchcase(p, name)]
 
             if not profile_names:
-                message = f"Can't find any configuration profiles matching the pattern '{name}'."
-                if error_callback is None:
-                    raise ValueError(message)
-
-                error_callback(message)
+                report(UnknownProfile(name, inherited_by=parent, default=from_default_profiles and parent is None))
                 return
 
+            parent_profiles = {(parent, profiles[parent])} if parent is not None else None
+
             for v in profile_names:
+                if v in path:
+                    raise ProfileInheritanceError((*path[path.index(v) :], v))
+
                 p = profiles[v]
 
                 if p.inherits:
                     if isinstance(p.inherits, list):
                         for i in p.inherits:
-                            select(str(i), {(v, p)})
+                            select(str(i), (*path, v))
                     else:
-                        select(str(p.inherits), {(v, p)})
+                        select(str(p.inherits), (*path, v))
 
                 if v in result:
                     if parent_profiles is None:
@@ -3362,14 +3425,21 @@ class RobotConfig(RobotExtendBaseProfile):
         *names: str,
         verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
         error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        unknown_profile_callback: Optional[Callable[[UnknownProfile], None]] = None,
     ) -> RobotBaseProfile:
-        return self.combine_profiles_ex(*names, verbose_callback=verbose_callback, error_callback=error_callback)[0]
+        return self.combine_profiles_ex(
+            *names,
+            verbose_callback=verbose_callback,
+            error_callback=error_callback,
+            unknown_profile_callback=unknown_profile_callback,
+        )[0]
 
     def combine_profiles_ex(
         self,
         *names: str,
         verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
         error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        unknown_profile_callback: Optional[Callable[[UnknownProfile], None]] = None,
     ) -> Tuple[RobotBaseProfile, Dict[str, RobotProfile], List[str]]:
         enabled_profiles = []
         type_hints = get_type_hints(RobotBaseProfile)
@@ -3390,7 +3460,10 @@ class RobotConfig(RobotExtendBaseProfile):
         )
 
         selected_profiles = self._select_profiles(
-            *names, verbose_callback=verbose_callback, error_callback=error_callback
+            *names,
+            verbose_callback=verbose_callback,
+            error_callback=error_callback,
+            unknown_profile_callback=unknown_profile_callback,
         )
         if verbose_callback:
             if selected_profiles:

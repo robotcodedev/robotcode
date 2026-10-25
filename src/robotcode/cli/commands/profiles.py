@@ -13,6 +13,7 @@ from robotcode.robot.config.loader import (
     DiscoverdBy,
     load_robot_config_from_path,
 )
+from robotcode.robot.config.model import UnknownProfile
 from robotcode.robot.config.utils import get_config_files
 
 
@@ -85,8 +86,20 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
 
         config = load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
 
+        # the editors fill their profile lists with this command, also when their selection names a profile that is
+        # gone, so a name that selects no profile is only reported, and those of the selection are listed for them
+        unknown_selected: List[str] = []
+
+        def report_unknown(unknown: UnknownProfile) -> None:
+            app.error(unknown.message)
+            if unknown.selected:
+                unknown_selected.append(unknown.name)
+
         _, selected_profiles, enabled_names = config.combine_profiles_ex(
-            *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
+            *(app.config.profiles or []),
+            verbose_callback=app.verbose,
+            error_callback=app.error,
+            unknown_profile_callback=report_unknown,
         )
 
         selected_names = [k for k in selected_profiles.keys()]
@@ -121,6 +134,8 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
             messages += ["No profiles defined."]
         if messages:
             result["messages"] = messages
+        if unknown_selected:
+            result["unknownSelected"] = unknown_selected
 
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
             for v in result["profiles"]:

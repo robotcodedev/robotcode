@@ -84,17 +84,20 @@ def dump_model(
         verbose_callback=app.verbose,
     )
 
-    robot_config = load_robot_config_from_path(
-        *config_files, extra_tools={"robotcode-analyze": AnalyzeConfig}, verbose_callback=app.verbose
-    )
+    try:
+        robot_config = load_robot_config_from_path(
+            *config_files, extra_tools={"robotcode-analyze": AnalyzeConfig}, verbose_callback=app.verbose
+        )
 
-    analyzer_config = robot_config.tool.get("robotcode-analyze", None) if robot_config.tool is not None else None
-    if analyzer_config is None:
-        analyzer_config = AnalyzeConfig()
+        analyzer_config = robot_config.tool.get("robotcode-analyze", None) if robot_config.tool is not None else None
+        if analyzer_config is None:
+            analyzer_config = AnalyzeConfig()
 
-    robot_profile = robot_config.combine_profiles(
-        *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
-    ).evaluated_with_env()
+        robot_profile = robot_config.combine_profiles(
+            *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
+        ).evaluated_with_env()
+    except (TypeError, ValueError) as e:
+        raise click.ClickException(str(e)) from e
 
     if variable:
         if robot_profile.variables is None:

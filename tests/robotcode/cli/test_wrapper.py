@@ -228,14 +228,28 @@ def test_dry_run_prints_the_wrapper_instead_of_running_it(project: Path) -> None
     assert f"Would run robotcode under: {sys.executable} {wrapper}" in result.stdout
 
 
-def test_profile_errors_are_reported_once_and_the_valid_wrapper_still_applies(project: Path) -> None:
-    """The wrapper detection leaves profile errors to the command, and an
-    unknown profile must not make it drop the wrapper of a valid one."""
+def test_an_unknown_profile_stops_the_run_before_the_wrapper_of_a_valid_one_starts(project: Path) -> None:
+    """The wrapper detection leaves profile errors to the command, so the error
+    shows once, and a name that selects no profile stops the command before
+    anything starts, also the wrapper of a valid profile."""
     result = _run_robotcode(project, ["-p", "nope", "-p", "x11", "run", "suite.robot"])
+    assert result.returncode == 252, result.stderr
+    assert _calls(project / "wrap.py") == []
+    output = result.stdout + result.stderr
+    assert output.count("No profile matches 'nope'") == 1
+
+
+def test_a_reported_profile_error_keeps_the_wrapper_of_a_valid_profile(project: Path) -> None:
+    """The wrapper detection leaves errors that are only reported, such as an
+    `enabled` condition that cannot be evaluated, to the command, so the error
+    shows once and the wrapper of a valid profile still applies."""
+    with (project / "robot.toml").open("a", encoding="utf-8") as f:
+        f.write("[profiles.broken]\nenabled = { if = '1 +' }\n")
+    result = _run_robotcode(project, ["-p", "broken", "-p", "x11", "run", "suite.robot"])
     assert result.returncode == 0, result.stderr
     assert _calls(project / "wrap.py") == ["xephyr"]
     output = result.stdout + result.stderr
-    assert output.count("Can't find any configuration profiles matching the pattern 'nope'") == 1
+    assert output.count("Error evaluating 'enabled' condition for profile 'broken'") == 1
 
 
 # --- the wrapper is ignored or disabled, with a warning ----------------------
