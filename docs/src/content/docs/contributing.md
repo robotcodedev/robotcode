@@ -40,9 +40,9 @@ RobotCode thrives on community contributions. Active participation helps shape t
 
 We understand that not everyone can contribute financially, but **there are many other valuable ways to support RobotCode**:
 
-- **Contribute Code** – Help improve RobotCode by fixing bugs, adding features, or optimizing performance on [GitHub](https://github.com/robotcodedev/robotcode).
+- **Contribute Code** – Help improve RobotCode by fixing bugs, adding features, or optimizing performance on [GitHub](https://github.com/robotcodedev/robotcode). The [contribution guide](https://github.com/robotcodedev/robotcode/blob/main/CONTRIBUTING.md) explains how to set up the project, run the tests and open a pull request.
 - **Improve Documentation** – Writing tutorials, FAQs, or guides makes it easier for new users to start using RobotCode.
-- **Report Bugs & Share Feedback** – Testing new releases, reporting issues, and suggesting improvements helps the project evolve.
+- **Report Bugs & Share Feedback** – Testing new releases and the [dev builds](/getting-started/dev-builds/), reporting issues, and suggesting improvements helps the project evolve.
 - **Spread the Word** – Recommend RobotCode to colleagues, write blog posts, give talks, or share it on social media.
 - **Engage with the Community** – Join discussions, answer questions, and help others in forums or social media channels.
 
