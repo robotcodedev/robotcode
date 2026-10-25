@@ -10,12 +10,13 @@ The target field of the Documentation Viewer takes a library, resource or suite 
 - **Completion of the name.** The part before the first `::` is completed as in `Library` and `Resource` imports in the editor, one level at a time:
   - modules on the Python path and the standard libraries;
   - library, resource and suite files and directories, relative to the workspace folder or absolute.
-- **Keys and mouse.**
-  - Up and Down select a suggestion.
+- **Order, as in the editor.** First the names that continue the typed text in the same case, then the others, each alphabetically. Of two equal names, a module comes before a file and a file before a directory. `Coll` offers `Collections` first, `xml` the Python package `xml`.
+- **Keys and mouse, as in the editor.**
+  - When the list opens, its first suggestion is selected; Up and Down select another.
   - Enter loads the selected suggestion. On a directory it only inserts it and shows the next level.
   - Tab inserts the selected suggestion without loading it, and Escape closes the list.
   - A click works like Enter.
-  - Enter without a selected suggestion loads the typed text, as before.
+  - With the list closed, as after Escape, Enter loads the typed text, as before.
 - **Without a language server** for the folder, as before its Python environment is usable or when RobotCode is switched off for it, the list stays closed. The viewer starts no language server for it.
 - **Screen readers** hear the field as a combobox with a list of suggestions, and the selected suggestion with its kind.
 - The VS Code guide describes the list in the section about the target field.

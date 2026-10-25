@@ -35,9 +35,13 @@
 - **Keys that open the list.** The defaults of the editor's Trigger Suggest (`suggestController.ts`): Ctrl+Space, and on macOS also Option+Escape, since macOS often takes Ctrl+Space for switching the input source. The page tells macOS by its existing `IS_MAC`. The editor's other keys, Ctrl+I and Cmd+I, stay out: where chat is available, Open Inline Chat holds them with a higher weight. A webview cannot read the user's keybindings, so a rebound Trigger Suggest does not reach the viewer.
 - **Empty field.** For an empty field the page posts no `suggest`, and the list stays closed. The top level of `sys.path` has over 200 entries.
 - **Groups.** The list is built from groups of suggestions. This change fills only the group of the completion; the bookmarks of a later change go into a group before it.
-- **Selection.** No suggestion is selected when the list opens, so that Enter keeps loading the typed text. Down selects the first.
+- **Selection.** As in the editor, whose `editor.suggestSelection` defaults to `first`, the first suggestion is selected when the list opens and with each new answer, so that Enter and Tab take it. Escape closes the list, and Enter then loads the typed text. The first plan selected nothing, so that Enter kept loading the typed text; with the order of D3, the first suggestion is the one the editor would offer.
 - **Positioning.** The list is a `position: fixed` element under the field, as wide as the field and at most 40 % of the viewer's height, with a scroll bar. It is placed by the field's bounding box, so that the toolbar cannot clip it.
 - **Mouse and focus.** A `mousedown` on the list calls `preventDefault`, so the field keeps the focus and a click works like Enter. The list closes on `blur` of the field, on Escape and when a load starts.
+- **Typing on.** On every input, an answer still on its way is dropped, because it is for an older text. Until the answer for the new text arrives, the list keeps the suggestions that still complete the new text, with the first one selected: the text before their `start` is unchanged, and their label starts with the part after it. Without such a suggestion, the list closes. Otherwise, typing on and pressing Enter at once would take a suggestion for the older text, such as `XML` for `XML::use_lxml=False`.
+- **Closing.** Escape also cancels a request whose answer has not arrived, and leaving the current entry, as with Back, closes the list, since the field then shows the entry's text.
+- **Scrolling.** The list scrolls its selected row into view itself, without `scrollIntoView`, which would scroll the frames around the page as well; the outline does the same.
+- **IME.** Keys during an IME composition belong to the IME, so the field leaves them alone.
 - **Look.** Colours from the theme tokens of VS Code's suggest widget (`--vscode-editorSuggestWidget-*`), and codicons for the kind: `folder`, `symbol-module` and `file`.
 - **Detail text.** Each row shows its kind as text on the right, the editor's detail text: "Module", "Module (Internal)", "File", "Resource" or "Directory".
 
@@ -58,9 +62,13 @@
 - **Result.** It returns `[{label, kind, detail, start}]`:
   - `kind` is the name of `CompleteResultKind` (such as `FOLDER` or `MODULE`), and `detail` is its value, the editor's detail text.
   - `start` is the length of the prefix that the label continues.
-  - The list holds the labels that start with the text after the prefix, without regard to case, without duplicate pairs of label and kind, sorted by label without regard to case.
+  - The list holds the labels that start with the text after the prefix, without regard to case, and without duplicate pairs of label and kind.
+  - **Order.** First the labels that continue the typed part in the same case, then the others; within each, by label without regard to case; of two equal labels, `MODULE_INTERNAL` and `MODULE` before `FILE` and `RESOURCE`, and those before `FOLDER`. This is the order of the editor's import completion, read in the harness on VS Code 1.142: `Coll` gives `Collections`, `collections` (Module), `collections` (Folder); `XML` gives `XML`, `xml` (Module), `xml` (Folder), `xmlrpc`; `xml` gives `xml` (Module), `xml` (Folder), `xmlrpc`, …, `XML`. The editor also offers fuzzy matches, such as `compileall` for `Coll`; the list keeps to names that start with the typed part.
 - **Rules.**
-  - A text with `::` gets an empty list.
+  - A text with `::`, or of dots only such as `.` or `..`, gets an empty list. The editor does not complete dots only either; the library side would otherwise list the folder after `.` with `start` 1.
+  - At the top level, the request adds `BuiltIn`. The editor's import completion leaves out `BuiltIn` and `Easter`, which every file imports already; `BuiltIn` is the viewer's default target. The editor stays as it is, since the request adds it itself, and `Easter` stays out.
+  - `start` is counted in UTF-16 code units, as LSP positions are and as the page slices the text; the server's filter and order work in code points before that.
+  - The two sides run apart: a side that fails, such as a directory without read permission, is logged and leaves the other side's results.
   - The library side splits as the editor does: at `/` or the OS separator when the text has one, else at `.`. The resource side splits at a path separator.
   - Both run with the folder as base directory.
   - For a resource prefix that is neither absolute nor starts with `.`, the request also asks for `./` and the prefix. This way `resources/` finds the folder's directory `resources`, as the field writes paths relative to the folder (`targetText`) and `robotcode doc` resolves them there.
@@ -71,7 +79,7 @@
 
 ### D4: The extension asks only a running client
 
-- **Request.** `LanguageClientsManager.getDocumentationTargetCompletions(folder, text, token)` returns `[]` unless `hasClientForResource(folder.uri)` holds, and only then calls `getLanguageClientForResource`, which returns the started client. The list never starts a language server: in a folder whose server does not run, as before the environment is usable or when RobotCode is switched off for it, the extension answers with no completion, and the list stays closed.
+- **Request.** `LanguageClientsManager.getDocumentationTargetCompletions(folder, text, token)` returns `[]` unless `hasClientForResource(folder.uri)` holds, and only then calls `getLanguageClientForResource`, which returns the started client. A client that stopped, as after a crash, stays in the manager's list, so the request also needs `client.isRunning()`. The list never starts a language server: in a folder whose server does not run, as before the environment is usable or when RobotCode is switched off for it, the extension answers with no completion, and the list stays closed.
 - **Cancellation.** The viewer keeps one cancellation source for suggestions and cancels the previous request when a new `suggest` arrives.
 - **Errors.** A failed request gives no completion. It is logged in RobotCode's output unless it was canceled: a `ResponseError` with `LSPErrorCodes.RequestCancelled`, or the request's own token, as in the Keywords view.
 
@@ -80,6 +88,8 @@
 - **Attributes.** The page sets `role="combobox"`, `aria-autocomplete="list"` and `aria-expanded` on the field's inner `<input>` (`wrappedElement`).
 - **References.** It links the list and the selected option through ARIA element reflection (`ariaControlsElements`, `ariaActiveDescendantElement`). An `id` reference does not reach from inside the shadow root to the list outside it, but element reflection may refer to elements of an ancestor tree, and Chromium 148 supports it.
 - **List and options.** The list has `role="listbox"` and the name "Suggestions". Each option has `role="option"` and `aria-selected`; its name is the label followed by the visible kind.
+- **Finding the list.** The page holds the list in a ref, and its classes are `target-suggestions` and `target-suggestion`: the rendered documentation keeps the `class` attributes of its HTML, so a search by a common class name could find an element of the page.
+- **Checked (task 3.3, VS Code 1.142).** In the accessibility tree of the viewer's page, the target field is an expanded combobox with `autocomplete: list`. It controls the listbox "Suggestions", and its active descendant is the option "Collections Module (Internal)". The field's name is still its placeholder, which `documentation-viewer-accessibility` corrects.
 
 **Alternatives considered:**
 - **A native `<input>` instead of `vscode-textfield`.** Its ARIA attributes would work with plain IDs, but it needs its own styling of the field's states, and it would drop the component that the accessibility change gives its name through `label`. It stays the fallback if element reflection does not reach the accessibility tree (task 3.3).
@@ -88,7 +98,9 @@
 
 - **Server.** Unit tests of the request on a project in `tmp_path`, with `start_language_server` and `libraries` on the Python path, over the Robot Framework matrix:
   - a standard library, a directory and a file of the folder, a module on the Python path;
-  - a prefix in other case, an absolute path, and a text with `::`.
+  - a prefix in other case, an absolute path, and a text with `::`;
+  - the order for `Coll` and for `xml`, with Python's `collections` and `xml` from the standard library on the Python path;
+  - `BuiltIn` for `Bui`, while the editor's import completion still leaves it out; no completion for `.` and `..`; `start` in UTF-16 code units after a directory `📁docs`.
 - **Extension and list.** Checked in the isolated VS Code harness by the scenarios of the specs, also the list's names for screen readers. The viewer's page has no JavaScript tests, and the extension only forwards the request.
 
 ## Risks / Trade-offs
