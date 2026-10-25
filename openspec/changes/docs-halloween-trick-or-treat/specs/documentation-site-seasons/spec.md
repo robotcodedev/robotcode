@@ -4,16 +4,16 @@
 
 ### Requirement: Spiders ask for a poke
 
-During the Halloween season the home page and the news pages SHALL now and then show a spider saying "Trick or treat? Poke me!" in a speech bubble next to it, for about four seconds: first about ten seconds after the page opens, then about every 45 seconds, until the visitor has got a treat on the page. The hanging spider, the resting spider and the walking spiders SHALL take turns. With reduced motion no spider SHALL ask.
+During the Halloween season the home page and the news pages SHALL now and then show a spider saying "Trick or treat? Poke me!" in a speech bubble next to it, for about six seconds: first about five seconds after the page opens, then about every 15 seconds, until the visitor has got a treat on the page. The hanging spider, the resting spider and the walking spiders SHALL take turns. With reduced motion no spider SHALL ask.
 
 #### Scenario: First invitation
-- **WHEN** a visitor stays on the home page or a news post for about ten seconds without clicking a creature
+- **WHEN** a visitor stays on the home page or a news post for about five seconds without clicking a creature
 - **THEN** a spider in the window says "Trick or treat? Poke me!" in a speech bubble next to it
-- **AND** the bubble disappears after about four seconds
+- **AND** the bubble disappears after about six seconds
 
 #### Scenario: Taking turns
-- **WHEN** the visitor stays on the home page for a few minutes, with the hanging and the resting spider in the window
-- **THEN** the hanging spider, the resting spider and a walking spider ask in turn, about every 45 seconds
+- **WHEN** the visitor stays on the home page for a minute, with the hanging and the resting spider in the window
+- **THEN** the hanging spider, the resting spider and a walking spider ask in turn, about every 15 seconds
 
 #### Scenario: Walking spider asks
 - **WHEN** it is a walking spider's turn

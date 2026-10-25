@@ -8,7 +8,7 @@ During the Halloween season every clicked spider, the ghost and the pumpkin leav
 
 - During the Halloween season, while Spooky mode is on, a spider now and then says "Trick or treat? Poke me!" in a small speech bubble next to it, on the home page and the news pages.
 - The spiders take turns: the hanging spider, the resting spider of the home page and a walking spider, which stops while it speaks. A spider that is not in the window at its turn leaves it to the next one.
-- The first invitation comes about 10 seconds after the page opens, the next ones about every 45 seconds, each for 4 seconds. Once the visitor has got a treat on the page, the spiders stop asking.
+- The first invitation comes about 5 seconds after the page opens, the next ones about every 15 seconds, each for 6 seconds. Once the visitor has got a treat on the page, the spiders stop asking.
 - A click on the speech bubble counts as a poke of its spider.
 - With reduced motion the spiders don't ask.
 
