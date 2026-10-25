@@ -5,7 +5,9 @@ import threading
 import time
 from concurrent.futures import CancelledError
 from typing import (
+    IO,
     TYPE_CHECKING,
+    Any,
     Callable,
     List,
     Optional,
@@ -25,7 +27,7 @@ from robotcode.core.utils.debugpy import (
 )
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
-from robotcode.plugin import Application
+from robotcode.plugin import Application, UnknownError
 
 from .dap_types import Event
 from .debugger import Debugger
@@ -166,6 +168,19 @@ def _run_robot(ctx: click.Context, app: Application, args: List[str]) -> int:
     return 0
 
 
+class _ShownError(click.ClickException):
+    """An error that `run_debugger` showed before the debug session ended. It keeps the
+    error's exit code and shows nothing, so the command shows the error only once."""
+
+    def __init__(self, error: click.ClickException) -> None:
+        super().__init__(error.message)
+        # click declares the exit code on the class; this one is the code of the error shown
+        self.exit_code = error.exit_code  # type: ignore[misc]
+
+    def show(self, file: Optional[IO[Any]] = None) -> None:
+        pass
+
+
 @_logger.call
 def run_debugger(
     ctx: click.Context,
@@ -256,6 +271,16 @@ def run_debugger(
         exit_code = 0
         try:
             exit_code = _run_robot(ctx, app, args)
+        except CancelledError:
+            raise
+        except Exception as e:
+            # An error that stops the run, such as one of the configuration: shown
+            # while the session lasts, since the debug launcher forwards the output of
+            # the run to VS Code's Debug Console only until then. An error that is not
+            # robotcode's own is shown as `debug` shows it.
+            error = e if isinstance(e, click.ClickException) else UnknownError(str(e))
+            error.show()
+            raise _ShownError(error) from e
         finally:
             if server.protocol.connected:
                 server.protocol.send_event(
