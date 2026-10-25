@@ -652,12 +652,12 @@ Starts the internal HTTP server only if needed.
 
 ### `robotcode.documentationViewer.openLocation` {#robotcode.documentationViewer.openLocation}
 
-Where a new Documentation Viewer opens, from "Show in Documentation Viewer" and "Show in New Documentation Viewer" (in the editor and in the Keywords view) and from "New Documentation Viewer" (in the command palette and in a viewer's toolbar).
+Where a new Documentation Viewer opens.
 
 - **Type:** `string`
 - **Default:** `"beside"`
 - **Allowed values:**
-  - `beside`: Opens a new viewer beside the active editor. With "Show in Documentation Viewer" and "Show in New Documentation Viewer", the editor keeps the focus.
+  - `beside`: Opens a new viewer beside the active editor.
   - `active`: Opens a new viewer in the active editor group.
 - **Can be set in:** user, remote and workspace settings
 

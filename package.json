@@ -1350,11 +1350,11 @@
               "active"
             ],
             "enumDescriptions": [
-              "Opens a new viewer beside the active editor. With \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\", the editor keeps the focus.",
+              "Opens a new viewer beside the active editor.",
               "Opens a new viewer in the active editor group."
             ],
             "default": "beside",
-            "markdownDescription": "Where a new Documentation Viewer opens, from \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\" (in the editor and in the Keywords view) and from \"New Documentation Viewer\" (in the command palette and in a viewer's toolbar)."
+            "markdownDescription": "Where a new Documentation Viewer opens."
           },
           "robotcode.documentationViewer.showOutline": {
             "type": "boolean",
