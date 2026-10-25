@@ -66,7 +66,7 @@ def main() -> None:
     ).check_returncode()
 
     shutil.rmtree("./intellij-client/build", ignore_errors=True)
-    run("gradle buildPlugin --console=plain", shell=True, check=False, cwd="intellij-client").check_returncode()
+    run("./gradlew buildPlugin --console=plain", shell=True, check=False, cwd="intellij-client").check_returncode()
 
 
 if __name__ == "__main__":
