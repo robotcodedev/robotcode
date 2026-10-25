@@ -53,7 +53,7 @@ In the editors, such a name also comes from the selection: VS Code's setting `ro
 
 ## Impact
 
-- `packages/robot/src/robotcode/robot/config/model.py`: profile selection raises for a name that selects no profile, unless the caller takes such names or the name comes from `default-profiles`; messages that name their origin and the defined profiles; exact names before patterns, each name reported once, profiles that inherit themselves.
+- `packages/robot/src/robotcode/robot/config/model.py`: profile selection raises for a name that selects no profile, unless the caller takes such names or the name comes from `default-profiles`; a message that names only the name or pattern; exact names before patterns, each name reported once, profiles that inherit themselves.
 - `src/robotcode/cli/commands/profiles.py` (`profiles list` reports and adds the names of the selection to its JSON), `packages/analyze/src/robotcode/analyze/dump_model.py` (reports configuration errors like `analyze code`).
 - `packages/language_server/src/robotcode/language_server/`: the start collects the configuration errors, and the server shows those that do not come from the editor's `-p` after `initialized`.
 - `packages/debugger/src/robotcode/debugger/run.py`: the debugger shows an error of the command before it ends the debug session.

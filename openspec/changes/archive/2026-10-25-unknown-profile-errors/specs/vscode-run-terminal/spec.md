@@ -7,7 +7,7 @@ When `robotcode` stops a run or debug session with an error of its own before Ro
 #### Scenario: Selected profile that does not exist, with the internal console
 
 - **WHEN** the folder's `robotcode.profiles` names `typo`, which the folder's configuration does not define, and the user runs a test with `internalConsole`
-- **THEN** the Debug Console shows `Error: No profile matches 'typo', …` once, and the session ends
+- **THEN** the Debug Console shows `Error: No profile matches 'typo'.` once, and the session ends
 
 #### Scenario: Invalid value in robot.toml, with the internal console
 

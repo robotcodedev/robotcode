@@ -164,7 +164,7 @@ Alternative: report the cycle and go on without the `inherits` entry that closes
 ## Risks / Trade-offs
 
 - [A selection in an editor that still names a removed profile now stops discovery and runs] → both editors report it with **Remove from Selection**.
-- [Pipelines with a mistyped `-p` fail from now on] → wanted; the message names the pattern and the defined profiles, and the exit code is 252, as for other errors of the configuration.
+- [Pipelines with a mistyped `-p` fail from now on] → wanted; the message names the pattern, and the exit code is 252, as for other errors of the configuration.
 - [A name in VS Code's user settings applies to every folder, also to those whose `robot.toml` does not define it] → their discovery, runs, REPL, notebook kernel and documentation viewer stop with the error; **Remove from Selection** drops the name for that folder only.
 - [A folder with such a selection leaves VS Code's tree also next to other folders' tests] → as a folder without a valid environment; the notification names it.
 - [Other language clients see a name of their selection that selects no profile only in the server's log] → they pass `-p` themselves, and the commands they run stop with the error.
