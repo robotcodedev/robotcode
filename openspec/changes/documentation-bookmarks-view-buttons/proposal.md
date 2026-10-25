@@ -10,7 +10,7 @@ The view Documentation Bookmarks opens a viewer only through a bookmark. To get 
   - It shows the viewer the actions use, the pinned viewer or else the viewer used last, and gives it the focus, as a click on its tab does.
   - The viewer keeps its target, place and history. A viewer in another window comes to the front there.
   - Without a viewer, it opens a new one on `BuiltIn`, as New Documentation Viewer does.
-- **New Documentation Viewer in the view.** The command New Documentation Viewer becomes a button in the title of the view, with the icon of the same button in a viewer's toolbar.
+- **New Documentation Viewer in the view.** The command New Documentation Viewer becomes a button in the title of the view, with the icon `new-file`, which the same button in a viewer's toolbar gets as well.
 - **The order of the buttons.** Show Documentation Viewer, New Documentation Viewer, then Reset Documentation Bookmarks, which is there already.
 
 ## Capabilities
@@ -25,6 +25,7 @@ The view Documentation Bookmarks opens a viewer only through a bookmark. To get 
 - **Extension:**
   - `package.json`: the command, the icon of New Documentation Viewer, and the menu `view/title` of the view.
   - `vscode-client/extension/documentationViewer.ts`: the command Show Documentation Viewer.
+- **Viewer page:** `vscode-client/documentationViewer/app.tsx`: the icon of the button New Documentation Viewer in the toolbar.
 - **Docs:** `docs/src/content/docs/guides/vscode/documentation-viewer.mdx`.
 - **Not in this change:**
   - A button for Copy Documentation Viewer into New Window. The user chose Show Documentation Viewer and New Documentation Viewer over it.
