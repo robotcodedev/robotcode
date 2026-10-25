@@ -115,6 +115,9 @@ _DATA_URI_RE = re.compile(
 # A Markdown link target, in angle brackets (as html-to-markdown writes one with
 # a space) or up to the next space or `)`, and an optional title.
 _MD_DEST = r"(?:<[^>\n]*>|[^)\s]+)"
+# A backslash escape of CommonMark, which html-to-markdown writes for `\`, `<` and
+# `>` in a target in angle brackets.
+_MD_ESCAPE_RE = re.compile(r"\\([!-/:-@\[-`{-~])")
 _MD_TITLE = r'(?:\s+"[^"]*")?'
 _MD_IMG_RE = re.compile(rf"!\[(?P<alt>[^\]]*)\]\((?P<src>{_MD_DEST}){_MD_TITLE}\)")
 # Links, whose text may hold images, and stand-alone images in one pass, so that
@@ -381,7 +384,7 @@ if _HAS_EXT:
         payload is recorded via on_artifact instead)."""
 
         def _target(dest: str) -> str:
-            return dest[1:-1] if dest.startswith("<") else dest
+            return _MD_ESCAPE_RE.sub(r"\1", dest[1:-1]) if dest.startswith("<") else dest
 
         def _replace_img(m: re.Match[str]) -> str:
             alt = m.group("alt")
