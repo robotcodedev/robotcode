@@ -58,6 +58,8 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs/dist
+          # .well-known/security.txt is in a hidden directory.
+          include-hidden-files: true
 
   # Deployment job
   deploy:

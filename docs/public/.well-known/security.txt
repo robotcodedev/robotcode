@@ -1,0 +1,6 @@
+Contact: https://github.com/robotcodedev/robotcode/security/advisories/new
+Contact: mailto:security@robotcode.io
+Expires: 2027-10-25T00:00:00Z
+Policy: https://github.com/robotcodedev/robotcode/security/policy
+Preferred-Languages: en, de
+Canonical: https://robotcode.io/.well-known/security.txt
