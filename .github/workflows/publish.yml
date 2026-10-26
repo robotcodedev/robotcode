@@ -174,6 +174,11 @@ jobs:
           echo "is_prelease=$(hatch -q run build:is-prerelease)" >> $GITHUB_OUTPUT
           echo "release_version=$(hatch -q run build:get-release-version)" >> $GITHUB_OUTPUT
 
+      - name: verify agent plugin release
+        id: verify_agent_plugin_release
+        if: steps.get_release_informations.outputs.is_prelease == 'false'
+        run: hatch -q run build:verify-chat-plugin-release ${{ steps.get_release_informations.outputs.release_version }}
+
       - name: create github release
         uses: softprops/action-gh-release@v3
         with:
@@ -186,8 +191,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: publish vsix, python packages and jetbrains plugin
-        # also when only the GitHub release failed, but not without the packages and the release information
-        if: ${{ !cancelled() && steps.get_release_informations.outcome == 'success' }}
+        # also when only the GitHub release failed, but not without the packages, the release information or the
+        # agent plugin release
+        if: ${{ !cancelled() && steps.get_release_informations.outcome == 'success' && steps.verify_agent_plugin_release.outcome != 'failure' }}
         run: hatch -q run build:publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

@@ -431,7 +431,8 @@ Review the diff: only the generated region of `model.py`, the schema and `config
 - `hatch run build:update-changelog` — Update project changelog.
 - `hatch run build:update-git-versions` — Update version information from git.
 - `hatch run build:update-doc-links` — Update documentation links.
-- `hatch run build:bump [major|minor|patch]` — Bump project version using semantic versioning.
+- `hatch run build:bump [major|minor|patch]` — Bump project version using semantic versioning. For a release, it first checks that the bundled agent plugin is ready: the plugin in `chat-plugins/robotcode/` has the new version, matches the plugin clone and was synced from a commit on the clone's `next`. After the bump, it tags that commit as `robotcode--vX.Y.Z` in the clone and moves the clone's `main` to it, without pushing. Push the plugin repository together with the release (the bump prints the command): the `publish` workflow publishes the release only when the tag and `main` are on GitHub.
+- `hatch run build:check-chat-plugin-release`, `hatch run build:prepare-chat-plugin-release` and `hatch run build:verify-chat-plugin-release` — The check before the bump, the preparation after it and the check of the `publish` workflow, each with the version as argument; for example, rerun the preparation by hand when it failed during the bump.
 - `hatch run build:package` — Package for distribution.
 - `hatch run build:publish` — Publish a release to the VS Code Marketplace, Open VSX, PyPI and the JetBrains Marketplace; `hatch run build:publish-dev` publishes the dev builds. Both need the stores' credentials and are run by the `publish` workflow (`.github/workflows/publish.yml`): a release after the successful build of a version tag, the dev builds every night.
 

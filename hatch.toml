@@ -203,6 +203,9 @@ get-release-version = ["python scripts/get_release_version.py"]
 bump = ["cz bump {args}"]
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 sync-chat-plugin = ["python scripts/sync_chat_plugin.py {args}"]
+check-chat-plugin-release = ["python scripts/chat_plugin_release.py check {args}"]
+prepare-chat-plugin-release = ["python scripts/chat_plugin_release.py prepare {args}"]
+verify-chat-plugin-release = ["python scripts/chat_plugin_release.py verify-published {args}"]
 
 
 [envs.hatch-static-analysis]

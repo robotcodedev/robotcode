@@ -358,11 +358,13 @@ changelog_merge_prerelease = true
 gpg_sign = true
 annotated_tag = true
 pre_bump_hooks = [
+  "hatch run build:check-chat-plugin-release",
   "hatch env remove lint",
   "hatch run build:update-git-versions",
   "hatch run build:update-changelog",
   "git add .",
 ]
+post_bump_hooks = ["hatch run build:prepare-chat-plugin-release"]
 
 
 [tool.robotcode-analyze.extend-modifiers]
