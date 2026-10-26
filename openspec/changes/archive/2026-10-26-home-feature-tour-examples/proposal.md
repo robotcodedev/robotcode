@@ -25,7 +25,7 @@ The feature tour on the home page shows one example for most of its features: on
 
 ### Modified Capabilities
 
-- `documentation-site`: the Home page requirement says that the feature tour shows examples of the selected feature; the Home page demos requirement lists the examples of each feature, adds terminal sessions as examples of a series and requires the VS Code recordings to show the shortcuts they press.
+- `documentation-site`: the Feature tour on the home page requirement says that the feature tour shows examples of the selected feature; the Home page demos requirement lists the examples of each feature, adds terminal sessions as examples of a series and requires the VS Code recordings to show the shortcuts they press.
 
 ## Impact
 

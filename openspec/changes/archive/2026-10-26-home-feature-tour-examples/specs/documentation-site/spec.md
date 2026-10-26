@@ -1,44 +1,5 @@
 ## MODIFIED Requirements
 
-### Requirement: Home page
-
-The home page SHALL show the product name, the tagline, a subline chosen at random on each load, one picture of the RobotCode artwork chosen at random on each load, the actions Get Started, VS Code Extension, JetBrains Plugin, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, which leads to the open-source section. The home page SHALL show no edit link and no last-change date.
-
-#### Scenario: Random picture
-- **WHEN** the home page is loaded
-- **THEN** one picture of the RobotCode artwork is shown next to the product name
-- **AND** the actions Get Started, VS Code Extension and JetBrains Plugin are offered
-
-#### Scenario: Browsing the pictures
-- **WHEN** a reader swipes left on the picture, or clicks it and presses the right arrow key
-- **THEN** the next picture is shown, in the enlarged view in the second case
-- **AND** Escape closes the enlarged view
-
-#### Scenario: Feature card target
-- **WHEN** a reader selects the "Interactive REPL" feature card in the feature tour and follows its link
-- **THEN** the REPL guide `/guides/repl/` is shown
-
-#### Scenario: Section order
-- **WHEN** a reader scrolls down the home page
-- **THEN** the feature tour, the AI agents section, the tutorial video, the latest news and the open-source section follow the hero in this order
-
-#### Scenario: Feature tour in the first screen
-- **WHEN** the home page is opened in a 1366×768 browser window
-- **THEN** the heading and the beginning of the feature tour are visible without scrolling
-
-#### Scenario: Setting up an agent
-- **WHEN** a reader follows "Set up your agent" in the AI agents section
-- **THEN** the guide `/guides/ai-agents/` is shown
-
-#### Scenario: Latest news
-- **WHEN** the home page is built
-- **THEN** its latest news lists the three newest posts, newest first, each with its date, title and description and a link to the post
-- **AND** a link leads to `/news/`
-
-#### Scenario: Open source
-- **WHEN** a reader follows the open-source note in the hero
-- **THEN** the open-source section is shown with the license, a link to the GitHub repository, a link to Support & Contribute, the sponsoring options and the supporters
-
 ### Requirement: Feature tour on the home page
 
 The feature tour SHALL list Code intelligence; Run, debug & test explorer; One config everywhere; Powerful CLI; Interactive REPL; and Multi-IDE, same core as feature cards, each with its description and links to the pages that cover it, next to a demo window that shows examples of the selected feature.
