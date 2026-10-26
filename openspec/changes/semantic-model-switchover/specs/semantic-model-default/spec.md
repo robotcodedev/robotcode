@@ -8,12 +8,12 @@ The SemanticModel is the analysis path by default: the flag that selects it defa
 
 ### Requirement: A cross-feature parity harness gates the switch
 
-Before the flag default is changed, a Level-D fixture SHALL run the existing LSP snapshot/regtest suites under both flag states and assert identical output across all LSP features, and a Level-E benchmark suite (`test_analyzer_performance.py`) SHALL assert the design document's budgets: `SemanticAnalyzer` overhead ≤ 30% vs `NamespaceAnalyzer`, `SemanticModel` ≤ 500 KB per file, pickle round-trip + `resolve_references()` ≤ 50 ms per file.
+Before the flag default is changed, a Level-D fixture SHALL run the LSP snapshot/regtest suites under both flag states and assert identical output across all LSP features and diagnostics, except the differences their specs record, and a Level-E benchmark suite (`test_analyzer_performance.py`) SHALL assert the design document's budgets: `SemanticAnalyzer` overhead ≤ 30% vs `NamespaceAnalyzer`, `SemanticModel` ≤ 500 KB per file, pickle round-trip + `resolve_references()` ≤ 50 ms per file.
 
 #### Scenario: Harness proves cross-feature parity with the flag still opt-in
 
 - **WHEN** the Level-D fixture runs the LSP suites with `robotcode.experimental.semanticModel` OFF and ON
-- **THEN** every LSP feature produces identical output under both states (excepting the sanctioned variable-modifier deviation), with the flag default still `false` at this point
+- **THEN** every LSP feature produces identical output under both states, and every file of the LSP test data the same diagnostics (excepting the sanctioned variable-modifier deviation and the cases of the "Differences from the legacy path" requirements of the feature specs), with the flag default still `false` at this point
 
 #### Scenario: Performance budget is enforced before the flip
 

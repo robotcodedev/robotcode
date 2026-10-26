@@ -8,12 +8,17 @@ How users suppress single diagnostics of RobotCode and findings of Robocop from 
 
 ### Requirement: Disable a RobotCode diagnostic for one line
 
-For each diagnostic with the source `robotcode` in the range of a code action request, the language server SHALL offer one quick fix "Disable '<code>' for this line" per diagnostic code. Applying it SHALL make RobotCode stop reporting that code on the line where the diagnostic starts, by an `ignore[<code>]` modifier on that line, and SHALL leave every other code of the line reported. Diagnostics of other sources SHALL NOT get this quick fix.
+For each diagnostic with the source `robotcode` or `robotcode.diagnostics` in the range of a code action request, the language server SHALL offer one quick fix "Disable '<code>' for this line" per diagnostic code. Applying it SHALL make RobotCode stop reporting that code on the line where the diagnostic starts, by an `ignore[<code>]` modifier on that line, and SHALL leave every other code of the line reported. Diagnostics of other sources SHALL NOT get this quick fix.
 
 #### Scenario: A keyword that does not exist
 - **WHEN** the user applies "Disable 'KeywordNotFound' for this line" at a call of a keyword that does not exist
 - **THEN** the line ends with `# robotcode: ignore[KeywordNotFound]`
 - **AND** the call is no longer reported, while a `VariableNotFound` on the same line still is
+
+#### Scenario: An unused keyword
+- **WHEN** the user applies "Disable 'KeywordNotUsed' for this line" on the name of a keyword that nothing calls
+- **THEN** the line ends with `# robotcode: ignore[KeywordNotUsed]`
+- **AND** the keyword is no longer reported as unused
 
 #### Scenario: Test discovery problems
 - **WHEN** a diagnostic with the source `robotcode.discover` is in the range of the request
@@ -38,7 +43,7 @@ When the line already has a comment, the quick fix for one line SHALL put the mo
 
 ### Requirement: Disable a RobotCode diagnostic for a file
 
-For each diagnostic with the source `robotcode` in the range of a code action request, the language server SHALL also offer "Disable '<code>' for this file". Applying it SHALL make RobotCode stop reporting that code anywhere in the file, by an `ignore[<code>]` modifier in a `# robotcode:` comment line at the top of the file, before its first section; an existing such line SHALL get the code instead of a second line.
+For each diagnostic with the source `robotcode` or `robotcode.diagnostics` in the range of a code action request, the language server SHALL also offer "Disable '<code>' for this file". Applying it SHALL make RobotCode stop reporting that code anywhere in the file, by an `ignore[<code>]` modifier in a `# robotcode:` comment line at the top of the file, before its first section; an existing such line SHALL get the code instead of a second line.
 
 #### Scenario: No modifier at the top yet
 - **WHEN** a file starts with `*** Settings ***` and the user applies "Disable 'KeywordNotFound' for this file"

@@ -88,6 +88,7 @@ Alternative considered: a special case that offers no named items for `Variables
 - [Before RF 7.0, `name=` items for `Variables` imports go away] → they put `name=value` as a string into the first parameter, which is not what they suggest.
 - [Keywords and library imports with positional-only parameters lose the `name=` items of those parameters] → Robot Framework passes `name=value` to them as a value, so the items were wrong (D5).
 - [Reading the signature fails, for example on an annotation that cannot be evaluated] → the file gets no initializer, and its variables are not affected.
+- [Before RF 7.0, the semantic tokens still mark `b=2` in `Variables    vars.py    a    b=2` as a named argument] → both analysis paths split `name=value` for positional-only parameters into a named argument today. On the semantic-model path that changes after `semantic-model-cleanup`, and the change then covers variable files too.
 
 ## Migration Plan
 

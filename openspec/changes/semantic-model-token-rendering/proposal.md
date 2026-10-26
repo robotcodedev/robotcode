@@ -17,7 +17,8 @@ Semantic highlighting is meant to add what the TextMate grammar cannot know, not
   - unmatched embedded keyword names;
   - comments in keyword calls and imports;
   - argument text in template rows and metadata values;
-  - continuation markers in documentation.
+  - continuation markers and variables in documentation;
+  - escapes in import names.
 - **Spec migration.** Retire the capability `semantic-model-tier1-parity`, whose requirements all compare against the legacy path. The rules that still hold move into the capability `semantic-highlighting`.
 - **Tests.** Regenerate and review the semantic-token regression outputs.
 

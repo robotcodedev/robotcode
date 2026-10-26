@@ -2,8 +2,9 @@
 
 ## 1. RobotCode's diagnostics: one line
 
-- [ ] 1.1 Offer "Disable '<code>' for this line" for the diagnostics with the source `robotcode` (D1). Check `CodeActionContext.only` with `code_action_kind_requested` (D5). Verify with a new test in `tests/robotcode/language_server/robotframework/parts/`:
+- [ ] 1.1 Offer "Disable '<code>' for this line" for the diagnostics with the source `robotcode` or `robotcode.diagnostics` (D1). Check `CodeActionContext.only` with `code_action_kind_requested` (D5). Verify with a new test in `tests/robotcode/language_server/robotframework/parts/`:
   - The fix is offered once per code at a `KeywordNotFound`.
+  - It is offered at a `KeywordNotUsed`, and applying it hides that diagnostic (scenario "An unused keyword").
   - It is not offered for diagnostics with the source `robotcode.discover` or `robocop`.
   - It is not offered for a request whose `only` holds just `refactor`.
 - [ ] 1.2 Let the resolve step write `ignore[<code>]` with the placement of D2. Verify with tests on the edited text for the scenarios of "Disable a RobotCode diagnostic for one line" and "Modifier placement on a line with comments":

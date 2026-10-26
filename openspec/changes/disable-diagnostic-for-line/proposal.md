@@ -2,11 +2,11 @@
 
 ## Why
 
-The quick fix "Disable '<code>' for this line" never appears for RobotCode's own diagnostics. It only considers diagnostics whose source starts with `robotcode.`, but the analyzer reports them with the source `robotcode`. And where it does appear, it writes a bare `# robotcode: ignore`, which silences every RobotCode diagnostic of the line, not the one it names. Robocop's findings, shown next to RobotCode's in the editor and in Problems, have no such quick fix at all, so users have to know and type both comment syntaxes themselves.
+The quick fix "Disable '<code>' for this line" never appears for the diagnostics of RobotCode's analysis. It only considers diagnostics whose source starts with `robotcode.`, but the analyzer reports them with the source `robotcode`; only `KeywordNotUsed` and `VariableNotUsed` (`robotcode.diagnostics`) and the problems of `robotcode discover` get it. And where it does appear, it writes a bare `# robotcode: ignore`, which silences every RobotCode diagnostic of the line, not the one it names. Robocop's findings, shown next to RobotCode's in the editor and in Problems, have no such quick fix at all, so users have to know and type both comment syntaxes themselves.
 
 ## What Changes
 
-- **Disable for this line, fixed:** "Disable '<code>' for this line" appears for every diagnostic with the source `robotcode` and writes `# robotcode: ignore[<code>]`, so only that code is silenced. If the line already has a `# robotcode:` comment, the code goes into it instead of a second comment.
+- **Disable for this line, fixed:** "Disable '<code>' for this line" appears for every diagnostic with the source `robotcode` or `robotcode.diagnostics` and writes `# robotcode: ignore[<code>]`, so only that code is silenced. If the line already has a `# robotcode:` comment, the code goes into it instead of a second comment.
 - **Disable for this file, new:** "Disable '<code>' for this file" writes `# robotcode: ignore[<code>]` as a comment at the top of the file, or adds the code to such a comment that is already there.
 - **Robocop's findings, new:** the same two quick fixes for findings with the source `robocop`, when Robocop 6.0 or newer is installed. They write Robocop's own disabler, `# robocop: off=<rule>`, at the end of the line or at the top of the file, and add the rule to such a comment that is already there.
 - **Only ignoring:** no quick fixes that change a severity; that stays with `robot.toml`, the editor settings and hand-written modifier comments.

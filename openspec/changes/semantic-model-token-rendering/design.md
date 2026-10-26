@@ -98,6 +98,8 @@ To review against the criterion during implementation. Record each decision in a
 | Continuation markers (`...`) | The grammar knows them. |
 | Unmatched embedded keyword name | Find out what produces this case, then decide between a keyword token and none. |
 | Argument text in metadata values and embedded fragments | Check what the grammar shows there. |
+| Variables in documentation (`[Documentation]    Executed at ${HOST}`) | Robot Framework resolves them, but they get no token, while variables in metadata values get one. Decide together with documentation setting names and continuation markers. |
+| Escapes in import names (`Resource    .\\res.resource`) | The model sends one `namespace` token over the name, the legacy path sent `escape` tokens. Check that the grammar shows the escapes there. |
 | Test case and keyword names | They carry the `declaration` modifier, which the grammar cannot know. |
 
 If a decision changes observable behavior beyond what the spec already states, update the spec in this change.

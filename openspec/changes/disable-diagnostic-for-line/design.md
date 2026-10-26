@@ -5,7 +5,7 @@
 See proposal.md for the motivation. The approach depends on how the language server builds code actions and how RobotCode and Robocop read their comments. All of the following was checked in the code or by running the tools on 2026-10-11:
 
 - **Code actions:** `code_action_quick_fixes.py` collects every `code_action_*` method and sorts the results by title. A `quickfix` action carries `CodeActionData`, including `diagnostics_code`. Its edit is computed later in the matching `resolve_code_action_<method>`.
-- **The quick fix today:** `code_action_disable_robotcode_diagnostics_for_line` keeps only diagnostics whose source starts with `robotcode.`. The analyzer reports `robotcode` (`DIAGNOSTICS_SOURCE_NAME`), so only `robotcode.discover` from `robotcode discover` matches, and the modifier engine is never applied to those. The resolve step inserts `    # robotcode: ignore` at the end of the line, marked with a `TODO` for the code.
+- **The quick fix today:** `code_action_disable_robotcode_diagnostics_for_line` keeps only diagnostics whose source starts with `robotcode.`. The analyzer reports `robotcode` (`DIAGNOSTICS_SOURCE_NAME`), so it never matches. The prefix matches `robotcode.discover` from `robotcode discover`, where the modifier engine is never applied, and `robotcode.diagnostics`, the source of `KeywordNotUsed` and `VariableNotUsed`, which do pass through the modifier engine (`modify_diagnostics` in `parts/diagnostics.py`, checked 2026-10-26). The resolve step inserts `    # robotcode: ignore` at the end of the line, marked with a `TODO` for the code.
 - **RobotCode's modifier engine** (`diagnostics_modifier.py`):
   - The modifiers are applied to the language server's and `robotcode analyze code`'s own diagnostics.
   - An end-of-line modifier is read only from the *first* comment of a statement. `_handle_statement_comments` strips the `#` only from that comment, so `# note    # robotcode: ignore[X]` does not silence `X`, while `# robotcode: ignore[X]    # note` does (checked with `robotcode analyze code`).
@@ -34,9 +34,10 @@ See proposal.md for the motivation. The approach depends on how the language ser
 
 ### D1 Which diagnostics get the RobotCode quick fixes
 
-Exactly those with the source `robotcode`, because these are the diagnostics the modifier engine applies to. Diagnostics without a code are skipped.
+Exactly those with the source `robotcode` or `robotcode.diagnostics`, because these are the diagnostics the modifier engine applies to: the analysis reports with `robotcode`, and `KeywordNotUsed` and `VariableNotUsed` come with `robotcode.diagnostics`. Diagnostics without a code are skipped.
 
 - *Alternative:* keep the prefix test and add the exact source. Rejected, because it keeps offering the fix for `robotcode.discover`, where a modifier has no effect.
+- *Alternative:* only `robotcode`. Rejected by the user on 2026-10-26: unused keywords and variables are typical candidates to silence, and the modifier works for them.
 
 ### D2 Where the modifier for one line goes
 
