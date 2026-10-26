@@ -1,5 +1,9 @@
 # Spec: semantic-model-variable-modifiers
 
+## Purpose
+
+The name token of a built-in variable carries the builtin modifier, so that editors can show built-in variables the way they show BuiltIn keywords; no other variable type modifier is sent.
+
 ## ADDED Requirements
 
 ### Requirement: Built-in variables carry the builtin modifier
@@ -18,7 +22,7 @@ The name token of a variable that resolves to a Robot Framework built-in variabl
 
 #### Scenario: The modifier is the only sanctioned deviation from legacy output
 
-- **WHEN** the Level-D parity fixture compares model output to legacy output
+- **WHEN** the Level-D parity fixture or the Tier-1 parity suite compares model output to legacy output
 - **THEN** the builtin modifier bit on variable tokens is the only permitted difference; all other token data remains identical
 
 ### Requirement: Variable tokens carry no other variable type modifier
