@@ -159,12 +159,17 @@ The latest news SHALL list the three newest posts, newest first, with date, titl
 
 ### Requirement: Home page
 
-The home page SHALL show the product name, the tagline, a subline chosen at random on each load, one picture of the RobotCode artwork chosen at random on each load, the actions Get Started, VS Code Extension, JetBrains Plugin, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, which leads to the open-source section. The home page SHALL show no edit link and no last-change date.
+The home page SHALL show the product name, the tagline, a subline and a picture of the RobotCode artwork, both chosen at random on each load, the actions Get Started, VS Code Extension, JetBrains Plugin, Star on GitHub and Sponsor, and a note that RobotCode is free and open source, leading to the open-source section, but no edit link and no last-change date. During a site season with its own pictures, the gallery SHALL hold only those, the first chosen at random, and none of them outside it.
 
 #### Scenario: Random picture
 - **WHEN** the home page is loaded
 - **THEN** one picture of the RobotCode artwork is shown next to the product name
 - **AND** the actions Get Started, VS Code Extension and JetBrains Plugin are offered
+
+#### Scenario: Season pictures
+- **WHEN** the home page is loaded during the Halloween season and the site has Halloween pictures
+- **THEN** one of the Halloween pictures, chosen at random, is shown next to the product name
+- **AND** the next button switches only between the Halloween pictures
 
 #### Scenario: Browsing the pictures
 - **WHEN** a reader swipes left on the picture, or clicks it and presses the right arrow key
