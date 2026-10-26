@@ -76,6 +76,15 @@ Every night, and when the maintainer starts it by hand, the CI SHALL upload the 
 - **WHEN** the latest run on `main` built the release version 2.8.0 from the release commit
 - **THEN** the nightly upload uploads nothing, and the version reaches the Marketplace through its tag
 
+### Requirement: Pushes and pull requests publish nothing by themselves
+
+The runs for pushes to `main`, for pull requests and for manual starts of the build workflow SHALL NOT upload the plugin to the Marketplace unless they run for a version tag. A dev build SHALL reach the Marketplace only through the nightly upload.
+
+#### Scenario: Push to main
+
+- **WHEN** a push to `main` builds the plugin as version 2.8.0-dev.466
+- **THEN** the run itself uploads nothing to the Marketplace, and the next nightly upload publishes 2.8.0-dev.466 if the run succeeded and is still the latest run on `main`
+
 ### Requirement: Only a tested and verified plugin is published
 
 The CI SHALL upload a plugin file to the Marketplace only after the plugin's unit tests and the plugin verifier's checks have passed in the run that built that file.

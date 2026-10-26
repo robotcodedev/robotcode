@@ -41,7 +41,7 @@ Implement this change after `intellij-ci-tests`.
 
 ## 3. Verification
 
-- [ ] 3.1 With the maintainer, after `intellij-ci-tests` is in place and the maintainer pushes the next version tag, check:
+- [x] 3.1 With the maintainer, after `intellij-ci-tests` is in place and the maintainer pushes the next version tag, check:
   - the publish step's log shows the Marketplace's answer to the upload;
   - the version is on the plugin's Marketplace page in the expected channel, `dev` for a prerelease and the default channel for a release;
   - the uploaded file is the `robotcode4ij-<version>.zip` of the GitHub release;

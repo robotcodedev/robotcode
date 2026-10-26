@@ -21,7 +21,7 @@ _None._
 
 - `release-publishing`:
   - adds the requirement that a night's dev builds come from the latest run on `main`;
-  - changes the three nightly upload requirements of the VS Code extension, the JetBrains plugin and the Python packages, and the scenario "Failing plugin test on main".
+  - changes the three nightly upload requirements of the VS Code extension, the JetBrains plugin and the Python packages, and the scenarios "Failing plugin test on main" and "Push to main" of the JetBrains plugin.
 
   The VS Code requirement is in the main spec. The JetBrains and the PyPI requirements come with `intellij-marketplace-publish` and `pypi-dev-builds`, which aren't archived yet.
 
