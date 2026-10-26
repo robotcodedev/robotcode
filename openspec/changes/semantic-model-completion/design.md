@@ -56,7 +56,7 @@ The seven calls are text and finder helpers that serve both paths. Deleting `Mod
 
 ### D5: Granularity audit against the actual consumers
 
-`token_path_at()` and `token_at()` have no production caller, so the audit cannot wait for one. It records, for each variable-related `TokenKind`, the code that branches on it: `_TOKEN_KIND_TO_SEM_TOKEN` in `semantic_tokens.py` and its mirror in the REPL lexer, signature help, inlay hints, the code actions, `model_variables.py` (inline values, selection ranges, debugging), and the analyzer. Output: a keep/merge table in `dev-docs/semantic-model.md`. Only kinds without a distinct consumer and with the same LSP mapping are merged; every merge keeps `test_semantic_tokens_flag_parity.py`, the analyzer snapshots and all `test_*_model.py` suites unchanged. When in doubt, the kind stays.
+`token_path_at()` and `token_at()` have no production caller, so the audit cannot wait for one. It records, for each variable-related `TokenKind`, the code that branches on it: `_TOKEN_KIND_TO_SEM_TOKEN` in `semantic_tokens.py` and its mirror in the REPL lexer, signature help, inlay hints, the code actions, `model_variables.py` (inline values, selection ranges, debugging), and the analyzer. Output: a keep/merge table in `dev-docs/semantic-model.md` that replaces the open question on the granularity in the Sub-Token Decomposition section; that question still expects completion as a consumer of `token_path_at()`. Only kinds without a distinct consumer and with the same LSP mapping are merged; every merge keeps `test_semantic_tokens_flag_parity.py`, the analyzer snapshots and all `test_*_model.py` suites unchanged. When in doubt, the kind stays.
 
 ## Risks / Trade-offs
 
@@ -66,4 +66,4 @@ The seven calls are text and finder helpers that serve both paths. Deleting `Mod
 
 ## Migration Plan
 
-(1) Parity test over the test data and the completion test documents, (2) the document with incomplete input, (3) deviations fixed or marked, (4) audit, (5) docs. Rollback = revert; the flag default stays `false`.
+(1) Parity test over the test data and the completion test documents, (2) the document with incomplete input, (3) the Completion section and the Ideas Collection of `dev-docs/semantic-model.md`, (4) deviations fixed or marked, (5) audit and its table. Rollback = revert; the flag default stays `false`.

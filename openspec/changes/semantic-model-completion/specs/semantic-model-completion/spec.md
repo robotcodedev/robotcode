@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Completion answers the same with the semantic-model analysis path enabled as with it disabled, and it offers items for the current text of the document, also while the last analysis still describes an earlier text.
+Completion answers the same with the semantic-model analysis path enabled as with it disabled, and it offers items for the current text of the document, also while the last analysis still describes an earlier text. The variable-related `TokenKind` values are audited against the code that branches on them.
 
 ## ADDED Requirements
 
@@ -31,12 +31,12 @@ Completion SHALL offer the items for the current text of the document, also when
 
 ### Requirement: Sub-token granularity audit is performed and documented
 
-The variable-related `TokenKind` values SHALL be audited against the code that branches on them (semantic tokens and the REPL lexer, signature help, inlay hints, code actions, inline values, selection ranges, the analyzer). The keep/merge table SHALL be recorded in `dev-docs/semantic-model.md`. Only kinds without a distinct consumer SHALL be merged, and no merge SHALL change a consumer's output.
+The variable-related `TokenKind` values SHALL be audited against the code that branches on them (semantic tokens and the REPL lexer, signature help, inlay hints, code actions, inline values, selection ranges, debugging, the analyzer). The keep/merge table SHALL be recorded in `dev-docs/semantic-model.md`. Only kinds without a distinct consumer SHALL be merged, and no merge SHALL change a consumer's output.
 
 #### Scenario: Audit result is recorded
 
 - **WHEN** the audit completes
-- **THEN** the design document contains a table listing every variable-related TokenKind with its consumers and a keep/merge verdict
+- **THEN** `dev-docs/semantic-model.md` contains a table listing every variable-related TokenKind with its consumers and a keep/merge verdict
 
 #### Scenario: Merges are behavior-neutral
 
