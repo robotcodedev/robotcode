@@ -16,6 +16,7 @@ import com.intellij.execution.ui.layout.PlaceInGrid
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.util.Disposer
+import com.intellij.xdebugger.impl.ui.XDebuggerUIConstants
 import dev.robotcode.robotcode4ij.RobotCodeBundle
 
 // the id of the "Terminal" content in the window of a run or a debug session
@@ -24,7 +25,8 @@ private const val TERMINAL_CONTENT_ID = "RobotCodeTerminal"
 /**
  * Adds the [terminal] console as the "Terminal" tab to the window [ui] of a run or a debug session, where the console
  * goes in the tab [tabIndex], unless the window has it already. It is what the user looks at first, so the callers add
- * it before the console, and the window selects it when it starts, instead of the console that a debug session selects.
+ * it before the console, and the window selects it when it starts and when a debug session ends, instead of the console
+ * that a debug session selects.
  */
 internal fun addTerminalContent(ui: RunnerLayoutUi, terminal: ConsoleView, tabIndex: Int) {
     if (ui.findContent(TERMINAL_CONTENT_ID) != null) return
@@ -38,10 +40,13 @@ internal fun addTerminalContent(ui: RunnerLayoutUi, terminal: ConsoleView, tabIn
         DefaultActionGroup(*terminal.createConsoleActions()), ActionPlaces.RUNNER_TOOLBAR, terminal.component
     )
     ui.addContent(content, tabIndex, PlaceInGrid.bottom, false)
-    // the window keeps one content per condition, so this replaces the console of a debug session
-    ui.defaults.initContentAttraction(
-        TERMINAL_CONTENT_ID, LayoutViewOptions.STARTUP, LayoutAttractionPolicy.FocusOnce(false)
-    )
+    // the window keeps one content per condition, so these replace the console of a debug session, with the policies
+    // that the platform gives the console
+    ui.defaults
+        .initContentAttraction(TERMINAL_CONTENT_ID, LayoutViewOptions.STARTUP, LayoutAttractionPolicy.FocusOnce(false))
+        .initContentAttraction(
+            TERMINAL_CONTENT_ID, XDebuggerUIConstants.LAYOUT_VIEW_FINISH_CONDITION, LayoutAttractionPolicy.FocusOnce()
+        )
 }
 
 /** Names the platform's console in the window [ui] of a run or a debug session, the results tree, "Debug Console". */
