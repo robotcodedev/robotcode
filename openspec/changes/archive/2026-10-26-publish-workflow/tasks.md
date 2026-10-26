@@ -61,7 +61,7 @@
   - the build runs as "build test and package";
   - the `publish` run it starts skips both jobs;
   - a manual start of "publish" finds the run of `build-test-package.yml` and uploads nothing new.
-- [ ] 5.2 At the next version tag, check:
+- [x] 5.2 At the next version tag, check:
   - the release job creates the GitHub release with the VSIX, the Python packages and the JetBrains plugin;
   - its log shows the answer of every store, and every store has the version;
   - the runs for untagged builds skipped the release job;
