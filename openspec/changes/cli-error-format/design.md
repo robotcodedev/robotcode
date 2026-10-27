@@ -25,13 +25,15 @@ See proposal.md - Why. On `main`:
 
 ### D1: One function writes a Click error in the form of `Application.error`
 
-A function in `robotcode.plugin` takes a `click.ClickException` and an `Application`: for a `UsageError` with a context it writes the usage line and the hint as Click does, then it writes `format_message()` through `Application.error`. Using `Application.error` keeps the form and the colour rules in one place.
+A function in `robotcode.plugin` takes a `click.ClickException` and an `Application`: for a `UsageError` with a context it writes the usage line and the hint as Click does, then it writes `format_message()` through `Application.error`. Using `Application.error` keeps the form and the colour rules in one place. An error whose class has a `show` of its own is written by it: Click's help for a group called without arguments (`NoArgsIsHelpError`) stays the help, and the debugger's error that was already shown (D3) stays silent.
 
 - **Alternative:** change the text through Click's translation of `Error: {message}`. It gives no colour and changes every Click program in the process; rejected.
 
 ### D2: `RobotCodeGroup` writes all errors of its commands
 
-`RobotCodeGroup` wraps every `click.ClickException` that leaves `invoke` or its own `make_context` in an error whose `show()` calls the function of D1 with the context's `Application`, or with one that has the defaults when the error comes before it exists, and that keeps the exit code: `RobotDataError` for 252, the code of the wrapped error otherwise. Click's `main` still decides when to show it and how to exit.
+`RobotCodeGroup` wraps every `click.ClickException` that leaves `invoke` or its own `make_context` in an error whose `show()` calls the function of D1 with the context's `Application`, and that keeps the exit code: `RobotDataError` for 252, the code of the wrapped error otherwise. Click's `main` still decides when to show it and how to exit.
+
+An error can come before the root command has set up its `Application`: a command name that does not exist or is missing (Click resolves it before it calls the root command), or an invalid option of robotcode itself (Click stops reading the command line before it takes any value). The error then gets an `Application` set up from robotcode's own options as the root command sets it up, colours and AI-agent sessions included: from the options Click has read, or, for an invalid option, from the command line read again by Click's parser in its lenient mode (`resilient_parsing`, unknown options passed over), which runs no callbacks.
 
 - **Alternative:** override `main` and handle the errors there. It would repeat Click's handling of `Abort`, `Exit`, closed pipes and the standalone mode; rejected.
 
