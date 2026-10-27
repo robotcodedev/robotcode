@@ -3,7 +3,7 @@ import logging
 import logging.config
 import os
 from pathlib import Path
-from typing import IO, Any, List, Literal, Optional
+from typing import IO, Any, List, Literal, Mapping, Optional
 
 import click
 
@@ -14,6 +14,7 @@ from robotcode.plugin import (
     ColoredOutput,
     OutputFormat,
     pass_application,
+    show_error,
 )
 from robotcode.plugin._agent_detection import is_running_in_ai_agent
 from robotcode.plugin.click_helper.aliases import AliasedGroup
@@ -64,22 +65,61 @@ def _warn_about_ignored_wrapper(ctx: click.Context, app: Application) -> None:
         app.warning(f"Ignoring --wrapper: '{ctx.invoked_subcommand}' does not execute Robot Framework.")
 
 
-class RobotDataError(click.ClickException):
+def _set_output_options(app: Application, color: Optional[bool], pager: Optional[bool]) -> None:
+    """Set the colour and pager choice of `app` from `--color/--no-color` and `--pager/--no-pager`."""
+    if color is None:
+        app.config.colored_output = ColoredOutput.AUTO
+    elif color:
+        app.config.colored_output = ColoredOutput.YES
+    else:
+        app.config.colored_output = ColoredOutput.NO
+    app.config.pager = pager
+
+    # AI-agent auto-detect: when running inside a known agent session
+    # (Claude Code, Copilot, OpenCode, …) demote colour and pager
+    # defaults so the agent's stdout capture stays clean. Explicit CLI
+    # flags and `NO_COLOR` / `FORCE_COLOR` keep their precedence.
+    if is_running_in_ai_agent():
+        if color is None and not os.environ.get("NO_COLOR") and not os.environ.get("FORCE_COLOR"):
+            app.config.colored_output = ColoredOutput.NO
+        if pager is None:
+            app.config.pager = False
+
+
+def _application_for(params: Mapping[str, Any]) -> Application:
+    """An `Application` for an error that comes before the root command has set one up,
+    set up from robotcode's own options `params` as far as they are known."""
+    app = Application()
+    _set_output_options(app, params.get("color"), params.get("pager"))
+    return app
+
+
+class RobotCodeError(click.ClickException):
+    """An error that stops a robotcode command, written as robotcode writes the errors it
+    reports (`robotcode.plugin.show_error`). Keeps the exit code of the error."""
+
+    def __init__(self, error: click.ClickException, app: Application) -> None:
+        super().__init__(error.message)
+        self.error = error
+        self.app = app
+        # click declares the exit code on the class; this one is the code of the error
+        self.exit_code = error.exit_code  # type: ignore[misc]
+
+    def show(self, file: Optional[IO[Any]] = None) -> None:
+        show_error(self.app, self.error, file)
+
+
+class RobotDataError(RobotCodeError):
     """An error robotcode reports itself for a command that passes on Robot Framework's
     exit codes.
 
-    Shows the original error unchanged, but exits with Robot Framework's code for invalid
-    data or command line options instead of Click's 1 or 2.
+    Exits with Robot Framework's code for invalid data or command line options instead of
+    Click's 1 or 2.
     """
 
-    exit_code = 252
-
-    def __init__(self, error: click.ClickException) -> None:
-        super().__init__(error.message)
-        self.error = error
-
-    def show(self, file: Optional[IO[Any]] = None) -> None:
-        self.error.show(file)
+    def __init__(self, error: click.ClickException, app: Application) -> None:
+        super().__init__(error, app)
+        self.exit_code = 252  # type: ignore[misc]
 
 
 class RobotCodeGroup(AliasedGroup):
@@ -92,15 +132,40 @@ class RobotCodeGroup(AliasedGroup):
     invalid option - exits with Robot Framework's 252 instead. Robot Framework's own exit
     codes never arrive as Click errors, so they pass through unchanged, and so does any
     other code.
+
+    Every Click error of a command or of the group's own options is written as
+    `[ ERROR ] <message>`, with the `Application` of the command. An error that comes
+    before the root command has set it up - a command name that does not exist or is
+    missing, an invalid option of robotcode itself - gets one set up from robotcode's own
+    options, so that `--no-color` and AI-agent sessions apply to it too.
     """
+
+    def make_context(
+        self, info_name: Optional[str], args: List[str], parent: Optional[click.Context] = None, **extra: Any
+    ) -> click.Context:
+        # Click's parser takes the arguments out of the list it gets
+        command_line = list(args)
+        try:
+            return super().make_context(info_name, args, parent, **extra)
+        except click.ClickException as e:
+            # Click stops at an invalid option before it takes any value; read robotcode's
+            # own options again as Click's shell completion does, without errors or
+            # callbacks, passing over unknown options
+            lenient = {**extra, "resilient_parsing": True, "ignore_unknown_options": True}
+            try:
+                params = super().make_context(info_name, command_line, parent, **lenient).params
+            except click.ClickException:
+                params = {}
+            raise RobotCodeError(e, _application_for(params)) from e
 
     def invoke(self, ctx: click.Context) -> Any:
         try:
             return super().invoke(ctx)
         except click.ClickException as e:
+            app = ctx.find_object(Application) or _application_for(ctx.params)
             if e.exit_code in (1, 2) and self._passes_on_robot_exit_codes(ctx):
-                raise RobotDataError(e) from e
-            raise
+                raise RobotDataError(e, app) from e
+            raise RobotCodeError(e, app) from e
 
     def _passes_on_robot_exit_codes(self, ctx: click.Context) -> bool:
         name = ctx.invoked_subcommand
@@ -353,23 +418,7 @@ def robotcode(
     app.config.root = root
     app.config.no_vcs = no_vcs
 
-    if color is None:
-        app.config.colored_output = ColoredOutput.AUTO
-    elif color:
-        app.config.colored_output = ColoredOutput.YES
-    else:
-        app.config.colored_output = ColoredOutput.NO
-    app.config.pager = pager
-
-    # AI-agent auto-detect: when running inside a known agent session
-    # (Claude Code, Copilot, OpenCode, …) demote colour and pager
-    # defaults so the agent's stdout capture stays clean. Explicit CLI
-    # flags and `NO_COLOR` / `FORCE_COLOR` keep their precedence.
-    if is_running_in_ai_agent():
-        if color is None and not os.environ.get("NO_COLOR") and not os.environ.get("FORCE_COLOR"):
-            app.config.colored_output = ColoredOutput.NO
-        if pager is None:
-            app.config.pager = False
+    _set_output_options(app, color, pager)
     app.config.output_format = format
     app.config.launcher_script = launcher_script
     app.config.default_paths = default_path

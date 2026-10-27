@@ -29,4 +29,4 @@ def test_an_error_of_the_configuration_shows_after_the_server_has_started(
 
     assert events == ["server"]
     assert result.exit_code == 252, result.output
-    assert result.stderr.count("Error: No profile matches 'typo'.") == 1, result.stderr
+    assert result.stderr.count("[ ERROR ] No profile matches 'typo'.") == 1, result.stderr

@@ -76,7 +76,7 @@ def test_the_error_is_on_stderr_before_the_debugger_reports_the_end_of_the_run(
     """The debug launcher forwards the output of the run to VS Code's Debug Console only while the session lasts."""
     protocol, _ = _run_with_an_error(monkeypatch, capsys)
 
-    assert protocol.stderr_at_robot_exited == "Error: No profile matches 'typo'.\n"
+    assert protocol.stderr_at_robot_exited == "[ ERROR ] No profile matches 'typo'.\n"
 
 
 def test_an_error_that_is_not_robotcodes_own_is_on_stderr_before_the_debugger_reports_the_end_of_the_run(
@@ -84,7 +84,7 @@ def test_an_error_that_is_not_robotcodes_own_is_on_stderr_before_the_debugger_re
 ) -> None:
     protocol, error = _run_with_an_error(monkeypatch, capsys, ValueError("boom"))
 
-    assert protocol.stderr_at_robot_exited == "Error: boom\n"
+    assert protocol.stderr_at_robot_exited == "[ ERROR ] boom\n"
     # the exit code of `debug` for such an error
     assert error.exit_code == 255
 
@@ -124,7 +124,7 @@ def test_a_broken_configuration_ends_the_debug_command_with_252_and_one_error(tm
     )
 
     assert result.returncode == 252, result.stderr
-    assert result.stderr.count("Error:") == 1, result.stderr
+    assert result.stderr.count("[ ERROR ]") == 1, result.stderr
     assert "output_dir" in result.stderr
 
 
@@ -156,6 +156,6 @@ def test_a_profile_that_does_not_exist_ends_the_debug_command_with_252_after_the
     )
 
     assert result.returncode == 252, result.stderr
-    assert result.stderr.count("Error: No profile matches 'typo'.") == 1, result.stderr
+    assert result.stderr.count("[ ERROR ] No profile matches 'typo'.") == 1, result.stderr
     # in the debug session, where the debug launcher passes it on to the client
-    assert result.stderr.index("Start robotcode debugger thread") < result.stderr.index("Error:"), result.stderr
+    assert result.stderr.index("Start robotcode debugger thread") < result.stderr.index("[ ERROR ]"), result.stderr

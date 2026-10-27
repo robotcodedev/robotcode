@@ -80,7 +80,7 @@ def test_invalid_robot_toml_is_reported_and_ends_the_process(tmp_path: Path, std
     stdout, stderr = process.stdout.read(), process.stderr.read()
 
     assert returncode == 252, stderr
-    assert "Error: Invalid TOML file" in stderr
+    assert "[ ERROR ] Invalid TOML file" in stderr
     assert "Traceback" not in stdout + stderr
 
 

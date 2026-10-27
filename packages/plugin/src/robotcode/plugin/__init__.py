@@ -41,6 +41,7 @@ __all__ = [
     "UnknownError",
     "hookimpl",
     "pass_application",
+    "show_error",
 ]
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -528,6 +529,29 @@ class Application:
             yield None
         finally:
             sys.path = self._syspath
+
+
+def show_error(app: Application, error: click.ClickException, file: Optional[IO[Any]] = None) -> None:
+    """Write a Click error as robotcode writes the errors it reports, `[ ERROR ] <message>`
+    (`Application.error`), instead of Click's `Error: <message>`.
+
+    A usage error with a context gets Click's usage line and hint to `--help` first. An
+    error that writes itself in a form of its own, such as Click's help for a command
+    called without arguments, is written by its `show`.
+    """
+    if type(error).show not in (click.ClickException.show, click.UsageError.show):
+        error.show(file)
+        return
+
+    if isinstance(error, click.UsageError) and error.ctx is not None:
+        ctx = error.ctx
+        hint = ""
+        if ctx.command.get_help_option(ctx) is not None:
+            help_option = max(ctx.command.get_help_option_names(ctx), key=len)
+            hint = f"Try '{ctx.command_path} {help_option}' for help.\n"
+        click.echo(f"{ctx.get_usage()}\n{hint}", file=file, err=True, color=ctx.color)
+
+    app.error(error.format_message(), file=file)
 
 
 pass_application = click.make_pass_decorator(Application, ensure=True)

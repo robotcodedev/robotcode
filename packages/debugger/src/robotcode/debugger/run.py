@@ -27,7 +27,7 @@ from robotcode.core.utils.debugpy import (
 )
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
-from robotcode.plugin import Application, UnknownError
+from robotcode.plugin import Application, UnknownError, show_error
 
 from .dap_types import Event
 from .debugger import Debugger
@@ -279,7 +279,7 @@ def run_debugger(
             # the run to VS Code's Debug Console only until then. An error that is not
             # robotcode's own is shown as `debug` shows it.
             error = e if isinstance(e, click.ClickException) else UnknownError(str(e))
-            error.show()
+            show_error(app, error)
             raise _ShownError(error) from e
         finally:
             if server.protocol.connected:

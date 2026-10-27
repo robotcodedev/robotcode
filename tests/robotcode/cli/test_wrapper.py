@@ -341,7 +341,7 @@ def test_a_configuration_that_cannot_be_loaded_starts_no_wrapper(project: Path) 
 
     assert result.returncode == 252, result.stderr
     assert _calls(cli_wrapper) == []
-    assert result.stderr.count("Error:") == 1, result.stderr
+    assert result.stderr.count("[ ERROR ]") == 1, result.stderr
     assert "output_dir" in result.stderr
 
 
