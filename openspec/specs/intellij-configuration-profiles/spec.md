@@ -73,7 +73,7 @@ When `robotcode` reports messages instead of profiles, such as that no configura
 
 ### Requirement: Profiles that no longer exist
 
-When the profile list opens, every selected name or pattern that `robotcode profiles list` reports as selecting no profile SHALL leave the selection at once, also when the user then cancels the list, and the list SHALL name them. Opened from the General page or from the editor of a run configuration, they SHALL leave the choice shown there, which Apply stores. Patterns and hidden profiles that select a profile SHALL stay. Nothing SHALL be removed when the list cannot be read, so that a selection is not lost.
+When the profile list opens, every selected name or pattern that `robotcode profiles list` reports as selecting no profile SHALL leave the selection at once, also when the user then cancels the list, and the list SHALL name them. Opened from the General page or from the editor of a run configuration, they SHALL leave the choice shown there, which Apply stores.
 
 #### Scenario: Renamed profile
 
@@ -84,6 +84,10 @@ When the profile list opens, every selected name or pattern that `robotcode prof
 
 - **WHEN** a configuration's choice is "Custom" with `dev`, `robot.toml` renames `dev` to `development`, and the user opens the list with "Select..." in the configuration's editor and cancels it
 - **THEN** the list said that `dev` was removed, the editor no longer shows `dev`, and applying the configuration stores its names without `dev`
+
+### Requirement: Names that still select a profile stay selected
+
+Selected patterns and hidden profiles that select a profile SHALL stay in the selection when the profile list opens. When the list cannot be read, nothing SHALL be removed, so that a selection is not lost.
 
 #### Scenario: Pattern in the selection
 

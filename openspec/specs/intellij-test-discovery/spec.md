@@ -122,7 +122,7 @@ The plugin SHALL run at most one full discovery of a project at a time. A newer 
 
 ### Requirement: Discovery failures are reported
 
-When discovery fails, because robotcode exits with an error or prints output that the plugin cannot read, the plugin SHALL keep the result of the last successful discovery, write the command line, the exit code and the complete output to idea.log, and not raise an IDE error. Unless the selection names a profile that `robot.toml` does not define, it SHALL show a RobotCode notification with the first lines of robotcode's error output and the actions "Retry" and, when the project folder has a `robot.toml`, "Open robot.toml".
+When discovery fails, because robotcode exits with an error or prints output that the plugin cannot read, the plugin SHALL keep the result of the last successful discovery. Unless the selection names a profile that `robot.toml` does not define, it SHALL show a RobotCode notification with the first lines of robotcode's error output and the actions "Retry" and, when the project folder has a `robot.toml`, "Open robot.toml".
 
 #### Scenario: Syntax error in robot.toml
 
@@ -133,6 +133,15 @@ When discovery fails, because robotcode exits with an error or prints output tha
 
 - **WHEN** the user clicks "Retry" in the notification
 - **THEN** a full discovery runs
+
+### Requirement: Failed discoveries are logged
+
+When discovery fails, the plugin SHALL write the command line, the exit code and the complete output of robotcode to idea.log and SHALL NOT raise an IDE error.
+
+#### Scenario: Failed discovery in idea.log
+
+- **WHEN** discovery fails because robot.toml has a syntax error
+- **THEN** idea.log has the command line, the exit code and robotcode's complete output, and no SEVERE entry from RobotCode
 
 ### Requirement: Repeated and fixed discovery failures
 
