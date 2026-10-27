@@ -39,7 +39,7 @@ No gate on the cleanup. Start after the Surround fixes of `code-action-and-selec
 - [ ] 4.3 Name the new variants where the guides list the Surround actions:
   - `docs/src/content/docs/guides/vscode/writing-code.mdx`;
   - `docs/src/content/docs/guides/pycharm/writing-code.mdx`;
-  - `docs/src/content/docs/guides/variable-not-found.md`.
+  - `docs/src/content/docs/guides/tips/variable-not-found.md`.
 
   Verify the pages with `npm run docs:build`.
 

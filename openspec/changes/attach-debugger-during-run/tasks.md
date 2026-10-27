@@ -11,8 +11,8 @@
 - [ ] 1.2 Add a test to `tests/robotcode/repl/test_debug_console.py`: a REPL session (`run_repl` with `_attach_debugger`, detached) runs `Breakpoint`. Verify that it stops with `* breakpoint` and that `.debug` reports the debugger as attached.
 - [ ] 1.3 Update the docs:
   - the docstring of `Breakpoint` in `Repl/repl.py`;
-  - in `guides/robot-debug.md`, the row "Embedded `Breakpoint` keyword" and the section on the `Breakpoint` step: it attaches a detached debugger and stops;
-  - in `guides/repl.md`, "Debugging at the prompt".
+  - in `guides/cli/robot-debug.md`, the row "Embedded `Breakpoint` keyword" and the section on the `Breakpoint` step: it attaches a detached debugger and stops;
+  - in `guides/cli/repl.md`, "Debugging at the prompt".
 
   Verify with `npm run docs:build`.
 
@@ -27,12 +27,12 @@
   - `Evaluate    breakpoint()` as an input of its own doesn't stop that input or the next one;
   - `sys.breakpointhook` is the previous one after the run and after the session;
   - with `PYTHONBREAKPOINT` set, the hook isn't installed.
-- [ ] 2.3 In `guides/robot-debug.md`, describe `Evaluate    breakpoint()` as the way that needs no library import:
+- [ ] 2.3 In `guides/cli/robot-debug.md`, describe `Evaluate    breakpoint()` as the way that needs no library import:
   - it stops at the next keyword and attaches a detached debugger;
   - left in a suite, it starts pdb in runs without RobotCode's debugger;
   - `PYTHONBREAKPOINT` keeps Python's own debugger.
 
-  Mention it in `guides/repl.md`. Verify with `npm run docs:build`.
+  Mention it in `guides/cli/repl.md`. Verify with `npm run docs:build`.
 
 ## 3. Ctrl-C attaches the debugger in a robot-debug run
 
@@ -54,7 +54,7 @@
 - [ ] 3.3 Update the help and the docs:
   - the help of `--debugger-attached` in `cli.py`: while detached nothing pauses until a `Breakpoint` keyword, `breakpoint()` or, in `robot-debug`, Ctrl-C attaches the debugger;
   - the docstrings of `.debug` and `.detach`;
-  - in `guides/robot-debug.md`: the `Ctrl-C` row, the sentence after the table that calls `--no-debugger-attached` "the same as `robotcode robot`", and the `.detach` row.
+  - in `guides/cli/robot-debug.md`: the `Ctrl-C` row, the sentence after the table that calls `--no-debugger-attached` "the same as `robotcode robot`", and the `.detach` row.
 
   Regenerate `reference/cli.md` with `hatch run create-cmd-line-docs`, and verify with `npm run docs:build`.
 

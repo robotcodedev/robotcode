@@ -152,6 +152,7 @@
 ## 8. Documentation and agent skill
 
 - [ ] 8.1 Only if Q3 is confirmed as recommended: write `docs/src/content/docs/guides/library-entry-points.md` for library authors with the content of D12, including `pyproject.toml` examples and that RobotCode ranks declared entries first in import completion. Link it from the `robotcode doc` page and declare `title`, `description` and `sidebar.order` in its frontmatter (it explains a setup with narrative, so it is a guide: label "Library Entry Points", order 150, a one-sentence description; see "Writing Documentation Pages" in `CONTRIBUTING.md`). Verify with `npm run docs:build`.
+  Note (2026-10-27): `docs-guides-structure` grouped the Guides area by tool and topic (requirement "Guides grouped by tool and topic" of `documentation-site`). Apart from the Guides overview, AI Agents and Finding Robot Files, every guide is a page of a group, at a path under the group's path, so the path and the order 150 above and the path in Q3 no longer fit. Choose the group when writing the page. `library-keyword-set-declaration` plans a page for library authors too (its task 5.1). A new group for both follows "Groups of guides" in `CONTRIBUTING.md`, and the change that adds it lists the group in that requirement with a MODIFIED delta.
 - [ ] 8.2 Extend the `robotcode doc` page of doc-cli with a section on the listing without targets:
   - what the groups contain;
   - that nothing is imported;

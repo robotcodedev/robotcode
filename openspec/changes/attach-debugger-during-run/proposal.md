@@ -43,7 +43,7 @@ Python's own way to stop at a place in the code is `breakpoint()`. A suite can c
   - `Repl/repl.py`: the documentation of the `Breakpoint` keyword.
 - **Tests** in `tests/robotcode/repl`: controller, debug console, monitor and subprocess signal tests. The tests of `prompt-ctrl-c-like-python` for a run that ends on Ctrl-C change.
 - **Docs:**
-  - `guides/robot-debug.md` and `guides/repl.md`;
+  - `guides/cli/robot-debug.md` and `guides/cli/repl.md`;
   - `reference/cli.md`, regenerated with `hatch run create-cmd-line-docs`.
 - **Agent skill:** `references/debugging.md`, `references/repl.md` and `SKILL.md` where they become wrong, plus `breakpoint()` as the way that needs no library import. Then `chat-plugins/` is synced.
 - **Not affected:** `robotcode robot`, `repl-server`, and the DAP debugger.
