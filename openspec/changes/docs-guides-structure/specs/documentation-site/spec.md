@@ -158,12 +158,16 @@ Pages for setting up an editor or tool and a first project SHALL be in Getting S
 
 ### Requirement: Guides grouped by tool and topic
 
-The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, PyCharm and Command Line, the page AI Agents, the group robot.toml, the pages Wrapper and .robotignore, and the group Robot Framework Tips. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
+The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, PyCharm and Command Line, the page AI Agents, the group Project Configuration, the page Finding Robot Files, and the group Robot Framework Tips. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
 
 #### Scenario: Order in the sidebar
 - **WHEN** a reader opens `/guides/`
-- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, robot.toml, Wrapper, .robotignore and Robot Framework Tips in this order
+- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, Project Configuration, Finding Robot Files and Robot Framework Tips in this order
 - **AND** every group is collapsed
+
+#### Scenario: Names by subject
+- **WHEN** a reader looks for the guides to `robot.toml` and to `.robotignore` in the sidebar
+- **THEN** they are listed as the group Project Configuration, at `/guides/robot-toml/`, and the page Finding Robot Files, at `/guides/ignoring-files/`
 
 #### Scenario: Group of the open page
 - **WHEN** a reader opens `/guides/cli/repl/`
@@ -173,7 +177,7 @@ The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, 
 #### Scenario: Command Line group
 - **WHEN** a reader opens `/guides/cli/`
 - **THEN** the overview of the group is shown
-- **AND** link cards lead to the guides to `discover`, `analyze code`, `results`, `repl`, `robot-debug` and `doc`
+- **AND** link cards lead to the guides to `discover`, `analyze code`, `results`, `repl`, `robot-debug`, `doc` and running tests through a wrapper
 
 #### Scenario: Robot Framework Tips group
 - **WHEN** a reader opens `/guides/tips/`

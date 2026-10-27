@@ -31,7 +31,7 @@ All three keep working when pages move into subdirectories of `guides/`.
 
 ### Groups from directories, not an explicit sidebar list
 
-The new groups are subdirectories of `guides/`, built by the existing `autogenerate`, with labels from `GROUP_LABELS` in `routeData.ts` (`cli` → "Command Line", `tips` → "Robot Framework Tips"). Pages keep declaring their own order and label (`documentation-site`, "Area sidebar"), and `AreaOverview` and `llms-index.mjs` need no change.
+The new groups are subdirectories of `guides/`, built by the existing `autogenerate`, with labels from `GROUP_LABELS` in `routeData.ts` (`cli` → "Command Line", `tips` → "Robot Framework Tips", and `robot-toml` now → "Project Configuration"). Pages keep declaring their own order and label (`documentation-site`, "Area sidebar"), and `AreaOverview` and `llms-index.mjs` need no change.
 
 Alternative: keep the files where they are and list the Guides sidebar by hand in `astro.config.mjs`. The paths would no longer match the groups, a new page would need an entry in the config, and the overview cards of `AreaOverview` would not know the groups.
 
@@ -47,6 +47,7 @@ Files move with `git mv`, so that their history follows them:
 | `repl.md` | `cli/repl.md` | `/guides/cli/repl/` |
 | `robot-debug.md` | `cli/robot-debug.md` | `/guides/cli/robot-debug/` |
 | `browsing-documentation.md` | `cli/browsing-documentation.md` | `/guides/cli/browsing-documentation/` |
+| `wrapper.md` | `cli/wrapper.md` | `/guides/cli/wrapper/` |
 | `vscode-highlighting.mdx` | `vscode/highlighting.mdx` | `/guides/vscode/highlighting/` |
 | `avoid-global-resource-file.mdx` | `tips/avoid-global-resource-file.mdx` | `/guides/tips/avoid-global-resource-file/` |
 | `variable-not-found.md` | `tips/variable-not-found.md` | `/guides/tips/variable-not-found/` |
@@ -55,7 +56,7 @@ None of these pages imports a file by a relative path (the two `.mdx` pages impo
 
 The directory is `cli`, as in `/reference/cli/`, and short in links; its label is "Command Line", like the Getting Started page. `tips` holds the Robot Framework practice pages.
 
-AI Agents, Wrapper and `.robotignore` keep their paths (`/guides/ai-agents/`, `/guides/wrapper/`, `/guides/ignoring-files/`). The home page and its spec link `/guides/ai-agents/`, and the maintainer chose to keep Wrapper and `.robotignore` as pages of their own after the robot.toml group.
+AI Agents and the `.robotignore` guide keep their paths (`/guides/ai-agents/`, `/guides/ignoring-files/`). The home page and its spec link `/guides/ai-agents/`, and the maintainer chose to keep the `.robotignore` guide as a page of its own after the configuration group. Wrapper was planned that way too; in the review of the implementation, the maintainer moved it into the Command Line group.
 
 ### Orders
 
@@ -66,10 +67,10 @@ A group sorts by its lowest page order, so each group's overview carries the low
 | 1 | Guides overview | (0) |
 | 2 | VS Code group | (0.5–9); Highlighting 6.5, after Configuration (6) |
 | 3 | PyCharm group | (9.1–9.9) |
-| 4 | Command Line group | overview 10, Discovering Tests 15 (was 10), Analyzing Code (20), Analyzing Results (30), REPL (40), Debugging (50), Browsing Documentation (60) |
+| 4 | Command Line group | overview 10, Discovering Tests 15 (was 10), Analyzing Code (20), Analyzing Results (30), REPL (40), Debugging (50), Browsing Documentation (60), Wrapper 70 (was 110) |
 | 5 | AI Agents | 90 (was 130) |
-| 6 | robot.toml group | (100–100.7) |
-| 7 | Wrapper, .robotignore | (110), (120) |
+| 6 | Project Configuration group (`robot-toml/`) | (100–100.7) |
+| 7 | Finding Robot Files (`ignoring-files.md`) | (120) |
 | 8 | Robot Framework Tips group | overview 200, Avoid a Global Resource File (210), Variable Not Found (220) |
 
 Highlighting comes after Configuration because it changes how the editor looks; Troubleshooting stays last (`vscode-user-guide`, "VS Code group in the Guides area"). Getting Started: "Get Started on the Command Line" gets order 25, between PyCharm (20) and Neovim (30).
@@ -77,6 +78,11 @@ Highlighting comes after Configuration because it changes how the editor looks; 
 ### Sidebar labels
 
 Inside the group, "Command-line Debugging" becomes "Debugging", and "VS Code Highlighting" becomes "Highlighting". The page titles stay as they are, since they name the command or the editor on their own, in search results and in `llms.txt`.
+
+In the review of the implementation, the maintainer asked for names that say what the chapters are about instead of naming the files:
+- The group `robot-toml/` is labelled "Project Configuration". Its path `/guides/robot-toml/` stays, since the IntelliJ README links it, and its overview keeps the title "Configuring Projects with robot.toml".
+- The `.robotignore` guide is labelled "Finding Robot Files" and titled "How RobotCode Finds Robot Framework Files". It is about which files RobotCode finds for discovery, analysis, runs and the language server, what it skips by default and what `.gitignore` and `.robotignore` change, not only about excluding files. Its description keeps `.robotignore`, so that the search still finds the page by the file name; its path `/guides/ignoring-files/` stays.
+- The page "robot.toml on the Command Line" in that group is labelled "On the Command Line" instead of "Command Line", so that the sidebar does not show it under the same name as the Command Line group.
 
 ### Collapsed groups
 
@@ -86,7 +92,8 @@ Inside the group, "Command-line Debugging" becomes "Debugging", and "VS Code Hig
 
 `guides/cli/index.mdx`, title "Working on the Command Line", label "Overview". The VS Code and PyCharm groups use the same title form ("Working in VS Code", "Working in PyCharm"). Content:
 - The `robotcode` commands run in the project's Python environment, next to Robot Framework and the libraries. Like the editors, they read the project's `robot.toml` files and the selected profiles (`-p`). Installing them: the Getting Started page. All options: `/reference/cli/`.
-- A table "task → command → guide": run tests (`robotcode robot`, `/guides/robot-toml/command-line/`), see what a run would pick up (`discover`), check the code (`analyze code`), find out why tests failed (`results`), try keywords (`repl`), debug a run in the terminal (`robot-debug`), read the documentation of a library (`doc`), run through a wrapper (`/guides/wrapper/`), let an AI agent work through the CLI (`/guides/ai-agents/`).
+- A table "task → command → guide": run tests (`robotcode robot`, `/guides/robot-toml/command-line/`), see what a run would pick up (`discover`), check the code (`analyze code`), find out why tests failed (`results`), try keywords (`repl`), debug a run in the terminal (`robot-debug`), read the documentation of a library (`doc`), run through a wrapper (`/guides/cli/wrapper/`), see the configuration and the profiles a command gets (`config`, `profiles`, `/guides/robot-toml/troubleshooting/`).
+- Below the table, where the options of `robotcode` and of the command go, and that AI agents work through the same commands (`/guides/ai-agents/`), which is no command of its own.
 - `<AreaOverview area="guides/cli" />`.
 
 ### The Robot Framework Tips overview
@@ -99,8 +106,8 @@ Inside the group, "Command-line Debugging" becomes "Debugging", and "VS Code Hig
 - **Who it is for:** the terminal, CI pipelines and scripts. Other editors connect to the language server; see the Neovim page.
 - **Install:** into the project's Python environment, the same one that has Robot Framework. A table of the packages and the commands each brings, taken from `pyproject.toml` and checked against the installed commands. Commands for pip and for uv (`uv add`, `uv pip install`), as on the dev builds page. No pipx or `uvx`, because RobotCode has to run next to the project's Robot Framework and libraries (the same reason as on the dev builds page). The `[all]` extra is mentioned as the way to get everything.
 - **Check:** `robotcode --version`.
-- **First look:** `robotcode discover all` shows the suites and tests that Robot Framework would run.
-- **First run:** `robotcode robot <path>`, then `robotcode results summary` for the outcome.
+- **First look:** `robotcode discover all tests` shows the suites and tests that Robot Framework would run. Without a `robot.toml` that sets `paths`, the folder has to be given.
+- **First run:** `robotcode run tests`, then `robotcode results summary` for the outcome. `run` is the alias of `robot` that the Configuration page and the robot.toml guide use, which the page leads on to.
 - **Next:** `/getting-started/configuration/` for a `robot.toml`, `/guides/cli/`, and `/reference/cli/`.
 
 Every command on the page is run in a scratch project before it goes on the page.
@@ -110,13 +117,14 @@ Every command on the page is run in a scratch project before it goes on the page
 - `guides/index.mdx`: the description and the intro name the groups in their order (editors, command line, AI agents, project configuration, Robot Framework tips).
 - `getting-started/index.mdx`: the description and the sentence above the cards name the command line next to the editors.
 - `README.md`: "Command Line and Other Editors" links the new page, and the line "Guides" under "Documentation" names the editors and the command line.
+- `CONTRIBUTING.md`: under "Writing Documentation Pages", "Groups of guides" says which folder a new guide goes into and what a new group needs (an `index.mdx` with the lowest order and an entry in `GROUP_LABELS`).
 
 ### Rewriting the links
 
-A list of the nine old paths and their new ones is applied to `docs/src/content/docs/**/*.{md,mdx}`, `docs/src/components/**/*.astro` and `CONTRIBUTING.md`. A link keeps its anchor. The archived OpenSpec changes keep their old paths, since they record what was true then. `npm run docs:build` then checks the content pages. A short script checks the `href`s under `/guides/` in the built home page and the 404 page against the files in `docs/dist`.
+A list of the ten old paths and their new ones is applied to `docs/src/content/docs/**/*.{md,mdx}`, `docs/src/components/**/*.astro` and `CONTRIBUTING.md`. A link keeps its anchor. The archived OpenSpec changes keep their old paths, since they record what was true then. `npm run docs:build` then checks the content pages. A short script checks the `href`s under `/guides/` in the built home page and the 404 page against the files in `docs/dist`.
 
 ## Risks / Trade-offs
 
-- [Links from outside the repository to the nine old paths break, for example from forum posts written since 2026-10-26] → The maintainer's decision; the not-found page says that pages move and offers the search and the area overviews.
+- [Links from outside the repository to the ten old paths break, for example from forum posts written since 2026-10-26] → The maintainer's decision; the not-found page says that pages move and offers the search and the area overviews.
 - [A later guide gets an order that sorts it before its group's overview] → Each group's overview has the lowest order of its group, and the Command Line group leaves space between its orders.
 - [Readers miss a page inside a collapsed group] → Each group's overview lists its pages as cards, and the Guides overview has a card for each group.
