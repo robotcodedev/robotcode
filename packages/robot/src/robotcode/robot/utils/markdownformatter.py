@@ -144,14 +144,18 @@ class LinkFormatter:
         return pre + self._get_link(url)
 
     def _get_image(self, src: str, title: Optional[str] = None) -> str:
-        return f"![{title or src}]({self._unquote_hash(src)})"
+        return f"![{title or src}]({self._target(src)})"
 
     def _get_link(self, href: str, content: Optional[str] = None) -> str:
-        return f"[{content or href}]({self._unquote_hash(href)})"
+        return f"[{content or href}]({self._target(href)})"
 
-    def _unquote_hash(self, target: str) -> str:
+    def _target(self, target: str) -> str:
         # `#` is escaped in the whole line before links are formatted, a link target needs it as it is
-        return target.replace("\\#", "#")
+        target = target.replace("\\#", "#")
+        # Markdown takes a target with spaces only in angle brackets; `<` is already escaped in the whole line
+        if " " in target:
+            return "<" + target.replace(">", "\\>") + ">"
+        return target
 
     def _quot(self, attr: str) -> str:
         return attr if '"' not in attr else attr.replace('"', "&quot;")

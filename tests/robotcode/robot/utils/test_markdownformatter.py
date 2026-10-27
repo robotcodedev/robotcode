@@ -31,6 +31,15 @@ def test_link_target_keeps_its_fragment() -> None:
     assert _format("See [http://example.com/x.html#frag|docs].") == "See [docs](http://example.com/x.html#frag).\n\n"
 
 
+def test_image_path_with_spaces_stays_an_image() -> None:
+    assert _format("[images/doc/with space.png|Title]") == "![Title](<images/doc/with space.png>)\n\n"
+    assert _format("[a b>c.png|Title]") == "![Title](<a b\\>c.png>)\n\n"
+
+
+def test_link_target_with_spaces_stays_a_link() -> None:
+    assert _format("See [docs/my file.html|docs].") == "See [docs](<docs/my file.html>).\n\n"
+
+
 def test_url_keeps_its_fragment_in_the_target() -> None:
     assert _format("See http://example.com/x.html#frag now.") == (
         "See [http://example.com/x.html\\#frag](http://example.com/x.html#frag) now.\n\n"
