@@ -116,7 +116,7 @@ For CI pipelines, the command line, or LSP-compatible editors like Neovim, Subli
 pip install "robotcode[runner,analyze]"
 ```
 
-Pick the extras that match your use case — see the [CLI reference](https://robotcode.io/reference/cli/) for the available packages and how to install them.
+Pick the extras that match your use case — see [Get Started on the Command Line](https://robotcode.io/getting-started/command-line/) for the commands each extra brings, installing with pip or uv and a first run, and the [CLI reference](https://robotcode.io/reference/cli/) for every command and option.
 
 
 ## Documentation
@@ -124,7 +124,7 @@ Pick the extras that match your use case — see the [CLI reference](https://rob
 For detailed instructions, visit our **[official documentation](https://robotcode.io)**. Additional resources:
 
 - **[Q&A](https://github.com/robotcodedev/robotcode/discussions/categories/q-a):** Answers to common questions about RobotCode.
-- **[Guides](https://robotcode.io/guides/):** How to use RobotCode's commands and set up projects, plus common pitfalls and editor customization.
+- **[Guides](https://robotcode.io/guides/):** How to work with RobotCode in VS Code, in PyCharm and on the command line, how to set up projects with `robot.toml`, and tips for Robot Framework code.
 - **[Command Line Tools Reference](https://robotcode.io/reference/cli/):** Comprehensive documentation on using RobotCode's CLI tools.
 - **[Changelog](https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md):** Track changes, updates, and new features in each release.
 - **[Support & Contribute](https://robotcode.io/contributing/):** Ways to back the project — financial, code, feedback.

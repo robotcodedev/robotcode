@@ -9,7 +9,7 @@ sidebar:
 import ThemeImage from "../../../../components/ThemeImage.astro";
 import ThemeVideo from "../../../../components/ThemeVideo.astro";
 
-The **Documentation Viewer** shows the documentation of a library, a resource file or a suite file in an editor tab. It shows the same documentation as [`robotcode doc`](/guides/browsing-documentation/): the viewer runs `robotcode doc lib` for you and renders the page with VS Code's built-in Markdown support, styled like VS Code's Markdown preview. Code blocks marked `robotframework` or `robot` are highlighted as Robot Framework code, in the viewer and in the Markdown preview of any Markdown file.
+The **Documentation Viewer** shows the documentation of a library, a resource file or a suite file in an editor tab. It shows the same documentation as [`robotcode doc`](/guides/cli/browsing-documentation/): the viewer runs `robotcode doc lib` for you and renders the page with VS Code's built-in Markdown support, styled like VS Code's Markdown preview. Code blocks marked `robotframework` or `robot` are highlighted as Robot Framework code, in the viewer and in the Markdown preview of any Markdown file.
 
 <ThemeImage
   name="viewer-window"
@@ -74,7 +74,7 @@ The links show the documentation of the import that the analysis used, also for 
 
 ## The target field
 
-The field in the toolbar shows what the viewer documents and takes a new target, as the [targets](/guides/browsing-documentation/#targets) of `robotcode doc`: `Name`, `Name::arg1::arg2`, or the path of a library, resource or suite file, relative to the workspace folder or absolute. `Enter` shows it in the same tab, which takes the name of the library or file as its title.
+The field in the toolbar shows what the viewer documents and takes a new target, as the [targets](/guides/cli/browsing-documentation/#targets) of `robotcode doc`: `Name`, `Name::arg1::arg2`, or the path of a library, resource or suite file, relative to the workspace folder or absolute. `Enter` shows it in the same tab, which takes the name of the library or file as its title.
 
 As a browser's address bar shows the part of a page, the field shows after a `#` the place at the top of the view, the id of its heading, such as `Collections#get-from-dictionary`; at the top of the page it shows the target alone. A text with a `#` opens the target at that place: the text after the last `#` is the id of a heading or the name of a keyword or data type, such as `BuiltIn#Should Be Equal`. Entering the target and place that are shown generates the page again; another place of the same target moves there, and back returns. A target with a `#` of its own, such as the path `issue#1/shop.resource`, ends with a `#`: `issue#1/shop.resource#`. So that also the last headings of a page can come to the top, the page scrolls past its end, as VS Code's editor does.
 
@@ -109,7 +109,7 @@ In a workspace with more than one folder, the toolbar shows the name of the view
 The outline on the left lists the sections of the page as a tree: below `Introduction` its sections and their subsections, below `Importing`, `Keywords` and `Data types` their entries. Clicking an entry or pressing `Enter` shows its heading.
 
 - `↑` and `↓` move through the entries, `→` opens an entry or moves to the first entry below it, `←` closes an entry or moves to the entry it belongs to, `Home`, `End`, `Page Up` and `Page Down` move by more, and typing jumps to the next entry whose title starts with what you typed.
-- The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](/guides/browsing-documentation/#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. An entry stays while it or one of the entries below it matches.
+- The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](/guides/cli/browsing-documentation/#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. An entry stays while it or one of the entries below it matches.
 - The button at the start of the toolbar hides the outline with its filter field, so that the page gets the full width of the viewer, and shows them again. Each viewer keeps this, also after a reload of the window. The setting `robotcode.documentationViewer.showOutline` decides whether a new viewer starts with its outline.
 
 The context menu of an entry, opened with a right-click, with the context menu key or with `Shift+F10`, offers:
@@ -169,7 +169,7 @@ The viewer generates pages only when the Python environment of the workspace fol
 - The completion in the target field lists every module on the Python path, as the editor's import completion does, also modules that are no libraries, such as Python's `collections` next to the standard library `Collections`.
 - Python 3.13 and newer have no `telnetlib`, so the standard library `Telnet` cannot be imported there; its bookmark then shows the import error, and you can remove it.
 - Pages are generated from the saved files; unsaved changes in an editor are not shown.
-- Libraries whose keywords exist only while a test runs cannot be documented; see [Libraries that need a running test](/guides/browsing-documentation/#libraries-that-need-a-running-test).
+- Libraries whose keywords exist only while a test runs cannot be documented; see [Libraries that need a running test](/guides/cli/browsing-documentation/#libraries-that-need-a-running-test).
 - The page needs VS Code's built-in extension *Markdown Language Features*. Without it, the viewer shows a notice and the page as plain Markdown text.
 - Your Markdown settings, such as `markdown.preview.breaks`, and the Markdown plugins of other extensions apply to the page. Mathematical formulas are not laid out as in the Markdown preview, and mermaid diagrams stay source text.
 

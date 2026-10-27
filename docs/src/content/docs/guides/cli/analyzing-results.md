@@ -515,7 +515,7 @@ Use `-bl` when you have a precise name to filter against (often pasted from the 
 
 ### Test metadata (`-btm`/`-ebtm`)
 
-`-btm`/`-ebtm` (Robot Framework 7.5+) select by the test's `[Metadata]`, with the same pattern rules as `robotcode robot` and `discover`, described in [Selecting by test metadata](/guides/discovering-tests/#selecting-by-test-metadata):
+`-btm`/`-ebtm` (Robot Framework 7.5+) select by the test's `[Metadata]`, with the same pattern rules as `robotcode robot` and `discover`, described in [Selecting by test metadata](/guides/cli/discovering-tests/#selecting-by-test-metadata):
 
 ```bash
 robotcode results show -btm Issue:4409                        # the results of every test for issue 4409

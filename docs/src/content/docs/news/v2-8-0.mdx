@@ -81,7 +81,7 @@ robotcode robot -i smoke -btm Issue:4409   # run the smoke tests for issue 4409
 robotcode discover metadata --values       # the metadata names and values in use
 ```
 
-With the pre-run modifiers of the `robotcode-modifiers` package, the selection also works with plain `robot` and in `robot.toml` profiles. [Selecting by test metadata](/guides/discovering-tests/#selecting-by-test-metadata) describes the patterns and how to use them.
+With the pre-run modifiers of the `robotcode-modifiers` package, the selection also works with plain `robot` and in `robot.toml` profiles. [Selecting by test metadata](/guides/cli/discovering-tests/#selecting-by-test-metadata) describes the patterns and how to use them.
 
 ### Also on Robot Framework 7.5
 
@@ -231,11 +231,11 @@ The Documentation Viewer is built on the new `robotcode doc` command, which you 
 robotcode doc keywords Collections dictionary   # the keywords of Collections that match "dictionary"
 ```
 
-`robotcode doc` comes with the optional `repl` package (`pip install "robotcode[repl]"`); [Browsing Library Documentation](/guides/browsing-documentation/) has the details.
+`robotcode doc` comes with the optional `repl` package (`pip install "robotcode[repl]"`); [Browsing Library Documentation](/guides/cli/browsing-documentation/) has the details.
 
 ### A More Dependable REPL
 
-A statement that fails without being handled now fails the REPL session, and a non-interactive session exits with 1, so scripts, CI and agents can tell success from failure. You can also choose the exit code yourself; see the [REPL reference](/guides/repl/#exit-code-and-session-status). Several fixes make `robotcode repl` and the notebook kernel more reliable: `.save` leaves out inputs that failed, so the saved file runs, and settings such as `[Tags]` typed at the prompt are reported instead of silently ignored. ([#663](https://github.com/robotcodedev/robotcode/issues/663), [#667](https://github.com/robotcodedev/robotcode/issues/667))
+A statement that fails without being handled now fails the REPL session, and a non-interactive session exits with 1, so scripts, CI and agents can tell success from failure. You can also choose the exit code yourself; see the [REPL reference](/guides/cli/repl/#exit-code-and-session-status). Several fixes make `robotcode repl` and the notebook kernel more reliable: `.save` leaves out inputs that failed, so the saved file runs, and settings such as `[Tags]` typed at the prompt are reported instead of silently ignored. ([#663](https://github.com/robotcodedev/robotcode/issues/663), [#667](https://github.com/robotcodedev/robotcode/issues/667))
 
 Ctrl-C now works as in Python's REPL and in pdb: at the prompts of `repl` and `robot-debug` it drops what you typed instead of ending the session or resuming the run, and while a run executes under the debugger it pauses at the next keyword.
 

@@ -20,7 +20,7 @@ Trying out a single Robot Framework keyword usually means more ceremony than the
 
 Reach for it whenever "let me just *try* it" would be faster than writing a one-off test file — library exploration, keyword debugging, environment sanity checks, ad-hoc spikes.
 
-`robotcode repl` also has a **command-line debugger** available — it starts detached, but once you attach it (`.debug on`, `--debugger-attached`, or by passing `--break …`) a breakpoint that matches a keyword you run at the prompt drops you into a debug prompt with the live call stack, per-frame variables, and a source listing. Its companion command, `robotcode robot-debug`, runs a real `.robot` suite under the same debugger (attached by default). Both are documented in [Command-line debugging](/guides/robot-debug/).
+`robotcode repl` also has a **command-line debugger** available — it starts detached, but once you attach it (`.debug on`, `--debugger-attached`, or by passing `--break …`) a breakpoint that matches a keyword you run at the prompt drops you into a debug prompt with the live call stack, per-frame variables, and a source listing. Its companion command, `robotcode robot-debug`, runs a real `.robot` suite under the same debugger (attached by default). Both are documented in [Command-line debugging](/guides/cli/robot-debug/).
 
 **Who this is for:**
 
@@ -37,7 +37,7 @@ Typical things you can do with it:
 - run control structures (FOR, WHILE, IF, TRY) interactively, multi-line
 - execute a `.robotrepl` script and either exit or drop into the prompt afterwards
 - generate a `log.html` / `report.html` / `output.xml` from the interactive session, just like a normal `robot` run
-- set breakpoints and step through a keyword you run at the prompt — or a whole suite via [`robotcode robot-debug`](/guides/robot-debug/)
+- set breakpoints and step through a keyword you run at the prompt — or a whole suite via [`robotcode robot-debug`](/guides/cli/robot-debug/)
 
 This is intentionally **not** a replacement for writing real test files. It's the lightweight cousin: same engine, immediate feedback, no persistence unless you ask for it.
 
@@ -63,7 +63,7 @@ robotcode repl -P ./resources
 robotcode repl -d ./repl-output -o output.xml -l log.html
 ```
 
-To debug a real suite — breakpoints, stepping, the call stack — see [Command-line debugging](/guides/robot-debug/).
+To debug a real suite — breakpoints, stepping, the call stack — see [Command-line debugging](/guides/cli/robot-debug/).
 
 ## `repl` and `robot-debug`
 
@@ -72,7 +72,7 @@ Two commands:
 | Command | What it does |
 | --- | --- |
 | `robotcode repl` (alias `shell`) | The interactive shell described on this page. Every existing `robotcode repl …` invocation keeps working unchanged. The debugger starts **detached** — a failing keyword just prints its error and you stay at the prompt, and nothing pauses. Attach it with `.debug on` (or start with `--debugger-attached`, or pass `--break …`) to make breakpoints, an embedded `Breakpoint`, and failures pause into the `(rdb)` prompt. |
-| `robotcode robot-debug` (alias `run-debug`) | Runs a real `.robot` suite through the normal runner with the debugger attached. Takes the same arguments as [`robotcode robot`](/reference/cli/#robot) plus the debugger trigger flags. See [Command-line debugging](/guides/robot-debug/). |
+| `robotcode robot-debug` (alias `run-debug`) | Runs a real `.robot` suite through the normal runner with the debugger attached. Takes the same arguments as [`robotcode robot`](/reference/cli/#robot) plus the debugger trigger flags. See [Command-line debugging](/guides/cli/robot-debug/). |
 
 The shell-specific flags (`--source`, `--inspect`, `--show-keywords`, and `.robotrepl` file arguments) live on `repl`. `robot-debug` instead accepts the full `robotcode robot` option set. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) and the debugger triggers (`--break`, the `--break-on-*` exception flags, and — on `robot-debug` — `--stop-on-entry`) work on both.
 
@@ -259,7 +259,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 | `.imports` | Show loaded libraries and resource files with their source path and keyword count. |
 | `.vars [--user]` | Variables in the current scope, name + truncated `repr` of the value. `--user` hides the variables Robot Framework sets itself (`${OUTPUT_DIR}`, `${SUITE_NAME}`, `${True}`, …) and the result variable `${_}`. |
 | `.kw [name-or-text]` | Keyword documentation in the doc viewer — signature, argument table (types + defaults), tags, docstring body. Same renderer the editor's hover uses. Bare `.kw` lists all loaded keywords; with non-matching text it lists keywords whose name contains it. |
-| `.doc <name>` | Full library or resource documentation in the doc viewer — version + scope, introduction (with the auto-linked Table of Contents), a keyword index, every keyword with its own signature + arguments + body, and the data types the keywords use; keywords tagged `robot:private` are left out. It is the page [`robotcode doc lib`](/guides/browsing-documentation/) prints. Only libraries and resources the current session has **imported** can be shown, addressed by their namespace name (for a library imported with `AS` / `WITH NAME`, the alias; for a resource, the file name without extension). |
+| `.doc <name>` | Full library or resource documentation in the doc viewer — version + scope, introduction (with the auto-linked Table of Contents), a keyword index, every keyword with its own signature + arguments + body, and the data types the keywords use; keywords tagged `robot:private` are left out. It is the page [`robotcode doc lib`](/guides/cli/browsing-documentation/) prints. Only libraries and resources the current session has **imported** can be shown, addressed by their namespace name (for a library imported with `AS` / `WITH NAME`, the alias; for a resource, the file name without extension). |
 | `.history [N]` | Show the last N entries (default 20), numbered. Available on the prompt-toolkit backend; plain backend has no history. |
 | `.history clear` | Truncate the in-memory history and the persistent history file. |
 | `.history del <N>` | Drop the single entry at index N from both. |
@@ -301,7 +301,7 @@ On the page of `.doc`, `s` opens a sidebar with the outline of the page: the sec
 
 | Key | Effect |
 | --- | ------ |
-| Typing | Filter the list: entries whose name contains the text, with `*` and `?` as wildcards, ignoring case, spaces and underscores — the rules of the patterns of [`robotcode doc keywords`](/guides/browsing-documentation/#keywords-an-overview-of-the-keywords). An entry stays listed while one of the entries below it matches. |
+| Typing | Filter the list: entries whose name contains the text, with `*` and `?` as wildcards, ignoring case, spaces and underscores — the rules of the patterns of [`robotcode doc keywords`](/guides/cli/browsing-documentation/#keywords-an-overview-of-the-keywords). An entry stays listed while one of the entries below it matches. |
 | `↑` / `↓` | Select an entry |
 | Mouse wheel | Scroll the list, without changing the selection |
 | `Enter`, mouse click on an entry | Jump to its heading; `[` returns to where you were |
@@ -562,13 +562,13 @@ hi
 
 ## Debugging at the prompt
 
-The same debugger that powers [`robotcode robot-debug`](/guides/robot-debug/) is available in the interactive shell, but it starts **detached**: nothing pauses, and a failing keyword just prints its error and leaves you at the `>>>` prompt. **Attach it** to make breakpoints, an embedded `Breakpoint` keyword, and failures drop you into the `(rdb)` debug prompt:
+The same debugger that powers [`robotcode robot-debug`](/guides/cli/robot-debug/) is available in the interactive shell, but it starts **detached**: nothing pauses, and a failing keyword just prints its error and leaves you at the `>>>` prompt. **Attach it** to make breakpoints, an embedded `Breakpoint` keyword, and failures drop you into the `(rdb)` debug prompt:
 
 - `.debug on` attaches at the prompt; `.debug off` detaches again; bare `.debug` shows the current state.
 - `--debugger-attached` attaches from the start.
 - Passing a pause trigger (`--break`, a `--break-on-*` flag) attaches automatically, so `robotcode repl --break "Submit Login"` just works.
 
-Detaching is non-destructive: your breakpoints and `.catch` exception filters (see [Exception breakpoints](/guides/robot-debug/#debug-commands) in the debug commands) stay configured, so `.debug on` resumes with the same setup.
+Detaching is non-destructive: your breakpoints and `.catch` exception filters (see [Exception breakpoints](/guides/cli/robot-debug/#debug-commands) in the debug commands) stay configured, so `.debug on` resumes with the same setup.
 
 While the debugger is attached, `Ctrl-C` during a statement doesn't interrupt the keyword that runs; it pauses at the next keyword of the statement, as in `robot-debug`. If the statement ends first, nothing pauses. A second `Ctrl-C` before the pause interrupts the keyword that runs.
 
@@ -585,7 +585,7 @@ robotcode repl --break "Submit Login" --no-break-on-exception
 robotcode repl --debugger-attached
 ```
 
-To debug a **real `.robot` suite** — and for the full reference on breakpoints, stepping, the call stack, inspecting variables, and the complete debug command set — see [Command-line debugging with `robotcode robot-debug`](/guides/robot-debug/).
+To debug a **real `.robot` suite** — and for the full reference on breakpoints, stepping, the call stack, inspecting variables, and the complete debug command set — see [Command-line debugging with `robotcode robot-debug`](/guides/cli/robot-debug/).
 
 ## Recipes
 
@@ -635,7 +635,7 @@ Log To Console    pinging ${BASE_URL}
 ## What it isn't
 
 - **Not a Python REPL.** It's keyword-driven, not expression-driven. Type Robot Framework syntax, not Python.
-- **Not a *graphical* debugger.** `robot-debug` is a *command-line* debugger (see [Command-line debugging](/guides/robot-debug/)). For step-debugging inside the editor — gutter breakpoints, a Variables pane, the call-stack view — use the **RobotCode** VS Code extension's debugger.
+- **Not a *graphical* debugger.** `robot-debug` is a *command-line* debugger (see [Command-line debugging](/guides/cli/robot-debug/)). For step-debugging inside the editor — gutter breakpoints, a Variables pane, the call-stack view — use the **RobotCode** VS Code extension's debugger.
 - **Not a way to define new user keywords.** Those go in `.resource` files; the REPL imports them.
 - **Not persistent.** Closing the prompt throws away the session unless you've passed `-o` / `-r` / `-x` to capture artefacts.
 

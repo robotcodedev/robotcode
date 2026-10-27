@@ -2,7 +2,7 @@
 title: robot.toml on the Command Line
 description: 'Running tests with robot.toml on the command line: where the options go, commands for everyday tasks, environment variables for CI servers, and checking what a run gets.'
 sidebar:
-  label: Command Line
+  label: On the Command Line
   order: 100.5
 ---
 

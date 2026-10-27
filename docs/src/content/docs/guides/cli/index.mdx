@@ -1,0 +1,31 @@
+---
+title: Working on the Command Line
+description: 'What the robotcode commands do in a project and which command answers which task: running and discovering tests, checking the code, reading results, the REPL, debugging and library documentation.'
+sidebar:
+  label: Overview
+  order: 10
+---
+
+import AreaOverview from "../../../../components/AreaOverview.astro";
+
+The `robotcode` command brings RobotCode to the terminal, to CI pipelines and to scripts. It runs in the Python environment of your project, next to Robot Framework and your libraries, and reads the project's `robot.toml` files and the profiles you select with `-p`, as RobotCode does in VS Code and PyCharm. To install it, see [Get Started on the Command Line](/getting-started/command-line/); the [CLI reference](/reference/cli/) lists every command and option.
+
+## Which command for which task
+
+| Task | Command | Guide |
+| --- | --- | --- |
+| Run the tests or tasks | `robotcode robot`, or its alias `robotcode run` | [robot.toml on the Command Line](/guides/robot-toml/command-line/) |
+| See which suites, tests, tasks and tags a run would pick up, without running anything | `robotcode discover` | [Discovering Tests, Tasks and Suites](/guides/cli/discovering-tests/) |
+| Check the code for problems, also in a CI pipeline | `robotcode analyze code` | [Analyzing Code](/guides/cli/analyzing-code/) |
+| Find out what a finished run contained and why tests failed | `robotcode results` | [Analyzing Run Results](/guides/cli/analyzing-results/) |
+| Try keywords line by line | `robotcode repl` | [Interactive Robot Framework with robotcode repl](/guides/cli/repl/) |
+| Debug a run in the terminal | `robotcode robot-debug` | [Command-line debugging with robotcode robot-debug](/guides/cli/robot-debug/) |
+| Read the documentation of a library or resource file | `robotcode doc` | [Browsing Library Documentation](/guides/cli/browsing-documentation/) |
+| Run the tests through a command such as `xvfb-run` | `robotcode --wrapper …`, or the setting `wrapper` | [Running Tests Through a Wrapper](/guides/cli/wrapper/) |
+| See the configuration and the profiles a command gets | `robotcode config`, `robotcode profiles` | [Troubleshooting robot.toml](/guides/robot-toml/troubleshooting/) |
+
+The options of `robotcode` itself, such as `-p` for a profile, go before the name of the command, the options of the command after it; see [Where the options go](/guides/robot-toml/command-line/#where-the-options-go). AI agents can work through the same commands; [Working with AI Agents](/guides/ai-agents/) sets up RobotCode's chat plugin for them.
+
+## Pages of this guide
+
+<AreaOverview area="guides/cli" />

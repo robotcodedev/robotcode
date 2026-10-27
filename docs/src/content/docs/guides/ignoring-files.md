@@ -1,8 +1,8 @@
 ---
-title: Excluding Files with .robotignore
-description: Keep build output, dependencies and other folders out of discovery, analysis and the language server using gitignore-style patterns in .robotignore.
+title: How RobotCode Finds Robot Framework Files
+description: Which files RobotCode walks for discovery, analysis, test runs and the language server, what it skips by default, and how .gitignore and a .robotignore with gitignore-style patterns keep other folders out.
 sidebar:
-  label: .robotignore
+  label: Finding Robot Files
   order: 120
 ---
 
@@ -158,14 +158,14 @@ Read top to bottom, this keeps RobotCode focused on the suites and resources you
 
 A `.robotignore` is honoured everywhere RobotCode walks the file system — the same ignore rules apply on the command line and in the editor alike:
 
-- **Test and suite discovery** — [`robotcode discover`](/guides/discovering-tests/) and the editor's Test Explorer. Excluded directories don't appear in the discovered tree, which keeps both the CLI output and the Test Explorer focused on real suites.
-- **Static code analysis** — [`robotcode analyze`](/guides/analyzing-code/). Excluded files are never analysed by `robotcode analyze`, so they produce no diagnostics in a lint run.
+- **Test and suite discovery** — [`robotcode discover`](/guides/cli/discovering-tests/) and the editor's Test Explorer. Excluded directories don't appear in the discovered tree, which keeps both the CLI output and the Test Explorer focused on real suites.
+- **Static code analysis** — [`robotcode analyze`](/guides/cli/analyzing-code/). Excluded files are never analysed by `robotcode analyze`, so they produce no diagnostics in a lint run.
 - **Test runs** — `robotcode robot`. Suites in excluded files and directories are left out of the run, which a plain `robot` run doesn't do.
 - **The language server** — diagnostics, completion, and namespace resolution in the editor. Excluded files are not loaded, so they don't contribute keywords or variables and don't slow the editor down — unless a non-excluded file imports one: that file is loaded for the import, and its keywords and variables resolve as usual.
 
 ## Verifying what's ignored
 
-When a pattern doesn't behave the way you expect, don't guess — ask RobotCode. The quickest way to see what your rules actually do is [`robotcode discover files`](/guides/discovering-tests/#files--flat-list-of-source-files), which lists every `.robot` and `.resource` file that remains *after* applying `.robotignore`:
+When a pattern doesn't behave the way you expect, don't guess — ask RobotCode. The quickest way to see what your rules actually do is [`robotcode discover files`](/guides/cli/discovering-tests/#files--flat-list-of-source-files), which lists every `.robot` and `.resource` file that remains *after* applying `.robotignore`:
 
 ```bash
 # every file RobotCode currently considers
@@ -189,6 +189,6 @@ A `.robotignore` is read while RobotCode walks the workspace, so a change to it 
 
 ## See also
 
-- [`robotcode discover files`](/guides/discovering-tests/#files--flat-list-of-source-files) — verify exactly which files survive your ignore rules.
-- [Analyzing Code](/guides/analyzing-code/) — the static analysis that honours `.robotignore`.
+- [`robotcode discover files`](/guides/cli/discovering-tests/#files--flat-list-of-source-files) — verify exactly which files survive your ignore rules.
+- [Analyzing Code](/guides/cli/analyzing-code/) — the static analysis that honours `.robotignore`.
 - [Diagnostics Modifiers](/reference/diagnostics-modifiers/) — suppress individual diagnostics instead of whole files, when excluding a file is too coarse a tool.

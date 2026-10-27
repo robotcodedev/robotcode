@@ -3,7 +3,7 @@ title: Running Tests Through a Wrapper
 description: Run tests through a wrapper command like xvfb-run or your own script, set in robot.toml or on the CLI, to bring the test environment up and tear it down.
 sidebar:
   label: Wrapper
-  order: 110
+  order: 70
 ---
 
 You always run RobotCode the same way — `robotcode … run`, a `debug` session, the `repl` — and configure everything in `robot.toml`. The `wrapper` option doesn't change that: it tells RobotCode to run its actual command **through** a command of your choosing. The wrapper command goes first and the real `robotcode` command line is **appended** to it. That lets the wrapper prepare the **test environment** a run needs — start the services, servers, mocks or session the tests depend on, run the tests inside it, and tear it all down again — none of which is part of the tests themselves.

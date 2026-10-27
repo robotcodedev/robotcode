@@ -82,7 +82,8 @@ export default defineConfig({
       sidebar: [
         "about",
         { label: "Getting Started", items: [{ autogenerate: { directory: "getting-started" } }] },
-        { label: "Guides", items: [{ autogenerate: { directory: "guides" } }] },
+        // The groups of the guides stay closed; Starlight opens the one of the current page.
+        { label: "Guides", items: [{ autogenerate: { directory: "guides", collapsed: true } }] },
         { label: "Reference", items: [{ autogenerate: { directory: "reference" } }] },
         "contributing",
       ],

@@ -2,7 +2,7 @@
 title: Command-line debugging with robotcode robot-debug
 description: 'Debug Robot Framework suites in the terminal with robotcode robot-debug: break on a line, keyword or failure, step, and inspect the stack and variables.'
 sidebar:
-  label: Command-line Debugging
+  label: Debugging
   order: 50
 ---
 
@@ -19,7 +19,7 @@ pip install "robotcode[repl]"   # or: pip install "robotcode[all]"
 There are two ways in:
 
 - **`robotcode robot-debug`** (alias `run-debug`) runs a real `.robot` suite through the normal runner with the debugger attached. It takes the same options and arguments as [`robotcode robot`](/reference/cli/#robot) — paths, `--variable`, `--include`, profiles, … — plus the trigger flags below.
-- **[`robotcode repl`](/guides/repl/)** (the interactive shell) has the *same* debugger available — though it starts **detached**, so attach it (`.debug on` or `--debugger-attached`) to have a breakpoint that matches a keyword you run at the prompt drop you into the debug prompt too.
+- **[`robotcode repl`](/guides/cli/repl/)** (the interactive shell) has the *same* debugger available — though it starts **detached**, so attach it (`.debug on` or `--debugger-attached`) to have a breakpoint that matches a keyword you run at the prompt drop you into the debug prompt too.
 
 The debugger sees every keyword and control-structure (FOR / IF / TRY / WHILE / …) start and end, on every supported Robot Framework version (5.0 – 7.x). For graphical step-debugging inside the editor, use the VS Code extension instead — see [Relationship to the VS Code debugger](#relationship-to-the-vs-code-debugger).
 
@@ -47,7 +47,7 @@ robotcode robot-debug --stop-on-entry tests/login.robot
 robotcode robot-debug --break login.robot:42 --break "Submit Login" tests/
 ```
 
-`robot-debug` accepts the full `robotcode robot` option set (see the [CLI reference](/reference/cli/#robot)) plus the debugger triggers below. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) work here too — see [Prompt features](/guides/repl/#prompt-features). The interactive shell's setup flags (`--source`, `--inspect`, `--show-keywords`) and `.robotrepl` file arguments live on [`robotcode repl`](/guides/repl/), not here.
+`robot-debug` accepts the full `robotcode robot` option set (see the [CLI reference](/reference/cli/#robot)) plus the debugger triggers below. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) work here too — see [Prompt features](/guides/cli/repl/#prompt-features). The interactive shell's setup flags (`--source`, `--inspect`, `--show-keywords`) and `.robotrepl` file arguments live on [`robotcode repl`](/guides/cli/repl/), not here.
 
 ## Setting breakpoints
 
@@ -97,7 +97,7 @@ Login
 `Breakpoint` is the only keyword from `robotcode.repl.Repl` meant for your own suites — `Repl` and `Exit` are used internally and aren't called by hand.
 
 :::note[Plain backend for non-interactive runs]
-On an interactive terminal the debug prompt gives you completion, history, and highlighting at the stop. When you feed it from a pipe, a script, or CI, the default `auto` backend falls back automatically to a plain prompt (or pass `--plain` explicitly). See [Picking a specific input backend](/guides/repl/#picking-a-specific-input-backend).
+On an interactive terminal the debug prompt gives you completion, history, and highlighting at the stop. When you feed it from a pipe, a script, or CI, the default `auto` backend falls back automatically to a plain prompt (or pass `--plain` explicitly). See [Picking a specific input backend](/guides/cli/repl/#picking-a-specific-input-backend).
 :::
 
 ## At a stop
@@ -261,4 +261,4 @@ robotcode robot-debug --stop-on-entry tests/orders.robot
 
 This is the **command-line** debugger. For graphical step-debugging inside the editor — breakpoints in the gutter, a Variables pane, the call-stack view — use the **RobotCode** VS Code extension's debugger, which speaks the Debug Adapter Protocol. Both pause Robot Framework runs; the CLI debugger is the terminal-native, scriptable counterpart.
 
-The shared shell features — the prompt backends, history, tab completion, the doc viewer, and the dot-command set you also get at a stop — are documented on the [`robotcode repl`](/guides/repl/) page. For the per-flag reference of the underlying `robot` options see the [CLI reference](/reference/cli/#robot).
+The shared shell features — the prompt backends, history, tab completion, the doc viewer, and the dot-command set you also get at a stop — are documented on the [`robotcode repl`](/guides/cli/repl/) page. For the per-flag reference of the underlying `robot` options see the [CLI reference](/reference/cli/#robot).

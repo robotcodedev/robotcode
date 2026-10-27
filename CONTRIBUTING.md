@@ -502,15 +502,16 @@ You can also run the equivalent commands from the `docs/` folder: `npm run dev`,
 
 #### Writing Documentation Pages
 
-The pages live in `docs/src/content/docs/`, and a page's path is its URL: `guides/repl.md` is published at `/guides/repl/`.
+The pages live in `docs/src/content/docs/`, and a page's path is its URL: `guides/cli/repl.md` is published at `/guides/cli/repl/`.
 
 - **Where a page belongs:** choose the area by what the reader comes to do. Setting up an editor or tool goes to `getting-started/`, doing a task or learning a RobotCode tool to `guides/`, and exact specifications without task narrative to `reference/`. The sidebar and the overview page of the area list a new page automatically.
+- **Groups of guides:** in `guides/`, a guide goes into the folder of its tool or topic: `vscode/`, `pycharm/`, `cli/`, `robot-toml/` or `tips/`. A new group is a new folder with an `index.mdx` that lists the group's pages with `<AreaOverview>` and has the lowest `sidebar.order` of the group, since the sidebar sorts a group by its lowest order; its display name goes into `GROUP_LABELS` in `docs/src/routeData.ts`.
 - **Frontmatter:** every page declares `title`, a one-sentence `description` (the meta description, also shown on the overview page) and `sidebar.label` and `sidebar.order` for its place in the sidebar. The page starts without a heading of level 1. The `create-release-notes` skill describes the format of the news posts in `news/`.
 - **Images:** store them in `docs/src/assets/` (screenshots in `docs/src/assets/screenshots/`) and use relative paths, so the build optimizes them. `docs/public/` holds only files served unchanged: `CNAME`, the favicons, the Open Graph image and the JSON schema.
 - **Asides:** `:::note`, `:::tip`, `:::caution` or `:::danger`, with an optional title in brackets (`:::tip[Title]`), closed by `:::`.
 - **Code blocks:** give a code block a title with `title="robot.toml"` after the language.
 - **Tabs and steps:** `<Tabs>` with `<TabItem label="…">`, and `<Steps>` around a numbered list, are components imported from `@astrojs/starlight/components`. A page with components is an `.mdx` file; use `.mdx` only where you need components and plain `.md` everywhere else.
-- **Links:** link other pages by their path with a trailing slash, such as `/guides/repl/#exit-code-and-session-status`.
+- **Links:** link other pages by their path with a trailing slash, such as `/guides/cli/repl/#exit-code-and-session-status`.
 - **Generated pages:** `reference/cli.md` and `reference/config.md` are generated (see [Additional Development Commands](#additional-development-commands)). Edit only their frontmatter, and in `cli.md` the text outside `<!-- START -->` and `<!-- END -->`.
 
 #### Documentation Standards

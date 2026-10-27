@@ -45,7 +45,7 @@ To accommodate these varied needs, `robotcode` is organized into separate packag
   - **Commands**:
     - `repl`: Launches an interactive Robot Framework shell where users can execute commands line-by-line, ideal for quick testing and experimentation.
     - `robot-debug`: Runs a real `.robot` suite with the command-line debugger attached, pausing at breakpoints to step through execution, inspect the call stack and variables, and run keywords in the paused context.
-    - `doc`: Shows the documentation of a library, resource file or suite file with the project's configuration, as Markdown in the terminal, in a file or as JSON, or in a terminal viewer. See [Browsing Library Documentation](/guides/browsing-documentation/).
+    - `doc`: Shows the documentation of a library, resource file or suite file with the project's configuration, as Markdown in the terminal, in a file or as JSON, or in a terminal viewer. See [Browsing Library Documentation](/guides/cli/browsing-documentation/).
 
 - **`language-server` Package**:
   This package provides language server capabilities, supporting IDE integration for Robot Framework with real-time code insights. Compatible with editors that support the Language Server Protocol (LSP), such as Visual Studio Code, it enables enhanced productivity and convenience. It is most useful in local development environments where interactive IDE support aids in code writing and refactoring but is generally not needed in CI or production environments.
@@ -3175,13 +3175,13 @@ The commands that run Robot Framework answer with Robot Framework's exit codes. 
 | `1`–`249` | The number of failed tests. |
 | `250` | 250 or more tests failed. |
 | `251` | Help, version information or a dry run (`robotcode --dry …`) was printed. |
-| `252` | Invalid data or command line options. This includes the errors RobotCode reports itself, such as an invalid `robot.toml`, an unknown option or a [wrapper](/guides/wrapper/) that can't be started. |
+| `252` | Invalid data or command line options. This includes the errors RobotCode reports itself, such as an invalid `robot.toml`, an unknown option or a [wrapper](/guides/cli/wrapper/) that can't be started. |
 | `253` | The run was stopped by the user. |
 | `255` | An unexpected internal error. |
 
-`libdoc` and `testdoc` don't count tests; they exit with `0` when the documentation was written. `repl` sets its exit code from the session status, see [Exit code and session status](/guides/repl/#exit-code-and-session-status).
+`libdoc` and `testdoc` don't count tests; they exit with `0` when the documentation was written. `repl` sets its exit code from the session status, see [Exit code and session status](/guides/cli/repl/#exit-code-and-session-status).
 
-The other commands use exit codes of their own: `analyze code` reports the severities it found as a bitmask (see [Exit codes](/guides/analyzing-code/#exit-codes)), and `doc` lists its codes under [When a target cannot be loaded](/guides/browsing-documentation/#when-a-target-cannot-be-loaded). All other commands exit with `0` on success and with another code on errors.
+The other commands use exit codes of their own: `analyze code` reports the severities it found as a bitmask (see [Exit codes](/guides/cli/analyzing-code/#exit-codes)), and `doc` lists its codes under [When a target cannot be loaded](/guides/cli/browsing-documentation/#when-a-target-cannot-be-loaded). All other commands exit with `0` on success and with another code on errors.
 
 ## Getting Help
 
@@ -3192,6 +3192,6 @@ For the commands that wrap a standard Robot Framework tool (`robot`, `rebot`, `l
 ## See Also
 
 - [Configuration](/reference/config/) — how `robot.toml` and profiles work, the foundation for the `config` and `profiles` commands.
-- [Discovering Tests](/guides/discovering-tests/) — details on the `discover` command.
-- [Analyzing Results](/guides/analyzing-results/) — working with the `analyze` and `results` commands.
-- [REPL](/guides/repl/) — using the interactive `repl` shell.
+- [Discovering Tests](/guides/cli/discovering-tests/) — details on the `discover` command.
+- [Analyzing Results](/guides/cli/analyzing-results/) — working with the `analyze` and `results` commands.
+- [REPL](/guides/cli/repl/) — using the interactive `repl` shell.

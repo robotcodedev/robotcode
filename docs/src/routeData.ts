@@ -2,7 +2,13 @@
 // config can change that label. This middleware gives such groups their display names.
 import { defineRouteMiddleware, type StarlightRouteData } from "@astrojs/starlight/route-data";
 
-const GROUP_LABELS: Record<string, string> = { vscode: "VS Code", pycharm: "PyCharm", "robot-toml": "robot.toml" };
+const GROUP_LABELS: Record<string, string> = {
+  vscode: "VS Code",
+  pycharm: "PyCharm",
+  cli: "Command Line",
+  "robot-toml": "Project Configuration",
+  tips: "Robot Framework Tips",
+};
 
 function relabel(entries: StarlightRouteData["sidebar"]): void {
   for (const entry of entries) {

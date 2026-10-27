@@ -97,7 +97,7 @@ To find a setting:
 | `paths` | The files and folders with the tests, which Robot Framework takes as arguments. Paths on the command line replace them. |
 | `env` | Environment variables that are set before Robot Framework starts. |
 | `args` | Further arguments that are passed to Robot Framework as they are. |
-| `wrapper` | A command that the run goes through, see [Running Tests Through a Wrapper](/guides/wrapper/). |
+| `wrapper` | A command that the run goes through, see [Running Tests Through a Wrapper](/guides/cli/wrapper/). |
 | `profiles`, `extend-profiles`, `default-profiles` | Profiles, see [Profiles](/guides/robot-toml/profiles/). |
 | `[rebot]`, `[libdoc]`, `[testdoc]`, and `[extend-rebot]`, `[extend-libdoc]`, `[extend-testdoc]` | The options of other commands, and changes to them, see [below](#settings-of-other-commands). |
 | `[tool.robotcode-analyze]` | The settings of RobotCode's analysis, see [below](#settings-of-other-commands). |
@@ -177,7 +177,7 @@ The conditions in `enabled` and `hidden` of a profile use the same kind of expre
 
   With the `robot.toml` above, `robotcode rebot` still merges the results into `merged`, with your own report title.
 
-- **`[tool.robotcode-analyze]`** configures the analysis in the editors and in `robotcode analyze code`, for example the severity of diagnostics and the cache; see [Analyzing Code](/guides/analyzing-code/) and [Configuration via `robot.toml`](/reference/diagnostics-modifiers/#configuration-via-robottoml).
+- **`[tool.robotcode-analyze]`** configures the analysis in the editors and in `robotcode analyze code`, for example the severity of diagnostics and the cache; see [Analyzing Code](/guides/cli/analyzing-code/) and [Configuration via `robot.toml`](/reference/diagnostics-modifiers/#configuration-via-robottoml).
 
 ## Moving over from argument files
 

@@ -193,7 +193,7 @@ A NAME that selects no keyword is reported on standard error, together with simi
 robotcode doc browse Collections
 ```
 
-`browse` opens the page of `lib` in the documentation viewer of the REPL. `Tab` moves through the links, `f` or `Enter` follows one, `[` and `]` go back and forward, and `/` searches; the REPL guide lists [all keys of the viewer](/guides/repl/#the-doc-viewer). `q` closes it.
+`browse` opens the page of `lib` in the documentation viewer of the REPL. `Tab` moves through the links, `f` or `Enter` follows one, `[` and `]` go back and forward, and `/` searches; the REPL guide lists [all keys of the viewer](/guides/cli/repl/#the-doc-viewer). `q` closes it.
 
 `s` opens a sidebar with the outline of the page: the sections of the introduction with their subsections, `Importing`, every keyword and every data type, each indented below the entry it belongs to. Typing filters the list with the rules of the [`keywords` patterns](#keywords-an-overview-of-the-keywords) and keeps an entry while it or one of the entries below it matches. `↑` and `↓` select an entry, the mouse wheel scrolls the list, `Enter` or a click jumps to the heading of the entry, and `Esc` hides the sidebar.
 
@@ -224,7 +224,7 @@ Other load errors, such as a keyword of a library that cannot be created or an e
 
 ## Libraries that need a running test
 
-A library whose keywords only exist while Robot Framework runs — for example, one that calls `BuiltIn().get_variable_value(...)` in `get_keyword_names` — cannot be documented this way: the command aborts with the library's error, as Libdoc does. Import the library in the [REPL](/guides/repl/) or stop in it with [`robot-debug`](/guides/robot-debug/), and use `.doc <library>` there, which shows the documentation of the loaded library.
+A library whose keywords only exist while Robot Framework runs — for example, one that calls `BuiltIn().get_variable_value(...)` in `get_keyword_names` — cannot be documented this way: the command aborts with the library's error, as Libdoc does. Import the library in the [REPL](/guides/cli/repl/) or stop in it with [`robot-debug`](/guides/cli/robot-debug/), and use `.doc <library>` there, which shows the documentation of the loaded library.
 
 ## VS Code
 

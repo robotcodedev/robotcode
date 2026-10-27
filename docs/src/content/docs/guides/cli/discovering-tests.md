@@ -3,7 +3,7 @@ title: Discovering Tests, Tasks and Suites
 description: List the suites, tests, tasks, tags and source files Robot Framework would pick up with robotcode discover, without running anything, as a tree or as JSON.
 sidebar:
   label: Discovering Tests
-  order: 10
+  order: 15
 ---
 
 :::tip[Installation]
@@ -115,7 +115,7 @@ robotcode --format toml discover all         # TOML
 
 If you only ever look at terminal output, the following sections cover everything you need. For the JSON shape of any subcommand, jump to the [JSON reference](#json-reference).
 
-Pager and colour handling is identical to `results` — see [Pager and colour](/guides/analyzing-results/#pager-and-colour-in-the-terminal) for the details.
+Pager and colour handling is identical to `results` — see [Pager and colour](/guides/cli/analyzing-results/#pager-and-colour-in-the-terminal) for the details.
 
 ## `all` — the full tree
 
@@ -441,7 +441,7 @@ Use `-bl` when you have a precise name (often pasted from a failure list or a bu
 
 ## Selecting by test metadata
 
-`-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN` (Robot Framework 7.5+) select tests and tasks by their `[Metadata]`: the issue a test verifies, who wrote or reviewed it, and other data you keep there rather than in tags. Both are repeatable. Several `--by-test-metadata` patterns select the tests matching any of them, `--exclude-by-test-metadata` removes every test matching one, and both narrow every other selection (`--include`, `--suite`, `-bl`, `--search`, …). They work the same with `robotcode robot`, `robotcode robot-debug`, every `discover` subcommand except `files` and `info`, and every [`results`](/guides/analyzing-results/#filters) subcommand.
+`-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN` (Robot Framework 7.5+) select tests and tasks by their `[Metadata]`: the issue a test verifies, who wrote or reviewed it, and other data you keep there rather than in tags. Both are repeatable. Several `--by-test-metadata` patterns select the tests matching any of them, `--exclude-by-test-metadata` removes every test matching one, and both narrow every other selection (`--include`, `--suite`, `-bl`, `--search`, …). They work the same with `robotcode robot`, `robotcode robot-debug`, every `discover` subcommand except `files` and `info`, and every [`results`](/guides/cli/analyzing-results/#filters) subcommand.
 
 ```bash
 robotcode discover tests --by-test-metadata Issue:4409          # every test for issue 4409
@@ -479,7 +479,7 @@ Transfer Money
 ### What is matched
 
 - Only a test's own `[Metadata]`. A suite's `Metadata`, including metadata given with `--metadata`, is not part of its tests' entries; [`discover metadata`](#metadata--metadata-index) lists it in its own section.
-- The values as the model holds them. Variables are replaced only when a test runs, so `robot` and `discover` see `${BUILD}` in `[Metadata]    Build    ${BUILD}`, while [`results`](/guides/analyzing-results/#filters) sees the value the run used — as with tags.
+- The values as the model holds them. Variables are replaced only when a test runs, so `robot` and `discover` see `${BUILD}` in `[Metadata]    Build    ${BUILD}`, while [`results`](/guides/cli/analyzing-results/#filters) sees the value the run used — as with tags.
 
 ### Invalid patterns
 
