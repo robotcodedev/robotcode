@@ -8,14 +8,14 @@ Defines what RobotCode's Starlight documentation site offers its readers and wha
 
 ### Requirement: Descriptive page paths without legacy URLs
 
-The site SHALL serve the home page at `/` and every other page at a descriptive path without numeric prefixes that names its area: `/about/`, `/getting-started/` and `/getting-started/<page>/`, `/guides/` and `/guides/<page>/`, `/reference/` and `/reference/<page>/`, `/contributing/` and `/news/<post>/`.
+The site SHALL serve the home page at `/` and every other page at a descriptive path without numeric prefixes that names its area: `/about/`, `/getting-started/` and `/getting-started/<page>/`, `/guides/`, `/guides/<page>/` and `/guides/<group>/<page>/`, `/reference/` and `/reference/<page>/`, `/contributing/` and `/news/<post>/`.
 
 #### Scenario: Configuration reference path
 - **WHEN** a reader opens `/reference/config/`
 - **THEN** the robot.toml configuration reference is shown
 
 #### Scenario: Guide that used to be in Reference
-- **WHEN** a reader opens `/guides/repl/`
+- **WHEN** a reader opens `/guides/cli/repl/`
 - **THEN** the guide to `robotcode repl` is shown
 
 #### Scenario: Editor setup
@@ -35,7 +35,7 @@ The site SHALL serve the home page at `/` and every other page at a descriptive 
 Every page, including the home page, SHALL show a navigation bar with the entries News, Documentation, Support & Contribute, Q&A (a link to the Q&A category of the GitHub Discussions) and a version menu labelled with the current RobotCode version that links to the changelog and the contributing guide. The entry of the area the current page belongs to SHALL be marked as current. The site title in the header SHALL link to the home page.
 
 #### Scenario: Current area
-- **WHEN** a reader opens `/reference/cli/`, `/guides/repl/` or `/getting-started/vscode/`
+- **WHEN** a reader opens `/reference/cli/`, `/guides/cli/repl/` or `/getting-started/vscode/`
 - **THEN** the navigation bar marks Documentation as current
 
 #### Scenario: Documentation entry
@@ -64,7 +64,7 @@ Documentation pages SHALL show a sidebar with About, the groups Getting Started,
 
 #### Scenario: Getting Started group
 - **WHEN** a reader opens any page of the Getting Started area
-- **THEN** the Getting Started group lists Overview first and Configuration after the editor pages
+- **THEN** the Getting Started group lists Overview first and Configuration after the editor pages and the command-line page
 
 #### Scenario: News sidebar
 - **WHEN** a reader opens a news post
@@ -75,12 +75,12 @@ Documentation pages SHALL show a sidebar with About, the groups Getting Started,
 Every page SHALL declare a title and a one-sentence description. The title SHALL be rendered as the page's only top-level heading. The description SHALL be emitted as the page's meta description and Open Graph description. Every page SHALL emit its own URL as canonical and Open Graph URL.
 
 #### Scenario: Meta description
-- **WHEN** `/guides/repl/` is built
+- **WHEN** `/guides/cli/repl/` is built
 - **THEN** its meta description is the description declared by the page
 
 #### Scenario: Page URL in Open Graph
-- **WHEN** `/guides/repl/` is built
-- **THEN** its canonical link and `og:url` are `https://robotcode.io/guides/repl/`
+- **WHEN** `/guides/cli/repl/` is built
+- **THEN** its canonical link and `og:url` are `https://robotcode.io/guides/cli/repl/`
 
 ### Requirement: Area overview pages
 
@@ -128,7 +128,7 @@ The site build SHALL fail when a page links to a page of the site that does not 
 - **THEN** the build fails and names the linking page and the link
 
 #### Scenario: Missing anchor
-- **WHEN** a page links to `/guides/robot-debug/#no-such-heading`
+- **WHEN** a page links to `/guides/cli/robot-debug/#no-such-heading`
 - **THEN** the build fails and names the linking page and the link
 
 ### Requirement: Command-line text stays literal
@@ -161,7 +161,7 @@ The site SHALL publish `/llms.txt`, an index that lists every documentation page
 
 #### Scenario: Page index
 - **WHEN** `/llms.txt` is requested
-- **THEN** the response lists `/guides/repl/` with its title and description
+- **THEN** the response lists `/guides/cli/repl/` with its title and description
 
 #### Scenario: Full export
 - **WHEN** `/llms-full.txt` is requested
@@ -197,7 +197,7 @@ The home page SHALL show the product name, the tagline, a subline and a picture 
 
 #### Scenario: Feature card target
 - **WHEN** a reader selects the "Interactive REPL" feature card in the feature tour and follows its link
-- **THEN** the REPL guide `/guides/repl/` is shown
+- **THEN** the REPL guide `/guides/cli/repl/` is shown
 
 #### Scenario: Section order
 - **WHEN** a reader scrolls down the home page
@@ -257,7 +257,7 @@ A request for a path the site does not serve SHALL receive a not-found page that
 Pages for setting up an editor or tool and a first project SHALL be in Getting Started, pages that explain a task or a RobotCode tool SHALL be in Guides, and Reference SHALL contain only material to look up without task narrative, such as the CLI and `robot.toml` references and the diagnostic-modifier syntax.
 
 #### Scenario: Guide to a RobotCode tool
-- **WHEN** a reader opens `/guides/analyzing-code/`
+- **WHEN** a reader opens `/guides/cli/analyzing-code/`
 - **THEN** the guide to `robotcode analyze code` is shown
 
 ### Requirement: No paths of the previous site
@@ -503,3 +503,70 @@ The screen recordings of VS Code SHALL show the keyboard shortcuts pressed in th
 #### Scenario: Shortcuts in a recording
 - **WHEN** the Go to Definition recording plays
 - **THEN** the shortcut that opens the definition is shown in the recording while it is pressed
+
+### Requirement: Guides grouped by tool and topic
+
+The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, PyCharm and Command Line, the page AI Agents, the group Project Configuration, the page Finding Robot Files, and the group Robot Framework Tips. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
+
+#### Scenario: Order in the sidebar
+- **WHEN** a reader opens `/guides/`
+- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, Project Configuration, Finding Robot Files and Robot Framework Tips in this order
+- **AND** every group is collapsed
+
+#### Scenario: Names by subject
+- **WHEN** a reader looks for the guides to `robot.toml` and to `.robotignore` in the sidebar
+- **THEN** they are listed as the group Project Configuration, at `/guides/robot-toml/`, and the page Finding Robot Files, at `/guides/ignoring-files/`
+
+#### Scenario: Group of the open page
+- **WHEN** a reader opens `/guides/cli/repl/`
+- **THEN** the group Command Line is expanded and marks REPL as the current page
+- **AND** the other groups are collapsed
+
+#### Scenario: Command Line group
+- **WHEN** a reader opens `/guides/cli/`
+- **THEN** the overview of the group is shown
+- **AND** link cards lead to the guides to `discover`, `analyze code`, `results`, `repl`, `robot-debug`, `doc` and running tests through a wrapper
+
+#### Scenario: Robot Framework Tips group
+- **WHEN** a reader opens `/guides/tips/`
+- **THEN** the overview of the group is shown
+- **AND** link cards lead to the pages on avoiding a global resource file and on variables shown as not found
+
+#### Scenario: Path of a moved guide
+- **WHEN** a reader opens `/guides/repl/`
+- **THEN** the site's not-found page is returned, without a redirect
+
+### Requirement: Overview of the command line
+
+The overview page of the Command Line group SHALL say that the `robotcode` commands run in the project's Python environment and read the project's `robot.toml` files and profiles, as the editors do. For each everyday task it SHALL name the command and link to the guide for it; for running tests, to the guide to `robot.toml` on the command line.
+
+#### Scenario: Running tests
+- **WHEN** a reader looks up on `/guides/cli/` how to run tests
+- **THEN** the page names `robotcode robot`
+- **AND** it links to `/guides/robot-toml/command-line/`
+
+#### Scenario: Results of a run
+- **WHEN** a reader looks up on `/guides/cli/` how to see why a test failed in the last run
+- **THEN** the page names `robotcode results`
+- **AND** it links to `/guides/cli/analyzing-results/`
+
+### Requirement: Getting started on the command line
+
+Getting Started SHALL have a page that sets RobotCode up for the command line: which package each command needs, installing the packages into the project's Python environment with pip or uv, checking the installed version, and a first look at the project and a first run with `robotcode`. It SHALL lead on to the configuration page and to the Command Line group. The README's section on the command line SHALL link to it.
+
+#### Scenario: Page in Getting Started
+- **WHEN** a reader opens `/getting-started/command-line/`
+- **THEN** the page is shown
+- **AND** the Getting Started sidebar lists it after PyCharm and before Neovim
+
+#### Scenario: Packages for a CI run
+- **WHEN** a reader wants to run the tests of their project in a CI pipeline
+- **THEN** the page names the package `robotcode[runner]` and shows how to install it with pip and with uv
+
+#### Scenario: Next steps
+- **WHEN** a reader reaches the end of `/getting-started/command-line/`
+- **THEN** links lead to `/getting-started/configuration/` and to `/guides/cli/`
+
+#### Scenario: README link
+- **WHEN** a reader reads the section "Command Line and Other Editors" of the README
+- **THEN** it links to `https://robotcode.io/getting-started/command-line/`

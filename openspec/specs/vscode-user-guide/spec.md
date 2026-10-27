@@ -8,7 +8,7 @@ The pages of the documentation site that teach working with RobotCode in VS Code
 
 ### Requirement: VS Code group in the Guides area
 
-The Guides area SHALL contain a group labelled "VS Code" that follows the Guides overview directly in the sidebar. It SHALL contain, in this order, the pages Overview, Writing code, Finding information, Documentation Viewer, Test Explorer, Running and debugging, Configuration, Diagnostics and linting, REPL and Troubleshooting under `/guides/vscode/`. The setup page `/getting-started/vscode/` SHALL link to the group.
+The Guides area SHALL contain a group labelled "VS Code" that follows the Guides overview directly in the sidebar. It SHALL contain, in this order, the pages Overview, Writing code, Finding information, Documentation Viewer, Test Explorer, Running and debugging, Configuration, Highlighting, Diagnostics and linting, REPL and Troubleshooting under `/guides/vscode/`. The setup page `/getting-started/vscode/` SHALL link to the group.
 
 #### Scenario: Group in the sidebar
 - **WHEN** a reader opens any page of the Guides area
@@ -38,11 +38,11 @@ The overview page SHALL show a screenshot of the whole VS Code window with numbe
 
 #### Scenario: Pages of the group
 - **WHEN** a reader opens `/guides/vscode/`
-- **THEN** link cards lead to the other nine pages of the group
+- **THEN** link cards lead to the other ten pages of the group
 
 ### Requirement: Writing code in VS Code
 
-The page Writing code SHALL show with screenshots how RobotCode helps while writing Robot Framework code: completion, signature help, hover, inlay hints, semantic highlighting, quick fixes, rename and formatting, and how to create a new Robot Framework file. It SHALL link to the highlighting tip for experienced users, which stays a page of its own outside the group.
+The page Writing code SHALL show with screenshots how RobotCode helps while writing Robot Framework code: completion, signature help, hover, inlay hints, semantic highlighting, quick fixes, rename and formatting, and how to create a new Robot Framework file. It SHALL link to the page Highlighting for experienced users.
 
 #### Scenario: Completion
 - **WHEN** a reader opens `/guides/vscode/writing-code/`
@@ -54,7 +54,7 @@ The page Writing code SHALL show with screenshots how RobotCode helps while writ
 
 #### Scenario: Highlighting tip
 - **WHEN** a reader opens `/guides/vscode/writing-code/`
-- **THEN** a link leads to `/guides/vscode-highlighting/`
+- **THEN** a link leads to `/guides/vscode/highlighting/`
 
 ### Requirement: Finding information in VS Code
 
@@ -79,7 +79,7 @@ The page Documentation Viewer SHALL describe the Documentation Viewer with the c
 - **AND** a screen recording shows a viewer in use
 
 #### Scenario: Guide without the viewer's description
-- **WHEN** a reader opens `/guides/browsing-documentation/`
+- **WHEN** a reader opens `/guides/cli/browsing-documentation/`
 - **THEN** its section "VS Code" holds only a short paragraph with a link to `/guides/vscode/documentation-viewer/`
 
 #### Scenario: Feature tour link
@@ -166,7 +166,7 @@ The page REPL SHALL explain how to start the REPL of RobotCode in the terminal o
 #### Scenario: Terminal REPL
 - **WHEN** a reader opens `/guides/vscode/repl/`
 - **THEN** a screenshot shows the REPL started with "RobotCode: Start Terminal REPL"
-- **AND** a link leads to `/guides/repl/`
+- **AND** a link leads to `/guides/cli/repl/`
 
 #### Scenario: No notebooks
 - **WHEN** the pages of the group are built
@@ -215,3 +215,11 @@ The screenshots and screen recordings of the group SHALL show one example projec
 #### Scenario: No personal data
 - **WHEN** the screenshots and recordings of the group are reviewed
 - **THEN** no user name, host name or path of a real user's home directory is visible in them
+
+### Requirement: Highlighting in VS Code
+
+The page Highlighting SHALL explain the font styles that RobotCode sets for Robot Framework code in VS Code and how to change them with token color rules in the settings, for experienced users.
+
+#### Scenario: Changing a font style
+- **WHEN** a reader opens `/guides/vscode/highlighting/`
+- **THEN** the page shows a token color rule in `settings.json` that changes a font style RobotCode sets
