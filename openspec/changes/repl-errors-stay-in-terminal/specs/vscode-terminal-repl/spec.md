@@ -41,7 +41,7 @@ The REPL terminal SHALL close when the REPL ends with the exit code 0, for examp
 #### Scenario: Mistyped profile in the folder settings
 
 - **WHEN** the folder settings set `robotcode.profiles` to `["typo"]`, the folder's `robot.toml` defines no profile `typo`, and the user runs the command
-- **THEN** the REPL's terminal opens and shows `Error: No profile matches 'typo'.` and ` * Press any key to close the terminal.`, no notification about the selection appears, and the terminal closes at the next key without a notification
+- **THEN** the REPL's terminal opens and shows `[ ERROR ] No profile matches 'typo'.` and ` * Press any key to close the terminal.`, no notification about the selection appears, and the terminal closes at the next key without a notification
 
 #### Scenario: Selection fixed
 

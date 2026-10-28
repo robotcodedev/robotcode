@@ -22,7 +22,7 @@ See proposal.md - Why. On `main`:
 
 - PyCharm's REPL.
 - The notebook kernel, which is being redesigned (`dev-docs/repl-and-notebooks.md`).
-- The format of robotcode's errors (`Error: …`), which a separate change handles.
+- The format of robotcode's errors (`[ ERROR ] …`), which the archived change `cli-error-format` set.
 - Keeping the terminal open after a session that ends with 0.
 
 ## Decisions
