@@ -372,7 +372,7 @@ A Debug session of a Robot Framework run configuration SHALL show the same "Term
 #### Scenario: An error before the run
 
 - **WHEN** the selection names the profile `typo`, which `robot.toml` does not define, and the user debugs a test
-- **THEN** the session ends with its "Terminal" tab selected, which shows `Error: No profile matches 'typo'.`
+- **THEN** the session ends with its "Terminal" tab selected, which shows `[ ERROR ] No profile matches 'typo'.`
 
 ### Requirement: A keyword that turns failures into its own is one failure in the failure details
 
