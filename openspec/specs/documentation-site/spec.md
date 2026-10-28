@@ -506,16 +506,17 @@ The screen recordings of VS Code SHALL show the keyboard shortcuts pressed in th
 
 ### Requirement: Guides grouped by tool and topic
 
-The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, PyCharm and Command Line, the page AI Agents, the group Project Configuration, the page Finding Robot Files, and the group Robot Framework Tips. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
+The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, PyCharm and Command Line, the page AI Agents, and the groups Project Configuration and Tips & Tricks. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
 
 #### Scenario: Order in the sidebar
 - **WHEN** a reader opens `/guides/`
-- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, Project Configuration, Finding Robot Files and Robot Framework Tips in this order
+- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, Project Configuration and Tips & Tricks in this order
 - **AND** every group is collapsed
 
 #### Scenario: Names by subject
 - **WHEN** a reader looks for the guides to `robot.toml` and to `.robotignore` in the sidebar
-- **THEN** they are listed as the group Project Configuration, at `/guides/robot-toml/`, and the page Finding Robot Files, at `/guides/ignoring-files/`
+- **THEN** both are in the group Project Configuration, at `/guides/robot-toml/`
+- **AND** the group lists the page Finding Robot Files right after Files and Project Root
 
 #### Scenario: Group of the open page
 - **WHEN** a reader opens `/guides/cli/repl/`
@@ -529,8 +530,13 @@ The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, 
 
 #### Scenario: Robot Framework Tips group
 - **WHEN** a reader opens `/guides/tips/`
-- **THEN** the overview of the group is shown
+- **THEN** the overview of the group, titled Tips & Tricks, is shown
 - **AND** link cards lead to the pages on avoiding a global resource file and on variables shown as not found
+
+#### Scenario: Project Configuration group
+- **WHEN** a reader opens `/guides/robot-toml/`
+- **THEN** the overview of the group is shown
+- **AND** link cards lead to the guides to `robot.toml` and to Finding Robot Files
 
 #### Scenario: Path of a moved guide
 - **WHEN** a reader opens `/guides/repl/`
