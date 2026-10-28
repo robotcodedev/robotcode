@@ -3,7 +3,7 @@ title: How RobotCode Finds Robot Framework Files
 description: Which files RobotCode walks for discovery, analysis, test runs and the language server, what it skips by default, and how .gitignore and a .robotignore with gitignore-style patterns keep other folders out.
 sidebar:
   label: Finding Robot Files
-  order: 120
+  order: 100.15
 ---
 
 When RobotCode looks at a project — discovering suites, running static analysis, or providing diagnostics and completion in the editor — it walks the source tree to find the `.robot` and `.resource` files it should care about. On a small project that is harmless, but real projects are rarely just Robot Framework. The same tree usually holds build output and dependencies (`dist/`, `build/`, `target/`, `node_modules/`, and the like), configuration folders, archived suites, vendored libraries, or the source of whatever application you are testing — none of which RobotCode needs to read. Walking and analysing them anyway costs time and memory for no benefit. A **`.robotignore`** file tells RobotCode which paths to skip.
@@ -16,7 +16,7 @@ By default RobotCode honours your `.gitignore`. But Robot Framework's own built-
 
 ## Quick start
 
-1. Create a file named `.robotignore` in your **project root** — the same directory you point Robot Framework at. This is where discovery and analysis begin, so a `.robotignore` here governs the whole project.
+1. Create a file named `.robotignore` in your **project root**, the folder that `robotcode` finds as described in [The project root](/guides/robot-toml/files/#the-project-root), usually the folder of your `robot.toml`. This is where discovery and analysis begin, so a `.robotignore` here governs the whole project.
 
 2. Add one pattern per line. The syntax is identical to `.gitignore`, so most of what you already know carries over:
 

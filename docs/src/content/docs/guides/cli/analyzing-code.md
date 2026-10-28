@@ -56,7 +56,7 @@ robotcode analyze code --output-format json
 robotcode analyze code --output-format sarif --output-file robotcode.sarif
 ```
 
-If you don't pass any paths, `analyze code` analyzes the **whole project** — every `.robot` / `.resource` file under the project root, minus the configured exclude patterns, the paths excluded by [`.robotignore` or `.gitignore`](/guides/ignoring-files/), and hidden files and folders. (This is unlike `robotcode robot`, which would run only the default paths/suites from your profile.)
+If you don't pass any paths, `analyze code` analyzes the **whole project** — every `.robot` / `.resource` file under the project root, minus the configured exclude patterns, the paths excluded by [`.robotignore` or `.gitignore`](/guides/robot-toml/ignoring-files/), and hidden files and folders. (This is unlike `robotcode robot`, which would run only the default paths/suites from your profile.)
 
 ## How `analyze code` finds your project
 

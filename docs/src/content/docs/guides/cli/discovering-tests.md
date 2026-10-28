@@ -359,7 +359,7 @@ Test metadata exists since Robot Framework 7.5. With an older version installed,
 
 ## `files` — flat list of source files
 
-`files` lists every `.robot` and `.resource` file in the given paths (or the profile's default paths), honouring `.gitignore` / [`.robotignore`](/guides/ignoring-files/). Files and folders whose names start with `_` are listed too, although Robot Framework skips them when it collects suites.
+`files` lists every `.robot` and `.resource` file in the given paths (or the profile's default paths), honouring `.gitignore` / [`.robotignore`](/guides/robot-toml/ignoring-files/). Files and folders whose names start with `_` are listed too, although Robot Framework skips them when it collects suites.
 
 ```bash
 robotcode discover files                          # respects profile paths

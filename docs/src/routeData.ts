@@ -7,7 +7,7 @@ const GROUP_LABELS: Record<string, string> = {
   pycharm: "PyCharm",
   cli: "Command Line",
   "robot-toml": "Project Configuration",
-  tips: "Robot Framework Tips",
+  tips: "Tips & Tricks",
 };
 
 function relabel(entries: StarlightRouteData["sidebar"]): void {
