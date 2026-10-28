@@ -76,6 +76,8 @@
 									order="first"/>
 		<usageTargetProvider implementation="dev.robotcode.robotcode4ij.lsp.RobotCodeUsageTargetProvider"
 							 order="first"/>
+		<targetElementEvaluator language="robotframework"
+								implementationClass="dev.robotcode.robotcode4ij.lsp.RobotCodeTargetElementEvaluator"/>
 
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 		<postStartupActivity

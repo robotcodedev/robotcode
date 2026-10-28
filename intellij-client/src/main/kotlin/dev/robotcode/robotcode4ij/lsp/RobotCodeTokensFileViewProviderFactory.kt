@@ -40,7 +40,7 @@ class RobotCodeTokensFileViewProvider(
 
     override fun addSemanticToken(textRange: TextRange, tokenType: String?, tokenModifiers: List<String>?) {
         if (hidesServerTokens(textRange, tokenModifiers, ::getSemanticTokenTextRange)) return
-        super.addSemanticToken(textRange, referenceTokenTypes[tokenType] ?: tokenType, tokenModifiers)
+        super.addSemanticToken(textRange, standardTokenTypes[tokenType] ?: tokenType, tokenModifiers)
         if (tokenType == null || textRange.isEmpty) return
         val stamp = getPsi(baseLanguage)?.modificationStamp ?: return
         val tokens = recorded.updateAndGet { if (it.stamp == stamp) it else RecordedTokens(stamp) }
@@ -61,6 +61,17 @@ class RobotCodeTokensFileViewProvider(
     internal fun semanticTokenRangeAt(offset: Int): TextRange? =
         recordedTokenAt(offset)?.let { TextRange(it.key, it.value.endOffset) }
 
+    /** The range of the first `keywordName` token that lies in [range], even in part; null without one. */
+    internal fun keywordNameRangeIn(range: TextRange): TextRange? {
+        val tokens = recorded.get()
+        if (tokens.stamp != getPsi(baseLanguage)?.modificationStamp) return null
+        // a token that starts before the range and reaches into it counts too
+        val from = tokens.byStart.floorEntry(range.startOffset)?.takeIf { range.startOffset < it.value.endOffset }?.key
+            ?: range.startOffset
+        val token = tokens.byStart.subMap(from, range.endOffset).entries.firstOrNull { it.value.type == "keywordName" }
+        return token?.let { TextRange(it.key, it.value.endOffset) }
+    }
+
     private fun recordedTokenAt(offset: Int): Map.Entry<Int, RecordedToken>? {
         val tokens = recorded.get()
         if (tokens.stamp != getPsi(baseLanguage)?.modificationStamp) return null
@@ -76,9 +87,12 @@ class RobotCodeTokensFileViewProvider(
     private class RecordedToken(val endOffset: Int, val type: String)
 }
 
-// LSP4IJ makes references only of tokens of the standard types, and only a reference is underlined on Ctrl+hover and
-// resolved at its own place; keyword calls get the standard type of a function call
-private val referenceTokenTypes = mapOf("keywordCall" to "function", "keywordCallInner" to "function")
+// LSP4IJ makes references and declarations only of tokens of the standard types. A reference is underlined on
+// Ctrl+hover and resolved at its own place, so keyword calls get the standard type of a function call. The name in a
+// keyword's definition gets it too: with the server's `declaration` modifier LSP4IJ takes it for a declaration, asks
+// the server nothing on Ctrl+click there and shows the keyword's documentation on Ctrl+hover
+private val standardTokenTypes =
+    mapOf("keywordCall" to "function", "keywordCallInner" to "function", "keywordName" to "function")
 
 // After a successful Go to Declaration, LSP4IJ marks the whole PSI element as one reference token. It passes no
 // modifiers, while tokens from the language server always come with a list. A keyword call such as
