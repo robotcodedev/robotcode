@@ -40,6 +40,7 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.namespace_analyzer import _get_builtin_variables
 from robotcode.robot.diagnostics.variable_scope import VariableScope
+from robotcode.robot.utils import RF_VERSION
 
 HANGING_SLEEP = 5
 
@@ -682,3 +683,103 @@ class TestExpectedLoadErrorsAreNotLogged:
             )
 
         assert not [record for record in caplog.records if record.exc_info]
+
+
+ISSUE_LIB = """\
+class MyLibKeywords:
+    ROBOT_AUTO_KEYWORDS = True
+
+    def do_greeting(self, name: str) -> str:
+        return f"Hello, {name}!"
+"""
+
+DECORATED_LIB = """\
+from robot.api.deco import keyword, library
+
+
+@library
+class Other:
+    @keyword
+    def greet(self):
+        pass
+"""
+
+TWO_MARKED_CLASSES_LIB = """\
+class First:
+    ROBOT_AUTO_KEYWORDS = True
+
+    def first_keyword(self):
+        pass
+
+
+class Second:
+    ROBOT_AUTO_KEYWORDS = True
+
+    def second_keyword(self):
+        pass
+"""
+
+needs_class_lookup = pytest.mark.skipif(
+    RF_VERSION < (7, 2), reason="Robot Framework looks for a marked library class since 7.2"
+)
+
+
+class TestLibraryClassLikeRobot:
+    """Without a class named like the module, Robot Framework 7.2 and newer load the one class of the module marked
+    with ROBOT_AUTO_KEYWORDS, and the module when there is none or more than one."""
+
+    @pytest.fixture
+    def issue_lib(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        package = tmp_path / "mylib"
+        package.mkdir()
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        (package / "keywords.py").write_text(ISSUE_LIB, encoding="utf-8")
+        # the spawned worker takes over sys.path
+        monkeypatch.syspath_prepend(str(tmp_path))
+        return package / "keywords.py"
+
+    @needs_class_lookup
+    def test_class_with_another_name_than_its_module(
+        self, imports_manager: ImportsManager, tmp_path: Path, issue_lib: Path
+    ) -> None:
+        doc: LibraryDoc = imports_manager._run_in_subprocess(
+            get_library_doc,
+            ("mylib.keywords", (), str(tmp_path), str(tmp_path), None, None),
+            "Loading library 'mylib.keywords'",
+        )
+
+        assert not doc.errors
+        assert [kw.name for kw in doc.keywords] == ["Do Greeting"]
+        keyword = doc.keywords["Do Greeting"]
+        assert keyword.source == str(issue_lib)
+        assert keyword.line_no == ISSUE_LIB.splitlines().index("    def do_greeting(self, name: str) -> str:") + 1
+
+    @pytest.mark.skipif(RF_VERSION >= (7, 2), reason="Robot Framework looks for a marked library class since 7.2")
+    def test_module_before_robot_framework_7_2(
+        self, imports_manager: ImportsManager, tmp_path: Path, issue_lib: Path
+    ) -> None:
+        doc: LibraryDoc = imports_manager._run_in_subprocess(
+            get_library_doc,
+            ("mylib.keywords", (), str(tmp_path), str(tmp_path), None, None),
+            "Loading library 'mylib.keywords'",
+        )
+
+        assert not doc.keywords
+
+    @needs_class_lookup
+    def test_class_marked_with_library_by_path(self, imports_manager: ImportsManager, tmp_path: Path) -> None:
+        library = tmp_path / "deco_lib.py"
+        library.write_text(DECORATED_LIB, encoding="utf-8")
+
+        doc = _load_library(imports_manager, tmp_path, library, ())
+
+        assert not doc.errors
+        assert [kw.name for kw in doc.keywords] == ["Greet"]
+
+    def test_module_with_two_marked_classes(self, imports_manager: ImportsManager, tmp_path: Path) -> None:
+        library = tmp_path / "two_marked.py"
+        library.write_text(TWO_MARKED_CLASSES_LIB, encoding="utf-8")
+
+        doc = _load_library(imports_manager, tmp_path, library, ())
+
+        assert not doc.keywords

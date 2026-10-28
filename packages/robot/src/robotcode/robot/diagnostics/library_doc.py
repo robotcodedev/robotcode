@@ -2728,7 +2728,7 @@ class _Logger(AbstractLogger):
 
 def _import_test_library(name: str) -> Union[Any, Tuple[Any, str]]:
     with OutputCapturer(library_import=True):
-        importer = Importer("test library", LOGGER)
+        importer = Importer("library", LOGGER)
         return importer.import_class_or_module(name, return_source=True)
 
 

@@ -408,7 +408,7 @@ class TestFailingLoads:
 
         assert result.exit_code != 0
         assert result.stdout == ""
-        assert "Importing test library 'NoSuchLib' failed" in result.stderr
+        assert "Importing library 'NoSuchLib' failed" in result.stderr
 
     def test_import_arguments_that_fail(self, doc_project: Project) -> None:
         result = _run("doc", "lib", f"{doc_project.strict_lib}::bogus")
