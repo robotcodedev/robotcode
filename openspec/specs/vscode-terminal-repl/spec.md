@@ -8,7 +8,7 @@ Defines how RobotCode's VS Code extension starts the RobotCode REPL in a termina
 
 ### Requirement: The REPL runs in the folder's environment
 
-**RobotCode: Start Terminal REPL** SHALL start the REPL of RobotCode's bundled tool as the process of a new terminal in the workspace folder, with the interpreter that RobotCode uses for that folder, the same as for its language server. It SHALL NOT type a command into a shell, and no activation command of the Python extensions SHALL reach the REPL.
+**RobotCode: Start Terminal REPL** SHALL start the REPL of RobotCode's bundled tool in a new terminal whose process is RobotCode's terminal script, in the workspace folder, with the interpreter that RobotCode uses for that folder, the same as for its language server, for both the script and the REPL. It SHALL NOT type a command into a shell, and no activation command of the Python extensions SHALL reach the REPL.
 
 #### Scenario: Python Environments extension active
 
@@ -24,6 +24,11 @@ Defines how RobotCode's VS Code extension starts the RobotCode REPL in a termina
 
 - **WHEN** a `robotcode` without the `repl` command comes first on the PATH of the user's shell
 - **THEN** the REPL starts nevertheless, from RobotCode's bundled tool
+
+#### Scenario: Ctrl+C at the prompt
+
+- **WHEN** the user presses Ctrl+C at the REPL's prompt
+- **THEN** the REPL handles it as without the script, and the terminal stays open
 
 ### Requirement: The REPL gets the settings of runs
 
@@ -79,7 +84,7 @@ When the folder's Python environment cannot run the REPL, because no interpreter
 
 ### Requirement: The REPL terminal ends with the REPL
 
-The REPL terminal SHALL close when the REPL ends, for example with `.exit`, without a further message, and SHALL NOT be restored when VS Code starts again.
+The REPL terminal SHALL close when the REPL ends with the exit code 0, for example with `.exit`, without a further message. When the REPL ends with another exit code, as after an error, the terminal SHALL keep the REPL's output, show ` * Press any key to close the terminal.` below it, and close at the next key, without a message about the exit code. The terminal SHALL NOT be restored when VS Code starts again.
 
 #### Scenario: Exit
 
@@ -91,16 +96,12 @@ The REPL terminal SHALL close when the REPL ends, for example with `.exit`, with
 - **WHEN** a REPL terminal is open and VS Code is closed and started again
 - **THEN** no REPL terminal is restored
 
-### Requirement: A selected profile that does not exist stops the start
-
-When the folder's `robotcode.profiles` names a profile or pattern that selects no profile of the folder's configuration, the command SHALL show the error notification that appears for these names after the start of the folder's language server, with **Remove from Selection** and **Select Configuration Profiles**, and SHALL NOT open a terminal.
-
 #### Scenario: Mistyped profile in the folder settings
 
 - **WHEN** the folder settings set `robotcode.profiles` to `["typo"]`, the folder's `robot.toml` defines no profile `typo`, and the user runs the command
-- **THEN** an error notification names `typo` and the folder, with **Remove from Selection** and **Select Configuration Profiles**, and no terminal opens
+- **THEN** the REPL's terminal opens and shows `[ ERROR ] No profile matches 'typo'.` and ` * Press any key to close the terminal.`, no notification about the selection appears, and the terminal closes at the next key without a notification
 
 #### Scenario: Selection fixed
 
-- **WHEN** the user clicks **Remove from Selection** in that notification and runs the command again
+- **WHEN** the user removes `typo` from `robotcode.profiles` and runs the command again
 - **THEN** the REPL starts, without `-p typo`
