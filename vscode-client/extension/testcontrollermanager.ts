@@ -704,14 +704,13 @@ export class TestControllerManager {
     }
   }
 
-  // Reports the names of the folder's selection that select no profile, after its language server has started and
-  // before the REPL starts. Returns whether there are any; the notification does not wait for the user's answer.
-  public async reportUnknownSelectedProfiles(folder: vscode.WorkspaceFolder): Promise<boolean> {
+  // Reports the names of the folder's selection that select no profile, after its language server has started; the
+  // notification does not wait for the user's answer.
+  private async reportUnknownSelectedProfiles(folder: vscode.WorkspaceFolder): Promise<void> {
     const names = await this.unknownSelectedProfiles(folder);
-    if (names.length === 0) return false;
+    if (names.length === 0) return;
 
     void this.showUnknownSelectedProfiles(folder, names);
-    return true;
   }
 
   private async showUnknownSelectedProfiles(folder: vscode.WorkspaceFolder, names: string[]): Promise<void> {

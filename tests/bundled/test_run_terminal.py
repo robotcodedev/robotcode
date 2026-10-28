@@ -1,8 +1,14 @@
 """`bundled/tool/utils/run_terminal.py`, the process of RobotCode's run terminal, closes the terminal on a single key
 after a run, marks the end of each run for VS Code's shell integration after the line about the terminal's reuse,
-and on Windows lets a variable of a run replace an inherited one whose name differs only in case."""
+and on Windows lets a variable of a run replace an inherited one whose name differs only in case. With
+`--wait-on-error`, as for the REPL, it runs one command and keeps the terminal open only when the command fails."""
 
 import importlib.util
+import os
+import select
+import subprocess
+import sys
+import time
 from pathlib import Path
 from types import ModuleType
 
@@ -114,3 +120,69 @@ def test_last_of_two_spellings_of_the_run_stays_on_windows(script: ModuleType) -
     env = {"path": r"C:\from-robot-env", "Path": r"C:\from-launch-config"}
 
     assert script.merged_environment({"PATH": r"C:\Windows"}, env, windows=True) == {"Path": r"C:\from-launch-config"}
+
+
+def _wait_on_error(*command: str) -> "subprocess.Popen[bytes]":
+    """The script started as the REPL's terminal starts it, with its input and output in pipes."""
+    return subprocess.Popen(
+        [sys.executable, "-I", str(_SCRIPT), "--wait-on-error", *command],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def _read_until(process: "subprocess.Popen[bytes]", text: bytes, timeout: float = 60) -> bytes:
+    assert process.stdout is not None
+    output = b""
+    deadline = time.monotonic() + timeout
+    while text not in output:
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, output
+        if select.select([process.stdout], [], [], remaining)[0]:
+            data = os.read(process.stdout.fileno(), 4096)
+            assert data, output
+            output += data
+    return output
+
+
+def test_a_command_that_ends_with_0_ends_the_script_at_once() -> None:
+    result = subprocess.run(
+        [sys.executable, "-I", str(_SCRIPT), "--wait-on-error", sys.executable, "-c", "print('hi')"],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 0, result.stderr
+    # the command's output, nothing of the script's own
+    assert result.stdout.decode().splitlines() == ["hi"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the script reads the keys of the console on Windows, not a pipe")
+@pytest.mark.parametrize(
+    ("command", "output"),
+    [
+        pytest.param([sys.executable, "-c", "print('boom'); raise SystemExit(3)"], b"boom", id="exit-code-3"),
+        pytest.param(["robotcode-run-terminal-test-missing-command"], b"No such file", id="command-not-found"),
+    ],
+)
+def test_a_command_that_fails_keeps_the_output_until_a_key(
+    script: ModuleType, command: list[str], output: bytes
+) -> None:
+    process = _wait_on_error(*command)
+    try:
+        shown = _read_until(process, script.CLOSE_MESSAGE.encode())
+
+        assert output in shown.split(script.CLOSE_MESSAGE.encode())[0]
+        with pytest.raises(subprocess.TimeoutExpired):
+            process.wait(timeout=0.5)
+
+        assert process.stdin is not None
+        process.stdin.write(b"x")
+        process.stdin.flush()
+        assert process.wait(timeout=60) == 0
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait()

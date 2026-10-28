@@ -2,6 +2,9 @@
 # each run that the extension sends over a local connection with the terminal as the run's input and output, then
 # waits for a key, which closes the terminal, or for the next run, which goes below the earlier output.
 #
+# Started with `--wait-on-error` and a command line, as for the REPL, it runs that command once instead, and only when
+# the command fails does the terminal keep its output until a key.
+#
 # It uses only the standard library, since it runs with `-I` in whatever environment the run has.
 import contextlib
 import json
@@ -256,17 +259,38 @@ class RunTerminal:
         return run
 
 
-def main() -> None:
-    # the run gets the terminal's environment without the script's own variables
-    address = os.environ.pop("ROBOTCODE_RUN_TERMINAL_ADDRESS")
-    key = os.environ.pop("ROBOTCODE_RUN_TERMINAL_KEY")
+def run_once(args: list[str]) -> None:
+    """Runs the command line `args` once with the terminal as its input and output. When the command does not end with
+    0, the terminal keeps its output until a key, so that VS Code neither closes it nor reports an exit code."""
+    try:
+        returncode = subprocess.Popen(args).wait()
+    except OSError as e:
+        write(f"\r\n{e}\r\n")
+    else:
+        if returncode == 0:
+            return
 
+    write(CLOSE_MESSAGE)
+    with Keyboard() as keyboard:
+        while not keyboard.key(POLL_INTERVAL):
+            pass
+
+
+def main() -> None:
     # Ctrl+C belongs to the run, and the terminal stays. A handler that does nothing, not SIG_IGN, which the run would
     # inherit on Linux and macOS, so that Robot Framework would not stop. On Windows the console sends each Ctrl+C to
     # the run itself.
     signal.signal(signal.SIGINT, lambda *_: None)
 
     enable_virtual_terminal()
+
+    if sys.argv[1:2] == ["--wait-on-error"]:
+        run_once(sys.argv[2:])
+        return
+
+    # the run gets the terminal's environment without the script's own variables
+    address = os.environ.pop("ROBOTCODE_RUN_TERMINAL_ADDRESS")
+    key = os.environ.pop("ROBOTCODE_RUN_TERMINAL_KEY")
     RunTerminal(address, key).serve()
 
 

@@ -623,10 +623,13 @@ export class LanguageToolsManager {
       return;
     }
 
-    // a selected profile that does not exist would stop the REPL, and VS Code closes the terminal with its error
-    if (await this.testControllerManger.reportUnknownSelectedProfiles(folder)) return;
-
+    // RobotCode's terminal script runs the REPL, so that an error that ends it, such as a selected profile that does
+    // not exist, stays in the terminal until a key instead of closing it with VS Code's message about the exit code
     const shellArgs = [
+      "-I",
+      this.extensionContext.asAbsolutePath(path.join("bundled", "tool", "utils", "run_terminal.py")),
+      "--wait-on-error",
+      state.executable,
       "-u",
       "-X",
       "utf8",
