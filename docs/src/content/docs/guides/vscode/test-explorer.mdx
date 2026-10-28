@@ -78,6 +78,8 @@ The filter field above the tree takes text and `!text` to exclude, and tags with
 
 When Robot Framework reports a problem while RobotCode reads the tests, the problem appears in the **Problems** view at the file, with the source `robotcode.discover`, for example "'Test Cases' section is not allowed in suite initialization file." or "One file cannot have both tests and tasks." Until you fix it, the suite of that file, or its tests, may be missing from the tree.
 
+RobotCode shows nothing in the Testing view until a workspace folder is a [Robot Framework project](/guides/vscode/configuration/#the-python-environment), and its hints count only such folders: a folder without Robot Framework files or configuration gets none.
+
 When RobotCode finds no tests or tasks at all and reports no problem, the Testing view shows a hint from RobotCode below VS Code's own text: where tests are looked for, with **Refresh Tests** and a link to the [troubleshooting page](/guides/vscode/troubleshooting/). Without a Python environment with Robot Framework, the hint says so instead and offers **Select Python Environment**. When the [configuration profiles](/guides/vscode/configuration/#configuration-profiles) selected for a folder name a profile that its configuration does not define, the folder leaves the tree, and the hint says so, with **Select Configuration Profiles**. VS Code shows these hints only while the tree is empty: next to another folder with tests, such a folder just leaves the tree.
 
 <ThemeImage
@@ -87,4 +89,4 @@ When RobotCode finds no tests or tasks at all and reports no problem, the Testin
 
 ## Switching the Test Explorer off
 
-The setting [`robotcode.testExplorer.enabled`](/reference/vscode-settings/#robotcode.testExplorer.enabled) switches the Test Explorer integration off, also for single workspace folders. While it is off for every workspace folder, the Testing view says so and offers to open the setting.
+The setting [`robotcode.testExplorer.enabled`](/reference/vscode-settings/#robotcode.testExplorer.enabled) switches the Test Explorer integration off, also for single workspace folders. While it is off for every workspace folder that is a Robot Framework project, the Testing view says so and offers to open the setting.

@@ -215,7 +215,11 @@ class TestRunInfo {
 
 export class TestControllerManager {
   private _disposables!: vscode.Disposable;
-  public readonly testController: vscode.TestController;
+  // The Test Explorer starts with the first Robot Framework project and stays for the session; until then the Testing
+  // view shows nothing of RobotCode. The test controller, the tree builder and the watcher exist from then on.
+  private started = false;
+  private _startedDisposables?: vscode.Disposable;
+  public testController!: vscode.TestController;
 
   private readonly runProfilesMutex = new Mutex();
   public runProfiles: vscode.TestRunProfile[] = [];
@@ -232,7 +236,7 @@ export class TestControllerManager {
   // The items of the folders' models by ID, and their suites by URI; derived from robotTestItems.
   private readonly itemIndex = new RobotItemIndex((uri) => vscode.Uri.parse(uri).toString());
   // The one way from the models to the items of the controller.
-  private readonly treeBuilder: TestTreeBuilder;
+  private treeBuilder!: TestTreeBuilder;
   // The reads of single files and the discoveries of folders, keyed by URI string.
   private readonly refreshQueue: RefreshQueue;
 
@@ -242,46 +246,10 @@ export class TestControllerManager {
     public readonly debugManager: DebugManager,
     public readonly outputChannel: vscode.OutputChannel,
   ) {
-    this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework Tests/Tasks");
-
-    this.treeBuilder = new TestTreeBuilder(this.testController, {
-      tagsOf: (names) => this.convertTags(names) ?? [],
-      folderTagOf: (item) => this.getFolderTag(this.findWorkspaceFolderForItem(item)),
-    });
     this.refreshQueue = new RefreshQueue({
       readFile: (folder, uri, signal) => this.readFile(folder, uri, signal),
       discoverFolder: (folder, signal) => this.discoverFolder(folder, signal),
     });
-
-    this.testController.resolveHandler = async (item) => {
-      if (item === undefined) {
-        // At start: the folders without a model yet are discovered.
-        await this.discoverFolders(
-          (vscode.workspace.workspaceFolders ?? []).filter((folder) => this.robotTestItems.get(folder) === undefined),
-        );
-        return;
-      }
-      // An expanded item gets its children from the model; no file is read.
-      const robotItem = this.findRobotItem(item);
-      if (robotItem?.children !== undefined) this.treeBuilder.buildChildren(item, robotItem.children);
-    };
-
-    this.testController.refreshHandler = async (token) => {
-      await this.discoverFolders(vscode.workspace.workspaceFolders ?? [], token);
-    };
-
-    this.updateRunProfiles().then(
-      (_) => undefined,
-      (_) => undefined,
-    );
-
-    // Watches everything: VS Code reports an operation on a whole folder as one event for the folder,
-    // without events for the files in it.
-    const fileWatcher = vscode.workspace.createFileSystemWatcher("**");
-
-    fileWatcher.onDidCreate((uri) => this.onFileEvent("created", uri));
-    fileWatcher.onDidDelete((uri) => this.onFileEvent("deleted", uri));
-    fileWatcher.onDidChange((uri) => this.onFileEvent("changed", uri));
 
     this.activeStepDecorationType = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
@@ -295,8 +263,18 @@ export class TestControllerManager {
 
     this._disposables = vscode.Disposable.from(
       this.diagnosticCollection,
-      fileWatcher,
       this.activeStepDecorationType,
+      // A new project gets its discovery when RobotCode takes it up and its language server starts; a project taken up
+      // already, as for an open Robot Framework document, and a folder that is no project any more are discovered now.
+      this.languageClientsManager.onDidChangeRobotProject(async (folder) => {
+        const isProject = this.languageClientsManager.isKnownRobotProject(folder);
+        if (!this.started && !isProject) return;
+
+        this.start();
+        await this.updateRunProfiles();
+        if (!isProject || this.languageClientsManager.isTakenUp(folder)) await this.discoverFolders([folder]);
+        else this.updateTestExplorerState();
+      }),
       this.languageClientsManager.onRobotEnvironmentStateChanged(async (event) => {
         // A folder that became usable gets its tests when its language server starts; a folder that lost its
         // environment, or was switched off, shows the hint instead of its tests.
@@ -422,12 +400,58 @@ export class TestControllerManager {
     );
   }
 
+  private start(): void {
+    if (this.started) return;
+    this.started = true;
+
+    this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework Tests/Tasks");
+
+    this.treeBuilder = new TestTreeBuilder(this.testController, {
+      tagsOf: (names) => this.convertTags(names) ?? [],
+      folderTagOf: (item) => this.getFolderTag(this.findWorkspaceFolderForItem(item)),
+    });
+
+    this.testController.resolveHandler = async (item) => {
+      if (item === undefined) {
+        // At start: the folders without a model yet are discovered.
+        await this.discoverFolders(
+          (vscode.workspace.workspaceFolders ?? []).filter((folder) => this.robotTestItems.get(folder) === undefined),
+        );
+        return;
+      }
+      // An expanded item gets its children from the model; no file is read.
+      const robotItem = this.findRobotItem(item);
+      if (robotItem?.children !== undefined) this.treeBuilder.buildChildren(item, robotItem.children);
+    };
+
+    this.testController.refreshHandler = async (token) => {
+      await this.discoverFolders(vscode.workspace.workspaceFolders ?? [], token);
+    };
+
+    // Watches everything: VS Code reports an operation on a whole folder as one event for the folder,
+    // without events for the files in it.
+    const fileWatcher = vscode.workspace.createFileSystemWatcher("**");
+
+    fileWatcher.onDidCreate((uri) => this.onFileEvent("created", uri));
+    fileWatcher.onDidDelete((uri) => this.onFileEvent("deleted", uri));
+    fileWatcher.onDidChange((uri) => this.onFileEvent("changed", uri));
+
+    this._startedDisposables = vscode.Disposable.from(fileWatcher, this.testController);
+  }
+
+  // The folders the Test Explorer handles: Robot Framework projects whose integration is switched on.
+  private isTestExplorerFolder(folder: vscode.WorkspaceFolder): boolean {
+    return this.languageClientsManager.isKnownRobotProject(folder) && this.isTestExplorerEnabledForWorkspace(folder);
+  }
+
   private getFolderTag(folder: vscode.WorkspaceFolder | undefined): vscode.TestTag | undefined {
     if (folder === undefined) return undefined;
     return this.createTag(`_robotFolder:${folder.uri.toString()}`);
   }
 
   private async updateRunProfiles(): Promise<void> {
+    if (!this.started) return;
+
     await this.runProfilesMutex.dispatch(async () => {
       for (const a of this.runProfiles) {
         a.dispose();
@@ -437,7 +461,7 @@ export class TestControllerManager {
       const multiFolders = (vscode.workspace.workspaceFolders?.length ?? 0) > 1;
 
       for (const folder of vscode.workspace.workspaceFolders ?? []) {
-        if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
+        if (!this.isTestExplorerFolder(folder)) continue;
 
         const folderTag = this.getFolderTag(folder);
 
@@ -758,7 +782,7 @@ export class TestControllerManager {
     this.itemIndex.clear();
 
     this._disposables.dispose();
-    this.testController.dispose();
+    this._startedDisposables?.dispose();
   }
 
   public readonly robotTestItems = new WeakMap<vscode.WorkspaceFolder, WorkspaceFolderEntry | undefined>();
@@ -790,9 +814,9 @@ export class TestControllerManager {
 
   // A file event reads the file again, discovers its folder, or does nothing, see fileEventAction.
   private async onFileEvent(kind: FileEventKind, uri: vscode.Uri): Promise<void> {
-    if (uri.scheme !== "file") return;
+    if (!this.started || uri.scheme !== "file") return;
     const folder = vscode.workspace.getWorkspaceFolder(uri);
-    if (folder === undefined || !this.isTestExplorerEnabledForWorkspace(folder)) return;
+    if (folder === undefined || !this.isTestExplorerFolder(folder)) return;
 
     const isRobotFile = this.hasRobotFileExtension(uri.path);
     const action = fileEventAction({
@@ -812,6 +836,8 @@ export class TestControllerManager {
     folders: readonly vscode.WorkspaceFolder[],
     token?: vscode.CancellationToken,
   ): Promise<void> {
+    if (!this.started) return;
+
     const signal = signalOf(token);
     await Promise.all(
       folders.map((folder) => this.refreshQueue.discoverFolder(TestControllerManager.folderKey(folder), signal)),
@@ -857,9 +883,10 @@ export class TestControllerManager {
     const folder = TestControllerManager.folderOf(folderKey);
     if (folder === undefined) return;
 
-    if (!this.isTestExplorerEnabledForWorkspace(folder) || this.hasKnownEnvironmentProblem(folder)) {
-      // No discovery can run without a valid environment. The cached answer is used so that this does not wait for
-      // the environment dialog; the language client start discovers again once an environment is valid.
+    if (!this.isTestExplorerFolder(folder) || this.hasKnownEnvironmentProblem(folder)) {
+      // No discovery runs in a folder that is no Robot Framework project, and none without a valid environment. The
+      // cached answer is used so that this does not wait for the environment dialog; the language client start
+      // discovers again once an environment is valid.
       this.removeFolderModel(folder);
       this.updateTestExplorerState();
       return;
@@ -926,12 +953,16 @@ export class TestControllerManager {
   }
 
   // The Testing view shows welcome content only while the tree is empty; the context key says why it is
-  // empty, so the manifest's viewsWelcome entries can pick the right hint. While an enabled folder has no
-  // model yet, its discovery has not ended, and the state stays until it has.
+  // empty, so the manifest's viewsWelcome entries can pick the right hint. Only Robot Framework projects count.
+  // While an enabled project has no model yet, its discovery has not ended, and the state stays until it has.
   private updateTestExplorerState(): void {
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    const enabled = folders.filter((folder) => this.isTestExplorerEnabledForWorkspace(folder));
-    if (folders.length === 0) {
+    if (!this.started) return;
+
+    const projects = (vscode.workspace.workspaceFolders ?? []).filter((folder) =>
+      this.languageClientsManager.isKnownRobotProject(folder),
+    );
+    const enabled = projects.filter((folder) => this.isTestExplorerEnabledForWorkspace(folder));
+    if (projects.length === 0) {
       setTestExplorerState(undefined);
     } else if (enabled.length === 0) {
       setTestExplorerState("disabled");
@@ -1051,27 +1082,13 @@ export class TestControllerManager {
     return documents;
   }
 
-  // The discovery of a folder, or undefined when it was aborted or could not run. A failed discovery gives the
-  // folder's error item, so that it replaces the suites of the last result.
+  // The discovery of a Robot Framework project, or undefined when it was aborted or could not run. A failed discovery
+  // gives the folder's error item, so that it replaces the suites of the last result. A project declared by its
+  // configuration is discovered too, also with its suites in folders that the project detection skips.
   public async getTestsFromWorkspaceFolder(
     folder: vscode.WorkspaceFolder,
     token?: vscode.CancellationToken,
   ): Promise<RobotCodeDiscoverResult | undefined> {
-    const robotFiles = await vscode.workspace.findFiles(
-      new vscode.RelativePattern(folder, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`),
-      undefined,
-      1,
-      token,
-    );
-    // A cancelled search finds nothing; that is no folder without files.
-    if (token?.isCancellationRequested) return undefined;
-
-    if (robotFiles.length === 0) {
-      // A folder without Robot Framework files is a completed discovery without tests, not an aborted
-      // one (`undefined`); a file created later reaches the tree through the watcher.
-      return { items: [] };
-    }
-
     try {
       const result = await this.discoverTests(
         folder,

@@ -53,24 +53,14 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
   const previousVersion = context.globalState.get<string>("robotcode.lastVersion");
   // dev builds have a patch number of 100000 or more, see VSCODE_DEV_BUILD_BLOCK in scripts/tools.py
   const isDevBuild = Number(currentVersion.split(".")[2]) >= 100000;
+  // A new release is announced, and noted, once RobotCode takes up a folder, so that a window without a Robot Framework
+  // project does not swallow it; anything else is noted now.
+  const announceRelease =
+    previousVersion !== currentVersion &&
+    !isDevBuild &&
+    vscode.workspace.getConfiguration("robotcode").get<boolean>("showWhatsNewOnUpdate", true);
 
-  if (previousVersion !== currentVersion && !isDevBuild) {
-    const showNotification = vscode.workspace.getConfiguration("robotcode").get<boolean>("showWhatsNewOnUpdate", true);
-    if (showNotification) {
-      vscode.window
-        .showInformationMessage(
-          `RobotCode has been updated to v${currentVersion}. Want to know what's new? Click below to see all the latest changes and improvements.`,
-          "What's New?",
-        )
-        .then(async (action) => {
-          if (action === "What's New?") {
-            await vscode.commands.executeCommand("robotcode.showWhatsNew");
-          }
-        });
-    }
-  }
-
-  context.globalState.update("robotcode.lastVersion", currentVersion);
+  if (!announceRelease) context.globalState.update("robotcode.lastVersion", currentVersion);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("robotcode.showWhatsNew", async () => {
@@ -99,6 +89,24 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
   const pythonManager = new PythonManager(context, outputChannel);
 
   languageClientManger = new LanguageClientsManager(context, pythonManager, outputChannel);
+
+  if (announceRelease) {
+    const announcement = languageClientManger.onDidTakeUpFolder(() => {
+      announcement.dispose();
+      context.globalState.update("robotcode.lastVersion", currentVersion);
+      vscode.window
+        .showInformationMessage(
+          `RobotCode has been updated to v${currentVersion}. Want to know what's new? Click below to see all the latest changes and improvements.`,
+          "What's New?",
+        )
+        .then(async (action) => {
+          if (action === "What's New?") {
+            await vscode.commands.executeCommand("robotcode.showWhatsNew");
+          }
+        });
+    });
+    context.subscriptions.push(announcement);
+  }
 
   const debugManager = new DebugManager(context, pythonManager, languageClientManger, outputChannel);
 
@@ -214,8 +222,12 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<R
         "robotcode.disableExtension",
       ]) {
         for (const ws of vscode.workspace.workspaceFolders ?? []) {
-          // if (languageClientManger.clients.has(ws.uri.toString()))
-          if (event.affectsConfiguration(s, ws)) {
+          // a folder that RobotCode has taken up restarts, a project that it has not, as one switched on again, is
+          // taken up; any other folder stays quiet
+          if (
+            event.affectsConfiguration(s, ws) &&
+            (languageClientManger.isTakenUp(ws) || languageClientManger.isKnownRobotProject(ws))
+          ) {
             affectedFolders.add(ws.uri);
           }
         }

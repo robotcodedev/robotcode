@@ -76,8 +76,65 @@ const ROBOT_DEPENDENCY_IN_PYPROJECT = new RegExp(
 const ROBOT_REQUIREMENT = new RegExp(String.raw`^\s*${ROBOT_PACKAGE}\s*(?:\[[^\]]*\])?\s*(?:[<>=!~;@#]|$)`, "im");
 // what the search for Robot Framework files skips: like Robot Framework, names that start with `.` or `_` and `CVS`
 // folders, and also folders of other tools that can be large
-const ROBOT_FILES_SEARCH_EXCLUDE = "{**/.*,**/_*,**/CVS,**/node_modules,**/target,**/build,**/dist,**/venv}";
-const ROBOT_FILES_SEARCH_TIMEOUT = 5000;
+const ROBOT_FILES_SKIPPED_FOLDERS = ["CVS", "node_modules", "target", "build", "dist", "venv"];
+const ROBOT_FILES_SEARCH_EXCLUDE = `{**/.*,**/_*,${ROBOT_FILES_SKIPPED_FOLDERS.map((name) => `**/${name}`).join(",")}}`;
+// A checkout or an install creates files in bursts; the detection runs once they settle.
+const ROBOT_PROJECT_DETECTION_DEBOUNCE = 1000;
+
+/**
+ * Whether a file event of the workspace folder lies in a folder that the search for Robot Framework files skips, or
+ * with `itself`, whether the file or folder is skipped itself. The folder's part of the path is cut off by its length,
+ * so that a path in another case, as on Windows and macOS, still counts by its names below the folder.
+ */
+export function isSkippedByRobotFilesSearch(folder: vscode.WorkspaceFolder, uri: vscode.Uri, itself: boolean): boolean {
+  const names = uri.path
+    .slice(folder.uri.path.length)
+    .split("/")
+    .filter((name) => name !== "");
+  if (!itself) names.pop();
+  return names.some((name) => /^[._]/.test(name) || ROBOT_FILES_SKIPPED_FOLDERS.includes(name));
+}
+
+/**
+ * Whether a workspace folder is a Robot Framework project: it has a `robot.toml` or `.robot.toml`, a
+ * `pyproject.toml` or `requirements.txt` that depends on Robot Framework or RobotCode, or Robot Framework files
+ * outside the folders that the search skips. Only the files decide, without Python; a cancelled search finds no
+ * files.
+ */
+export async function isRobotProject(
+  folder: vscode.WorkspaceFolder,
+  fileExtensions: string[],
+  token?: vscode.CancellationToken,
+): Promise<boolean> {
+  const read = async (name: string): Promise<string> => {
+    try {
+      return new TextDecoder().decode(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(folder.uri, name)));
+    } catch {
+      return "";
+    }
+  };
+
+  const names = new Set((await vscode.workspace.fs.readDirectory(folder.uri)).map(([name]) => name));
+  if (names.has("robot.toml") || names.has(".robot.toml")) return true;
+  const pyproject = names.has("pyproject.toml") ? await read("pyproject.toml") : "";
+  if (ROBOT_DEPENDENCY_IN_PYPROJECT.test(pyproject.replace(/^\s*#.*$/gm, ""))) return true;
+  const requirements = names.has("requirements.txt") ? await read("requirements.txt") : "";
+  if (ROBOT_REQUIREMENT.test(requirements)) return true;
+
+  if (token?.isCancellationRequested) return false;
+  try {
+    const files = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(folder, `**/*.{${fileExtensions.join(",")}}`),
+      new vscode.RelativePattern(folder, ROBOT_FILES_SEARCH_EXCLUDE),
+      1,
+      token,
+    );
+    return files.length > 0 && !token?.isCancellationRequested;
+  } catch (error) {
+    if (token?.isCancellationRequested) return false;
+    throw error;
+  }
+}
 
 export function toVsCodeRange(range: Range): vscode.Range {
   return new vscode.Range(
@@ -308,6 +365,18 @@ export class LanguageClientsManager {
   // When the startup phase of each folder ends, and the timer that shows a problem that remains; see STARTUP_PHASE.
   private readonly _startupPhaseEnds = new Map<string, number>();
   private readonly _startupPhaseTimers = new Map<string, NodeJS.Timeout>();
+  // Whether each folder is a Robot Framework project, by its last detection, the running detections, the folders to
+  // detect once more when theirs ends, and the detections waiting for file events to settle.
+  private readonly _robotProjects = new Map<string, boolean>();
+  private readonly _robotProjectDetections = new Map<
+    string,
+    { run: Promise<void>; cancellation: vscode.CancellationTokenSource }
+  >();
+  private readonly _robotProjectDetectionsAgain = new Set<string>();
+  private readonly _robotProjectDetectionTimers = new Map<string, NodeJS.Timeout>();
+  // The folders RobotCode has taken up: only they get the check of their environment, the message, the polling and a
+  // language server.
+  private readonly _takenUpFolders = new Set<string>();
 
   private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
 
@@ -321,6 +390,20 @@ export class LanguageClientsManager {
   /** Fires when a folder's environment check ends, with the usable or unusable state. */
   public get onRobotEnvironmentStateChanged(): vscode.Event<RobotEnvironmentStateChangedEvent> {
     return this._onRobotEnvironmentStateChangedEmitter.event;
+  }
+
+  private readonly _onDidChangeRobotProjectEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
+
+  /** Fires when the detection of a folder ends with another answer than before, see isKnownRobotProject. */
+  public get onDidChangeRobotProject(): vscode.Event<vscode.WorkspaceFolder> {
+    return this._onDidChangeRobotProjectEmitter.event;
+  }
+
+  private readonly _onDidTakeUpFolderEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
+
+  /** Fires when RobotCode takes up a workspace folder. */
+  public get onDidTakeUpFolder(): vscode.Event<vscode.WorkspaceFolder> {
+    return this._onDidTakeUpFolderEmitter.event;
   }
 
   private _supportedLanguages?: string[];
@@ -380,11 +463,14 @@ export class LanguageClientsManager {
     public readonly outputChannel: vscode.OutputChannel,
   ) {
     const fileWatcher1 = vscode.workspace.createFileSystemWatcher(
-      `**/{pyproject.toml,robot.toml,.robot.toml,robocop.toml,.gitignore,.robotignore}`,
+      `**/{pyproject.toml,robot.toml,.robot.toml,robocop.toml,.gitignore,.robotignore,requirements.txt}`,
     );
-    fileWatcher1.onDidCreate((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
-    fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
-    fileWatcher1.onDidChange((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
+    fileWatcher1.onDidCreate((uri) => this.onConfigurationFileChanged(uri));
+    fileWatcher1.onDidDelete((uri) => this.onConfigurationFileChanged(uri));
+    fileWatcher1.onDidChange((uri) => this.onConfigurationFileChanged(uri));
+
+    // a new file or folder can make a folder a Robot Framework project
+    const createdFilesWatcher = vscode.workspace.createFileSystemWatcher("**", false, true, true);
 
     // Listen for extension changes to invalidate caches
     const extensionChangeListener = vscode.extensions.onDidChange(() => {
@@ -396,6 +482,10 @@ export class LanguageClientsManager {
 
     this._disposables = vscode.Disposable.from(
       fileWatcher1,
+      createdFilesWatcher,
+      createdFilesWatcher.onDidCreate((uri) => {
+        this.onFileCreated(uri).catch((error) => this.logger.error(`${error}`));
+      }),
       extensionChangeListener,
       virtualEnvironmentWatcher,
       virtualEnvironmentWatcher.onDidCreate((uri) => {
@@ -403,6 +493,8 @@ export class LanguageClientsManager {
       }),
       this.pythonManager.onDidChangeEnvironment((event) => this.scheduleEnvironmentReconsider(event.folder)),
       this._onRobotEnvironmentStateChangedEmitter,
+      this._onDidChangeRobotProjectEmitter,
+      this._onDidTakeUpFolderEmitter,
 
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const folder of event.removed) this.forgetFolder(folder);
@@ -496,6 +588,8 @@ export class LanguageClientsManager {
     for (const timer of this._environmentReconsiderTimers.values()) clearTimeout(timer);
     for (const timer of this._environmentNotificationTimers.values()) clearTimeout(timer);
     for (const timer of this._startupPhaseTimers.values()) clearTimeout(timer);
+    for (const timer of this._robotProjectDetectionTimers.values()) clearTimeout(timer);
+    for (const detection of this._robotProjectDetections.values()) detection.cancellation.cancel();
     for (const notification of this._environmentNotifications.values()) notification.close();
     this._disposables.dispose();
   }
@@ -562,8 +656,8 @@ export class LanguageClientsManager {
 
   /**
    * Checks the environment of a folder with a known problem again, for something the user asks for right now: a
-   * Robot Framework installed since the last check is found without waiting for the polling, and a folder that is
-   * usable now gets its language server. Returns whether the folder is usable.
+   * Robot Framework installed since the last check is found without waiting for the polling, and a folder taken up
+   * that is usable now gets its language server. Returns whether the folder is usable.
    */
   public async checkRobotEnvironmentAgain(folder: vscode.WorkspaceFolder): Promise<boolean> {
     if (this.getRobotEnvironmentState(folder).state === "unusable") await this.reconsiderFolder(folder);
@@ -706,6 +800,13 @@ export class LanguageClientsManager {
     clearTimeout(this._startupPhaseTimers.get(key));
     this._startupPhaseTimers.delete(key);
     this._startupPhaseEnds.delete(key);
+    clearTimeout(this._robotProjectDetectionTimers.get(key));
+    this._robotProjectDetectionTimers.delete(key);
+    this._robotProjectDetections.get(key)?.cancellation.cancel();
+    this._robotProjectDetections.delete(key);
+    this._robotProjectDetectionsAgain.delete(key);
+    this._robotProjects.delete(key);
+    this._takenUpFolders.delete(key);
   }
 
   /** Whether the folder is in its startup phase, in which a problem of its environment is provisional. */
@@ -759,16 +860,17 @@ export class LanguageClientsManager {
     }
   }
 
-  // While Robot Framework is missing or too old, runs the check script every few seconds: it finds the package as
-  // Python itself does (site-packages, user site, PYTHONPATH, .pth files), where a file watcher does not report files
-  // deep inside a directory created while the window is open. Slower after five minutes, so that a folder left alone
-  // costs little.
+  // While Robot Framework is missing or too old in a folder that RobotCode has taken up, runs the check script every
+  // few seconds: it finds the package as Python itself does (site-packages, user site, PYTHONPATH, .pth files), where
+  // a file watcher does not report files deep inside a directory created while the window is open. Slower after five
+  // minutes, so that a folder left alone costs little.
   private updateRobotFrameworkPolling(folder: vscode.WorkspaceFolder, state: RobotEnvironmentState): void {
     this.stopRobotFrameworkPolling(folder);
     const executable = state.executable;
     if (state.state !== "unusable" || !isRobotFrameworkProblem(state.problem) || executable === undefined) return;
-
     const key = folder.uri.toString();
+    if (!this._takenUpFolders.has(key)) return;
+
     let attempts = 0;
     const schedule = (): void => {
       const timer = setTimeout(
@@ -809,11 +911,12 @@ export class LanguageClientsManager {
     }
   }
 
-  // Environment events come in bursts; one look per folder after they settle is enough.
+  // Environment events come in bursts; one look per folder after they settle is enough. Only for the folders RobotCode
+  // has taken up: an environment change alone takes up no folder.
   private scheduleEnvironmentReconsider(folder: vscode.WorkspaceFolder | undefined): void {
     for (const f of folder !== undefined ? [folder] : (vscode.workspace.workspaceFolders ?? [])) {
       const key = f.uri.toString();
-      if (!this._environmentStates.has(key) || this.isDisabledForFolder(f)) continue;
+      if (!this._environmentStates.has(key) || !this._takenUpFolders.has(key) || this.isDisabledForFolder(f)) continue;
 
       clearTimeout(this._environmentReconsiderTimers.get(key));
       this._environmentReconsiderTimers.set(
@@ -831,7 +934,7 @@ export class LanguageClientsManager {
   /**
    * Looks at a folder's environment again after something changed: a usable folder whose interpreter changed
    * restarts its language server, an unusable folder is checked again and gets its language server when it is
-   * usable now.
+   * usable now and RobotCode has taken it up.
    */
   private async reconsiderFolder(folder: vscode.WorkspaceFolder): Promise<void> {
     const key = folder.uri.toString();
@@ -857,7 +960,8 @@ export class LanguageClientsManager {
       }
 
       const result = await this.checkRobotEnvironment(folder);
-      if (result.state === "usable") await this.refresh(folder.uri, true);
+      // for a folder not taken up, a command of the user, such as the REPL's start, asked for the check
+      if (result.state === "usable" && this._takenUpFolders.has(key)) await this.refresh(folder.uri, true);
     })().finally(() => this._environmentReconsiders.delete(key));
     this._environmentReconsiders.set(key, run);
     await run;
@@ -871,6 +975,7 @@ export class LanguageClientsManager {
 
     this.logger.info(`virtual environment appeared: ${uri.fsPath}`);
     this.pythonManager.rememberVirtualEnvironment(uri);
+    if (!this._takenUpFolders.has(folder.uri.toString())) return;
     await this.pythonManager.refreshEnvironments(folder);
     await this.reconsiderFolder(folder);
   }
@@ -1130,6 +1235,18 @@ export class LanguageClientsManager {
     return this.clients.has(workspaceFolder.uri.toString());
   }
 
+  // The first request for the client of a folder that is not switched off takes the folder up. A Robot Framework
+  // problem found before, as by a command of the user, gets its polling then.
+  private takeUpFolder(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    if (this._takenUpFolders.has(key)) return;
+
+    this._takenUpFolders.add(key);
+    const state = this.getRobotEnvironmentState(folder);
+    if (state.state === "unusable") this.updateRobotFrameworkPolling(folder, state);
+    this._onDidTakeUpFolderEmitter.fire(folder);
+  }
+
   public async getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
     return this.clientsMutex.dispatch(async () => {
       const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
@@ -1150,6 +1267,8 @@ export class LanguageClientsManager {
       if (this.isDisabledForFolder(workspaceFolder)) {
         return undefined;
       }
+
+      this.takeUpFolder(workspaceFolder);
 
       let result = this.clients.get(workspaceFolder.uri.toString());
 
@@ -1374,6 +1493,13 @@ export class LanguageClientsManager {
       }
     });
 
+    if (uri === undefined) {
+      // as at startup: the folders are taken up anew, and only those get their polling again
+      this._takenUpFolders.clear();
+      for (const timer of this._environmentPollers.values()) clearTimeout(timer);
+      this._environmentPollers.clear();
+    }
+
     const folders = new Set<vscode.WorkspaceFolder>();
 
     if (uri !== undefined && restart) {
@@ -1394,77 +1520,123 @@ export class LanguageClientsManager {
       }
     }
 
-    if (uri === undefined) {
-      for (const f of vscode.workspace.workspaceFolders || []) {
-        // a folder with an open Robot Framework document gets its client anyway
-        if (!folders.has(f) && (await this.isRobotProject(f).catch(() => false))) {
-          folders.add(f);
-        }
-      }
-    }
+    // The detections of all folders run side by side; each takes up its folder when it ends.
+    const detections =
+      uri === undefined ? (vscode.workspace.workspaceFolders ?? []).map((f) => this.detectRobotProject(f)) : [];
 
-    for (const folder of folders) {
-      try {
-        await this.getLanguageClientForResource(folder.uri.toString()).catch((_) => undefined);
-        this._onClientStateChangedEmitter.fire({
-          uri: folder.uri,
-          state: ClientState.Refreshed,
-        });
-      } catch {
-        // do noting
-      }
+    for (const folder of folders) await this.startFolder(folder);
+    await Promise.all(detections);
+  }
+
+  // Starts the folder's client, which takes the folder up, and tells the listeners that the folder was refreshed.
+  private async startFolder(folder: vscode.WorkspaceFolder): Promise<void> {
+    try {
+      await this.getLanguageClientForResource(folder.uri.toString()).catch((_) => undefined);
+      this._onClientStateChangedEmitter.fire({
+        uri: folder.uri,
+        state: ClientState.Refreshed,
+      });
+    } catch {
+      // do noting
     }
   }
 
-  /**
-   * Whether a workspace folder is a Robot Framework project: it has a `robot.toml` or `.robot.toml`, a
-   * `pyproject.toml` or `requirements.txt` that depends on Robot Framework or RobotCode, or Robot Framework files
-   * outside the folders that the search skips. A search that takes too long counts as no files; the client then
-   * starts with the first opened Robot Framework document.
-   */
-  private async isRobotProject(folder: vscode.WorkspaceFolder): Promise<boolean> {
-    const read = async (name: string): Promise<string> => {
-      try {
-        return new TextDecoder().decode(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(folder.uri, name)));
-      } catch {
-        return "";
-      }
-    };
+  /** Whether the folder is a Robot Framework project by its last detection; false until one has ended. */
+  public isKnownRobotProject(folder: vscode.WorkspaceFolder): boolean {
+    return this._robotProjects.get(folder.uri.toString()) === true;
+  }
 
-    const names = new Set((await vscode.workspace.fs.readDirectory(folder.uri)).map(([name]) => name));
-    if (names.has("robot.toml") || names.has(".robot.toml")) return true;
-    const pyproject = names.has("pyproject.toml") ? await read("pyproject.toml") : "";
-    if (ROBOT_DEPENDENCY_IN_PYPROJECT.test(pyproject.replace(/^\s*#.*$/gm, ""))) return true;
-    const requirements = names.has("requirements.txt") ? await read("requirements.txt") : "";
-    if (ROBOT_REQUIREMENT.test(requirements)) return true;
+  // Detects whether the folder is a Robot Framework project, keeps the answer and takes up a project. A request while a
+  // detection runs lets that one end and detects once more afterwards, unless the folder is a project taken up by
+  // then. Without a time limit: a large project gets its language server when the search ends, or with the first
+  // opened Robot Framework document.
+  private async detectRobotProject(folder: vscode.WorkspaceFolder): Promise<void> {
+    const key = folder.uri.toString();
+    const running = this._robotProjectDetections.get(key);
+    if (running !== undefined) {
+      this._robotProjectDetectionsAgain.add(key);
+      return running.run;
+    }
 
     const cancellation = new vscode.CancellationTokenSource();
-    const timeout = setTimeout(() => cancellation.cancel(), ROBOT_FILES_SEARCH_TIMEOUT);
-    let files: vscode.Uri[] = [];
-    let timedOut = false;
-    try {
-      files = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(folder, `**/*.{${this.fileExtensions.join(",")}}`),
-        new vscode.RelativePattern(folder, ROBOT_FILES_SEARCH_EXCLUDE),
-        1,
-        cancellation.token,
-      );
-    } catch (error) {
-      if (!cancellation.token.isCancellationRequested) throw error;
-    } finally {
-      timedOut = cancellation.token.isCancellationRequested;
-      clearTimeout(timeout);
-      cancellation.dispose();
-    }
-    if (timedOut) {
-      this.outputChannel.appendLine(
-        `Searching Robot Framework files in workspace folder '${folder.name}' took too long, ` +
-          "its language server starts with the first opened Robot Framework document.",
-      );
-      return false;
-    }
+    const run = (async () => {
+      this.logger.debug(`detecting whether folder '${folder.name}' is a Robot Framework project`);
+      const isProject = await isRobotProject(folder, this.fileExtensions, cancellation.token).catch(() => false);
+      // the removal of the folder cancelled the detection
+      if (cancellation.token.isCancellationRequested) return;
 
-    return files.length > 0;
+      if (this._robotProjects.get(key) !== isProject) {
+        this._robotProjects.set(key, isProject);
+        this.logger.info(`folder '${folder.name}' is ${isProject ? "a" : "no"} Robot Framework project`);
+        this._onDidChangeRobotProjectEmitter.fire(folder);
+      }
+      if (isProject && !this._takenUpFolders.has(key) && !this.isDisabledForFolder(folder)) {
+        await this.startFolder(folder);
+      }
+    })().finally(() => {
+      if (this._robotProjectDetections.get(key)?.cancellation === cancellation) {
+        this._robotProjectDetections.delete(key);
+      }
+      cancellation.dispose();
+    });
+    this._robotProjectDetections.set(key, { run, cancellation });
+    await run;
+
+    if (this._robotProjectDetectionsAgain.delete(key) && !this.isSettledRobotProject(folder)) {
+      await this.detectRobotProject(folder);
+    }
+  }
+
+  /** Whether RobotCode has taken up the folder: only such a folder gets anything that needs Python. */
+  public isTakenUp(folder: vscode.WorkspaceFolder): boolean {
+    return this._takenUpFolders.has(folder.uri.toString());
+  }
+
+  // A project that RobotCode has taken up stays one for the session; any other folder is detected again after file
+  // events.
+  private isSettledRobotProject(folder: vscode.WorkspaceFolder): boolean {
+    return this.isTakenUp(folder) && this.isKnownRobotProject(folder);
+  }
+
+  // A configuration file of the language server restarts it in a folder that RobotCode has taken up; requirements.txt
+  // is only read by the detection.
+  private onConfigurationFileChanged(uri: vscode.Uri): void {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (folder === undefined) return;
+
+    if (this.isTakenUp(folder) && path.posix.basename(uri.path) !== "requirements.txt") void this.restart(folder.uri);
+    if (!isSkippedByRobotFilesSearch(folder, uri, false)) this.scheduleRobotProjectDetection(folder);
+  }
+
+  // Only a new Robot Framework file, or a new folder that may hold some, can make a folder a project.
+  private async onFileCreated(uri: vscode.Uri): Promise<void> {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (folder === undefined || this.isSettledRobotProject(folder) || isSkippedByRobotFilesSearch(folder, uri, true)) {
+      return;
+    }
+    const name = uri.path.toLowerCase();
+    if (!this.fileExtensions.some((ext) => name.endsWith(`.${ext}`))) {
+      const stat = await Promise.resolve(vscode.workspace.fs.stat(uri)).catch(() => undefined);
+      if (stat === undefined || (stat.type & vscode.FileType.Directory) === 0) return;
+    }
+    this.scheduleRobotProjectDetection(folder);
+  }
+
+  // One detection per folder once the file events settle.
+  private scheduleRobotProjectDetection(folder: vscode.WorkspaceFolder): void {
+    if (this.isSettledRobotProject(folder)) return;
+
+    const key = folder.uri.toString();
+    clearTimeout(this._robotProjectDetectionTimers.get(key));
+    this._robotProjectDetectionTimers.set(
+      key,
+      setTimeout(() => {
+        this._robotProjectDetectionTimers.delete(key);
+        this.detectRobotProject(folder).catch((error) =>
+          this.logger.error(`detecting whether '${folder.name}' is a Robot Framework project failed: ${error}`),
+        );
+      }, ROBOT_PROJECT_DETECTION_DEBOUNCE),
+    );
   }
 
   public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {
