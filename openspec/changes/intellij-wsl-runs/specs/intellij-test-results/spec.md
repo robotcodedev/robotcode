@@ -1,9 +1,5 @@
 # Spec Delta
 
-## Purpose
-
-Defines how the IntelliJ plugin turns the events of a Robot Framework run into the results shown in the run tab: the results tree, test statuses and messages, and the output that belongs to each test.
-
 ## ADDED Requirements
 
 ### Requirement: Locations of a run inside WSL
