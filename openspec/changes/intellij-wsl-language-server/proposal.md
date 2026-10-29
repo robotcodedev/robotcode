@@ -40,7 +40,7 @@ _None._
   - `lsp/RobotCodeLanguageServer.kt`: standard input and output for a server in WSL; `lsp/RobotCodeLanguageServerFactory.kt`: no IDE process id in `initialize` for such a server;
   - `testing/RobotCodeTestManager.kt`: the discovered sources in the IDE's form;
   - the run path: the "not supported yet" error for WSL interpreters.
-- `intellij-client/src/main/resources/messages/RobotCode.properties`: the WSL messages; `intellij-client/README.md`: one line on WSL interpreters under Requirements.
+- `intellij-client/src/main/resources/messages/RobotCode.properties`: the WSL messages; `intellij-client/README.md`: one line on WSL interpreters under Requirements; the PyCharm guide's sentence on remote interpreters in `guides/pycharm/configuration.mdx`.
 - `packages/core/src/robotcode/core/uri.py`: the mapping between client URIs and local paths; `src/robotcode/cli/__init__.py`: the hidden global option that sets it; `packages/jsonrpc2/src/robotcode/jsonrpc2/server.py`: standard output and end of input in stdio mode.
 - New tests under `intellij-client/src/test/kotlin/`, `tests/robotcode/core/`, `tests/robotcode/runner/cli/discover/` and `tests/robotcode/jsonrpc/`.
 - No change to the VS Code extension or to `robot.toml`.
