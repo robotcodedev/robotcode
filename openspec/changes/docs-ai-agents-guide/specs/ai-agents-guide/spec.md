@@ -64,6 +64,18 @@ Working with the Agent SHALL have a section each for writing tests and tasks, ru
 - **WHEN** a reader reads the section on knowing the project
 - **THEN** a session recorded in a project with thousands of tests shows how the agent answers questions about it
 
+### Requirement: Interactive sessions
+
+Working with the Agent SHALL show a debugging session in which the user steers the paused run turn by turn, and a REPL session in which the agent runs keywords one after another, shows the current state when asked and reacts to their output and failures. In both, the debugger or the REPL SHALL keep running between the user's prompts.
+
+#### Scenario: Debugging step by step
+- **WHEN** a reader reads the section on failing tests
+- **THEN** a session shows the agent stopping a run at a line the user names, showing the variables and the call stack when the user asks, and continuing to the next breakpoint when the user says so
+
+#### Scenario: Keywords in the REPL
+- **WHEN** a reader reads the section on writing tests and tasks
+- **THEN** a session shows the agent running keywords one after another in one REPL, showing its variables when the user asks, and reacting to a keyword that fails
+
 ### Requirement: Recording of the sessions
 
 The sessions SHALL be recorded in the example project of a web shop that the home page's demos use, and the session on a large project in a generated project with thousands of tests. Claude Code SHALL run in a configuration of its own with only the RobotCode plugin installed, without further instructions, memory or MCP servers. The page SHALL name the versions of Claude Code and RobotCode and the model.

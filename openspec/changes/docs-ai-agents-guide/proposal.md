@@ -23,6 +23,8 @@ The guide `/guides/ai-agents/` is one page of about 2300 words. Most of it cover
   - configuration.
 
   Each section shows sessions of a real agent as Markdown: the prompt, the commands with their output, the files the agent read or changed, and its answer.
+- **Two interactive sessions** that the user steers turn by turn: debugging a paused run step by step, and running keywords one after another in the REPL.
+- **The recordings test the skill.** Findings (the agent going against the skill, or guidance that is missing or wrong) are collected. A session with a finding goes on the page only after it is recorded again with the improved skill or CLI. The improvements themselves are changes of their own.
 - **The sessions are real Claude Code transcripts**, shortened only by leaving parts out. Claude Code runs in an empty configuration with only the RobotCode plugin from the marketplace, in a copy of the example project behind the home page's demos. The session on large projects runs in a generated project with thousands of tests. The page names the versions of Claude Code and RobotCode and the model.
 - **Links follow:**
   - four links that point to sections of the current page get the new pages;
@@ -31,7 +33,7 @@ The guide `/guides/ai-agents/` is one page of about 2300 words. Most of it cover
 
 Not part of this change:
 - the home page's AI agents section and its demo, which stay as they are;
-- the RobotCode skill itself. Where the recordings show the agent going against the skill, that is reported as a finding for the skill.
+- improving the RobotCode skill or the CLI. The recordings collect the findings, and the improvements follow as changes of their own, for example for driving the debugger and the REPL turn by turn.
 
 ## Capabilities
 

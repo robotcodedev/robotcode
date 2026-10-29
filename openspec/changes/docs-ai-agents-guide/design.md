@@ -20,7 +20,9 @@
 - **Claude Code facts** (installed 2.1.312; docs at code.claude.com):
   - `CLAUDE_CONFIG_DIR` moves settings, session history, plugins and the login to another directory.
   - From 2.1.277 on, Claude Code reads `AGENTS.md` as project instructions when there is no `CLAUDE.md` or `CLAUDE.local.md` in the working directory or above it.
-  - `claude -p` runs without prompts and takes these options: `--output-format stream-json`, `--session-id`/`--resume` for later prompts of the same session, `--permission-mode`, `--allowedTools`, `--permission-prompts none`, `--strict-mcp-config` and `--no-chrome`.
+  - `claude -p` runs without prompts and takes these options: `--input-format stream-json` (further prompts in the same process), `--output-format stream-json`, `--session-id`/`--resume`, `--permission-mode`, `--allowedTools`, `--permission-prompts none`, `--strict-mcp-config` and `--no-chrome`.
+  - Claude Code's Bash tool can run a command in the background and read its output from a file, but it has no way to write to a running command's input.
+  - In a `-p` run, a background command may run 30 minutes (up to 2 hours with a longer timeout). If the prompt is passed as text, the limit is 10 minutes, and the run waits for its background commands after its answer.
 - **The skill:** `plugins/robotcode/skills/robotcode/` in robotframework-agent-plugins, with SKILL.md and nine references (analyze, authoring, config, debugging, install, large-projects, repl, results, workflows). On the plugin's files, the marketplace (`main` = tag `robotcode--v2.8.0`) and `next` are the same.
 
 ## Goals / Non-Goals
@@ -84,10 +86,12 @@
 | --- | --- | --- | --- |
 | Writing tests and tasks | From a requirement | the project | "I want to test our web shop with the Browser library, but I've never used it. How do I open a page, type into a field and check a text?" |
 | Writing tests and tasks | A task | the project plus `data/restock.csv` (products and quantities) | "Write a task that orders every product in `data/restock.csv` and logs the order ids, then run it." |
+| Writing tests and tasks | Keywords in the REPL | the project | "Open a REPL with our orders resource and order two coffees." Later: which variables there are now, ordering a mug (sold out, so `Create Order` fails), the status of the coffee order. |
 | Running tests | Smoke tests on staging | the project | "Which tests are in our smoke test?" |
 | Running tests | Another browser | the state after "From a requirement" | "Can the Browser library run our web tests in Firefox?" |
 | Failing tests | A failing test | the project after a full run (Login Works fails) | "Why did `Login Works` fail in last night's run?" |
 | Failing tests | Comparing runs | the state after "A failing test", the earlier run kept in `results/nightly/` | "Run all tests and tell me what changed compared with last night's run in `results/nightly`." |
+| Failing tests | Debugging step by step | the project | "Run the order tests in the debugger and stop at line 19 of `tests/orders.robot`." Later: the variables, the call stack, a second breakpoint at line 21 of `resources/orders.resource` (`Should Be Equal    ${status}    ${expected}`), "continue to the next breakpoint" (`Express Order` reaches it again), continue to the end. |
 | Knowing the project | Coverage | the project | "Which tests cover the cart requirements SHOP-201 to SHOP-203?" |
 | Knowing the project | Keywords | the project | "What arguments does our `Create Order` keyword take?" |
 | Knowing the project | A large project | the generated project after a run (D7) | "How many tests does this project have, and how are they split across the teams?" |
@@ -97,6 +101,7 @@
 - **First prompts:** They come from the home page's scenarios where one exists.
 - **Later prompts:** They react to the agent's answers and are written during the recording. Where the home page steers to a tool ("Show me in the debugger what the shop returns there"), the recording steers the same way.
 - **Order:** "Another browser" and "Comparing runs" build on the session before them, and the other sessions start from a fresh copy of the project.
+- **Interactive sessions:** "Debugging step by step" and "Keywords in the REPL" are the two the maintainer asked for: the user steers each turn, and the debugger or the REPL keeps running between the prompts. With today's skill, Claude Code probably sends a fixed `printf` sequence instead (D9).
 
 ### D4: How a session is shown
 
@@ -134,7 +139,9 @@ The script `playground/robotcode-demo/agent-sessions/record.sh` (git-ignored) do
   - `XDG_CONFIG_HOME` points to an empty folder, so the maintainer's user `robot.toml` stays out.
 - **Claude Code:**
   - `CLAUDE_CONFIG_DIR` is a folder of its own, in which the maintainer logs in once. Only the plugin from the marketplace is installed there (`claude plugin marketplace add robotcodedev/robotframework-agent-plugins`, `claude plugin install robotcode@robotframework-agent-plugins`).
-  - Each prompt runs as `claude -p --output-format stream-json`, with `--strict-mcp-config` (no MCP server, also none of the account) and `--no-chrome`. The first prompt gets a `--session-id`, and later prompts get `--resume` with that id.
+  - A session runs as one process: `claude -p --input-format stream-json --output-format stream-json`, with `--strict-mcp-config` (no MCP server, also none of the account) and `--no-chrome`. The script writes each prompt to its input when the answer to the one before has arrived.
+  - This keeps the agent's background commands, such as a paused debugger or a REPL, running between the user's prompts: with this input, a background command may run 30 minutes, up to 2 hours.
+  - Rejected: one `claude -p --resume` per prompt. Each run ends with its answer, and a run whose prompt is passed as text waits at most 10 minutes for its background commands and then stops them. A debugger started for one prompt would be gone by the next.
   - Before the first session, `claude mcp list` in that configuration must list no server.
 - **Permissions:**
   - `--permission-mode acceptEdits` lets the agent change files in the session project.
@@ -160,9 +167,18 @@ The script runs it once before the session, so the session can ask about the res
 - **Converter:** `agent-sessions/to_markdown.py` turns a `.jsonl` into the Markdown of D4, complete. It reads the prompts, the tool calls with their results (Bash, Read, Write, Edit, Skill) and the answers. The field names are checked against the first recording.
 - **Shortening:** Done by hand on that Markdown, only by leaving parts out (D4). The version line takes the model, Claude Code's version and the date from the transcript's init event, and RobotCode's version from `robotcode --version` in the session project.
 
-### D9: When the agent does not follow the skill
+### D9: The recordings test the skill
 
-A session is not edited into shape. If the agent greps instead of using `discover`, re-runs instead of debugging, or loads `output.xml`, that is reported to the maintainer as a finding for the skill. The session is recorded again only after the maintainer decides, for example after a fix of the skill or with a more specific prompt.
+The recordings are also a test of the skill and the plugin. The maintainer chose to record first, collect the findings and improve afterwards.
+
+- **Not edited into shape:** A session is never edited into shape.
+- **Findings:** Every place where the agent goes against the skill, or where the skill's guidance is missing or wrong, goes into `playground/agent-skill-befunde.md` (git-ignored, like the other findings lists), with the session and the transcript lines. Examples: the agent greps instead of using `discover`, re-runs instead of debugging, loads `output.xml`, or sends a fixed `printf` sequence instead of steering the debugger or the REPL turn by turn.
+- **Improvements:** They are changes of their own, in robotframework-agent-plugins for the skill and in robotcode for the CLI, planned after the recordings. They are not part of this change.
+- **Sessions with a finding:** They stay off the page and are recorded again once the improvement is applied. The other sessions go on the page as recorded.
+- **Findings known before the first recording:**
+  - **The skill has no "how" for interactivity.** It says to drive the debugger and the REPL interactively, but not how. VS Code's Copilot has `send_to_terminal` and `get_terminal_output` (since 1.115 for background terminals, 1.116 also for visible ones), and Codex has `exec_command` with `write_stdin`. Claude Code has no tool that writes to a running command's input.
+  - **The FIFO trial (2026-10-29, demo project):** Input from a FIFO held open and output into a log file. For `robot-debug` this already works turn by turn: the prompt `(rdb) ` ends each answer. `robotcode repl` runs the statements, but it prints `>>> ` only when its input is a terminal (`console_interpreter.py:940-942`). So nothing shows when a statement is done, and a statement without output leaves nothing in the log.
+  - **Windows has no `mkfifo`.** That recipe would not apply there.
 
 ### D10: Links
 
@@ -177,6 +193,7 @@ The links without an anchor keep `/guides/ai-agents/`. `CONTRIBUTING.md` ("Group
 
 - [Sessions grow stale when robotcode's output or the skill changes] → The raw transcripts, the script and the prompts stay in the playground, so a session can be recorded again. The version line says what the sessions show.
 - [A real agent answers differently each time] → Accepted. The sessions show one real run. The prompts are kept in the playground, not the answers.
-- [The recordings cost time and run on the maintainer's account] → Eleven sessions of a few prompts each. The maintainer logs in once, and the script runs them one after another.
+- [The recordings cost time and run on the maintainer's account] → Thirteen sessions of a few prompts each. The maintainer logs in once, and the script runs them one after another.
+- [The change cannot be finished before the improvements] → The two interactive sessions, and any other session with a finding, go on the page only after they are recorded again with the improved skill or CLI. Until then, the change stays open with those tasks (3.8).
 - [Absolute paths of the maintainer's machine could show in a session, for example if the agent reads `pyproject.toml`] → Such lines are left out (D4).
-- [The page gets long with eleven sessions] → Accepted with the choice of one page. Each section starts with what the agent can do, and the sessions follow.
+- [The page gets long with thirteen sessions] → Accepted with the choice of one page. Each section starts with what the agent can do, and the sessions follow.
