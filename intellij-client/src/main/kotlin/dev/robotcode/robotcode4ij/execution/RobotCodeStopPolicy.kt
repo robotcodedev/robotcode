@@ -23,6 +23,9 @@ internal class RobotCodeStopPolicy(
     private val confirmed = AtomicBoolean(false)
     private val fellBack = AtomicBoolean(false)
 
+    /** Completes once a stop has settled: the debugger confirmed `terminate`, or the process was interrupted instead. */
+    val settled = CompletableFuture<Unit>()
+
     /** Stops the run; a second call sends no second `terminate`, which the debugger would answer with SIGTERM. */
     fun stop() {
         if (!requested.compareAndSet(false, true)) return
@@ -35,11 +38,24 @@ internal class RobotCodeStopPolicy(
             fallBack()
             return
         }
-        response.whenComplete { _, error -> if (error == null) confirmed.set(true) else fallBack() }
+        response.whenComplete { _, error ->
+            if (error == null) {
+                confirmed.set(true)
+                settled.complete(Unit)
+            } else {
+                fallBack()
+            }
+        }
         schedule(timeoutMillis) { if (!confirmed.get()) fallBack() }
     }
 
     private fun fallBack() {
-        if (fellBack.compareAndSet(false, true)) fallback()
+        if (fellBack.compareAndSet(false, true)) {
+            try {
+                fallback()
+            } finally {
+                settled.complete(Unit)
+            }
+        }
     }
 }

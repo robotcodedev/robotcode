@@ -27,6 +27,7 @@ import dev.robotcode.robotcode4ij.actions.RobotCodeConfigurePythonInterpreterAct
 import dev.robotcode.robotcode4ij.configuration.ProfileList
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.profileListCache
+import dev.robotcode.robotcode4ij.debugging.PYTHON_SESSION_RUN_STATE
 import dev.robotcode.robotcode4ij.pythonInterpreterOf
 import dev.robotcode.robotcode4ij.robotCodeEnvironment
 import dev.robotcode.robotcode4ij.robotPythonModule
@@ -34,6 +35,7 @@ import dev.robotcode.robotcode4ij.testing.testManger
 import org.jdom.Element
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import javax.swing.Icon
 
 /**
  * A Robot Framework run configuration. It is a PyCharm Python run configuration, so it has PyCharm's interpreter,
@@ -66,6 +68,8 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
 
     // fails with the IDE's run error before a process or a debug session starts, for the interpreter that the run uses
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
+        // the Python environment of a run with "Attach Python" runs the state of the run's environment
+        environment.getUserData(PYTHON_SESSION_RUN_STATE)?.let { return it }
         val interpreter = pythonInterpreterOf(sdk)
         interpreterRefusal(interpreter)?.let { throw CantRunException(it) }
         project.robotCodeEnvironment.ensureUsableForRun(interpreter)
@@ -160,6 +164,11 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     }
 
     override fun isNewUiSupported(): Boolean = true
+
+    /** An icon of its own, which only the copy for the Python session of a run with "Attach Python" has. */
+    internal var sessionIcon: Icon? = null
+
+    override fun getIcon(): Icon? = sessionIcon ?: super.getIcon()
 
     private fun workingDirectoryPath(): Path? = try {
         Path.of(workingDirectorySafe)

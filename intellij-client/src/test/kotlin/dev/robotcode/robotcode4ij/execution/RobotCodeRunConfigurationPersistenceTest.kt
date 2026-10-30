@@ -58,8 +58,8 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
     }
 
     private fun RobotCodeRunConfigurationOptions.runDebugOptions() = listOf(
-        wrapper, wrapperCommand, robotCodeArguments, outputMessages, outputLog, outputTimestamps, openOutputAfterRun,
-        stopOnEntry, connectionTimeout, debuggerArguments
+        wrapper, wrapperCommand, robotCodeArguments, outputMessages, outputLog, outputTimestamps, attachPython,
+        openOutputAfterRun, stopOnEntry, connectionTimeout, debuggerArguments
     )
 
     fun testNewConfigurationsLeaveTheRunAndDebugOptionsToTheProject() {
@@ -68,7 +68,7 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
         assertEquals(
             listOf(
                 RobotRunWrapper.INHERIT, null, null, RobotRunSwitch.INHERIT, RobotRunSwitch.INHERIT,
-                RobotRunSwitch.INHERIT, RobotRunOpenOutput.INHERIT, false, 0, null
+                RobotRunSwitch.INHERIT, RobotRunSwitch.INHERIT, RobotRunOpenOutput.INHERIT, false, 0, null
             ),
             options.runDebugOptions()
         )
@@ -82,6 +82,7 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
             options.outputMessages = RobotRunSwitch.ON
             options.outputLog = RobotRunSwitch.OFF
             options.outputTimestamps = RobotRunSwitch.ON
+            options.attachPython = RobotRunSwitch.ON
             options.openOutputAfterRun = RobotRunOpenOutput.LOG
             options.stopOnEntry = true
             options.connectionTimeout = 30
@@ -91,6 +92,17 @@ class RobotCodeRunConfigurationPersistenceTest : BasePlatformTestCase() {
         for (copy in listOf(roundTrip(configuration), configuration.clone() as RobotCodeRunConfiguration)) {
             assertEquals(configuration.options.runDebugOptions(), copy.options.runDebugOptions())
         }
+    }
+
+    fun testAttachPythonIsWrittenOnlyWhenTheConfigurationSetsIt() {
+        val element = Element("configuration")
+        newConfiguration().writeExternal(element)
+
+        val text = JDOMUtil.write(element)
+        assertFalse(text, text.contains("attachPython"))
+        val copy = newConfiguration()
+        copy.readExternal(element)
+        assertEquals(RobotRunSwitch.INHERIT, copy.options.attachPython)
     }
 
     private fun RobotCodeRunConfigurationOptions.robotOptions() = listOf(

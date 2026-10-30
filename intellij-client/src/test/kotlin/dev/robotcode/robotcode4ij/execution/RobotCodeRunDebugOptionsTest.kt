@@ -24,6 +24,7 @@ class RobotCodeRunDebugOptionsTest {
         debugOutputMessages = true
         debugOutputLog = false
         debugOutputTimestamps = true
+        debugAttachPython = true
         runOpenOutputAfterRun = RobotOpenOutput.REPORT
     }
 
@@ -32,8 +33,8 @@ class RobotCodeRunDebugOptionsTest {
         assertEquals(
             RunDebugOptions(
                 RobotRunWrapper.PROFILE, "", "", outputMessages = false, outputLog = true, outputTimestamps = false,
-                openOutputAfterRun = RobotOpenOutput.NONE, stopOnEntry = false, connectionTimeoutSeconds = 15,
-                debuggerArguments = ""
+                attachPython = false, openOutputAfterRun = RobotOpenOutput.NONE, stopOnEntry = false,
+                connectionTimeoutSeconds = 15, debuggerArguments = ""
             ),
             resolveRunDebugOptions(project(), configuration())
         )
@@ -44,8 +45,8 @@ class RobotCodeRunDebugOptionsTest {
         assertEquals(
             RunDebugOptions(
                 RobotRunWrapper.CUSTOM, "xvfb-run -a", "", outputMessages = true, outputLog = false,
-                outputTimestamps = true, openOutputAfterRun = RobotOpenOutput.REPORT, stopOnEntry = false,
-                connectionTimeoutSeconds = 15, debuggerArguments = ""
+                outputTimestamps = true, attachPython = true, openOutputAfterRun = RobotOpenOutput.REPORT,
+                stopOnEntry = false, connectionTimeoutSeconds = 15, debuggerArguments = ""
             ),
             resolveRunDebugOptions(changedProject, configuration())
         )
@@ -59,6 +60,7 @@ class RobotCodeRunDebugOptionsTest {
             outputMessages = RobotRunSwitch.OFF
             outputLog = RobotRunSwitch.ON
             outputTimestamps = RobotRunSwitch.OFF
+            attachPython = RobotRunSwitch.OFF
             openOutputAfterRun = RobotRunOpenOutput.LOG
             stopOnEntry = true
             connectionTimeout = 30
@@ -68,8 +70,8 @@ class RobotCodeRunDebugOptionsTest {
         assertEquals(
             RunDebugOptions(
                 RobotRunWrapper.NONE, "", "--verbose", outputMessages = false, outputLog = true,
-                outputTimestamps = false, openOutputAfterRun = RobotOpenOutput.LOG, stopOnEntry = true,
-                connectionTimeoutSeconds = 30, debuggerArguments = "--group-output"
+                outputTimestamps = false, attachPython = false, openOutputAfterRun = RobotOpenOutput.LOG,
+                stopOnEntry = true, connectionTimeoutSeconds = 30, debuggerArguments = "--group-output"
             ),
             resolveRunDebugOptions(changedProject, configuration)
         )
@@ -110,6 +112,24 @@ class RobotCodeRunDebugOptionsTest {
         project.debugOutputTimestamps = true
 
         assertTrue(resolveRunDebugOptions(project, configuration).outputTimestamps)
+    }
+
+    @Test
+    fun attachPythonFollowsTheProjectDefaultUnlessTheConfigurationSetsIt() {
+        // the project default, the configuration's switch, the value the run gets
+        val cases = listOf(
+            Triple(false, RobotRunSwitch.INHERIT, false),
+            Triple(true, RobotRunSwitch.INHERIT, true),
+            Triple(false, RobotRunSwitch.ON, true),
+            Triple(true, RobotRunSwitch.OFF, false)
+        )
+        for ((projectDefault, switch, expected) in cases) {
+            val options = resolveRunDebugOptions(
+                project { debugAttachPython = projectDefault }, configuration { attachPython = switch }
+            )
+
+            assertEquals("$switch with the project default $projectDefault", expected, options.attachPython)
+        }
     }
 
     @Test

@@ -173,6 +173,7 @@ class RobotCodeRunConfigurationOptions : ModuleBasedConfigurationOptions() {
     var outputMessages by enum(RobotRunSwitch.INHERIT)
     var outputLog by enum(RobotRunSwitch.INHERIT)
     var outputTimestamps by enum(RobotRunSwitch.INHERIT)
+    var attachPython by enum(RobotRunSwitch.INHERIT)
     var openOutputAfterRun by enum(RobotRunOpenOutput.INHERIT)
     var stopOnEntry by property(false)
     var connectionTimeout by property(0)

@@ -40,6 +40,10 @@ class RobotCodeDebugConfigurable(project: Project) : BoundSearchableConfigurable
                     .bindSelected(settings::debugOutputTimestamps)
             }.rowComment(RobotCodeBundle.message("settings.debug.outputTimestamps.comment"))
             row {
+                checkBox(RobotCodeBundle.message("settings.debug.attachPython"))
+                    .bindSelected(settings::debugAttachPython)
+            }.rowComment(RobotCodeBundle.message("settings.debug.attachPython.comment"))
+            row {
                 comment(RobotCodeBundle.message("settings.runDefaults.comment"))
             }
         }

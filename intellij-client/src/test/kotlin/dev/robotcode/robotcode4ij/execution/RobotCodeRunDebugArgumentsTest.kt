@@ -1,7 +1,11 @@
 package dev.robotcode.robotcode4ij.execution
 
+import com.intellij.execution.executors.DefaultDebugExecutor
+import com.intellij.execution.executors.DefaultRunExecutor
 import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RobotCodeRunDebugArgumentsTest {
@@ -13,6 +17,18 @@ class RobotCodeRunDebugArgumentsTest {
 
     private fun custom(command: String) =
         defaultRunDebugOptions.copy(wrapper = RobotRunWrapper.CUSTOM, wrapperCommand = command)
+
+    // the decision takes only the executor, so a Debug run is in debug mode whichever runner runs it
+    @Test
+    fun onlyDebugRunsStartTheDebuggerInDebugMode() {
+        val debug = isDebugExecutor(DefaultDebugExecutor.EXECUTOR_ID)
+        val run = isDebugExecutor(DefaultRunExecutor.EXECUTOR_ID)
+
+        assertTrue(debug)
+        assertFalse(run)
+        assertFalse("--no-debug" in debugArguments(debug, 5000, defaultRunDebugOptions, listOf()))
+        assertTrue("--no-debug" in debugArguments(run, 5000, defaultRunDebugOptions, listOf()))
+    }
 
     @Test
     fun eachWrapperState() {

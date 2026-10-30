@@ -127,6 +127,7 @@ class RobotCodeProjectConfiguration(private val project: Project) :
         var debugOutputMessages by property(defaultValue = false)
         var debugOutputLog by property(defaultValue = true)
         var debugOutputTimestamps by property(defaultValue = false)
+        var debugAttachPython by property(defaultValue = false)
 
         // the "Run" page, with the browser's id for RobotOpenOutputTarget.BROWSER
         var runOpenOutputAfterRun by enum(RobotOpenOutput.NONE)
@@ -177,6 +178,7 @@ class RobotCodeProjectConfiguration(private val project: Project) :
     var debugOutputMessages by delegate(ProjectState::debugOutputMessages)
     var debugOutputLog by delegate(ProjectState::debugOutputLog)
     var debugOutputTimestamps by delegate(ProjectState::debugOutputTimestamps)
+    var debugAttachPython by delegate(ProjectState::debugAttachPython)
     var runOpenOutputAfterRun by delegate(ProjectState::runOpenOutputAfterRun)
     var runOpenOutputTarget by delegate(ProjectState::runOpenOutputTarget)
     var runOpenOutputBrowser by stringDelegate(ProjectState::runOpenOutputBrowser)

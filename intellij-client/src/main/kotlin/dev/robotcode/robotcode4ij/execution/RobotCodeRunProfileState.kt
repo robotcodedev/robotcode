@@ -4,6 +4,7 @@ import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.Executor
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
@@ -21,6 +22,7 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.util.execution.ParametersListUtil
+import com.jetbrains.python.console.PyDebugConsoleBuilder
 import com.jetbrains.python.run.PythonCommandLineState
 import com.jetbrains.python.run.PythonExecution
 import com.jetbrains.python.run.PythonScriptExecution
@@ -32,7 +34,6 @@ import dev.robotcode.robotcode4ij.RobotCodeHelpers
 import dev.robotcode.robotcode4ij.configuration.RobotCodePersonalConfiguration
 import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
-import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
 import dev.robotcode.robotcode4ij.debugging.RobotExitedEventArguments
 import dev.robotcode.robotcode4ij.debugging.awaitRequest
@@ -63,6 +64,9 @@ import java.util.function.Function
 import kotlin.io.path.pathString
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+
+/** Whether a run with the executor [executorId] starts the RobotCode debugger in debug mode, whatever its runner. */
+internal fun isDebugExecutor(executorId: String): Boolean = executorId == DefaultDebugExecutor.EXECUTOR_ID
 
 /**
  * The arguments after `debug`: the options of `robotcode debug`, with the port of the debugger connection and the
@@ -309,12 +313,19 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     private var runDebugOptions: RunDebugOptions? = null
     
     private var consoleProperties: SMTRunnerConsoleProperties? = null
+
+    /** The test tree console of the run, which the Robot Framework session shows also when the run's console is not. */
+    internal var testTreeConsole: RobotCodeRunnerConsoleView? = null
+        private set
+
+    /** Whether the run also has a session of PyCharm's Python debugger; the Debug runner sets it before the run. */
+    internal var pythonSession = false
     
     override fun buildPythonExecution(helpersAwareRequest: HelpersAwareTargetEnvironmentRequest): PythonExecution {
         interpreterRefusal(pythonInterpreterOf(sdk))?.let { throw ExecutionException(it) }
         
         val project = environment.project
-        val debug = environment.runner is RobotCodeDebugProgramRunner
+        val debug = isDebugExecutor(environment.executor.id)
         val testManager = project.testManger
         // the macros of the stored values, expanded with the data context of the run
         val configurator = ProgramParametersConfigurator()
@@ -358,6 +369,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         return handler
     }
     
+    // for a Debug run with "Attach Python", PyCharm's Python debug console is the run's console, because PyCharm
+    // connects its prompt only to that console; it is not attached to the output, which the test tree console shows
     override fun createAndAttachConsole(
         project: Project, processHandler: ProcessHandler, executor: Executor
     ): ConsoleView {
@@ -371,20 +384,39 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         SMTestRunnerConnectionUtil.initConsoleView(consoleView, TESTFRAMEWORK_NAME)
         consoleView.attachToProcess(processHandler)
         consoleProperties = properties
-        return consoleView
+        testTreeConsole = consoleView
+        return if (pythonSession) PyDebugConsoleBuilder(project, sdk).console else consoleView
     }
     
     override fun execute(executor: Executor): ExecutionResult? {
         val result = super.execute(executor) ?: return null
-        val console = result.executionConsole
-        val properties = consoleProperties
-        if (result is DefaultExecutionResult && console is BaseTestsOutputConsoleView && properties != null) {
-            result.setRestartActions(properties.createRerunFailedTestsAction(console))
-        }
         if (result is DefaultExecutionResult) {
-            result.setActions(*result.actions, *openOutputActions())
+            addRunActions(result)
         }
         return result
+    }
+
+    /** The "Run & Debug" values that the run would use now, with the project defaults as they are at this moment. */
+    internal fun currentRunDebugOptions(): RunDebugOptions =
+        resolveRunDebugOptions(environment.project.robotSettings, config.options)
+
+    /**
+     * The result that the Robot Framework session of a run with a Python session shows: the test tree console with the
+     * run's [processHandler] and the actions that [execute] gives a run; null before the test tree console exists.
+     */
+    internal fun robotSessionResult(processHandler: ProcessHandler): ExecutionResult? {
+        val console = testTreeConsole ?: return null
+        return DefaultExecutionResult(console, processHandler).also { addRunActions(it) }
+    }
+
+    // "Rerun Failed Tests" and the actions that open the output files
+    private fun addRunActions(result: DefaultExecutionResult) {
+        val console = result.executionConsole
+        val properties = consoleProperties
+        if (console is BaseTestsOutputConsoleView && properties != null) {
+            result.setRestartActions(properties.createRerunFailedTestsAction(console))
+        }
+        result.setActions(*result.actions, *openOutputActions())
     }
 
     /** "Open Report" and "Open Log" for the tab of the run. */

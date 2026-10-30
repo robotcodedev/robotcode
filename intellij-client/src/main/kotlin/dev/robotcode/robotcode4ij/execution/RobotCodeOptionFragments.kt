@@ -442,6 +442,9 @@ internal fun runDebugFragments(): List<RobotFragment> {
             "robotcode.outputTimestamps", "run.debug.outputTimestamps",
             RobotCodeRunConfigurationOptions::outputTimestamps
         ),
+        switchFragment(
+            "robotcode.attachPython", "run.debug.attachPython", RobotCodeRunConfigurationOptions::attachPython
+        ),
         openOutput,
         stopOnEntry,
         connectionTimeout,

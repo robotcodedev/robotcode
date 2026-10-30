@@ -13,6 +13,7 @@ internal data class RunDebugOptions(
     val outputMessages: Boolean,
     val outputLog: Boolean,
     val outputTimestamps: Boolean,
+    val attachPython: Boolean,
     val openOutputAfterRun: RobotOpenOutput,
     val stopOnEntry: Boolean,
     val connectionTimeoutSeconds: Int,
@@ -52,6 +53,7 @@ internal fun resolveRunDebugOptions(
         outputMessages = switch(configuration.outputMessages, project.debugOutputMessages),
         outputLog = switch(configuration.outputLog, project.debugOutputLog),
         outputTimestamps = switch(configuration.outputTimestamps, project.debugOutputTimestamps),
+        attachPython = switch(configuration.attachPython, project.debugAttachPython),
         openOutputAfterRun = when (configuration.openOutputAfterRun) {
             RobotRunOpenOutput.INHERIT -> project.runOpenOutputAfterRun
             RobotRunOpenOutput.NONE -> RobotOpenOutput.NONE

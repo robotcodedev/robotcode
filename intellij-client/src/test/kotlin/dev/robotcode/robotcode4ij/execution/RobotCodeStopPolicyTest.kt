@@ -1,6 +1,8 @@
 package dev.robotcode.robotcode4ij.execution
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
@@ -87,5 +89,58 @@ class RobotCodeStopPolicyTest {
 
         assertEquals(1, sent)
         assertEquals(0, fallbacks)
+    }
+
+    @Test
+    fun aStopSettlesWhenTheDebuggerConfirmsIt() {
+        val response = CompletableFuture<Void>()
+        val stopPolicy = policy { response }
+        assertFalse(stopPolicy.settled.isDone)
+
+        stopPolicy.stop()
+        assertFalse(stopPolicy.settled.isDone)
+        response.complete(null)
+
+        assertTrue(stopPolicy.settled.isDone)
+        assertEquals(0, fallbacks)
+    }
+
+    @Test
+    fun aStopSettlesWithTheFallback() {
+        // after the timeout
+        val unanswered = policy { CompletableFuture<Void>() }
+        unanswered.stop()
+        assertFalse(unanswered.settled.isDone)
+        runScheduled()
+        assertTrue(unanswered.settled.isDone)
+
+        // after a failed request
+        val failing = CompletableFuture<Void>()
+        val failed = policy { failing }
+        failed.stop()
+        failing.completeExceptionally(IOException("connection closed"))
+        assertTrue(failed.settled.isDone)
+
+        // without a connection
+        val unconnected = policy { null }
+        unconnected.stop()
+        assertTrue(unconnected.settled.isDone)
+    }
+
+    @Test
+    fun aStopSettlesOnlyOnce() {
+        val response = CompletableFuture<Void>()
+        val stopPolicy = policy { response }
+        var settlements = 0
+        stopPolicy.settled.thenRun { settlements++ }
+
+        stopPolicy.stop()
+        runScheduled()
+        // a late answer and a second stop change nothing
+        response.complete(null)
+        stopPolicy.stop()
+
+        assertEquals(1, settlements)
+        assertEquals(1, sent)
     }
 }

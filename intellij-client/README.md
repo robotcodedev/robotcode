@@ -19,7 +19,7 @@
 - **Formatting** with Robocop's formatter.
 - **Running** tests, tasks and suites from the run markers in the editor, from context menus and from run configurations, which also have PyCharm's Python options such as `.env` files.
 - **A results tree** for each run, with the log messages and failures of each test, **Rerun Failed Tests**, and the report and log in a built-in preview or a browser.
-- **Debugging** with breakpoints, conditions, hit counts and logpoints, stopping at failures, stepping, variables, watches and evaluating keywords and variables while the run is paused.
+- **Debugging** with breakpoints, conditions, hit counts and logpoints, stopping at failures, stepping, variables, watches and evaluating keywords and variables while the run is paused, and, with **Attach Python**, of the Python code of libraries in a second session of PyCharm's Python debugger.
 - **`robot.toml` configuration**: RobotCode reads the same [`robot.toml`](https://robotcode.io/guides/robot-toml/) in PyCharm, in VS Code and on the command line, so a run in the IDE and a run in CI see the same options. Select its configuration profiles for the project, or run once with another profile.
 
 RobotCode is built on Robot Framework's own parser and developed in close collaboration with the Robot Framework Core team. It is also available for VS Code and as command line tools; [RobotCode in PyCharm and VS Code](https://robotcode.io/guides/pycharm/compared-with-vscode/) compares the plugin with the VS Code extension.

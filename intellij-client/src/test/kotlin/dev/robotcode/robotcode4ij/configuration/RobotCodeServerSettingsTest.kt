@@ -251,6 +251,7 @@ class RobotCodeServerSettingsTest {
         debugOutputMessages = true
         debugOutputLog = false
         debugOutputTimestamps = true
+        debugAttachPython = true
         runOpenOutputAfterRun = RobotOpenOutput.REPORT
         runOpenOutputTarget = RobotOpenOutputTarget.BROWSER
         runOpenOutputBrowser = "98ca6bdf-8d26-46d9-a5c7-41b1b6c44eb5"
@@ -264,6 +265,7 @@ class RobotCodeServerSettingsTest {
         assertFalse(state.debugOutputMessages)
         assertTrue(state.debugOutputLog)
         assertFalse(state.debugOutputTimestamps)
+        assertFalse(state.debugAttachPython)
         assertEquals(RobotOpenOutput.NONE, state.runOpenOutputAfterRun)
         assertEquals(RobotOpenOutputTarget.BUILT_IN_PREVIEW, state.runOpenOutputTarget)
         assertTrue(state.runOpenOutputBrowser.isNullOrEmpty())

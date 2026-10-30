@@ -90,6 +90,10 @@ class RobotCodeProcessHandler(
         },
     )
 
+    /** Completes once a stop of the run has settled; see [RobotCodeStopPolicy.settled]. */
+    internal val stopSettled: CompletableFuture<Unit>
+        get() = stopPolicy.settled
+
     // the debugger ends the run as on Ctrl+C in a terminal, so that Robot Framework still writes its outputs; the
     // inherited destroy runs only when the debugger cannot be asked or does not answer. The second Stop kills the
     // process as before.
