@@ -25,18 +25,18 @@ When its input is not a terminal and RobotCode recognizes the session as an AI a
 
 ### Requirement: Option for the prompt
 
-The option `--prompt` of `robotcode repl` SHALL show the prompt, and `--no-prompt` SHALL hide it, when the input is not a terminal, whether or not the session is an AI agent's. When the input is a terminal, the prompt SHALL show whatever the option says.
+The option `--show-prompt` of `robotcode repl` SHALL show the prompt, and `--no-show-prompt` SHALL hide it, when the input is not a terminal, whether or not the session is an AI agent's. When the input is a terminal, the prompt SHALL show whatever the option says.
 
 #### Scenario: Prompt for piped input
-- **WHEN** a person pipes statements into `robotcode repl --prompt`
+- **WHEN** a person pipes statements into `robotcode repl --show-prompt`
 - **THEN** `>>> ` is shown before each statement
 
 #### Scenario: No prompt in an agent session
-- **WHEN** an AI agent's session pipes statements into `robotcode repl --no-prompt`
+- **WHEN** an AI agent's session pipes statements into `robotcode repl --no-show-prompt`
 - **THEN** no prompt is shown
 
 #### Scenario: On a terminal
-- **WHEN** `robotcode repl --no-prompt` reads from a terminal
+- **WHEN** `robotcode repl --no-show-prompt` reads from a terminal
 - **THEN** the prompt `>>> ` is shown
 
 ### Requirement: Result of a statement
@@ -49,7 +49,8 @@ After each statement it reads from its input, `robotcode repl` SHALL print the s
 
 #### Scenario: Assignment
 - **WHEN** `${x}=    Set Variable    42` is entered
-- **THEN** the message that sets `${x}` is printed, followed by `=> 42`
+- **THEN** the message that sets `${x}` is printed
+- **AND** no line starting with `=>` follows
 
 #### Scenario: Failing statement
 - **WHEN** `Should Be Equal    1    2` is entered
@@ -60,9 +61,9 @@ After each statement it reads from its input, `robotcode repl` SHALL print the s
 - **WHEN** a script file passed to `robotcode repl` runs `Evaluate    1 + 1`
 - **THEN** no line starting with `=>` is printed for it
 
-### Requirement: No result for None
+### Requirement: No result for None or an assignment
 
-Neither `robotcode repl` nor the debugger prompt `(rdb)` SHALL print a result line for a statement whose result is `None`.
+Neither `robotcode repl` nor the debugger prompt `(rdb)` SHALL print a result line for a statement whose result is `None` or that assigns a variable; an assignment shows only the message that sets the variable.
 
 #### Scenario: Log in the REPL
 - **WHEN** `Log    hello` is entered at the `>>>` prompt
@@ -72,6 +73,11 @@ Neither `robotcode repl` nor the debugger prompt `(rdb)` SHALL print a result li
 #### Scenario: Log at the debugger prompt
 - **WHEN** `Log    hello` is entered at the `(rdb)` prompt
 - **THEN** no line `=> None` is printed
+
+#### Scenario: Assignment at the debugger prompt
+- **WHEN** `${x}=    Set Variable    42` is entered at the `(rdb)` prompt
+- **THEN** the message that sets `${x}` is printed
+- **AND** no line starting with `=>` follows
 
 #### Scenario: Other results at the debugger prompt
 - **WHEN** `Evaluate    1 + 1` is entered at the `(rdb)` prompt

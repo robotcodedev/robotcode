@@ -6,9 +6,9 @@ An AI agent that drives `robotcode repl` through a pipe or a FIFO can't tell whe
 
 ## What Changes
 
-- **The prompt without a terminal in agent sessions:** In a session that RobotCode recognizes as an AI agent's, `robotcode repl` shows `>>> ` and `... ` also when its input is not a terminal. A new option `--prompt` / `--no-prompt` shows or hides the prompt for input that is not a terminal, in any session. With a terminal, the prompt shows as before.
-- **The result of a statement:** After each statement read from its input, the terminal REPL prints the statement's result as `=> <value>`, as the debugger does at `(rdb)`, with and without a terminal. A statement that fails shows its failure as before, and no result.
-- **No `=> None`:** A result of `None`, such as that of `Log`, is not shown, neither in the REPL nor at the debugger prompt, which shows `=> None` today.
+- **The prompt without a terminal in agent sessions:** In a session that RobotCode recognizes as an AI agent's, `robotcode repl` shows `>>> ` and `... ` also when its input is not a terminal. A new option `--show-prompt` / `--no-show-prompt` shows or hides the prompt for input that is not a terminal, in any session. With a terminal, the prompt shows as before.
+- **The result of a statement:** After each statement read from its input, the terminal REPL prints the statement's result as `=> <value>`, as the debugger does at `(rdb)`, with and without a terminal. A statement that fails shows its failure as before, and an assignment shows the message that sets the variable; neither shows a result.
+- **No `=> None`, no result for an assignment:** A result of `None`, such as that of `Log`, and the value of an assignment are not shown, neither in the REPL nor at the debugger prompt, which shows both today.
 - **Unchanged:** `robotcode repl-server` and the REPL of the VS Code notebook, which run on an interpreter of their own; the statements of script files passed as arguments, which run like the body of a test; `${_}`; the exit codes of a session.
 - **Documentation:** The guides on the REPL and on `robot-debug` describe the prompt without a terminal and the results, and the CLI reference is generated again for the new option.
 

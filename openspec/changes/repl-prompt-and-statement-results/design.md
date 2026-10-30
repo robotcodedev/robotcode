@@ -26,14 +26,14 @@
 
 `repl` computes `show_prompt` once and passes it to the interpreter, which uses it in `get_input()` in place of `sys.stdin.isatty()`, for `>>> ` and `... ` alike:
 
-| Input | `--prompt` / `--no-prompt` | Prompt |
+| Input | `--show-prompt` / `--no-show-prompt` | Prompt |
 | --- | --- | --- |
 | a terminal | any | shown |
-| not a terminal | `--prompt` | shown |
-| not a terminal | `--no-prompt` | hidden |
+| not a terminal | `--show-prompt` | shown |
+| not a terminal | `--no-show-prompt` | hidden |
 | not a terminal | not given | shown when `is_running_in_ai_agent()` |
 
-- The option is a flag pair with the default "not given", in `SHELL_OPTIONS`, with the environment variable `ROBOTCODE_REPL_PROMPT` like its neighbors `ROBOTCODE_REPL_PLAIN`, `ROBOTCODE_REPL_BACKEND` and `ROBOTCODE_REPL_NO_HISTORY`. `robot-debug` has no `>>>` prompt and doesn't get it.
+- The option is a flag pair with the default "not given", in `SHELL_OPTIONS`, with the environment variable `ROBOTCODE_REPL_SHOW_PROMPT` like its neighbors `ROBOTCODE_REPL_PLAIN`, `ROBOTCODE_REPL_BACKEND` and `ROBOTCODE_REPL_NO_HISTORY`. `robot-debug` has no `>>>` prompt and doesn't get it.
 - Rejected: calling `is_running_in_ai_agent()` inside the interpreter. The CLI already makes the backend choice from it, and a value passed in keeps the interpreter testable without patching the environment.
 - Without a terminal, `input(prompt)` writes the prompt without a newline, as the debugger's `(rdb) ` does today. The next output starts on the same line; an agent sees that a statement has ended when the output ends with `>>> `.
 
@@ -41,24 +41,24 @@
 
 `BaseInterpreter.run_input()` calls a step after `set_last_result()` that does nothing in the base class, so the REPL server stays as it is. `ConsoleInterpreter` fills it: it prints `=> <value>` with the debugger's `_repr`, unless the value is `None` or the statement came from a script file.
 
-- `get_input()` marks the statements it yields from a script file. A script file runs like the body of a test, so its output stays that of a run.
+- `get_input()` marks the statements it yields from a script file. A script file runs like the body of a test, so its output stays that of a run (decided by the maintainer, 2026-10-30).
 - A statement that fails never reaches the step, since it raises out of `run_input()`.
-- An assignment shows its value like any statement (`=> 42` after the message that sets `${x}`), as the debugger does today, so both prompts follow one rule.
+- An assignment shows no result: the message that sets the variable already names the value. The debugger prompt follows the same rule (D3); today it shows `=> 42` after the message (decided by the maintainer, 2026-10-30).
 - Rejected: printing in `ConsoleInterpreter.set_last_result()`. It also runs for each keyword at the debugger prompt, which prints the result of a line itself, so the result would show twice.
 
-### D3: No `=> None` anywhere
+### D3: No `=> None` and no result for an assignment anywhere
 
-The REPL and `_evaluate_at_stop()` share one helper that prints `=> <value>` and leaves out `None`. At the debugger prompt, `Log    hello` then prints only its message; other results show as before.
+The REPL and `_evaluate_at_stop()` share one helper that prints `=> <value>` and leaves out `None` and the result of a statement that assigns variables (its `assign` is not empty). At the debugger prompt, `Log    hello` and `${x}=    Set Variable    42` then print only their messages; other results show as before.
 
 ### D4: Documentation
 
-- `guides/cli/repl.md`: "How the prompt works" says when the prompt shows without a terminal (agent sessions, `--prompt` / `--no-prompt`) and that each statement shows its result, without `None`; the section on AI agents and automation mentions the prompt.
+- `guides/cli/repl.md`: "How the prompt works" says when the prompt shows without a terminal (agent sessions, `--show-prompt` / `--no-show-prompt`) and that each statement shows its result, without `None`; the section on AI agents and automation mentions the prompt.
 - `guides/cli/robot-debug.md`: the sentence on results at the `(rdb)` prompt says that `None` shows nothing; "exactly like at the shell prompt" is then true.
 - `reference/cli.md` is generated again with `hatch run create-cmd-line-docs`.
 - The table of the AI-agent detection on `guides/ai-agents/how-the-skill-works.md` gets the prompt in the change `docs-ai-agents-guide`, which owns that page and is not committed yet.
 
 ## Risks / Trade-offs
 
-- [Piped input of people now shows `=> …` lines] → Only statements that return a value show one, and script files passed as arguments show none. Scripts that parse the REPL's output see the new lines.
-- [An agent that pipes a fixed sequence gets `>>> ` between the outputs] → It marks where the output of each statement ends; `--no-prompt` removes it.
-- [The agent detection misses an agent] → `--prompt`, `ROBOTCODE_REPL_PROMPT=1` or `ROBOTCODE_FORCE_AI_AGENT=1` shows the prompt.
+- [Piped input of people now shows `=> …` lines] → Only statements that return a value show one, and script files passed as arguments show none. Scripts that parse the REPL's output see the new lines. The maintainer decided on 2026-10-30 that this is not a breaking change.
+- [An agent that pipes a fixed sequence gets `>>> ` between the outputs] → It marks where the output of each statement ends; `--no-show-prompt` removes it.
+- [The agent detection misses an agent] → `--show-prompt`, `ROBOTCODE_REPL_SHOW_PROMPT=1` or `ROBOTCODE_FORCE_AI_AGENT=1` shows the prompt.
