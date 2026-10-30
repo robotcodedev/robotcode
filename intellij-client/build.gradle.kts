@@ -299,7 +299,8 @@ intellijPlatformTesting.runIde.register("runIdePyCharmCommunityEAP") {
 }
 
 intellijPlatformTesting.runIde.register("runIdeIntellijIdeaC") {
-    type = IntelliJPlatformType.IntellijIdeaCommunity
+    // IntelliJ IDEA Community is no longer published since 2025.3; the unified IntelliJ IDEA runs without a license
+    type = IntelliJPlatformType.IntellijIdea
     applyRunIdeVersion()
     plugins {
         // the fixed Python plugin only fits platformVersion; another IDE version gets the newest compatible one
