@@ -41,7 +41,7 @@ Every run uses a run configuration of the type **Robot Framework**. A run from t
 - **Run:** **Files and folders** runs paths, separated by spaces; **Add Files or Folders...** picks them. An empty list runs the `paths` of `robot.toml`; without them the **Paths** of the settings page **Robot**, or else the project folder. **Tests and suites** runs tests, tasks and suites by their full names, such as `"Project.Tests.Sample.First Test"`.
 - **Robot arguments:** further options for Robot Framework, such as `--loglevel DEBUG`.
 - **Modify options**, group **Robot Framework**, adds **Variables**, **Variable files**, **Python path**, **Languages**, **Include tags**, **Exclude tags**, **Output directory**, **Mode**, **Dry run** and **Configuration profiles**.
-- **Modify options**, group **Run & Debug**, adds **Launch wrapper**, **robotcode arguments**, **Output messages**, **Output log**, **Output timestamps**, **Open output after run**, **Stop on entry**, which applies to debug runs, **Connection timeout** and **Debugger arguments**.
+- **Modify options**, group **Run & Debug**, adds **Launch wrapper**, **robotcode arguments**, **Output messages**, **Output log**, **Output timestamps**, **Attach Python**, which debugs the Python code of libraries in debug runs, **Open output after run**, **Stop on entry**, which applies to debug runs, **Connection timeout** and **Debugger arguments**.
 
 A Robot Framework run configuration is a Python run configuration of PyCharm, so it also has PyCharm's Python options: the interpreter, its options, the working directory, environment variables and `.env` files, adding the content and source roots to `PYTHONPATH`, which is off by default, and **Before launch** tasks.
 

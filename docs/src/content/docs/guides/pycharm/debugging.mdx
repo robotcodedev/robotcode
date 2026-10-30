@@ -1,6 +1,6 @@
 ---
 title: Debugging in PyCharm
-description: 'Debug Robot Framework tests in PyCharm: breakpoints with conditions and logging, stopping at failures, stepping, variables, Evaluate, watches and the Robot Debug Console.'
+description: 'Debug Robot Framework tests in PyCharm: breakpoints with conditions and logging, stopping at failures, stepping, variables, Evaluate, watches, the Robot Debug Console and the Python code of libraries.'
 sidebar:
   label: Debugging
   order: 9.5
@@ -61,4 +61,44 @@ The tab **Robot Debug Console** evaluates the lines you type in the selected fra
   alt="The Robot Debug Console while paused, with the variable ${order} evaluated to 'order-4711' and the keyword call Order Status ${order} to 'placed'."
 />
 
-RobotCode in PyCharm does not show variable values at the end of the lines while paused, cannot debug the Python code of libraries in the same session and cannot attach to a run started outside the IDE; see [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/). On the command line, [`robotcode robot-debug`](/guides/cli/robot-debug/) debugs a run in the terminal.
+RobotCode in PyCharm does not show variable values at the end of the lines while paused and cannot attach to a run started outside the IDE; see [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/). On the command line, [`robotcode robot-debug`](/guides/cli/robot-debug/) debugs a run in the terminal.
+
+## Debugging the Python code of libraries
+
+Many keywords run Python code, from a library of your project or an installed one. The RobotCode debugger stops at such a keyword in the test, but does not step into its Python code. With **Attach Python**, a debug run also starts PyCharm's own Python debugger, so the run stops at breakpoints in that Python code as well. PyCharm brings this debugger along, so nothing has to be installed in the project's interpreter, and the **Mode** switch of the **Debug** tool window makes no difference.
+
+### Switching on Attach Python
+
+**Attach Python** is off by default. Switch it on for all Robot Framework run configurations of the project on the settings page **Debug**, see [Configuration](/guides/pycharm/configuration/#the-settings-pages). For a single run configuration, add **Attach Python** under **Modify options**, group **Run & Debug**, and choose **On** or **Off**; **Project default** follows the settings page.
+
+Then set breakpoints in the library's Python file with a click in the gutter, as in any Python file, and start the test with **Debug**.
+
+PyCharm's Python exception breakpoints, under **Run | View Breakpoints...**, work too. One with **On raise** also stops at the exceptions that Robot Framework, RobotCode and the Python standard library raise and catch themselves; switch on **Ignore library files** to stop only in the code of your project.
+
+### Two debug sessions
+
+A debug run with **Attach Python** uses two different debuggers, the RobotCode debugger for the tests and keywords and PyCharm's Python debugger for the Python code, and each of them has its own session in a tab of the **Debug** tool window:
+
+- The tab of the run configuration, for example **Test Order Coffee** for the test Order Coffee, holds the session of the RobotCode debugger, with **Terminal**, **Debug Console** and **Robot Debug Console** as without the option. Robot Framework breakpoints stop here.
+- The tab with "Python" before that name, for example **Python Test Order Coffee**, holds a session of PyCharm's Python debugger. Python breakpoints stop here.
+
+When the run stops at a Python breakpoint, the Python tab comes to the front with the frames and variables of the Python code, and you step through it as in any Python debug session. **Resume Program** in the Python tab goes on to the next breakpoint, in the Python code or in the test. The Run widget in the window header follows only the tab of the run configuration and still shows **Pause** at a Python breakpoint.
+
+In the picture, the test Order Coffee calls the keyword `Place Order` of the project's library `ShopLibrary.py`, and the run is paused in its Python code, the method `place_order`.
+
+<ThemeImage
+  folder="pycharm"
+  name="debugging-python-session"
+  alt="A debug run of the test Order Coffee with Attach Python, paused at the Python breakpoint on the line self._stock[product] -= quantity of place_order in ShopLibrary.py, with the tabs Test Order Coffee and Python Test Order Coffee in the Debug tool window, the frames from place_order down into Robot Framework and the variables express, product, quantity and self."
+  full
+/>
+
+To evaluate Python in the paused frame, open the tab **Console** of the Python session and click **Show Debug Console** in its toolbar. You get a Python prompt for expressions such as the arguments of the keyword or the state of the library.
+
+<ThemeImage
+  folder="pycharm"
+  name="debugging-python-console"
+  alt="The Python prompt in the Console of the Python session, paused in place_order, with product, quantity, express evaluated to ('coffee', 2, False) and self._stock to the stock of the shop."
+/>
+
+**Stop** in either tab ends the whole run: Robot Framework writes its output files, and the stopped test fails. **Rerun** in either tab starts the run again, with both sessions in the same two tabs.
