@@ -109,7 +109,7 @@ When the run pauses, the debugger prints a one-line banner and opens a prompt:
 (rdb)
 ```
 
-The banner is `* <reason>  <keyword>  (<file>:<line>)`, where reason is `breakpoint`, `step`, `entry`, `pause`, or `exception`. At the `(rdb)` prompt you have the full debug command set (below) **plus** every shell command (`.kw`, `.doc`, `.vars`, …), and you can run any keyword in the paused context — its result is echoed and any variable it assigns stays in scope, exactly like at the shell prompt.
+The banner is `* <reason>  <keyword>  (<file>:<line>)`, where reason is `breakpoint`, `step`, `entry`, `pause`, or `exception`. At the `(rdb)` prompt you have the full debug command set (below) **plus** every shell command (`.kw`, `.doc`, `.vars`, …), and you can run any keyword in the paused context — its result is echoed as `=> <value>`, with nothing for `None` or an assignment, and any variable it assigns stays in scope, exactly like at the shell prompt.
 
 `robot-debug` produces the **same console output as `robotcode robot`** — the run is fully visible, and continuing or stepping shows execution proceeding. The debug prompt is simply interleaved with Robot's live console at each stop; when a test happens to finish right at a prompt its `| PASS |` marker lands next to the prompt, which is cosmetic. (Use `.detach` at the prompt to let the rest of the run finish and print normally.)
 
@@ -232,11 +232,10 @@ $ robotcode robot-debug --break "Greet" hello.robot
 ${name} = 'world'
 (rdb) Log    debugging ${name}
 [ INFO ] debugging world
-=> None
 (rdb) .continue
 ```
 
-Typing a keyword at the prompt runs it in the paused context: its log output appears (`[ INFO ] …`) and the `=> <value>` line echoes the keyword's return value (`None` for `Log`).
+Typing a keyword at the prompt runs it in the paused context: its log output appears (`[ INFO ] …`), and a `=> <value>` line echoes the keyword's return value. `Log` returns `None`, which shows no such line.
 
 ## Recipes
 

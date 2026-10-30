@@ -28,6 +28,7 @@ def _pick_interpreter(
     inspect: bool,
     no_history: bool,
     backend: str,
+    show_prompt: bool,
 ) -> ConsoleInterpreter:
     """Construct the interpreter that matches ``backend``.
 
@@ -43,6 +44,7 @@ def _pick_interpreter(
             show_keywords=show_keywords,
             inspect=inspect,
             no_history=no_history,
+            show_prompt=show_prompt,
         )
     if backend not in ("auto", "prompt-toolkit"):
         raise ValueError(f"Unknown backend: {backend!r}. Choose from {BACKEND_CHOICES}.")
@@ -52,6 +54,7 @@ def _pick_interpreter(
         show_keywords=show_keywords,
         inspect=inspect,
         no_history=no_history,
+        show_prompt=show_prompt,
     )
 
 
@@ -151,6 +154,20 @@ def _resolve_backend(plain: bool, backend: str) -> str:
         ):
             backend = "plain"
     return backend
+
+
+def _resolve_show_prompt(show_prompt: Optional[bool]) -> bool:
+    """Whether `repl` shows its `>>> ` / `... ` prompt.
+
+    Always on an interactive terminal. Otherwise `--show-prompt` / `--no-show-prompt`
+    (or `ROBOTCODE_REPL_SHOW_PROMPT`) decides, and without either a recognised AI
+    agent gets the prompt: it marks where the output of a statement ends.
+    """
+    if _is_interactive_stdin():
+        return True
+    if show_prompt is not None:
+        return show_prompt
+    return is_running_in_ai_agent()
 
 
 def _resolve_attached(
@@ -303,6 +320,15 @@ SHELL_OPTIONS = [
         help="Activate inspection mode. This forces a prompt to appear after the REPL script is executed.",
     ),
     click.option(
+        "--show-prompt/--no-show-prompt",
+        default=None,
+        envvar="ROBOTCODE_REPL_SHOW_PROMPT",
+        help="Show (`--show-prompt`) or hide (`--no-show-prompt`) the `>>>` prompt when the input is not a "
+        "terminal, such as piped input. Without either option it shows there only in the session of a "
+        "recognised AI agent, where it marks the end of each statement's output. On a terminal the prompt "
+        "always shows.",
+    ),
+    click.option(
         "-d",
         "--outputdir",
         metavar="DIR",
@@ -430,6 +456,7 @@ def repl(
     pythonpath: Tuple[str, ...],
     show_keywords: bool,
     inspect: bool,
+    show_prompt: Optional[bool],
     no_history: bool,
     backend: str,
     plain: bool,
@@ -480,6 +507,7 @@ def repl(
         inspect=inspect,
         no_history=no_history,
         backend=backend,
+        show_prompt=_resolve_show_prompt(show_prompt),
     )
     # Only `repl` fails its session test on unhandled failures — not `robot-debug`,
     # which builds its interpreter the same way.
@@ -572,8 +600,15 @@ def robot_debug(
 
     backend = _resolve_backend(plain, backend)
 
+    # A run stops at `(rdb) `, which always shows; `robot-debug` has no option for `>>> `.
     interpreter = _pick_interpreter(
-        app=app, files=[], show_keywords=False, inspect=False, no_history=no_history, backend=backend
+        app=app,
+        files=[],
+        show_keywords=False,
+        inspect=False,
+        no_history=no_history,
+        backend=backend,
+        show_prompt=_is_interactive_stdin(),
     )
     controller = _attach_debugger(
         interpreter,

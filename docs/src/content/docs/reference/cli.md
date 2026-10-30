@@ -2107,6 +2107,11 @@ robotcode repl [OPTIONS] [FILES]...
    Activate inspection mode. This forces a prompt to appear after the REPL script is executed.
 
 
+- `--show-prompt / --no-show-prompt`
+
+   Show (`--show-prompt`) or hide (`--no-show-prompt`) the `>>>` prompt when the input is not a terminal, such as piped input. Without either option it shows there only in the session of a recognised AI agent, where it marks the end of each statement's output. On a terminal the prompt always shows.
+
+
 - `-d, --outputdir DIR`
 
    Where to create output files. See `robot --outputdir` option.

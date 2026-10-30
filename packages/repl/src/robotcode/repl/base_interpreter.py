@@ -597,12 +597,18 @@ class BaseInterpreter(abc.ABC):
                     # Checked after marking the statement: a SIGTERM in between can't be missed.
                     if kw is None or self._termination_requested:
                         break
-                    self.set_last_result(self.run_keyword(kw))
+                    result = self.run_keyword(kw)
+                    self.set_last_result(result)
+                    self.show_result(kw, result)
                 finally:
                     self._running_statement = False
 
     def set_last_result(self, result: Any) -> None:
         self.last_result = result
+
+    def show_result(self, statement: Keyword, result: Any) -> None:
+        """Show the result of a statement of the input after it has run. Each interpreter knows how;
+        the REPL server returns results through its protocol."""
 
     @abc.abstractmethod
     def log_message(

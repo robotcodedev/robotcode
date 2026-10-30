@@ -242,6 +242,23 @@ def test_evaluate_runs_keyword_in_paused_context() -> None:
     assert "=> '42'" in messages
 
 
+@pytest.mark.parametrize(
+    ("statement", "message", "results"),
+    [
+        pytest.param("Log    hello", "hello", [], id="none"),
+        pytest.param("${x}=    Set Variable    42", "${x} = 42", [], id="assignment"),
+        pytest.param("Evaluate    1 + 1", None, ["=> 2"], id="keyword-with-a-result"),
+    ],
+)
+def test_evaluation_shows_no_result_for_none_or_an_assignment(
+    statement: str, message: Optional[str], results: List[str]
+) -> None:
+    messages = _run_debug(STEP_SUITE, [statement, ".continue"], stop_on_entry=True)
+    if message is not None:
+        assert any(message in m for m in messages), messages
+    assert [m for m in messages if m.startswith("=>")] == results
+
+
 def test_evaluated_variable_is_visible_afterwards() -> None:
     messages = _run_debug(
         VAR_SUITE,

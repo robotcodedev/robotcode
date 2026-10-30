@@ -8,7 +8,6 @@ typed so far.
 """
 
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, AnyStr, Callable, Iterator, List, Optional, Sequence, Tuple, Union
@@ -58,16 +57,6 @@ class _Reader:
             self.read_after_end = True
         self.ended = True
         raise EOFError
-
-
-class _Stdin:
-    """Stands in for `sys.stdin`, which decides whether `get_input` shows prompts."""
-
-    def __init__(self, *, tty: bool) -> None:
-        self._tty = tty
-
-    def isatty(self) -> bool:
-        return self._tty
 
 
 class _EchoApp(Application):
@@ -385,16 +374,13 @@ def test_next_prompt_after_the_input_ended_does_not_read_again() -> None:
 
 
 @pytest.mark.parametrize(
-    ("tty", "echoed"),
-    [pytest.param(True, [""], id="terminal"), pytest.param(False, [], id="pipe")],
+    ("show_prompt", "echoed"),
+    [pytest.param(True, [""], id="prompt"), pytest.param(False, [], id="no-prompt")],
 )
-def test_input_ending_inside_a_block_ends_the_prompt_line(
-    tty: bool, echoed: List[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # `input()` leaves the cursor after the prompt on EOF; piped input shows no prompt.
-    monkeypatch.setattr(sys, "stdin", _Stdin(tty=tty))
+def test_input_ending_inside_a_block_ends_the_prompt_line(show_prompt: bool, echoed: List[str]) -> None:
+    # `input()` leaves the cursor after the prompt on EOF; without a prompt there is no line to end.
     app = _EchoApp()
-    interp = ConsoleInterpreter(app=app)
+    interp = ConsoleInterpreter(app=app, show_prompt=show_prompt)
     interp.read_line = _Reader(["FOR    ${i}    IN    1"])  # type: ignore[method-assign]
 
     list(interp.get_input())
@@ -403,17 +389,16 @@ def test_input_ending_inside_a_block_ends_the_prompt_line(
 
 
 @pytest.mark.parametrize(
-    ("tty", "echoed"),
+    ("show_prompt", "echoed"),
     [
-        pytest.param(True, ["", "KeyboardInterrupt"], id="terminal"),
-        pytest.param(False, ["KeyboardInterrupt"], id="pipe"),
+        pytest.param(True, ["", "KeyboardInterrupt"], id="prompt"),
+        pytest.param(False, ["KeyboardInterrupt"], id="no-prompt"),
     ],
 )
-def test_ctrl_c_drops_an_unfinished_block(tty: bool, echoed: List[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    # `input()` leaves the cursor after the prompt; piped input shows no prompt.
-    monkeypatch.setattr(sys, "stdin", _Stdin(tty=tty))
+def test_ctrl_c_drops_an_unfinished_block(show_prompt: bool, echoed: List[str]) -> None:
+    # `input()` leaves the cursor after the prompt; without a prompt there is no line to end.
     app = _EchoApp()
-    interp = ConsoleInterpreter(app=app)
+    interp = ConsoleInterpreter(app=app, show_prompt=show_prompt)
     interp.read_line = _Reader(  # type: ignore[method-assign]
         ["FOR    ${i}    IN    a    b", "    Log    ${i}", _CTRL_C, "Log    AFTER"]
     )
@@ -559,12 +544,9 @@ def pipe_input() -> Iterator[PipeInput]:
             yield inp
 
 
-def test_prompt_toolkit_runs_a_submitted_invalid_block_at_once(
-    pipe_input: PipeInput, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_prompt_toolkit_runs_a_submitted_invalid_block_at_once(pipe_input: PipeInput) -> None:
     # The prompts `get_input` asks for are the ones of a terminal session.
-    monkeypatch.setattr(sys, "stdin", _Stdin(tty=True))
-    interp = PromptToolkitConsoleInterpreter(app=None, no_history=True)
+    interp = PromptToolkitConsoleInterpreter(app=None, no_history=True, show_prompt=True)
     prompts: List[Tuple[str, str, bool]] = []
     read_line = interp.read_line
 
@@ -586,12 +568,9 @@ def test_prompt_toolkit_runs_a_submitted_invalid_block_at_once(
     assert prompts == [(">>> ", "", False), (">>> ", "", False)]
 
 
-def test_prompt_toolkit_ctrl_c_drops_an_unfinished_block(
-    pipe_input: PipeInput, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(sys, "stdin", _Stdin(tty=True))
+def test_prompt_toolkit_ctrl_c_drops_an_unfinished_block(pipe_input: PipeInput) -> None:
     app = _EchoApp()
-    interp = PromptToolkitConsoleInterpreter(app=app, no_history=True)
+    interp = PromptToolkitConsoleInterpreter(app=app, no_history=True, show_prompt=True)
     prompts: List[str] = []
     read_line = interp.read_line
 

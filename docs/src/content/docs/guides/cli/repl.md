@@ -85,11 +85,24 @@ When stdin is a terminal, `repl` shows the standard Robot Framework prompts:
 
 Input that is complete runs right away — even when it's invalid. Robot Framework then reports the error the way it would in a test, for example `ELSE branch cannot be empty.`, and the next line starts a new input. An empty line at the `... ` prompt submits the unfinished block as it is, so Robot Framework reports what's missing, for example `FOR loop must have closing END.`
 
+After a statement has run, the REPL prints its result on a line of its own, as `=> <value>`:
+
+```
+>>> Evaluate    1 + 1
+=> 2
+>>> ${order}=    Set Variable    order-4711
+[ INFO ] ${order} = order-4711
+>>> Log    hello
+[ INFO ] hello
+```
+
+A keyword that returns `None`, such as `Log`, shows no result, and neither does an assignment: the message that sets the variable already names the value. A failing statement shows its failure instead. Long values are shortened, as at the debugger's `(rdb)` prompt, and the result stays available as `${_}` (see [Interactive shortcuts](#interactive-shortcuts)). Statements of a script file passed as an argument run like the body of a test and show no results.
+
 A line that starts with the `...` continuation marker continues the line before it only inside an unfinished block. As the first line of a new input it has nothing to continue: the REPL reports a failure and doesn't run it.
 
 To **exit**, press `Ctrl-D` at the `>>> ` prompt or type `.exit` (or `.quit`). An empty line at `>>> ` does nothing but show the prompt again. `Ctrl-C` drops the line or the unfinished block you have typed so far, prints `KeyboardInterrupt` and shows the `>>> ` prompt again, as Python's REPL does; the session goes on.
 
-When stdin is **not a terminal** (piped input, heredoc), prompts are suppressed and the REPL reads input until EOF. If the input ends inside an unfinished block, Robot Framework reports that block, and the session ends. That makes it scriptable — the exit code tells a script whether a statement failed (see [Exit code and session status](#exit-code-and-session-status)):
+When stdin is **not a terminal** (piped input, heredoc), the REPL reads input until EOF and shows no prompts, except in the session of a recognised AI agent, which reads the `>>> ` to see where the output of a statement ends (see [Disabling all enhancements](#disabling-all-enhancements-ai-agents-automation)). `--show-prompt` shows them for any input that isn't a terminal, and `--no-show-prompt` hides them for an agent too; on a terminal they always show. The results show either way. If the input ends inside an unfinished block, Robot Framework reports that block, and the session ends. That makes it scriptable — the exit code tells a script whether a statement failed (see [Exit code and session status](#exit-code-and-session-status)):
 
 ```bash
 # bash / zsh — heredoc, exits when EOF is reached
@@ -140,6 +153,17 @@ ROBOTCODE_REPL_PLAIN=1 robotcode repl <<'EOF'
 Log To Console    hello from agent
 EOF
 ```
+
+In the session of a recognised AI agent, the REPL shows its `>>> ` and `... ` prompts on piped input too. An agent that writes one statement at a time, through a pipe or a FIFO, sees from the `>>> ` at the end of the output that the statement has ended and the REPL waits for the next one. The prompt is written without a newline, so the output of the next statement follows on the same line. `--show-prompt` gives you the same output outside an agent:
+
+```bash
+$ printf 'Evaluate    1 + 1\nLog    hello\n' | robotcode repl --show-prompt
+>>> => 2
+>>> [ INFO ] hello
+>>>
+```
+
+`--no-show-prompt` (or `ROBOTCODE_REPL_SHOW_PROMPT=0`) hides the prompts in an agent's session; `ROBOTCODE_REPL_SHOW_PROMPT=1` shows them like `--show-prompt`.
 
 You usually don't need `--plain` for **piped/redirected input or AI agents** — the default `auto` backend already falls back to `plain` in those cases (see the table above). Reach for `--plain` to force the basic prompt on an interactive terminal too, or to be explicit in scripts. The agent fallback covers popular environments (Claude Code, Cursor, Copilot CLI, OpenCode, Codex, …); see [AI-agent detection](/guides/ai-agents/#ai-agent-detection) for the full marker list and the override hatches.
 

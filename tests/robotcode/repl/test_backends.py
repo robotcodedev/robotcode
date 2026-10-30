@@ -20,6 +20,7 @@ def _pick(
     backend: str,
     files: Any = None,
     no_history: bool = False,
+    show_prompt: bool = False,
     app: Optional[Application] = None,
 ) -> ConsoleInterpreter:
     """Test wrapper that supplies the boring defaults — keeps each test
@@ -34,6 +35,7 @@ def _pick(
         inspect=False,
         no_history=no_history,
         backend=backend,
+        show_prompt=show_prompt,
     )
 
 
@@ -52,6 +54,12 @@ def test_pick_interpreter_auto_returns_prompt_toolkit() -> None:
 def test_pick_interpreter_explicit_prompt_toolkit_returns_prompt_toolkit() -> None:
     interp = _pick(backend="prompt-toolkit")
     assert type(interp).__name__ == "PromptToolkitConsoleInterpreter"
+
+
+@pytest.mark.parametrize("backend", ["plain", "prompt-toolkit"])
+def test_pick_interpreter_passes_show_prompt(backend: str) -> None:
+    assert _pick(backend=backend, show_prompt=True).show_prompt is True
+    assert _pick(backend=backend).show_prompt is False
 
 
 def test_pick_interpreter_explicit_plain_returns_plain() -> None:

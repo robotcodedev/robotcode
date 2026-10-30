@@ -348,6 +348,7 @@ class ConsoleInterpreter(BaseInterpreter):
         show_keywords: bool = False,
         inspect: Optional[bool] = False,
         no_history: bool = False,
+        show_prompt: bool = False,
     ) -> None:
         del no_history  # plain mode has no history file to honour the flag against
         super().__init__()
@@ -356,6 +357,8 @@ class ConsoleInterpreter(BaseInterpreter):
         self.files = files
         self.show_keywords = show_keywords
         self.inspect = inspect
+        # Whether `>>> ` and `... ` show; `robotcode repl` decides it (`_resolve_show_prompt`).
+        self.show_prompt = show_prompt
 
         self.executed_files: List[Path] = []
         # REPL inputs that parsed cleanly — `.save` exports them as a
@@ -368,6 +371,8 @@ class ConsoleInterpreter(BaseInterpreter):
         # runs, then the session ends without reading again — on a terminal, a
         # read after Ctrl-D waits for more input instead of ending.
         self._input_ended = False
+        # Set while the statements of a script file run: like the body of a test, they show no results.
+        self._input_from_file = False
         # Set while a prompt waits for input: SIGTERM then ends the wait (`_end_waiting`).
         self._reading = False
 
@@ -868,7 +873,7 @@ class ConsoleInterpreter(BaseInterpreter):
                     self.set_last_result(self.run_keyword(kw))
         finally:
             self.record_failures = record_failures
-        self._echo(f"=> {_repr.repr(self.last_result)}")
+        self._echo_result(test.body[-1], self.last_result)
 
     # ------------------------------------------------------------------
     # Robot integration
@@ -891,6 +896,18 @@ class ConsoleInterpreter(BaseInterpreter):
             # Locked scope / shutdown phase — drop the binding rather
             # than crash the REPL.
             pass
+
+    def show_result(self, statement: Keyword, result: Any) -> None:
+        if not self._input_from_file:
+            self._echo_result(statement, result)
+
+    def _echo_result(self, statement: Any, result: Any) -> None:
+        """Print the result of `statement` as `=> <value>`, at the `>>>` and the `(rdb)` prompt alike.
+        `None` shows nothing, and neither does an assignment: the message that sets the variable
+        names the value."""
+        if result is None or getattr(statement, "assign", None):
+            return
+        self._echo(f"=> {_repr.repr(result)}")
 
     def _alias_setting_imports(self, test: "running.TestCase") -> None:
         """REPL-only: rewrite top-level ``Library`` / ``Resource`` / ``Variables``
@@ -929,8 +946,10 @@ class ConsoleInterpreter(BaseInterpreter):
             text = file.read_text(encoding="utf-8")
 
             # Run like a test body: an invalid statement fails when execution reaches it.
+            self._input_from_file = True
             yield from self._body_to_run(self.parse_input(text))
         else:
+            self._input_from_file = False
             if self._input_ended:
                 raise EOFError
 
@@ -938,7 +957,7 @@ class ConsoleInterpreter(BaseInterpreter):
             last_one = False
             while True:
                 prompt = ""
-                if sys.stdin.isatty():
+                if self.show_prompt:
                     prompt = ">>> " if not lines else "... "
 
                 prefill = compute_indent(lines) if lines else ""

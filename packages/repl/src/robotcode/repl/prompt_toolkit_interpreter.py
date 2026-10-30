@@ -67,6 +67,7 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
         show_keywords: bool = False,
         inspect: Optional[bool] = False,
         no_history: bool = False,
+        show_prompt: bool = False,
     ) -> None:
         super().__init__(
             app=app,
@@ -74,6 +75,7 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
             show_keywords=show_keywords,
             inspect=inspect,
             no_history=no_history,
+            show_prompt=show_prompt,
         )
 
         self._history_store: History

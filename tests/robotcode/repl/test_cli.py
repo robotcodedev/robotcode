@@ -204,6 +204,42 @@ def test_cli_force_ai_agent_override_enables_detection(
 
 
 # ---------------------------------------------------------------------------
+# The `>>> ` prompt — always on a terminal; otherwise `--show-prompt` /
+# `--no-show-prompt`, and without either only for a recognised AI agent
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("interactive", "args", "env", "agent", "show_prompt"),
+    [
+        pytest.param(True, [], {}, False, True, id="terminal"),
+        pytest.param(True, ["--no-show-prompt"], {}, False, True, id="terminal-with-no-show-prompt"),
+        pytest.param(False, ["--show-prompt"], {}, False, True, id="pipe-with-show-prompt"),
+        pytest.param(False, ["--no-show-prompt"], {}, True, False, id="agent-pipe-with-no-show-prompt"),
+        pytest.param(False, [], {}, True, True, id="agent-pipe"),
+        pytest.param(False, [], {}, False, False, id="pipe"),
+        pytest.param(False, [], {"ROBOTCODE_REPL_SHOW_PROMPT": "1"}, False, True, id="pipe-with-env-var"),
+        pytest.param(False, [], {"ROBOTCODE_REPL_SHOW_PROMPT": "0"}, True, False, id="agent-pipe-with-env-var-off"),
+    ],
+)
+def test_cli_show_prompt(
+    interactive: bool,
+    args: List[str],
+    env: Dict[str, str],
+    agent: bool,
+    show_prompt: bool,
+    capture_interpreter_kwargs: Dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ROBOTCODE_REPL_SHOW_PROMPT", raising=False)
+    monkeypatch.setattr(cli_mod, "_is_interactive_stdin", lambda: interactive)
+    monkeypatch.setattr(cli_mod, "is_running_in_ai_agent", lambda: agent)
+    result = CliRunner().invoke(cli_mod.repl, args, env=env)
+    assert result.exit_code == 0, result.output
+    assert capture_interpreter_kwargs["show_prompt"] is show_prompt
+
+
+# ---------------------------------------------------------------------------
 # `repl` (alias `shell`) is a flat command — bare/file/options run the shell
 # (above). `robot-debug` (alias `run-debug`) runs a real suite via the runner
 # with the debugger attached. Both are top-level AliasedCommands.
