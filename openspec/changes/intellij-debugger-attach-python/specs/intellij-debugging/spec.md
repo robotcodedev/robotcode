@@ -25,6 +25,13 @@ When a Robot Framework run configuration is started with Debug and its effective
 - **WHEN** "Attach Python" is off and a test with a Python breakpoint in a library keyword is started with Debug
 - **THEN** only the Robot Framework debug session starts, and the run does not stop at the Python breakpoint
 
+### Requirement: Before-launch tasks of a run with Python debugging
+A Debug run with "Attach Python" on SHALL run the before-launch tasks of its run configuration once per start, as a run without the option does.
+
+#### Scenario: Before-launch task runs once
+- **WHEN** the run configuration "Orders" has a before-launch task and is started with Debug and "Attach Python" on
+- **THEN** the task runs once before the run starts
+
 ### Requirement: Python exception breakpoints in runs with Python debugging
 In a Debug run with "Attach Python" on, PyCharm's Python exception breakpoints SHALL stop at Python exceptions in the code of libraries and keywords as they do in PyCharm's own Python debug sessions.
 
