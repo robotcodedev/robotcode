@@ -201,6 +201,13 @@ def test_dispatch_help_accepts_leading_dot_in_arg() -> None:
     assert "Has no effect at a" not in blob
 
 
+def test_plain_show_doc_ends_with_the_text() -> None:
+    # The markdown of a keyword's documentation can end with empty lines.
+    app = _StubApp()
+    _make_interp(app).show_doc("Create Order", "Creates an order.\n\n\n")
+    assert app.paged == ["Create Order\n============\n\nCreates an order."]
+
+
 def test_dispatch_help_unknown_command_reports_error() -> None:
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".help nope")

@@ -581,7 +581,8 @@ class ConsoleInterpreter(BaseInterpreter):
         pager ignores them.
         """
         del scroll_to, outline  # only the scrollable viewer (prompt_toolkit) uses them
-        body = f"{title}\n{'=' * len(title)}\n\n{markdown}"
+        # Documentation can end with empty lines of its markdown; the output ends with the text.
+        body = f"{title}\n{'=' * len(title)}\n\n{markdown}".rstrip()
         if self.app is not None:
             self.app.echo_via_pager(body, color=False)
 
