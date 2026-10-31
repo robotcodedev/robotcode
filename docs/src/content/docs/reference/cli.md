@@ -256,6 +256,10 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
    Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
 
+- [`session`](#session)
+
+   Run a REPL or a debug run in the background and give it one input after the other.
+
 - [`testdoc`](#testdoc)
 
    Runs `testdoc` with the selected configuration, profiles, options and arguments.
@@ -3135,6 +3139,377 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 Use `-- --help` to see `robot` help.
+
+
+#### session
+
+Run a REPL or a debug run in the background and give it one input after the
+other.
+
+`session start` starts the session and prints its ID, which the other
+commands take. The session keeps running when the command has returned,
+until it is stopped or has waited for the idle timeout without a request.
+When the REPL exits or the debug run ends, the session stays open: `session
+status` tells it, `session result` prints the exit code, and `session
+restart` starts it again.
+
+Examples:
+```
+robotcode session start repl
+robotcode session send repl-3f9a2c1e "Evaluate    1 + 1"
+robotcode session start debug --break tests/orders.robot:19 tests
+robotcode session send debug-7b2d9e04 ".vars --user"
+robotcode session stop repl-3f9a2c1e
+```
+
+
+**Usage:**
+```text
+robotcode session [OPTIONS] COMMAND [ARGS]...
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+**Commands:**
+
+- [`interrupt`](#interrupt)
+
+   Interrupt the session ID as Ctrl-C does at its terminal.
+
+- [`list`](#list)
+
+   List the open sessions with their project folder, whether they run, wait or their REPL or run has ended, and the time left until they end for being idle.
+
+- [`restart`](#restart)
+
+   Start the REPL or the run of the session ID again in a new process, and print its output up to its first prompt or its end.
+
+- [`result`](#result)
+
+   Print the exit code of the REPL or the run of the session ID once it has ended.
+
+- [`send`](#send)
+
+   Give INPUT to the prompt of the session ID and print its output up to the next prompt.
+
+- [`start`](#start)
+
+   Start a session in the background and print its ID and its output up to its first prompt or its end.
+
+- [`status`](#status)
+
+   Print whether the session ID runs, waits at its prompt or its REPL or run has ended: `runs`, `waits` or `ended`.
+
+- [`stop`](#stop)
+
+   End the session ID and print its output since the last command, or end several sessions.
+
+- [`wait`](#wait)
+
+   Wait until the session ID waits at its prompt or its REPL or run has ended, and print its output since the last command.
+
+
+##### interrupt
+
+Interrupt the session ID as Ctrl-C does at its terminal.
+
+In a REPL, the statement that runs fails; with the debugger attached, the
+run pauses at the next keyword. `session wait` prints what follows.
+
+
+**Usage:**
+```text
+robotcode session interrupt [OPTIONS] ID
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+##### list
+
+List the open sessions with their project folder, whether they run, wait or
+their REPL or run has ended, and the time left until they end for being
+idle.
+
+
+**Usage:**
+```text
+robotcode session list [OPTIONS]
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+##### restart
+
+Start the REPL or the run of the session ID again in a new process, and
+print its output up to its first prompt or its end.
+
+A REPL or a run that hasn't ended is ended as with `session stop`, and its
+output since the last command comes first. The session keeps its ID, and the
+new process starts with the options of `session start` and the breakpoints
+as they are.
+
+
+**Usage:**
+```text
+robotcode session restart [OPTIONS] ID
+```
+
+
+**Options:**
+- `--timeout SECONDS`
+
+   Wait at most SECONDS for the first prompt. After that, print the output so far and exit with code 124, while the session goes on; `session wait` prints the rest.  [default: 60; x>=0]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### result
+
+Print the exit code of the REPL or the run of the session ID once it has
+ended.
+
+`result` itself exits with 0, as Robot Framework gives exit codes a meaning
+of its own; before the end, it says so and exits with 252.
+
+
+**Usage:**
+```text
+robotcode session result [OPTIONS] ID
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+##### send
+
+Give INPUT to the prompt of the session ID and print its output up to the
+next prompt.
+
+INPUT is a whole input: a statement, a text of several lines such as a FOR
+loop with its END, or a dot-command such as `.vars`, which works as at the
+prompt, each in a send of its own. A block that INPUT leaves unfinished
+fails. The exit code is 0 when the statement passed, 1 when it failed, and
+124 when it still runs after `--timeout`. When the REPL or the run ends,
+`send` says so with its exit code; a `send` after that fails, and `session
+restart` starts it again.
+
+
+**Usage:**
+```text
+robotcode session send [OPTIONS] ID INPUT
+```
+
+
+**Options:**
+- `--timeout SECONDS`
+
+   Wait at most SECONDS for the answer. After that, print the output so far and exit with code 124, while the session goes on; `session wait` prints the rest.  [default: 60; x>=0]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### start
+
+Start a session in the background and print its ID and its output up to its
+first prompt or its end.
+
+`start` returns once the session takes commands. A session that isn't ready
+within 60 seconds, or within `--timeout` when that is longer, is ended.
+
+
+**Usage:**
+```text
+robotcode session start [OPTIONS] COMMAND [ARGS]...
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+**Commands:**
+
+- [`debug`](#debug)
+
+   Start `robotcode robot-debug` in the background; the session is ready at its first stop or at the end of the run.
+
+- [`repl`](#repl)
+
+   Start `robotcode repl` in the background; the session is ready at its first prompt.
+
+
+###### debug
+
+Start `robotcode robot-debug` in the background; the session is ready at its
+first stop or at the end of the run.
+
+
+**Usage:**
+```text
+robotcode session start debug [OPTIONS] [ARGS]...
+```
+
+
+**Options:**
+- `--idle-timeout MINUTES`
+
+   End the session when it has waited at its prompt for MINUTES without a request. A statement that runs doesn't count as waiting.  [default: 15; x>0]
+
+
+- `--timeout SECONDS`
+
+   Wait at most SECONDS for the first prompt. After that, print the output so far and exit with code 124, while the session goes on; `session wait` prints the rest.  [default: 60; x>=0]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+
+Takes the options and arguments of `robotcode robot-debug`.
+
+
+###### repl
+
+Start `robotcode repl` in the background; the session is ready at its first
+prompt.
+
+
+**Usage:**
+```text
+robotcode session start repl [OPTIONS] [ARGS]...
+```
+
+
+**Options:**
+- `--idle-timeout MINUTES`
+
+   End the session when it has waited at its prompt for MINUTES without a request. A statement that runs doesn't count as waiting.  [default: 15; x>0]
+
+
+- `--timeout SECONDS`
+
+   Wait at most SECONDS for the first prompt. After that, print the output so far and exit with code 124, while the session goes on; `session wait` prints the rest.  [default: 60; x>=0]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+
+Takes the options and arguments of `robotcode repl`.
+
+
+
+
+##### status
+
+Print whether the session ID runs, waits at its prompt or its REPL or run
+has ended: `runs`, `waits` or `ended`.
+
+It takes none of the output of the session, which `session wait` prints.
+
+
+**Usage:**
+```text
+robotcode session status [OPTIONS] ID
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+##### stop
+
+End the session ID and print its output since the last command, or end
+several sessions.
+
+`--project` ends the sessions of the project the current folder belongs to,
+the folder RobotCode finds for its `robot.toml`; a session belongs to the
+project of the folder `session start` ran in. `--all` ends all your
+sessions. A debug run that has not ended is aborted as with `.abort`.
+
+
+**Usage:**
+```text
+robotcode session stop [OPTIONS] [ID]
+```
+
+
+**Options:**
+- `--project`
+
+   End the sessions of the project of the current folder.
+
+
+- `--all`
+
+   End all your sessions.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### wait
+
+Wait until the session ID waits at its prompt or its REPL or run has ended,
+and print its output since the last command.
+
+Takes over from a `send` that returned after its `--timeout`, with the exit
+code that `send` would have had.
+
+
+**Usage:**
+```text
+robotcode session wait [OPTIONS] ID
+```
+
+
+**Options:**
+- `--timeout SECONDS`
+
+   Wait at most SECONDS for the next prompt. After that, print the output so far and exit with code 124, while the session goes on; `session wait` prints the rest.  [default: 60; x>=0]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
 
 
 #### testdoc

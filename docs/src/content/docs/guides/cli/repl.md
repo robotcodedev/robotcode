@@ -27,7 +27,7 @@ Reach for it whenever "let me just *try* it" would be faster than writing a one-
 - **Developers exploring an unfamiliar library** — `Import Library SeleniumLibrary`, then start calling keywords and watching what they do, without spinning up a full test.
 - **Anyone debugging a keyword in isolation** — replicate the exact arguments a failing test passes and step through the response without re-running the whole suite.
 - **Quick spike scripts** — try out an XPath, prototype a data-extraction snippet, validate that a library import works in the current environment.
-- **AI-driven workflows** — coding agents (Claude Code, Cursor, Copilot, …) that need to call Robot Framework keywords interactively for test development or library exploration. Piping a snippet through `robotcode repl` is often faster than spawning a full `robot` run and parsing the output.
+- **AI-driven workflows** — coding agents (Claude Code, Cursor, Copilot, …) that need to call Robot Framework keywords interactively for test development or library exploration. Piping a snippet through `robotcode repl` is often faster than spawning a full `robot` run and parsing the output. To keep the REPL open between its turns, an agent runs it as a [session in the background](/guides/cli/sessions/).
 - **Teaching / demos** — show a live keyword call with its arguments and assignment without a slide full of `*** Settings ***`.
 
 Typical things you can do with it:

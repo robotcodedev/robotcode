@@ -5,7 +5,9 @@ LOGGER logger (version-aware, mirroring `InterpreterLogger`) running a real
 in-process suite — the same mechanism the interpreter uses, minus the prompt.
 """
 
+import dataclasses
 import io
+import json
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -1025,3 +1027,31 @@ def test_false_condition_does_not_consume_ignore_count() -> None:
     # => never stops. If the condition were evaluated AFTER counting, i=0/i=2
     #    would consume the ignore slot and i==1 would stop.
     assert frontend.stops == []
+
+
+def test_breakpoints_go_to_another_controller_as_they_are() -> None:
+    # As at the restart of a session, through the JSON of a file.
+    controller = DebugController()
+    # From `--break`: #1 and #2.
+    controller.set_line_breakpoints(_SOURCE, [3, 7])
+    controller.add_keyword_breakpoint("Login", condition="$user == 'bob'")
+    controller.add_line_breakpoint(_SOURCE, 9, temporary=True)
+    controller.add_line_breakpoint(_SOURCE, 11, log_message="x is ${x}")
+    second = controller.breakpoints[1]
+    second.enabled = False
+    second.ignore_count = 2
+    second.commands = [".vars --user", ".continue"]
+    second.hits = 3
+    controller.remove_breakpoint(1)
+    controller.set_exception_breakpoints(["failed_test", "uncaught_failed_keyword"])
+
+    taken = DebugController()
+    # The `--break` of the new process, which the breakpoints of before replace.
+    taken.set_line_breakpoints(_SOURCE, [3, 7])
+    taken.restore_breakpoints(json.loads(json.dumps(controller.breakpoint_state())))
+
+    assert taken.breakpoints == [dataclasses.replace(bp, hits=0) for bp in controller.breakpoints]
+    assert [bp.id for bp in taken.breakpoints] == [2, 3, 4, 5]
+    assert taken.exception_filters == {"failed_test", "uncaught_failed_keyword"}
+    # A breakpoint set after the restart gets a number of its own.
+    assert taken.add_line_breakpoint(_SOURCE, 13).id == 6

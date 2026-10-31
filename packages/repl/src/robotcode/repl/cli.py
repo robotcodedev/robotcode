@@ -1,10 +1,12 @@
+import contextlib
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import ContextManager, Dict, List, Optional, Tuple
 
 import click
 
+from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin._agent_detection import is_running_in_ai_agent
 from robotcode.plugin.click_helper.aliases import AliasedCommand
@@ -15,6 +17,7 @@ from robotcode.runner.cli.robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, loa
 from .__version__ import __version__
 from ._backends import BACKEND_CHOICES
 from ._debug import DebugController, DebugTerminated
+from ._session import SessionError, SessionInterpreter, SessionKind, SessionServer, project_folder
 from .console_interpreter import _LINE_BREAK_RE, ConsoleInterpreter
 from .prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
 from .run import ReplResult, run_repl
@@ -391,6 +394,52 @@ SHELL_OPTIONS = [
     ),
 ]
 
+# The session that `robotcode session start` runs `repl` or `robot-debug` as.
+SESSION_OPTIONS = [
+    click.option(
+        "--serve-session",
+        metavar="ID",
+        hidden=show_hidden_arguments(),
+        help="Serve the session ID that `robotcode session start` started. This is an internal option.",
+    ),
+    click.option(
+        "--serve-output",
+        type=int,
+        metavar="FD",
+        hidden=show_hidden_arguments(),
+        help="Read the output of the session from the pipe FD, a handle on Windows, into memory. "
+        "This is an internal option.",
+    ),
+    click.option(
+        "--serve-idle-timeout",
+        type=float,
+        default=15,
+        metavar="MINUTES",
+        hidden=show_hidden_arguments(),
+        help="End the session after it has waited at its prompt for MINUTES without a request. "
+        "This is an internal option.",
+    ),
+]
+
+
+def _session_server(
+    app: Application,
+    serve_session: Optional[str],
+    serve_output: Optional[int],
+    kind: SessionKind,
+    idle_timeout: float,
+) -> Optional[SessionServer]:
+    if serve_session is None:
+        return None
+    if serve_output is None:
+        raise click.UsageError("--serve-session needs --serve-output.")
+    try:
+        # The folder `session start` ran in decides the project, also for a debug run of a suite elsewhere.
+        return SessionServer(serve_session, kind, project_folder(app), idle_timeout * 60, serve_output)
+    except SessionError as e:
+        raise click.ClickException(str(e)) from e
+
+
 # Debugger options — shared by `repl` and `robot-debug`. `--debugger-attached`
 # is the master switch (does anything pause at all?); the `--break*` flags are
 # the individual pause triggers. (`robot-debug` adds `--stop-on-entry`, which
@@ -447,6 +496,7 @@ DEBUG_OPTIONS = [
 @add_options(*REPL_BASE_OPTIONS)
 @add_options(*SHELL_OPTIONS)
 @add_options(*DEBUG_OPTIONS)
+@add_options(*SESSION_OPTIONS)
 @click.version_option(version=__version__, prog_name="RobotCode REPL")
 @pass_application
 def repl(
@@ -474,6 +524,9 @@ def repl(
     break_on_all_exceptions: bool,
     break_on_failed_test: bool,
     break_on_failed_suite: bool,
+    serve_session: Optional[str],
+    serve_output: Optional[int],
+    serve_idle_timeout: float,
 ) -> None:
     """Run Robot Framework interactively (alias `shell`).
 
@@ -500,14 +553,19 @@ def repl(
 
     backend = _resolve_backend(plain, backend)
 
-    interpreter = _pick_interpreter(
-        app=app,
-        files=list(files),
-        show_keywords=show_keywords,
-        inspect=inspect,
-        no_history=no_history,
-        backend=backend,
-        show_prompt=_resolve_show_prompt(show_prompt),
+    server = _session_server(app, serve_session, serve_output, SessionKind.REPL, serve_idle_timeout)
+    interpreter = (
+        SessionInterpreter(server, app=app, files=list(files), show_keywords=show_keywords, inspect=inspect)
+        if server is not None
+        else _pick_interpreter(
+            app=app,
+            files=list(files),
+            show_keywords=show_keywords,
+            inspect=inspect,
+            no_history=no_history,
+            backend=backend,
+            show_prompt=_resolve_show_prompt(show_prompt),
+        )
     )
     # Only `repl` fails its session test on unhandled failures — not `robot-debug`,
     # which builds its interpreter the same way.
@@ -515,7 +573,7 @@ def repl(
     # The debugger stays wired for the whole interactive session and is torn down
     # with the interpreter when the session ends — so, unlike `robot`, there is no
     # per-run unregister here. `attached` decides whether it actually pauses.
-    _attach_debugger(
+    controller = _attach_debugger(
         interpreter,
         break_at=break_at,
         attached=attached,
@@ -524,26 +582,31 @@ def repl(
         break_on_failed_test=break_on_failed_test,
         break_on_failed_suite=break_on_failed_suite,
     )
+    if server is not None:
+        server.keep_breakpoints(controller)
 
-    result = run_repl(
-        interpreter=interpreter,
-        app=app,
-        variable=variable,
-        variablefile=variablefile,
-        pythonpath=pythonpath,
-        outputdir=outputdir,
-        output=output,
-        report=report,
-        log=log,
-        xunit=xunit,
-        source=source,
-        files=files,
-        statusrc=statusrc,
-    )
+    # A session records the exit code of the command when the REPL exits, and stays open.
+    session: ContextManager[object] = server if server is not None else contextlib.nullcontext()
+    with session:
+        result = run_repl(
+            interpreter=interpreter,
+            app=app,
+            variable=variable,
+            variablefile=variablefile,
+            pythonpath=pythonpath,
+            outputdir=outputdir,
+            output=output,
+            report=report,
+            log=log,
+            xunit=xunit,
+            source=source,
+            files=files,
+            statusrc=statusrc,
+        )
 
-    # Script files without `--inspect` end on their own, like piped input.
-    interactive = _is_interactive_stdin() and (not files or inspect)
-    app.exit(_session_exit_code(result, statusrc=statusrc, interactive=interactive))
+        # Script files without `--inspect` end on their own, like piped input.
+        interactive = _is_interactive_stdin() and (not files or inspect)
+        app.exit(_session_exit_code(result, statusrc=statusrc, interactive=interactive))
 
 
 @wrappable
@@ -557,6 +620,7 @@ def repl(
 @add_options(*REPL_BASE_OPTIONS)
 @add_options(*(option for option in ROBOT_OPTIONS if option not in ROBOT_VERSION_OPTIONS))
 @add_options(*DEBUG_OPTIONS)
+@add_options(*SESSION_OPTIONS)
 @click.option(
     "--stop-on-entry",
     is_flag=True,
@@ -584,6 +648,9 @@ def robot_debug(
     break_on_all_exceptions: bool,
     break_on_failed_test: bool,
     break_on_failed_suite: bool,
+    serve_session: Optional[str],
+    serve_output: Optional[int],
+    serve_idle_timeout: float,
 ) -> None:
     """Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
 
@@ -600,15 +667,20 @@ def robot_debug(
 
     backend = _resolve_backend(plain, backend)
 
+    server = _session_server(app, serve_session, serve_output, SessionKind.DEBUG, serve_idle_timeout)
     # A run stops at `(rdb) `, which always shows; `robot-debug` has no option for `>>> `.
-    interpreter = _pick_interpreter(
-        app=app,
-        files=[],
-        show_keywords=False,
-        inspect=False,
-        no_history=no_history,
-        backend=backend,
-        show_prompt=_is_interactive_stdin(),
+    interpreter = (
+        SessionInterpreter(server, app=app, files=[], show_keywords=False, inspect=False)
+        if server is not None
+        else _pick_interpreter(
+            app=app,
+            files=[],
+            show_keywords=False,
+            inspect=False,
+            no_history=no_history,
+            backend=backend,
+            show_prompt=_is_interactive_stdin(),
+        )
     )
     controller = _attach_debugger(
         interpreter,
@@ -620,14 +692,18 @@ def robot_debug(
         break_on_failed_test=break_on_failed_test,
         break_on_failed_suite=break_on_failed_suite,
     )
+    if server is not None:
+        server.keep_breakpoints(controller)
 
     # `robot-debug` produces the same console output as `robotcode robot` — the run
     # is fully visible. At a stop the debug prompt is interleaved with Robot's live
     # console; `_render_stop` breaks off any in-progress status line, and the run's
     # output resumes on continue/step/detach. The console mode is left to Robot's
     # default (or the user's `--console`), not forced.
+    # A session records the exit code of the run when the run ends, and stays open.
+    session: ContextManager[object] = server if server is not None else contextlib.nullcontext()
     try:
-        with interpreter.forward_events(echo_messages=False):
+        with session, interpreter.forward_events(echo_messages=False):
             _invoke_runner(
                 ctx,
                 by_longname,

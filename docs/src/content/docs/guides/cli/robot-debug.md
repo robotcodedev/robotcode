@@ -29,7 +29,7 @@ The debugger sees every keyword and control-structure (FOR / IF / TRY / WHILE / 
 - **Anyone chasing an intermittent or hard-to-reproduce failure** — the first uncaught failure pauses the run out of the box, so you catch the state at the moment it actually goes wrong.
 - **Terminal, SSH, container, and headless users** — full step-debugging where a graphical editor and a DAP client aren't available, driven entirely from the command line.
 - **CI and scripted debugging** — feed the debug prompt a fixed sequence of commands from a pipe or file (`.where`, `.vars`, `.continue`) to capture state non-interactively, or reproduce a CI failure locally with the same breakpoints.
-- **AI-driven debugging** — coding agents (Claude Code, Cursor, Copilot, …) can drive the debugger non-interactively: set a breakpoint, then pipe `.where` / `.vars` / `.print` to capture the paused call stack and variables and reason about a failure instead of guessing. Inside a recognised agent the prompt falls back to the plain backend automatically, so the captured output stays clean.
+- **AI-driven debugging** — coding agents (Claude Code, Cursor, Copilot, …) can drive the debugger non-interactively: set a breakpoint, then pipe `.where` / `.vars` / `.print` to capture the paused call stack and variables and reason about a failure instead of guessing. Inside a recognised agent the prompt falls back to the plain backend automatically, so the captured output stays clean. To step through a run over several turns, an agent runs it as a [session in the background](/guides/cli/sessions/).
 
 ## Quick start
 

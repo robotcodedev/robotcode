@@ -334,6 +334,7 @@ class ConsoleInterpreter(BaseInterpreter):
     """
 
     # The prompt shown while paused at a debug stop (vs the `>>> ` REPL prompt).
+    PROMPT = ">>> "
     DEBUG_PROMPT = "(rdb) "
 
     # Whether `show_doc` opens a scrollable fullscreen viewer (prompt_toolkit) vs
@@ -766,7 +767,7 @@ class ConsoleInterpreter(BaseInterpreter):
         return f"{path}:{frame.line}" if frame.line is not None else path
 
     def _render_stop(self, stop: StopEvent) -> None:
-        self._echo("")  # break off any in-progress runner console status line
+        self._end_console_line()
         parts = [f"* {stop.reason.value}", stop.frame.name]
         loc = self._location(stop.frame)
         if loc:
@@ -776,6 +777,11 @@ class ConsoleInterpreter(BaseInterpreter):
             line += f"  — {stop.description}"
         self._echo(line)
         self._show_displays()
+
+    def _end_console_line(self) -> None:
+        """Break off the line of the run's console that a stop comes in, such as the name of a test that Robot
+        Framework has written before its status."""
+        self._echo("")
 
     def _show_displays(self) -> None:
         """Auto-evaluate the `.display` expressions in the selected frame at a stop."""
@@ -842,8 +848,8 @@ class ConsoleInterpreter(BaseInterpreter):
         width = max(len(f.name) for f in stack)
         self._echo(self._frame_line(self._frame_no, self._selected_frame(), width))
 
-    def _evaluate_at_stop(self, line: str) -> None:
-        """Run `line` as Robot keyword(s) in the paused context.
+    def _evaluate_at_stop(self, line: str) -> bool:
+        """Run `line` as Robot keyword(s) in the paused context; False when it can't run.
 
         Wrapped in `suppress_pausing()` so the evaluated keyword's own events
         don't re-trigger a stop, and in `forward_events(echo_messages=True)` so
@@ -853,18 +859,18 @@ class ConsoleInterpreter(BaseInterpreter):
         # output.xml when we stop; a keyword written after it makes the file unreadable.
         if self._stop is not None and self._stop.reason == StopReason.EXCEPTION and self._stop.frame.type == "SUITE":
             self._echo("! Keywords can't run at the end of a suite: its output is already closed.")
-            return
+            return False
         try:
             test, errors = self.get_test_body_from_string(line)
         except Exception as e:  # surface any parse failure to the prompt
             self._echo(f"! {e}")
-            return
+            return False
         if errors:
             for err in errors:
                 self._echo(f"! {err}")
-            return
+            return False
         if not test.body:
-            return
+            return True
         # Keywords evaluated at a stop don't count for the session status.
         record_failures, self.record_failures = self.record_failures, False
         try:
@@ -874,6 +880,7 @@ class ConsoleInterpreter(BaseInterpreter):
         finally:
             self.record_failures = record_failures
         self._echo_result(test.body[-1], self.last_result)
+        return True
 
     # ------------------------------------------------------------------
     # Robot integration
@@ -958,7 +965,7 @@ class ConsoleInterpreter(BaseInterpreter):
             while True:
                 prompt = ""
                 if self.show_prompt:
-                    prompt = ">>> " if not lines else "... "
+                    prompt = self.PROMPT if not lines else "... "
 
                 prefill = compute_indent(lines) if lines else ""
                 try:
