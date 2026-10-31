@@ -125,6 +125,10 @@ _T = TypeVar("_T")
 # A Unix socket in the folder of the sessions on Linux and macOS, a named pipe on Windows.
 _FAMILY = "AF_PIPE" if sys.platform == "win32" else "AF_UNIX"
 
+# How many connections the channel keeps waiting; `multiprocessing` keeps one. Each command connects twice, to check the
+# channel and for its request, and macOS refuses a connection to a full queue at once, where Linux lets it wait.
+_BACKLOG = 16
+
 # How long a new session process may take until it accepts requests.
 STARTUP_LIMIT = 60
 
@@ -502,7 +506,7 @@ class SessionServer:
         create_sessions_dir()
         address = _address(session_id, self._generation)
         try:
-            self._listener = Listener(address, family=_FAMILY, authkey=key)
+            self._listener = Listener(address, family=_FAMILY, backlog=_BACKLOG, authkey=key)
         except OSError as e:
             raise SessionError(f"Can't open the channel of the session at {address}: {e.strerror or e}.") from e
         now = time.time()
