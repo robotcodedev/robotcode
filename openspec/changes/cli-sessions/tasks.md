@@ -173,6 +173,13 @@ The maintainer asked for a review of section 12, also of the tests that don't ru
 - [x] 13.10 Run `lint:all`, the three test files in all environments on Linux, the whole `tests/robotcode/repl` with RF 7.5 on the Windows VM, `npm run docs:build` and `openspec validate cli-sessions --strict`. Verify that all pass.
   - Done 2026-10-31: `lint:all` passes; the four files (with `test_debug_controller.py`) pass in all 9 environments on Linux (268 passed, 2 skipped: the test for Windows only and `stop --all` with the sessions of the test, which runs elsewhere; with RF 5.0 to 6.1 one more is skipped, as before), with no session process left. On the Windows VM with RF 7.5 the whole `tests/robotcode/repl` passes (974 passed, 26 skipped, the new counterparts among the passed), with no file or session process left. `npm run docs:build`: "All internal links are valid.", and the page has the new item; `openspec validate cli-sessions --strict` passes.
 
+## 14. Sessions on macOS
+
+Found by the CI after the push of 2026-10-31: on macOS, 45 tests of `test_sessions.py` failed in each job, with `Connection refused` or `No session '…' is open` right after `start`. The listener of a session queued one connection, as `multiprocessing` listens with a queue of 1, while each command connects twice; macOS refuses a connection to a full queue, where Linux lets it wait. Decided by the maintainer to fix it in this change.
+
+- [x] 14.1 Let the listener of a session keep up to 16 connections waiting (D2). Verify on Linux that the socket listens with that queue, and that `test_sessions.py` passes on Linux and on the Windows VM; the tests that failed on macOS check it there with the next run of the CI.
+  - Done 2026-10-31: `_BACKLOG = 16` for the `Listener` of a session. On Linux the socket of a new session listens with a queue of 16 now (`ss -xln`: Send-Q 16, before 1), and `test_sessions.py` passes with RF 7.5 (66 passed, 2 skipped). On Windows nothing changes: the `PipeListener` of `multiprocessing` takes the queue length without using it; the VM was off. macOS is checked by the next run of the CI.
+
 ## Workflow follow-up
 
 - After the archive, run `openspec validate --specs --strict` and verify that all main specs pass.

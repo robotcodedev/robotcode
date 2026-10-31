@@ -32,6 +32,8 @@
 
 Each session listens with `multiprocessing.connection.Listener`: a Unix socket in a directory only the user can open on Linux and macOS, a named pipe on Windows, both with a random authentication key. The `session` commands connect with `Client`. Requests are small messages (`send` with an input, `wait`, `interrupt`, `stop`, `status`, and for D11 `state`, `result` and `restart`). Each request gets a thread of its own in the session: the inputs of `send` requests run one after the other, while `interrupt`, `stop` and the `status` after a timeout are answered while a statement runs.
 
+The listener keeps up to 16 connections waiting: each command connects twice, once to check the channel (D10) and once for its request, and on macOS a connection to a full queue fails at once with `Connection refused`, which the check takes for an ended session (found by the CI on macOS, 2026-10-31; `multiprocessing` listens with a queue of 1).
+
 - Rejected: TCP on localhost. It needs a free port, and other users of the machine can reach it.
 
 ### D3: The interpreter reads from the channel
