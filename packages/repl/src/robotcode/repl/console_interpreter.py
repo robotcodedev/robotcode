@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional,
 
 import click
 from robot import result, running
-from robot.errors import ExecutionFailed, ExecutionPassed
+from robot.errors import ExecutionFailed, ExecutionPassed, ExecutionStatus
 from robot.running import Keyword
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -692,6 +692,10 @@ class ConsoleInterpreter(BaseInterpreter):
                         self._dispatch_dot_command(line)
                     else:
                         self._evaluate_at_stop(line)
+                except ExecutionStatus:
+                    # Robot Framework has reported the failure of the keyword, or its `Pass Execution`, as a message
+                    # already; the REPL prompt adds nothing to it either.
+                    pass
                 except Exception as e:  # a throwing command must not eject the debug prompt
                     # `.abort` (SystemExit), Ctrl-C, and DebugTerminated are
                     # BaseException, not Exception, so they still propagate.

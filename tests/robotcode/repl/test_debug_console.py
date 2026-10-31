@@ -356,6 +356,12 @@ def test_setting_at_a_stop_is_reported() -> None:
     assert "! Setting 'Tags' is not allowed in the REPL." in messages
 
 
+def test_a_failure_at_a_stop_is_reported_once() -> None:
+    # Robot Framework reports the failure of the keyword; the prompt adds nothing to it.
+    messages = _run_debug(STEP_SUITE, ["Fail    reported once", ".continue"], stop_on_entry=True)
+    assert sum("reported once" in m for m in messages) == 1, messages
+
+
 def test_print_evaluates_variable_and_expression() -> None:
     messages = _run_debug(
         VAR_SUITE, [".up", ".print ${a}", ".print ${a} + ${b}", ".continue"], keyword_breakpoints=["Log"]
