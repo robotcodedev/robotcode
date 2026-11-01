@@ -118,6 +118,23 @@ A session stays open after its REPL has exited or its run has ended, until `stop
 - Rejected: a restart in the session process itself, as pdb does. It saves starting a process, but the Python modules of the first run, such as a library being worked on, stay loaded, so the new run wouldn't see their changes (decided by the maintainer, 2026-10-31).
 - Rejected: the breakpoints of the command line and those added in the session. A breakpoint removed or changed in the session would come back as it is on the command line (decided by the maintainer, 2026-10-31).
 
+### D12: Types in the session code
+
+The session code passes typed values instead of `Dict[str, Any]`, and no text that stands for something else (decided by the maintainer, 2026-11-01, on reading the code). Except for the second move below, nothing changes for a user: the output, the JSON output, the exit codes and the file of a session stay as they are.
+
+- **The channel:** A request is a dataclass with its kind (`Request`) and its input; `_Request`, the input in the queue of the session, becomes `_QueuedInput`, so that the names stay apart. Each answer is a dataclass of its own, and a `Union` names them all: `OutputAnswer` (`output`, `status`, and `exit_code` once the REPL or the run has ended), `StateAnswer`, `ResultAnswer`, `InterruptedAnswer`, `StoppedAnswer`, `RestartedAnswer`, `RestartFailedAnswer`, `RefusedAnswer` and `MovedAnswer`. `multiprocessing.connection` pickles them as it pickles the enums of the channel today, so neither end converts anything (tried 2026-11-01).
+- **The commands:** `_request` deals with `MovedAnswer` and `RefusedAnswer`, so the commands see neither. A command that can get only one class asks for it by type and gets that class back; `stop` and `restart` tell theirs with `isinstance`, as they also get an `OutputAnswer` after their limit. `_exit_code` then needs no fallback for an answer without a status. The JSON output comes from the dataclass: `as_dict(answer, remove_defaults=True)` leaves out an `exit_code` of None and gives the same objects as before (tried 2026-11-01).
+- **A second move:** `_request` follows `MovedAnswer` until the file of the session names no other channel. So far it followed one: after a second restart during the same command, the answer without a status reached the command, which then exited with 252 without a message, or with a `KeyError` in `session status`.
+- **The methods that answer:** `_await` and the methods that use it always return an answer, so their `Optional` and the check in `_serve` go. `_answer` ends with `assert_never`, so that mypy reports a kind of request that it doesn't handle, in place of the answer to an unknown request.
+- **The restart:** `_Handover` holds the number of the new process, the start time and a `BreakpointState`, which stands beside `Breakpoint` in `_debug/types.py` and replaces the dict of `breakpoint_state` and `restore_breakpoints`. `_take_handover` returns None for the first process of a session. A new process that doesn't get ready raises `SessionError` from `_wait_for_new_process`, instead of returning its reason as text.
+- **The files:** `from_json` of `robotcode.core.utils.dataclasses` reads the file of a session and the file of a restart, with their enums and nested dataclasses, so `SessionEntry.__post_init__` goes. A broken file still counts as none: `from_json` raises `ValueError` for broken JSON and `TypeError` for missing or wrong values, which the readers catch (tried 2026-11-01). `_write_json` takes these two classes instead of `Any`.
+- **Smaller places:** `self._prompt` holds an enum instead of the text of the prompt, which only served to compare it with `DEBUG_PROMPT`. `start_session_process` calls `Popen` once per platform instead of passing `_DETACHED` and `passed` as `Dict[str, Any]`, so that mypy knows the arguments. `_update_entry` takes named parameters instead of `**changes: Any`.
+- **What stays:** The values of variables in `controller.py` can be anything, so `Dict[str, Any]` is right there. `SessionKind.what`, `_address` and `_minutes` produce text. `completer: Any` in `read_line` is the signature of the base class.
+
+- Rejected: one class `Answer` with optional fields. The commands would stay almost as they are, but `status` would stay optional, with the fallback in `_exit_code`, and combinations such as `moved` with `output` would stay possible (decided by the maintainer, 2026-11-01).
+
+Outside this change: `Breakpoint.kind` as `"line"` or `"keyword"`, the exception filters as `Set[str]` and `_dot_command_index` with its tuple of five dicts are older code of the REPL package with similar points.
+
 ## Risks / Trade-offs
 
 - [Session processes left behind, holding a browser] → The idle timeout ends them, `session list` shows them, and stale registry files are removed.
@@ -127,3 +144,4 @@ A session stays open after its REPL has exited or its run has ended, until `stop
 - [Two agents work in one session] → Their inputs run one after the other; both see the same state, as two people at one terminal would.
 - [Sessions whose run has ended stay open] → The idle timeout ends them as it ends a session waiting at its prompt, and `session list` shows them as `ended`.
 - [A restart whose new process doesn't get ready] → The old process keeps the session, and `restart` prints what the new process wrote (D11).
+- [The classes of the answers are part of the channel (D12)] → Both ends come from the same installation; only a session that outlives an update of RobotCode meets another version, as with the enums of the channel so far.
