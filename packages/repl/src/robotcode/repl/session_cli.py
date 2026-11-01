@@ -1,13 +1,15 @@
+import dataclasses
 import multiprocessing
 import os
 import sys
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, Tuple, Type, TypeVar
 
 import click
 from click.core import ParameterSource
 from robot.errors import DATA_ERROR
 
+from robotcode.core.utils.dataclasses import as_dict
 from robotcode.core.utils.path import same_file
 from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.plugin.click_helper.exit_codes import robot_exit_codes
@@ -16,9 +18,20 @@ from robotcode.plugin.click_helper.types import add_options
 from ._session import (
     STARTUP_LIMIT,
     AnswerStatus,
+    ChannelAnswer,
+    MovedAnswer,
+    OutputAnswer,
+    RefusedAnswer,
     Request,
+    RestartedAnswer,
+    RestartFailedAnswer,
+    ResultAnswer,
+    SessionAnswer,
     SessionEntry,
     SessionKind,
+    SessionRequest,
+    StateAnswer,
+    StoppedAnswer,
     connect,
     create_output_pipe,
     create_sessions_dir,
@@ -36,6 +49,7 @@ if sys.platform == "win32":
     import msvcrt
 
 F = TypeVar("F", bound=Callable[..., Any])
+A = TypeVar("A", bound=SessionAnswer)
 
 # How long `session start` waits for a session to take commands, when `--timeout` isn't longer.
 _STARTUP_LIMIT = STARTUP_LIMIT
@@ -238,9 +252,9 @@ def _start(
         # Once the session is ready, it reads the pipe itself.
         os.close(read_end)
 
-    answer = _request(entry, {"request": Request.WAIT}, max(0.0, deadline - time.monotonic()))
+    answer = _expect(OutputAnswer, entry, SessionRequest(Request.WAIT), max(0.0, deadline - time.monotonic()))
     if _structured(app):
-        app.print_data({"id": session_id, **_answer_data(answer)})
+        app.print_data({"id": session_id, **as_dict(answer, remove_defaults=True)})
     else:
         app.echo(f"Started session {session_id}.")
         _echo_answer(app, entry, answer)
@@ -273,7 +287,7 @@ def send(app: Application, timeout: float, session_id: str, text: str) -> None:
     `session restart` starts it again.
     """
     entry = _entry(session_id)
-    answer = _request(entry, {"request": Request.SEND, "input": text}, timeout)
+    answer = _expect(OutputAnswer, entry, SessionRequest(Request.SEND, text), timeout)
     _echo_answer(app, entry, answer)
     app.exit(_exit_code(answer))
 
@@ -291,7 +305,7 @@ def wait(app: Application, timeout: float, session_id: str) -> None:
     code that `send` would have had.
     """
     entry = _entry(session_id)
-    answer = _request(entry, {"request": Request.WAIT}, timeout)
+    answer = _expect(OutputAnswer, entry, SessionRequest(Request.WAIT), timeout)
     _echo_answer(app, entry, answer)
     app.exit(_exit_code(answer))
 
@@ -305,11 +319,11 @@ def session_status(app: Application, session_id: str) -> None:
 
     It takes none of the output of the session, which `session wait` prints.
     """
-    answer = _request(_entry(session_id), {"request": Request.STATE})
+    answer = _expect(StateAnswer, _entry(session_id), SessionRequest(Request.STATE))
     if _structured(app):
-        app.print_data({"state": answer["state"]})
+        app.print_data(answer)
     else:
-        app.echo(str(answer["state"]))
+        app.echo(str(answer.state))
 
 
 @session.command(name="result")
@@ -322,11 +336,11 @@ def session_result(app: Application, session_id: str) -> None:
     `result` itself exits with 0, as Robot Framework gives exit codes a meaning
     of its own; before the end, it says so and exits with 252.
     """
-    answer = _request(_entry(session_id), {"request": Request.RESULT})
+    answer = _expect(ResultAnswer, _entry(session_id), SessionRequest(Request.RESULT))
     if _structured(app):
-        app.print_data({"exit_code": answer["exit_code"]})
+        app.print_data(answer)
     else:
-        app.echo(str(answer["exit_code"]))
+        app.echo(str(answer.exit_code))
 
 
 @session.command()
@@ -345,19 +359,21 @@ def restart(app: Application, timeout: float, session_id: str) -> None:
     """
     entry = _entry(session_id)
     # The old process ends the REPL or the run as `stop` does, then waits for the new process to take commands.
-    answer = _request(entry, {"request": Request.RESTART}, 2 * _STARTUP_LIMIT)
-    before = answer.get("output", "")
-    if not answer.get("restarted"):
-        if before:
-            app.echo(before, nl=False)
-        if "restart_failed" in answer:
-            raise click.ClickException(str(answer["restart_failed"]))
+    restarted = _request(entry, SessionRequest(Request.RESTART), 2 * _STARTUP_LIMIT)
+    if not isinstance(restarted, RestartedAnswer):
+        # After its limit, `restart` gets the output so far, while the restart goes on.
+        if isinstance(restarted, (OutputAnswer, RestartFailedAnswer)) and restarted.output:
+            app.echo(restarted.output, nl=False)
+        if isinstance(restarted, RestartFailedAnswer):
+            raise click.ClickException(restarted.reason)
         raise click.ClickException(f"Session '{session_id}' hasn't restarted yet; `session status` tells when it has.")
+    before = restarted.output
     # The file names the new process now.
     entry = _entry(session_id)
-    answer = _request(entry, {"request": Request.WAIT}, timeout)
+    answer = _expect(OutputAnswer, entry, SessionRequest(Request.WAIT), timeout)
     if _structured(app):
-        app.print_data({"id": session_id, **_answer_data({**answer, "output": before + answer.get("output", "")})})
+        whole = dataclasses.replace(answer, output=before + answer.output)
+        app.print_data({"id": session_id, **as_dict(whole, remove_defaults=True)})
     else:
         if before:
             app.echo(before, nl=not before.endswith("\n"))
@@ -375,7 +391,7 @@ def interrupt(session_id: str) -> None:
     In a REPL, the statement that runs fails; with the debugger attached, the run
     pauses at the next keyword. `session wait` prints what follows.
     """
-    _request(_entry(session_id), {"request": Request.INTERRUPT})
+    _request(_entry(session_id), SessionRequest(Request.INTERRUPT))
 
 
 @session.command()
@@ -396,8 +412,8 @@ def stop(app: Application, of_project: bool, all_sessions: bool, session_id: Opt
         raise click.UsageError("Give the ID of a session, --project or --all.")
     if session_id is not None:
         answer = _stop(_entry(session_id))
-        if answer.get("output"):
-            app.echo(answer["output"], nl=False)
+        if answer.output:
+            app.echo(answer.output, nl=False)
         return
 
     entries = open_sessions()
@@ -413,9 +429,9 @@ def stop(app: Application, of_project: bool, all_sessions: bool, session_id: Opt
             app.echo(f"Stopped session {entry.id}.")
 
 
-def _stop(entry: SessionEntry) -> Dict[str, Any]:
-    answer = _request(entry, {"request": Request.STOP}, 60)
-    if not answer.get("stopped"):
+def _stop(entry: SessionEntry) -> StoppedAnswer:
+    answer = _request(entry, SessionRequest(Request.STOP), 60)
+    if not isinstance(answer, StoppedAnswer):
         raise click.ClickException(f"Session '{entry.id}' hasn't ended yet; a second `session stop` ends it at once.")
     return answer
 
@@ -464,33 +480,42 @@ def _entry(session_id: str) -> SessionEntry:
     return entry
 
 
-def _request(entry: SessionEntry, message: Dict[str, Any], timeout: Optional[float] = None) -> Dict[str, Any]:
-    """The answer of the session `entry` to `message`; after `timeout` seconds, the output so far."""
-    answer = _ask(entry, message, timeout)
-    if answer.get("moved"):
+def _request(entry: SessionEntry, request: SessionRequest, timeout: Optional[float] = None) -> SessionAnswer:
+    """The answer of the session `entry` to `request`; after `timeout` seconds, the output so far."""
+    answer = _ask(entry, request, timeout)
+    while isinstance(answer, MovedAnswer):
         # The session has just restarted in a new process, which its file names now.
         moved_to = read_entry(entry.id)
         if moved_to is None or moved_to.address == entry.address:
             raise click.ClickException(f"No session '{entry.id}' is open.")
-        answer = _ask(moved_to, message, timeout)
-    if "error" in answer:
-        raise click.ClickException(str(answer["error"]))
+        entry = moved_to
+        answer = _ask(entry, request, timeout)
+    if isinstance(answer, RefusedAnswer):
+        raise click.ClickException(answer.message)
     return answer
 
 
-def _ask(entry: SessionEntry, message: Dict[str, Any], timeout: Optional[float]) -> Dict[str, Any]:
-    """Send `message` to the process that `entry` names and return its answer; after `timeout` seconds, the output so
+def _expect(answer_type: Type[A], entry: SessionEntry, request: SessionRequest, timeout: Optional[float] = None) -> A:
+    """The answer of the session `entry` to a `request` that only an `answer_type` answers."""
+    answer = _request(entry, request, timeout)
+    if not isinstance(answer, answer_type):
+        raise click.ClickException(f"Session '{entry.id}' gave an unexpected answer.")
+    return answer
+
+
+def _ask(entry: SessionEntry, request: SessionRequest, timeout: Optional[float]) -> ChannelAnswer:
+    """Send `request` to the process that `entry` names and return its answer; after `timeout` seconds, the output so
     far."""
     try:
         with connect(entry) as connection:
-            connection.send(message)
+            connection.send(request)
             if timeout is not None and not connection.poll(timeout):
                 try:
-                    connection.send({"request": Request.STATUS})
+                    connection.send(SessionRequest(Request.STATUS))
                 except OSError:
                     # The answer came just now, and the session has closed the connection.
                     pass
-            answer: Dict[str, Any] = connection.recv()
+            answer: ChannelAnswer = connection.recv()
     except (OSError, EOFError, multiprocessing.AuthenticationError) as e:
         raise click.ClickException(f"Session '{entry.id}' doesn't answer: {e or type(e).__name__}") from e
     return answer
@@ -500,31 +525,20 @@ def _structured(app: Application) -> bool:
     return app.config.output_format not in (None, OutputFormat.TEXT)
 
 
-def _answer_data(answer: Dict[str, Any]) -> Dict[str, Any]:
-    data = {"output": answer.get("output", ""), "status": answer.get("status")}
-    if "exit_code" in answer:
-        data["exit_code"] = answer["exit_code"]
-    return data
-
-
-def _echo_answer(app: Application, entry: SessionEntry, answer: Dict[str, Any]) -> None:
+def _echo_answer(app: Application, entry: SessionEntry, answer: OutputAnswer) -> None:
     if _structured(app):
-        app.print_data(_answer_data(answer))
+        app.print_data(answer)
         return
-    output = answer.get("output", "")
-    if output:
-        app.echo(output, nl=False)
-        if not output.endswith("\n"):
+    if answer.output:
+        app.echo(answer.output, nl=False)
+        if not answer.output.endswith("\n"):
             app.echo("")
-    if "exit_code" in answer:
-        app.echo(f"{entry.kind.what} has ended with exit code {answer['exit_code']}.", err=True)
-    elif answer.get("status") == AnswerStatus.RUNNING:
+    if answer.exit_code is not None:
+        app.echo(f"{entry.kind.what} has ended with exit code {answer.exit_code}.", err=True)
+    elif answer.status is AnswerStatus.RUNNING:
         app.echo(f"It still runs; `robotcode session wait {entry.id}` prints the rest.", err=True)
 
 
-def _exit_code(answer: Dict[str, Any]) -> int:
+def _exit_code(answer: OutputAnswer) -> int:
     """How the input went; the exit code of the REPL or the run is in the output."""
-    status = answer.get("status")
-    if not isinstance(status, AnswerStatus):
-        return int(DATA_ERROR)
-    return _EXIT_CODES[status]
+    return _EXIT_CODES[answer.status]

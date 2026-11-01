@@ -25,13 +25,28 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, Iterator, List
 
+import click
 import pytest
 from click.testing import CliRunner, Result
 
 from robotcode.cli import robotcode as robotcode_cli
 from robotcode.core.utils.process import pid_exists
 from robotcode.repl import _session, session_cli
-from robotcode.repl._session import SessionEntry, SessionKind, open_sessions, read_entry, sessions_dir
+from robotcode.repl._session import (
+    AnswerStatus,
+    ChannelAnswer,
+    MovedAnswer,
+    OutputAnswer,
+    Request,
+    SessionEntry,
+    SessionKind,
+    SessionRequest,
+    SessionState,
+    StateAnswer,
+    open_sessions,
+    read_entry,
+    sessions_dir,
+)
 
 if sys.platform == "win32":
     import _winapi
@@ -291,6 +306,29 @@ def test_the_files_of_a_session_that_no_longer_runs_are_removed(
     assert list(short_folder.iterdir()) == []
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        "{",
+        "[]",
+        "{}",
+        '{"id": "repl-0123abcd"}',
+        (
+            '{"id": "repl-0123abcd", "kind": "nonsense", "pid": 1, "address": "a", "key": "00", "project": "p", '
+            '"started": 0, "idle_timeout": 60, "last_request": 0}'
+        ),
+    ],
+)
+def test_a_file_that_cant_be_read_counts_as_none(text: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(_session, "sessions_dir", lambda: tmp_path)
+    (tmp_path / "repl-0123abcd.json").write_text(text, encoding="utf-8")
+    (tmp_path / "repl-0123abcd.restart").write_text(text, encoding="utf-8")
+
+    assert read_entry("repl-0123abcd") is None
+    assert _session._take_handover("repl-0123abcd") is None
+
+
 @pytest.mark.skipif(sys.platform != "win32" and os.geteuid() == 0, reason="takes the right to read the file")
 def test_a_command_reads_the_file_of_a_session_that_the_session_replaces(repl_session: str) -> None:
     # Windows can't open the file while the session replaces it, but a moment later it can.
@@ -371,10 +409,10 @@ def test_the_folder_of_the_sessions_is_open_only_to_the_user(repl_session: str) 
 def test_requests_are_served_one_at_a_time(repl_session: str) -> None:
     entry = read_entry(repl_session)
     assert entry is not None
-    answers: Dict[str, Any] = {}
+    answers: Dict[str, OutputAnswer] = {}
 
     def send(name: str, line: str) -> None:
-        answers[name] = session_cli._request(entry, {"request": "send", "input": line})
+        answers[name] = session_cli._expect(OutputAnswer, entry, SessionRequest(Request.SEND, line))
 
     # The second line needs the variable that the first one sets at its end.
     first = threading.Thread(target=send, args=("first", "Sleep    1s\n${first}=    Set Variable    done"))
@@ -385,9 +423,9 @@ def test_requests_are_served_one_at_a_time(repl_session: str) -> None:
     first.join(30)
     second.join(30)
 
-    assert answers["second"]["status"] == "passed", answers["second"]["output"]
-    assert "first is done" in answers["second"]["output"]
-    assert "first is done" not in answers["first"]["output"]
+    assert answers["second"].status is AnswerStatus.PASSED, answers["second"].output
+    assert "first is done" in answers["second"].output
+    assert "first is done" not in answers["first"].output
 
 
 # ---------------------------------------------------------------------------
@@ -1115,12 +1153,12 @@ def test_a_request_that_reaches_the_process_before_a_restart_goes_to_the_new_one
     asked: List[str] = []
     ask = session_cli._ask
 
-    def answer(to: SessionEntry, message: Dict[str, Any], timeout: Any) -> Dict[str, Any]:
+    def answer(to: SessionEntry, request: SessionRequest, timeout: Any) -> ChannelAnswer:
         asked.append(to.address)
         if to.address == before.address:
             # As the process before the restart answers once the new one has taken over.
-            return {"moved": True}
-        return ask(to, message, timeout)
+            return MovedAnswer()
+        return ask(to, request, timeout)
 
     monkeypatch.setattr(session_cli, "_ask", answer)
     monkeypatch.setattr(session_cli, "_entry", lambda session_id: before)
@@ -1130,6 +1168,59 @@ def test_a_request_that_reaches_the_process_before_a_restart_goes_to_the_new_one
     assert result.exit_code == 0, result.output
     assert "=> 2" in result.stdout
     assert asked == [before.address, entry.address]
+
+
+def _entry_at(address: str) -> SessionEntry:
+    """The file of a session whose process listens at `address`, without a process, for tests of the commands alone."""
+    return SessionEntry(
+        id="repl-0123abcd",
+        kind=SessionKind.REPL,
+        pid=1,
+        address=address,
+        key="00",
+        project="project",
+        started=0,
+        idle_timeout=60,
+        last_request=0,
+    )
+
+
+def test_a_command_reports_an_answer_it_doesnt_expect(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(session_cli, "_entry", lambda session_id: _entry_at("first"))
+    monkeypatch.setattr(session_cli, "_ask", lambda to, request, timeout: StateAnswer(SessionState.WAITS))
+
+    result = _robotcode("session", "send", "repl-0123abcd", "Log    hello")
+
+    assert result.exit_code == 252
+    assert "Session 'repl-0123abcd' gave an unexpected answer." in result.output
+
+
+def test_a_request_follows_a_session_that_restarts_twice(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The new process of the first restart hands over to the next one before it gets to answer.
+    files = iter([_entry_at("second"), _entry_at("third")])
+    asked: List[str] = []
+
+    def answer(to: SessionEntry, request: SessionRequest, timeout: Any) -> ChannelAnswer:
+        asked.append(to.address)
+        return OutputAnswer("done\n", AnswerStatus.PASSED) if to.address == "third" else MovedAnswer()
+
+    monkeypatch.setattr(session_cli, "_ask", answer)
+    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: next(files))
+
+    result = session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
+
+    assert result == OutputAnswer("done\n", AnswerStatus.PASSED)
+    assert asked == ["first", "second", "third"]
+
+
+# None: the file of the session has gone. "first": it names the channel that answered already.
+@pytest.mark.parametrize("address", [None, "first"])
+def test_a_session_that_moved_to_no_other_channel_isnt_open(address: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(session_cli, "_ask", lambda to, request, timeout: MovedAnswer())
+    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: address and _entry_at(address))
+
+    with pytest.raises(click.ClickException, match=r"No session 'repl-0123abcd' is open\."):
+        session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
 
 
 # ---------------------------------------------------------------------------

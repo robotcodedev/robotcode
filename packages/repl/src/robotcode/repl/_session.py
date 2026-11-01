@@ -32,20 +32,22 @@ import uuid
 import warnings
 from collections import deque
 from dataclasses import dataclass
-from enum import Enum, unique
+from enum import Enum, auto, unique
 from multiprocessing.connection import Client, Connection, Listener
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 import platformdirs
 from robot.errors import ExecutionFailed, ExecutionPassed
 from robot.running import Keyword
+from typing_extensions import assert_never
 
+from robotcode.core.utils.dataclasses import from_json
 from robotcode.plugin import Application
 from robotcode.robot.config.utils import get_config_files
 
-from ._debug import DebugController
+from ._debug import BreakpointState, DebugController
 from .console_interpreter import ConsoleInterpreter
 
 if sys.platform == "win32":
@@ -59,8 +61,7 @@ if hasattr(platformdirs, "RuntimeDirWarning"):
 
 
 class _Value(str, Enum):
-    """A string enum whose members stand for their plain values in the file of a session, on its channel and in the
-    output."""
+    """A string enum whose members stand for their plain values in the file of a session and in the output."""
 
     def __str__(self) -> str:
         return str(self.value)
@@ -118,6 +119,86 @@ class AnswerStatus(_Value):
     RUNNING = "running"
 
 
+@dataclass
+class SessionRequest:
+    """What a command asks the channel of a session."""
+
+    kind: Request
+    # The input of a `send` request.
+    input: str = ""
+
+
+@dataclass
+class OutputAnswer:
+    """The output since the last answer and how the input went."""
+
+    output: str
+    status: AnswerStatus
+    # Once the REPL or the run has ended.
+    exit_code: Optional[int] = None
+
+
+@dataclass
+class StateAnswer:
+    """The answer to `state`."""
+
+    state: SessionState
+
+
+@dataclass
+class ResultAnswer:
+    """The answer to `result`: the exit code of the REPL or the run."""
+
+    exit_code: int
+
+
+@dataclass
+class InterruptedAnswer:
+    """The answer to `interrupt`."""
+
+
+@dataclass
+class StoppedAnswer:
+    """The answer to `stop` once the session ends, with the output since the last answer."""
+
+    output: str
+
+
+@dataclass
+class RestartedAnswer:
+    """The answer to `restart` once the new process has taken over, with the output since the last answer."""
+
+    output: str
+
+
+@dataclass
+class RestartFailedAnswer:
+    """The answer to `restart` when the new process didn't get ready, so that the session stays as it is."""
+
+    output: str
+    reason: str
+
+
+@dataclass
+class RefusedAnswer:
+    """The session doesn't take the request, for the reason in the message."""
+
+    message: str
+
+
+@dataclass
+class MovedAnswer:
+    """The new process of a restart has taken over the session, so that the command has to ask that process."""
+
+
+# What a session answers to the requests it takes.
+SessionAnswer = Union[
+    OutputAnswer, StateAnswer, ResultAnswer, InterruptedAnswer, StoppedAnswer, RestartedAnswer, RestartFailedAnswer
+]
+# What a channel answers, also when its session doesn't take a request or has moved to another process.
+ChannelAnswer = Union[SessionAnswer, RefusedAnswer, MovedAnswer]
+
+
 _ID_PATTERN = re.compile(rf"(?:{'|'.join(kind.value for kind in SessionKind)})-[0-9a-f]{{8}}")
 
 _T = TypeVar("_T")
@@ -131,16 +212,6 @@ _BACKLOG = 16
 
 # How long a new session process may take until it accepts requests.
 STARTUP_LIMIT = 60
-
-# The session process keeps running after the command that started it has returned: in a new process session on Linux
-# and macOS, on Windows in a new process group, which a Ctrl-C at the console of the command doesn't reach, and with a
-# console without a window. Console programs that the session starts use that console instead of opening windows of
-# their own.
-_DETACHED: Dict[str, Any]
-if sys.platform == "win32":
-    _DETACHED = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW}
-else:
-    _DETACHED = {"start_new_session": True}
 
 
 class SessionError(Exception):
@@ -217,17 +288,23 @@ class SessionEntry:
     # When the session last arrived at its prompt.
     waits_since: Optional[float] = None
 
-    def __post_init__(self) -> None:
-        # The file holds the plain values of the enums.
-        self.kind = SessionKind(self.kind)
-        self.state = SessionState(self.state)
-
     def time_left(self) -> Optional[float]:
         """The seconds until the session ends for being idle, None while it runs."""
         if self.state is SessionState.RUNS:
             return None
         idle_since = max(self.last_request, self.waits_since or 0)
         return max(0.0, self.idle_timeout - (time.time() - idle_since))
+
+
+@dataclass
+class _Handover:
+    """The file in which a session process hands on to the new process of a restart."""
+
+    # The number of the new process, by which it gets a channel of its own.
+    generation: int
+    # When the session started.
+    started: float
+    breakpoints: Optional[BreakpointState] = None
 
 
 def _retried(action: Callable[[], _T]) -> _T:
@@ -248,17 +325,17 @@ def _temp_path(path: Path) -> Path:
     return path.with_name(f"{path.name}.tmp")
 
 
-def _write_json(path: Path, data: Any) -> None:
+def _write_json(path: Path, data: Union[SessionEntry, _Handover]) -> None:
     """Write `data` to `path` as a whole, readable only by the user."""
     temp = _temp_path(path)
     fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(data, f)
+        json.dump(dataclasses.asdict(data), f)
     _retried(lambda: os.replace(temp, path))
 
 
 def _write_entry(entry: SessionEntry) -> None:
-    _write_json(_entry_path(entry.id), dataclasses.asdict(entry))
+    _write_json(_entry_path(entry.id), entry)
 
 
 def remove_session_files(session_id: str) -> None:
@@ -298,7 +375,7 @@ def _channel_gone(address: str) -> bool:
 def _load_entry(session_id: str) -> Optional[SessionEntry]:
     path = _entry_path(session_id)
     try:
-        return SessionEntry(**json.loads(_retried(lambda: path.read_text(encoding="utf-8"))))
+        return from_json(_retried(lambda: path.read_text(encoding="utf-8")), SessionEntry)
     except (OSError, ValueError, TypeError):
         return None
 
@@ -356,14 +433,28 @@ def start_session_process(
 ) -> "subprocess.Popen[bytes]":
     """Start a session process, detached from this one. The process writes its standard output and standard error to
     `stdout` and reads them back from `output`, the read end of the same pipe, which it inherits: a handle on
-    Windows, and there the only one it inherits beside its standard handles."""
-    passed: Dict[str, Any]
+    Windows, and there the only one it inherits beside its standard handles.
+
+    The process keeps running after the command that started it has returned: in a new process session on Linux and
+    macOS, on Windows in a new process group, which a Ctrl-C at the console of the command doesn't reach, and with a
+    console without a window. Console programs that the session starts use that console instead of opening windows of
+    their own."""
     if sys.platform == "win32":
         os.set_handle_inheritable(output, True)
-        passed = {"startupinfo": subprocess.STARTUPINFO(lpAttributeList={"handle_list": [output]})}
+        try:
+            process = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                env=env,
+                cwd=cwd,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW,
+                startupinfo=subprocess.STARTUPINFO(lpAttributeList={"handle_list": [output]}),
+            )
+        finally:
+            os.set_handle_inheritable(output, False)
     else:
-        passed = {"pass_fds": (output,)}
-    try:
         process = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
@@ -371,12 +462,9 @@ def start_session_process(
             stderr=subprocess.STDOUT,
             env=env,
             cwd=cwd,
-            **_DETACHED,
-            **passed,
+            start_new_session=True,
+            pass_fds=(output,),
         )
-    finally:
-        if sys.platform == "win32":
-            os.set_handle_inheritable(output, False)
     # The session reads its inputs from its channel. A closed pipe as standard input makes it a session without a
     # terminal on every platform, unlike the null device, which Windows takes for a terminal.
     if process.stdin is not None:
@@ -384,14 +472,14 @@ def start_session_process(
     return process
 
 
-def _take_handover(session_id: str) -> Dict[str, Any]:
-    """Read and remove the file that the previous process of the session wrote for this one at a restart; empty for
+def _take_handover(session_id: str) -> Optional[_Handover]:
+    """Read and remove the file that the previous process of the session wrote for this one at a restart; None for
     the first process of a session."""
     path = _restart_path(session_id)
     try:
-        handover: Dict[str, Any] = json.loads(_retried(lambda: path.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
-        return {}
+        handover = from_json(_retried(lambda: path.read_text(encoding="utf-8")), _Handover)
+    except (OSError, ValueError, TypeError):
+        return None
     with contextlib.suppress(OSError):
         path.unlink()
     return handover
@@ -418,8 +506,17 @@ def _passed_or_failed(failed: bool) -> AnswerStatus:
     return AnswerStatus.FAILED if failed else AnswerStatus.PASSED
 
 
+@unique
+class _Prompt(Enum):
+    """The prompt the interpreter waits at."""
+
+    INPUT = auto()
+    # At a stop of the debugger.
+    STOP = auto()
+
+
 @dataclass
-class _Request:
+class _QueuedInput:
     """The input of a `send` request, and its answer once it has run."""
 
     text: str
@@ -442,11 +539,11 @@ class SessionServer:
         self.session_id = session_id
         self._kind = kind
         self._condition = threading.Condition()
-        self._requests: Deque[_Request] = deque()
-        # The request whose input runs.
-        self._current: Optional[_Request] = None
+        self._queue: Deque[_QueuedInput] = deque()
+        # The input that runs.
+        self._current: Optional[_QueuedInput] = None
         # The prompt the interpreter waits at, None while something runs.
-        self._prompt: Optional[str] = None
+        self._prompt: Optional[_Prompt] = None
         # Updated each time the interpreter arrives at its prompt: how often it has arrived, whether the input failed,
         # and how much output there was then.
         self._arrivals = 0
@@ -466,7 +563,7 @@ class SessionServer:
         # The interpreter, which tells whether a signal has ended the REPL or the run.
         self._interpreter: Optional["SessionInterpreter"] = None
         # The answer to `restart`, once the new process has taken over or failed to.
-        self._restart_answer: Optional[Dict[str, Any]] = None
+        self._restart_answer: Optional[Union[RestartedAnswer, RestartFailedAnswer]] = None
         # Set while a restart starts the new process, which writes the session file from then on; `_handed_over` once
         # the new process has taken over and answers the requests.
         self._handing_over = False
@@ -487,8 +584,8 @@ class SessionServer:
         self._environment = dict(os.environ)
         self._folder = os.getcwd()
         handover = _take_handover(session_id)
-        self._generation: int = handover.get("generation", 0)
-        self._handed_breakpoints: Optional[Dict[str, Any]] = handover.get("breakpoints")
+        self._generation = handover.generation if handover is not None else 0
+        self._handed_breakpoints = handover.breakpoints if handover is not None else None
         # The pipe the process writes its standard output and standard error to. What the session has read from it
         # stays in memory until an answer carries it.
         self._pipe = _own_pipe(output)
@@ -517,7 +614,7 @@ class SessionServer:
             address=str(self._listener.address),
             key=key.hex(),
             project=str(project),
-            started=handover.get("started", now),
+            started=handover.started if handover is not None else now,
             idle_timeout=idle_timeout,
             last_request=now,
         )
@@ -557,17 +654,16 @@ class SessionServer:
         """Wait at `prompt` for the next request and return its whole input; the request that ran before gets its
         answer first. While it waits, end the REPL or the run when the session has been idle too long or is asked to
         stop or restart."""
-        prompt = prompt.strip()
         with self._condition:
-            self._arrive(prompt)
+            self._arrive(_Prompt.STOP if prompt.strip() == ConsoleInterpreter.DEBUG_PROMPT.strip() else _Prompt.INPUT)
             while True:
-                if self._requests:
-                    self._current = request = self._requests.popleft()
-                    request.started = True
+                if self._queue:
+                    self._current = queued = self._queue.popleft()
+                    queued.started = True
                     self._prompt = None
                     self._update_entry(state=SessionState.RUNS)
-                    return request.text
-                if self._kind is SessionKind.DEBUG and prompt == ConsoleInterpreter.DEBUG_PROMPT.strip():
+                    return queued.text
+                if self._waits_at_stop():
                     if self._stop_requested or self._restart_requested:
                         # A debug session ends its run as `.abort` does.
                         return ".abort"
@@ -641,27 +737,27 @@ class SessionServer:
         with self._condition:
             self._handing_over = True
         breakpoints = self._controller.breakpoint_state() if self._controller is not None else None
+        handover = _Handover(self._generation + 1, self._entry.started, breakpoints)
         # Only one process may read the pipe; from now on it is the new one.
         self._stop_reading()
         process: "Optional[subprocess.Popen[bytes]]" = None
         try:
-            _write_json(
-                _restart_path(self.session_id),
-                {"generation": self._generation + 1, "started": self._entry.started, "breakpoints": breakpoints},
-            )
+            _write_json(_restart_path(self.session_id), handover)
             process = start_session_process(self._command, self._pipe_handle(), 1, self._environment, self._folder)
-            failure = self._wait_for_new_process(process)
+            self._wait_for_new_process(process)
+        except SessionError as e:
+            failure = str(e)
         except OSError as e:
             failure = f"The session couldn't start again: {e.strerror or e}."
-        if failure is None:
+        else:
             self._hand_over()
             return True
         self._keep_session(process, failure)
         return False
 
-    def _wait_for_new_process(self, process: "subprocess.Popen[bytes]") -> Optional[str]:
-        """Wait until `process` has written the session file, which it does once it accepts requests; None then,
-        otherwise why it didn't get ready."""
+    def _wait_for_new_process(self, process: "subprocess.Popen[bytes]") -> None:
+        """Wait until `process` has written the session file, which it does once it accepts requests; `SessionError`
+        with the reason when it doesn't get ready."""
         # Known by its channel: on Windows, the `python.exe` of a virtual environment runs the interpreter in a process
         # of its own, whose ID isn't that of `process`.
         address = _address(self.session_id, self._generation + 1)
@@ -669,13 +765,15 @@ class SessionServer:
         while True:
             entry = _load_entry(self.session_id)
             if entry is not None and entry.address == address:
-                return None
+                return
             if process.poll() is not None:
-                return f"The session couldn't start again; its new process ended with exit code {process.returncode}."
+                raise SessionError(
+                    f"The session couldn't start again; its new process ended with exit code {process.returncode}."
+                )
             if time.monotonic() >= ready_by:
                 process.kill()
                 process.wait()
-                return (
+                raise SessionError(
                     f"The session couldn't start again; its new process wasn't ready after {STARTUP_LIMIT} seconds "
                     "and was ended."
                 )
@@ -687,7 +785,7 @@ class SessionServer:
         with self._output_lock:
             size = self._read_size
         with self._condition:
-            self._restart_answer = {"output": self._read_output(size), "restarted": True}
+            self._restart_answer = RestartedAnswer(self._read_output(size))
             self._handed_over = True
             self._close_channel()
         # Anything this process still writes would end up in the output of the new process.
@@ -712,11 +810,11 @@ class SessionServer:
             self._handing_over = False
             # The new process may have written the file before it ended.
             self._update_entry()
-            self._restart_answer = {"output": self._read_output(self._output_size()), "restart_failed": failure}
+            self._restart_answer = RestartFailedAnswer(self._read_output(self._output_size()), failure)
             self._restart_requested = False
             self._condition.notify_all()
 
-    def _arrive(self, prompt: str) -> None:
+    def _arrive(self, prompt: _Prompt) -> None:
         """The interpreter has arrived at `prompt`: give the request that ran its answer, and wake the threads that
         wait for it."""
         _flush_output()
@@ -724,11 +822,11 @@ class SessionServer:
         # No I/O up to the notification: a Ctrl-C at the prompt can interrupt this method, and the request must then
         # either have its answer or be left to the next arrival.
         failed, self._failed = self._failed, False
-        request, self._current = self._current, None
-        if request is not None:
-            request.output_end = end
-            request.failed = failed
-            request.done = True
+        queued, self._current = self._current, None
+        if queued is not None:
+            queued.output_end = end
+            queued.failed = failed
+            queued.done = True
         self._arrivals += 1
         self._arrival_failed = failed
         self._arrival_end = end
@@ -742,6 +840,10 @@ class SessionServer:
     def _idle(self) -> bool:
         idle_since = max(self._entry.last_request, self._entry.waits_since or 0)
         return time.time() - idle_since >= self._entry.idle_timeout
+
+    def _waits_at_stop(self) -> bool:
+        """Whether the run of a debug session waits at a stop of the debugger."""
+        return self._kind is SessionKind.DEBUG and self._prompt is _Prompt.STOP
 
     # --- the requests, each on a thread of its own ---------------------------
 
@@ -760,9 +862,7 @@ class SessionServer:
             self._serving += 1
         try:
             with connection:
-                answer = self._answer(connection, connection.recv())
-                if answer is not None:
-                    connection.send(answer)
+                connection.send(self._answer(connection, connection.recv()))
         except (EOFError, OSError):
             # The client has gone.
             pass
@@ -771,72 +871,71 @@ class SessionServer:
                 self._serving -= 1
                 self._condition.notify_all()
 
-    def _answer(self, connection: Connection, message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        request = message.get("request")
+    def _answer(self, connection: Connection, request: SessionRequest) -> ChannelAnswer:
+        kind = request.kind
         with self._condition:
             if self._handed_over:
                 # The command then asks the new process, which the session file names now.
-                return {"moved": True}
+                return MovedAnswer()
             if self._closing:
                 # The session has just ended, as the next command would find.
-                return {"error": f"No session '{self.session_id}' is open."}
+                return RefusedAnswer(f"No session '{self.session_id}' is open.")
             self._update_entry(last_request=time.time())
             run_ended = self._run_ended
-        if request == Request.SEND:
+        if kind is Request.SEND:
             if run_ended:
                 return self._ended_error()
-            return self._send(connection, str(message.get("input", "")))
-        if request == Request.WAIT:
+            return self._send(connection, request.input)
+        if kind is Request.WAIT:
             return self._wait(connection)
-        if request == Request.STATUS:
+        if kind is Request.STATUS:
             with self._condition:
                 return self._status()
-        if request == Request.STATE:
+        if kind is Request.STATE:
             with self._condition:
-                return {"state": self._state()}
-        if request == Request.RESULT:
+                return StateAnswer(self._state())
+        if kind is Request.RESULT:
             if not run_ended:
-                return {"error": f"{self._kind.what} of session '{self.session_id}' hasn't ended yet."}
-            return {"exit_code": self._exit_code}
-        if request == Request.INTERRUPT:
+                return RefusedAnswer(f"{self._kind.what} of session '{self.session_id}' hasn't ended yet.")
+            return ResultAnswer(self._exit_code)
+        if kind is Request.INTERRUPT:
             if run_ended:
                 return self._ended_error()
             with self._condition:
                 self._interrupted = True
             # As Ctrl-C does at the terminal of the session.
             self._signal(signal.SIGINT)
-            return {"interrupted": True}
-        if request == Request.STOP:
+            return InterruptedAnswer()
+        if kind is Request.STOP:
             return self._stop(connection)
-        if request == Request.RESTART:
+        if kind is Request.RESTART:
             return self._restart(connection)
-        return {"error": f"Unknown request {request!r}."}
+        assert_never(kind)
 
-    def _ended_error(self) -> Dict[str, Any]:
+    def _ended_error(self) -> RefusedAnswer:
         session_id = self.session_id
-        return {
-            "error": f"{self._kind.what} of session '{session_id}' has ended; `robotcode session restart {session_id}` "
-            f"starts it again, and `robotcode session result {session_id}` prints its exit code."
-        }
+        return RefusedAnswer(
+            f"{self._kind.what} of session '{session_id}' has ended; `robotcode session restart {session_id}` starts "
+            f"it again, and `robotcode session result {session_id}` prints its exit code."
+        )
 
-    def _send(self, connection: Connection, text: str) -> Optional[Dict[str, Any]]:
+    def _send(self, connection: Connection, text: str) -> ChannelAnswer:
         lines = text.strip().splitlines()
         if len(lines) > 1 and lines[0].lstrip().startswith("."):
             # A dot-command is an input of its own.
-            return {"output": "[ ERROR ] Dot-commands can only be sent on their own.\n", "status": AnswerStatus.FAILED}
-        request = _Request(text)
+            return OutputAnswer("[ ERROR ] Dot-commands can only be sent on their own.\n", AnswerStatus.FAILED)
+        queued = _QueuedInput(text)
         with self._condition:
-            self._requests.append(request)
+            self._queue.append(queued)
             self._condition.notify_all()
         return self._await(
             connection,
-            lambda: request.done,
-            lambda: self._make_answer(request.output_end, _passed_or_failed(request.failed)),
+            lambda: self._make_answer(queued.output_end, _passed_or_failed(queued.failed)) if queued.done else None,
             # An input that was still queued when the REPL or the run ended never ran.
-            lambda: self._answer_ended() if request.started else self._ended_error(),
+            lambda: self._answer_ended() if queued.started else self._ended_error(),
         )
 
-    def _wait(self, connection: Connection) -> Optional[Dict[str, Any]]:
+    def _wait(self, connection: Connection) -> ChannelAnswer:
         with self._condition:
             if self._run_ended:
                 return self._answer_ended()
@@ -846,42 +945,43 @@ class SessionServer:
             arrivals = self._arrivals
         return self._await(
             connection,
-            lambda: self._arrivals > arrivals,
-            lambda: self._make_answer(self._arrival_end, _passed_or_failed(self._arrival_failed)),
+            lambda: (
+                self._make_answer(self._arrival_end, _passed_or_failed(self._arrival_failed))
+                if self._arrivals > arrivals
+                else None
+            ),
             self._answer_ended,
         )
 
-    def _stop(self, connection: Connection) -> Optional[Dict[str, Any]]:
+    def _stop(self, connection: Connection) -> ChannelAnswer:
         with self._condition:
             self._stop_requested = True
             self._condition.notify_all()
         self._end_run()
-        return self._await(connection, lambda: self._closing, self._stopped_answer)
+        return self._await(connection, lambda: self._stopped_answer() if self._closing else None)
 
-    def _stopped_answer(self) -> Dict[str, Any]:
+    def _stopped_answer(self) -> Union[MovedAnswer, StoppedAnswer]:
         if self._handed_over:
             # A restart has taken over meanwhile: the command stops the new process.
-            return {"moved": True}
-        return {"output": self._read_output(self._output_size()), "stopped": True}
+            return MovedAnswer()
+        return StoppedAnswer(self._read_output(self._output_size()))
 
-    def _restart(self, connection: Connection) -> Optional[Dict[str, Any]]:
+    def _restart(self, connection: Connection) -> ChannelAnswer:
         with self._condition:
             if self._restart_requested:
-                return {"error": f"Session '{self.session_id}' restarts already."}
+                return RefusedAnswer(f"Session '{self.session_id}' restarts already.")
             self._restart_requested = True
             self._restart_answer = None
             self._condition.notify_all()
         self._end_run()
-        return self._await(
-            connection, lambda: self._restart_answer is not None, lambda: dict(self._restart_answer or {})
-        )
+        return self._await(connection, lambda: self._restart_answer)
 
     def _end_run(self) -> None:
         """End the REPL or the run, unless it has ended, for a `stop` or a `restart` that the caller has noted."""
         with self._condition:
             if self._run_ended:
                 return
-            waits_at_stop = self._kind is SessionKind.DEBUG and self._prompt == ConsoleInterpreter.DEBUG_PROMPT.strip()
+            waits_at_stop = self._waits_at_stop()
         if self._kind is SessionKind.REPL:
             # As SIGTERM does.
             self._signal(signal.SIGTERM)
@@ -893,48 +993,47 @@ class SessionServer:
     def _await(
         self,
         connection: Connection,
-        done: Callable[[], bool],
-        answer: Callable[[], Dict[str, Any]],
-        at_end: Optional[Callable[[], Dict[str, Any]]] = None,
-    ) -> Optional[Dict[str, Any]]:
-        """Wait until `done()` and return `answer()`, or return `at_end()` once the REPL or the run has ended.
+        ready: Callable[[], Optional[ChannelAnswer]],
+        at_end: Optional[Callable[[], ChannelAnswer]] = None,
+    ) -> ChannelAnswer:
+        """Wait until `ready()` has the answer and return it, or return `at_end()` once the REPL or the run has ended.
         Meanwhile the client can send a `status` request after its timeout: it then gets the output so far, and a
         later `wait` gets the answer."""
         while True:
             with self._condition:
-                if done():
-                    return answer()
+                answer = ready()
+                if answer is not None:
+                    return answer
                 if at_end is not None and self._run_ended:
                     return at_end()
                 self._condition.wait(0.1)
             if connection.poll():
-                if connection.recv().get("request") == Request.STATUS:
+                if connection.recv().kind is Request.STATUS:
                     with self._condition:
                         return self._status()
 
     def _runs(self) -> bool:
-        return self._prompt is None or self._current is not None or bool(self._requests)
+        return self._prompt is None or self._current is not None or bool(self._queue)
 
     def _state(self) -> SessionState:
         if self._run_ended:
             return SessionState.ENDED
         return SessionState.RUNS if self._runs() else SessionState.WAITS
 
-    def _status(self) -> Dict[str, Any]:
+    def _status(self) -> OutputAnswer:
         if self._run_ended:
             return self._answer_ended()
         if self._runs():
             return self._make_answer(self._output_size(), AnswerStatus.RUNNING)
         return self._make_answer(self._output_size(), _passed_or_failed(self._arrival_failed))
 
-    def _answer_ended(self) -> Dict[str, Any]:
+    def _answer_ended(self) -> OutputAnswer:
         """The output since the last answer, with the status of the input that ran at the end and the exit code of the
         REPL or the run."""
-        answer = self._make_answer(self._output_size(), _passed_or_failed(self._end_failed))
-        return {**answer, "exit_code": self._exit_code}
+        return self._make_answer(self._output_size(), _passed_or_failed(self._end_failed), self._exit_code)
 
-    def _make_answer(self, end: int, status: AnswerStatus) -> Dict[str, Any]:
-        return {"output": self._read_output(end), "status": status}
+    def _make_answer(self, end: int, status: AnswerStatus, exit_code: Optional[int] = None) -> OutputAnswer:
+        return OutputAnswer(self._read_output(end), status, exit_code)
 
     def _read_output(self, end: int) -> str:
         """Take the output from where the last answer ended up to `end` out of memory, and return it."""
@@ -1025,10 +1124,22 @@ class SessionServer:
             self._read_size += len(data)
             self._at_line_start = data.endswith(b"\n")
 
-    def _update_entry(self, **changes: Any) -> None:
+    def _update_entry(
+        self,
+        *,
+        state: Optional[SessionState] = None,
+        waits_since: Optional[float] = None,
+        last_request: Optional[float] = None,
+    ) -> None:
+        """Write the session file, with the values given changed."""
         if self._closing or self._handing_over:
             return
-        self._entry = dataclasses.replace(self._entry, **changes)
+        if state is not None:
+            self._entry.state = state
+        if waits_since is not None:
+            self._entry.waits_since = waits_since
+        if last_request is not None:
+            self._entry.last_request = last_request
         with contextlib.suppress(OSError):
             _write_entry(self._entry)
 

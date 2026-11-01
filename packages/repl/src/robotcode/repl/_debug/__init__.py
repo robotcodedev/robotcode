@@ -11,6 +11,7 @@ are concerns of a particular front-end. The CLI front-end is the
 from .controller import DebugController
 from .types import (
     Breakpoint,
+    BreakpointState,
     DebugTerminated,
     Frontend,
     ResumeAction,
@@ -23,6 +24,7 @@ from .types import (
 
 __all__ = [
     "Breakpoint",
+    "BreakpointState",
     "DebugController",
     "DebugTerminated",
     "Frontend",

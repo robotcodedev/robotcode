@@ -15,8 +15,16 @@ from robot.api import TestSuite as _RobotSuite  # aliased so pytest doesn't try 
 from robot.api import get_model
 from robot.output import LOGGER
 
+from robotcode.core.utils.dataclasses import from_json
 from robotcode.repl._debug.controller import DebugController
-from robotcode.repl._debug.types import DebugTerminated, ResumeAction, StackFrame, StopEvent, StopReason
+from robotcode.repl._debug.types import (
+    BreakpointState,
+    DebugTerminated,
+    ResumeAction,
+    StackFrame,
+    StopEvent,
+    StopReason,
+)
 from robotcode.repl.base_interpreter import ExecutionObserver
 from robotcode.robot.utils import RF_VERSION
 
@@ -1048,7 +1056,7 @@ def test_breakpoints_go_to_another_controller_as_they_are() -> None:
     taken = DebugController()
     # The `--break` of the new process, which the breakpoints of before replace.
     taken.set_line_breakpoints(_SOURCE, [3, 7])
-    taken.restore_breakpoints(json.loads(json.dumps(controller.breakpoint_state())))
+    taken.restore_breakpoints(from_json(json.dumps(dataclasses.asdict(controller.breakpoint_state())), BreakpointState))
 
     assert taken.breakpoints == [dataclasses.replace(bp, hits=0) for bp in controller.breakpoints]
     assert [bp.id for bp in taken.breakpoints] == [2, 3, 4, 5]
