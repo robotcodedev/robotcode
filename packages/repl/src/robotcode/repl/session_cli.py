@@ -516,8 +516,11 @@ def _ask(entry: SessionEntry, request: SessionRequest, timeout: Optional[float])
                     # The answer came just now, and the session has closed the connection.
                     pass
             answer: ChannelAnswer = connection.recv()
-    except (OSError, EOFError, multiprocessing.AuthenticationError) as e:
-        raise click.ClickException(f"Session '{entry.id}' doesn't answer: {e or type(e).__name__}") from e
+    except (EOFError, ConnectionError, FileNotFoundError):
+        # The process has ended before it answered, as the old process of a restart does; its file tells what follows.
+        return MovedAnswer()
+    except (OSError, multiprocessing.AuthenticationError) as e:
+        raise click.ClickException(f"Session '{entry.id}' doesn't answer: {e}") from e
     return answer
 
 

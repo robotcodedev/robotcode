@@ -1241,6 +1241,62 @@ def test_a_session_that_moved_to_no_other_channel_isnt_open(address: Any, monkey
         session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
 
 
+class _Connection:
+    """A connection to a process that answers with `answer`, or ends with it when it is an exception."""
+
+    def __init__(self, answer: Any) -> None:
+        self._answer = answer
+
+    def __enter__(self) -> "_Connection":
+        return self
+
+    def __exit__(self, *exc_info: Any) -> None:
+        pass
+
+    def send(self, request: SessionRequest) -> None:
+        pass
+
+    def poll(self, timeout: Any) -> bool:
+        return True
+
+    def recv(self) -> Any:
+        if isinstance(self._answer, BaseException):
+            raise self._answer
+        return self._answer
+
+
+# How the end of a process reaches a command depends on the platform and on the moment.
+@pytest.mark.parametrize(
+    "error", [EOFError(), ConnectionResetError(), BrokenPipeError(), ConnectionRefusedError(), FileNotFoundError()]
+)
+def test_a_request_goes_to_the_new_process_when_the_old_one_ends_before_it_answers(
+    error: Exception, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    answer = OutputAnswer("done\n", AnswerStatus.PASSED)
+    connections = {"old": _Connection(error), "new": _Connection(answer)}
+    monkeypatch.setattr(session_cli, "connect", lambda entry: connections[entry.address])
+    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: _entry_at("new"))
+
+    assert session_cli._request(_entry_at("old"), SessionRequest(Request.STOP)) == answer
+
+
+def test_a_session_whose_process_ends_before_it_answers_isnt_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(session_cli, "connect", lambda entry: _Connection(EOFError()))
+    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: None)
+
+    with pytest.raises(click.ClickException, match=r"No session 'repl-0123abcd' is open\."):
+        session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
+
+
+def test_a_channel_the_command_may_not_reach_says_why(monkeypatch: pytest.MonkeyPatch) -> None:
+    # As in a sandbox: the session goes on, so it doesn't count as ended.
+    error = PermissionError(1, "Operation not permitted")
+    monkeypatch.setattr(session_cli, "connect", lambda entry: _Connection(error))
+
+    with pytest.raises(click.ClickException, match=r"doesn't answer: .*Operation not permitted"):
+        session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
+
+
 # ---------------------------------------------------------------------------
 # Counterparts on Windows of tests that run only elsewhere
 # ---------------------------------------------------------------------------
