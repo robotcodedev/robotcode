@@ -96,6 +96,18 @@ def _started(result: Result) -> str:
     return match.group(1)
 
 
+def _touch(path: Path) -> str:
+    """A statement that creates the file `path`, by which a test sees how far an input has come."""
+    return f"Evaluate    __import__('pathlib').Path('{path.as_posix()}').touch()"
+
+
+def _wait_for_file(path: Path) -> None:
+    deadline = time.monotonic() + 30
+    while not path.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert path.exists()
+
+
 @pytest.fixture(scope="module")
 def session_project(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     """The project folder the sessions of a module run in, out of reach of the developer's configuration."""
@@ -938,15 +950,18 @@ def test_exit_after_a_failed_statement_names_the_exit_code_of_the_repl(started: 
     assert "The REPL has ended with exit code 1." in result.stderr
 
 
-def test_status_tells_whether_a_session_runs_waits_or_has_ended(started: List[str], session_project: Path) -> None:
+def test_status_tells_whether_a_session_runs_waits_or_has_ended(
+    started: List[str], session_project: Path, tmp_path: Path
+) -> None:
     session_id = _debug_at_stop(started, session_project)
     assert _robotcode("session", "status", session_id).stdout == "waits\n"
     assert json.loads(_robotcode("--format", "json", "session", "status", session_id).stdout) == {"state": "waits"}
 
-    statement = "Sleep    0.3s\nLog    meanwhile\nSleep    2s"
+    written = tmp_path / "written"
+    statement = f"Sleep    0.3s\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
     assert _robotcode("session", "send", "--timeout", "0.1", session_id, statement).exit_code == 124
     # Once the statement has written to the console after the answer of `send`.
-    time.sleep(1)
+    _wait_for_file(written)
     assert _robotcode("session", "status", session_id).stdout == "runs\n"
     # `status` took none of that output.
     assert "meanwhile" in _robotcode("session", "wait", session_id).stdout
@@ -1108,12 +1123,15 @@ def test_stop_and_restart_end_a_debug_run_that_runs(command: str, started: List[
         assert result.stdout.rstrip().splitlines()[-1].startswith("* entry"), result.stdout
 
 
-def test_restart_prints_the_output_it_got_when_it_gives_up(started: List[str], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_restart_prints_the_output_it_got_when_it_gives_up(
+    started: List[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     session_id = _started(_start(started, "repl"))
-    statement = "Sleep    0.3s\nLog    meanwhile\nSleep    3s"
+    written = tmp_path / "written"
+    statement = f"Sleep    0.3s\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
     assert _robotcode("session", "send", "--timeout", "0.1", session_id, statement).exit_code == 124
     # Once the statement has written to the console after the answer of `send`.
-    time.sleep(1)
+    _wait_for_file(written)
     # Shorter than the start of a new process.
     monkeypatch.setattr(session_cli, "_STARTUP_LIMIT", 0.05)
 
