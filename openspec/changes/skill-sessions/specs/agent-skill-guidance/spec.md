@@ -2,17 +2,37 @@
 
 ## Purpose
 
-What the RobotCode agent skill tells an agent about driving the REPL and the debugger, about sessions in a sandbox, about suite names and about searching a finished run, and how the evals of the plugin repository check it.
+What the RobotCode agent skill tells an agent about driving the REPL and the debugger, about sessions in a sandbox, about suite names and about searching a finished run, what it leaves out, where a rule stands, and how the evals of the plugin repository check it.
 
 ## ADDED Requirements
 
-### Requirement: Driving the REPL and the debugger
+### Requirement: How to run the REPL and the debugger
 
-The skill SHALL tell an agent to run the REPL and the debugger as a `robotcode session` and to drive it one input at a time, reading each answer before choosing the next input. It SHALL give the meaning of the exit codes of `session send` (0, 1, 124, 252), name `status`, `result`, `wait`, `interrupt` and `restart`, and tell the agent to end the session with `session stop`. It SHALL NOT name a fixed list of inputs through a pipe as a fallback.
+`references/repl.md` and `references/debugging.md` SHALL say right after their introduction, in the same order, how to run the program. They SHALL ask whether the agent's shell tool can keep a command running and write to its input. With such a tool, the agent SHALL work at the prompt, one input at a time; a background process fed through a file or a FIFO doesn't count. Without one, it SHALL run a `robotcode session`.
+
+#### Scenario: An agent with such a tool
+- **WHEN** an agent whose shell tool writes to a running command is asked to try keywords in a REPL
+- **THEN** it starts `robotcode repl` in that tool, writes one input at a time and reads each answer up to the prompt `>>> `
+
+#### Scenario: An agent without such a tool
+- **WHEN** an agent whose shell tool can't write to a running command is asked to try keywords in a REPL
+- **THEN** it starts a session with `robotcode session start repl`
+
+#### Scenario: The same order in both files
+- **WHEN** an agent opens `references/repl.md` or `references/debugging.md`
+- **THEN** the section on how to run the program comes right after the introduction, and no section is set apart as being for agents
+
+#### Scenario: A bare REPL or debugger
+- **WHEN** the skill describes `robotcode repl` and `robotcode robot-debug`
+- **THEN** it warns against starting one of them without input and waiting for it to exit
+
+### Requirement: Driving a session
+
+A session SHALL be driven one input at a time, reading each answer before choosing the next. The skill SHALL give the meaning of the exit codes of `session send` (0, 1, 124, 252), name `status`, `result`, `wait`, `interrupt` and `restart`, and tell the agent to end the session with `session stop`. It SHALL NOT name a fixed list of inputs through a pipe as a fallback.
 
 #### Scenario: Trying keywords
-- **WHEN** an agent is asked to try keywords in a REPL
-- **THEN** it starts a session with `robotcode session start repl`, sends one input per `session send` and chooses the next input from the answer
+- **WHEN** an agent tries keywords in a session
+- **THEN** it sends one input per `session send` and chooses the next input from the answer
 - **AND** it ends the session with `session stop` when the task is done
 
 #### Scenario: A block
@@ -20,20 +40,20 @@ The skill SHALL tell an agent to run the REPL and the debugger as a `robotcode s
 - **THEN** it sends the whole block with its `END` in one `session send`
 
 #### Scenario: Debugging a test
-- **WHEN** an agent is asked to step through a test
+- **WHEN** an agent without a tool that writes to a running command is asked to step through a test
 - **THEN** it starts a session with `robotcode session start debug`, scoped to that test, and sends one debugger command per `session send`
+
+#### Scenario: Several steps at once
+- **WHEN** an agent steps through a test in a session
+- **THEN** it reads the answer of each step before the next, with no two steps in one shell command and no shell loop over inputs
 
 #### Scenario: A session that was started earlier
 - **WHEN** an agent is asked about a debug session that is open already, whose run has ended
 - **THEN** it finds it with `session list`, gets the exit code of the run with `session result` and runs it again with `session restart`
 
-#### Scenario: A bare REPL or debugger
-- **WHEN** the skill describes `robotcode repl` and `robotcode robot-debug`
-- **THEN** it warns against starting one of them without input and waiting for it to exit
-
 ### Requirement: Sessions in a sandbox
 
-The skill SHALL tell an agent what it means when a `session` command fails in a sandbox, for all `session` commands: each command has a sandbox of its own, and a session can't outlive it or be reached from it. It SHALL say that an agent with a tool that writes to a running command drives `robotcode repl` or `robotcode robot-debug` in it, and that sessions work when the whole agent runs in one sandbox. It SHALL NOT tell an agent to leave the sandbox or to change its settings.
+The skill SHALL tell an agent what it means when a `session` command fails in a sandbox, for all `session` commands: each command has a sandbox of its own, and a session can't outlive it or be reached from it. It SHALL say that sessions work when the whole agent runs in one sandbox. It SHALL NOT tell an agent to leave the sandbox or to change its settings.
 
 #### Scenario: A tool that writes to a running command
 - **WHEN** `session start` fails in the sandbox of an agent that has such a tool
@@ -49,7 +69,35 @@ The skill SHALL tell an agent what it means when a `session` command fails in a 
 
 #### Scenario: One sandbox around the whole agent
 - **WHEN** the whole agent runs in one sandbox, such as a container or a virtual machine
-- **THEN** the agent uses sessions as usual
+- **THEN** the agent can use sessions as usual
+
+### Requirement: What an agent doesn't need
+
+The skill SHALL leave out what works without the agent doing anything, what the agent sees in a message anyway, what it can't do through its tools, and what only a person needs.
+
+#### Scenario: What works automatically
+- **WHEN** the skill describes a command that adapts to an agent, such as the input of the REPL or paging and colors
+- **THEN** it doesn't explain the detection; that stays in the guide for people
+
+#### Scenario: A message the agent gets
+- **WHEN** a command refuses something with a message that says what to do, such as `.exit` at a debugger stop
+- **THEN** the skill doesn't repeat that message
+
+### Requirement: One place for a rule
+
+A rule of the skill SHALL stand once, in `SKILL.md` in the section on its topic, and other places SHALL link to it; a reference SHALL only add what its own topic needs. `SKILL.md` SHALL have a section on selecting one test or suite, which the sections on running, debugging and discovery link to, and no section that repeats the rules above it.
+
+#### Scenario: Selecting one test
+- **WHEN** an agent is asked to run or debug one test
+- **THEN** it selects the test by longname, not by its `.robot` file
+
+#### Scenario: A section on another topic
+- **WHEN** the section on running or debugging comes to selecting a test
+- **THEN** it links to the section on selecting instead of explaining the rule again
+
+#### Scenario: An example
+- **WHEN** an example in the skill starts the debugger for one test
+- **THEN** it selects the test by longname, and the text says or links to how to drive the debugger
 
 ### Requirement: Names of suites
 
@@ -77,12 +125,20 @@ The skill SHALL name `robotcode results log --search` as the way to find out whe
 
 ### Requirement: Evals of the guidance
 
-The evals of the plugin repository SHALL expect `robotcode session` commands in the cases on the REPL and the debugger, and SHALL have a case each for the names of suites and for searching a finished run. The harness SHALL be able to run the cases with a skill from a given folder.
+The evals of the plugin repository SHALL accept a session or the prompt in a terminal as the way to drive the REPL and the debugger, and check the way as well as the answer. They SHALL have a case each for the rules of this skill that an agent can get wrong. The harness SHALL run the cases with a skill from a given folder and with several agents.
 
 #### Scenario: A debugging case
-- **WHEN** the harness runs a case on the debugger and the agent uses `robotcode session start debug`, scoped to the test
+- **WHEN** the harness runs a case on the debugger and the agent uses `robotcode session start debug`, scoped to the test, or the prompt of `robotcode robot-debug` with a tool that writes to a running command
 - **THEN** the checks of the case pass
+
+#### Scenario: A right answer on a wrong way
+- **WHEN** an agent gets the right answer through a fixed list of inputs or a throwaway test file
+- **THEN** the case fails
 
 #### Scenario: A skill that isn't released
 - **WHEN** the harness runs with the plugin folder of a working copy
 - **THEN** the agent in each case has the skill of that folder
+
+#### Scenario: Several agents
+- **WHEN** the harness runs with several agents
+- **THEN** it runs each case with each of them and shows how many runs passed per case and agent

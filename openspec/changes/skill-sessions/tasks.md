@@ -36,6 +36,15 @@ Everything in `robotframework-agent-plugins` happens on `next`. Commits only on 
 - [x] 5.2 After the commit, sync the vendored copy with `hatch run build:sync-chat-plugin` and ask for the commit `chore(chat-plugin): sync robotcode skill from agent-plugins`. Verify: `chat-plugins/.upstream.json` names the new commit, and `hatch run build:sync-chat-plugin --check` passes.
 - [x] 5.3 Ask for the commit of the guide and, separately, of the plan (`docs(openspec)`). Verify: `git show --stat` of each lists only its own paths.
 
+## 6. The rework
+
+After the maintainer's review. It changes parts of sections 1 and 2 (D8–D11).
+
+- [ ] 6.1 Take the text from the output `in-section` of `make_skill_variants.py` into `plugins/robotcode/skills/robotcode/` on `next`, with the shorter sandbox hints of D2 (D8–D11). Verify: `wc -c` gives under 20 000 B for both references; every link and its anchor in the skill has its target; `grep -n -E "Ctrl-D|auto-detect|agent backend|Gotchas|report\.html in"` in the skill finds nothing.
+- [ ] 6.2 Read the whole skill through once as an agent would: contents match the headings, no reference points to something that went, each rule of D10 stands once, and nothing the spec asks for is lost (the exit codes, `status`, `result`, `wait`, `interrupt`, `restart`, `session stop`, the warning against a bare start). Verify: a list of what I changed after reading, in the findings.
+- [ ] 6.3 Run cases 01–06 and 08–19 against the working copy (D7); ask before the runs with Codex, because they cost credits. Verify: I read the rubric against the transcripts where a check failed. A wrong way goes back to the text of the skill, a right way with a failed check to the check. Per agent, not below the skill before the rework; the results go in the findings.
+- [ ] 6.4 Ask for the commit of the skill (`docs(skill)`) in `robotframework-agent-plugins`; after it, sync the vendored copy with `hatch run build:sync-chat-plugin` and ask for the commit `chore(chat-plugin): sync robotcode skill from agent-plugins`, and for the commit of the plan (`docs(openspec)`). Verify: `python scripts/sync_manifests.py --check` and `hatch run build:sync-chat-plugin --check` pass, the commits are signed, and `chat-plugins/.upstream.json` names the new commit.
+
 ## Workflow follow-up
 
 - Task 3.8 of `docs-ai-agents-guide` records the sessions with this skill, from the local plugin folder.
