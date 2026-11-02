@@ -1,6 +1,6 @@
 # Interactive development & exploration — `robotcode repl`
 
-`robotcode repl` is an interactive Robot Framework shell that runs inside the project's configuration — the same `robot.toml`, profiles, Python environment, and imports a real run uses. You type keyword calls one line at a time and they execute immediately, and the session's state — variables, imports, library instances, open browsers and connections — persists for as long as it stays open. That makes it the tool for **interactive, step-by-step work**: *exploring* (drive a system under test, try a keyword or library, debug a misbehaving keyword as you call it, stabilize a locator or wait) and *developing* (build up a test case or reusable keyword one line at a time, confirm each step, then save it). Reach for it even when the user never says "REPL" — "try this keyword interactively" or "let's build the test as we go" both point here.
+`robotcode repl` is an interactive Robot Framework shell that runs inside the project's configuration — the same `robot.toml`, profiles, Python environment, and imports a real run uses. You type keyword calls one line at a time and they execute immediately, and the session's state — variables, imports, library instances, open browsers and connections — persists for as long as it stays open. That makes it the tool for **interactive, step-by-step work**: *exploring* (drive a system under test, try a keyword or library, debug a misbehaving keyword as you call it, stabilize a locator or wait) and *developing* (build up a test case or reusable keyword one line at a time, confirm each step, then save it).
 
 The REPL serves **two distinct purposes** — use whichever fits the request:
 
@@ -25,25 +25,36 @@ Before guessing keyword arguments, inspect them with `robotcode doc keywords <Li
 
 ## Start or reuse a REPL
 
-If a RobotCode REPL terminal is already running, reuse it — do not close and reopen it between experiments.
+If a REPL session of this project is already open (`robotcode session list`), reuse it — do not close and reopen it between experiments.
 
-Otherwise just start it:
+### Driving the REPL from an agent
+
+Run the REPL as a **session**. It runs in the background and keeps its state — variables, imports, open browsers and connections — between your commands, and each command returns with the answer to one input. That gives you the same back-and-forth a person has at the prompt: send one input, read the answer, then choose the next input from what you saw.
 
 ```bash
-robotcode repl
+robotcode session start repl                    # prints "Started session repl-1a2b3c4d." — use this ID below
+robotcode session send repl-1a2b3c4d 'Import Resource    ${CURDIR}/resources/accounts.resource'
+robotcode session send repl-1a2b3c4d '${user}=    Create User    alice    role=admin'
+robotcode session send repl-1a2b3c4d '.vars --user'
+robotcode session stop repl-1a2b3c4d
 ```
 
-It is an **interactive terminal session — run it in a terminal and drive it turn by turn.** Send one statement, wait for the prompt to come back, read the result, then pick the next line from what you saw — the same back-and-forth a person has at the prompt. Started without input it just waits at the prompt forever, so never start it and block on its exit. This is the normal way to use it — the *same* goes for its debugger (see [debugging.md](debugging.md#driving-the-session-from-an-agent)).
+- `start` takes the options and files of `robotcode repl` (`-v`, `-P`, `--source`, script files with `--inspect`, `--break …`); options of `robotcode` itself go before `session` (`robotcode -p dev session start repl`). The session runs in the folder you start it in.
+- **One `send` is one whole input:** a statement, a whole `FOR` / `IF` / `TRY` block with its `END` as one argument of several lines, or one dot command. Don't send a block line by line: each `send` is complete, so a block it leaves unfinished fails (`FOR loop must have closing END.`). A dot command can't share a `send` with anything else.
+- Quote the input in **single quotes**, so the shell leaves `${…}` alone; line breaks go inside the quotes. In PowerShell, use a here-string (`@'` … `'@`) for several lines.
+- **The exit code of `send` tells you how the input went:** `0` it passed, `1` it failed (the output says why), `124` it still runs after `--timeout` (default 60 s; then `robotcode session wait <ID>` prints the rest), `252` an error of robotcode itself such as an unknown ID. `robotcode session status <ID>` prints `runs`, `waits` or `ended` without taking any output.
+- `robotcode session interrupt <ID>` stops a statement that hangs, as `Ctrl-C` does.
+- **End it** with `robotcode session stop <ID>` when the task is done; `robotcode session stop --project` ends all sessions of the project. `.exit` only ends the REPL: the session stays open, says `The REPL has ended with exit code N.`, `robotcode session result <ID>` prints that code, and `robotcode session restart <ID>` starts a fresh REPL under the same ID. A session that has waited 15 minutes without a request ends by itself (`--idle-timeout MINUTES` at the start).
 
-> **Fallback only if your agent can't drive a terminal.** When you can only run a command to completion, pipe a *predetermined* statement sequence into it — e.g. `printf 'Import Library    OperatingSystem\nFile Should Exist    ./config.yaml\n' | robotcode repl`. Piped input ends at its last line, and the exit code tells you whether a statement failed (`1`) or not (`0`) — see *Exit code*. This gives up the back-and-forth, so prefer interactive whenever you can.
+**If a `robotcode session` command fails in a sandbox** — `Can't create the files of the session`, `Can't open the channel of the session`, `doesn't answer`, or the next command finds `No session '…' is open` — your agent runs each command in a sandbox of its own, and a session can't outlive that command or be reached from it. Don't try to leave the sandbox. If your shell tool can keep a process running and write to its input, start `robotcode repl` in it directly: write one input, wait until the output ends with the prompt `>>> `, read the answer, then write the next. Otherwise work out another way yourself. Sessions work as usual when the whole agent runs in one sandbox, such as a container or a virtual machine.
 
-**No agent-specific flags are needed.** RobotCode detects when it runs under an AI agent (via env vars like `CLAUDECODE`, `CURSOR_AGENT`, `COPILOT_AGENT`, the generic `AI_AGENT`/`AGENT`, …) and automatically drops to the plain input backend — no completion popups, syntax highlighting, or ANSI escapes that would corrupt captured stdin/stdout, and no persistent history pollution. A human at a terminal gets the rich prompt-toolkit backend instead.
+Never start a bare `robotcode repl` with a command that waits for it to exit — it waits at its prompt forever.
 
-Override only if the auto-detection is wrong for your setup: `--plain` forces the plain backend, `--backend prompt-toolkit` forces the rich one, and `ROBOTCODE_NO_AI_AGENT=1` disables agent detection entirely.
+**No agent-specific flags are needed.** RobotCode detects an AI agent (env vars like `CLAUDECODE`, `CURSOR_AGENT`, `COPILOT_AGENT`, `AI_AGENT`, …) and uses the plain input backend: no completion popups, highlighting or ANSI escapes in the captured output, and no history. `--plain` / `--backend prompt-toolkit` force a backend; `ROBOTCODE_NO_AI_AGENT=1` turns the detection off.
 
 Startup options worth knowing (all optional):
 
-- `robotcode repl <file> [...]` — **pre-execute** the keyword calls in one or more files (REPL syntax, not full suites), then exit. A file runs like a test body: an invalid statement fails with Robot Framework's message when execution reaches it and skips the rest of that file, and without `--inspect` the exit code is `1` if a statement failed. Add `--inspect` to drop into the interactive prompt afterwards with all the file's imports and variables still in scope — handy for replaying a known-good setup before exploring further.
+- `robotcode repl <file> [...]` — **pre-execute** the keyword calls in one or more files (REPL syntax, not full suites), then exit. A file runs like a test body: an invalid statement fails with Robot Framework's message when execution reaches it and skips the rest of that file, and without `--inspect` the exit code is `1` if a statement failed. Add `--inspect` to drop into the interactive prompt afterwards with all the file's imports and variables still in scope.
 - `-v name:value` / `-V <varfile.py|.yaml>` — seed variables into the session (same as `robot --variable` / `--variablefile`).
 - `-P <path>` — add a library/module search path for this session (`robot --pythonpath`).
 - `--show-keywords` — echo each executed keyword as it runs (a lightweight trace, useful when a higher-level keyword does several things).
@@ -63,7 +74,7 @@ There is **no `*** Settings ***` section** — section headers fail with `No key
 - `Import Resource    path/to/resource.robot` — or `Resource    …`.
 - `Import Variables    path/to/vars.py` — or `Variables    …`.
 
-Library search paths are normally configured in `robot.toml` (`python-path`) and picked up automatically, so you should not need to set them manually. For libraries needing import-time arguments, pass them as positional/named args, e.g. `Import Library    DatabaseLibrary    db_api_module_name=sqlite3`.
+Library search paths come from `robot.toml` (`python-path`). Pass import arguments as usual, e.g. `Import Library    DatabaseLibrary    db_api_module_name=sqlite3`.
 
 ## What you can run
 
@@ -72,7 +83,7 @@ The REPL is line-oriented but is **not limited to single keyword calls** — it 
 - **Single keyword per line** — the common case; executes as soon as the line parses.
 - **Variable assignment that persists** across the whole session: `${id}=    Set Variable    42`, then `Log    ${id}` on a later line. State (variables, imports, library instances, open browsers/connections) lives for the lifetime of the session.
 - **The last keyword's return value** is always available as `${_}` — e.g. `Get Text    h1` then `Should Be Equal    ${_}    Welcome`.
-- **Multi-line control structures** — `FOR`/`WHILE`/`IF`/`TRY`/`VAR` blocks work. Send the block line by line including its `END`; the REPL keeps reading continuation lines (`...` prompt) while the block has no `END`, then runs it as a unit. Complete input runs at once even when it's invalid — Robot Framework reports the error (e.g. `ELSE branch cannot be empty.`) and the next line starts a new input. When driving from an agent, just send the whole block as consecutive lines; the closing `END` completes it. A blank line inside an unfinished block submits it as it is, so Robot Framework reports what's missing (`FOR loop must have closing END.`) — the same happens when piped input ends inside a block. A `...` continuation line continues a line of an unfinished block only; as the first line of a new input it fails and isn't executed:
+- **Multi-line control structures** — `FOR`/`WHILE`/`IF`/`TRY`/`VAR` blocks work. In a session, send the whole block with its `END` in **one** `send`; it runs as a unit, and a block the input leaves unfinished fails with Robot Framework's error (`FOR loop must have closing END.`). Invalid complete input fails the same way (e.g. `ELSE branch cannot be empty.`). (At a terminal, the REPL keeps reading continuation lines at the `...` prompt until the block's `END`.)
   ```robotframework
   FOR    ${row}    IN    @{rows}
       Log    ${row}
@@ -92,20 +103,18 @@ Available at the `>>>` prompt (work in the plain agent backend too; `.help` list
 
 - `.vars [--user]` — list variables in scope with current values; `--user` hides Robot built-ins so only what you assigned shows.
 - `.imports` — show which libraries and resource files are currently loaded, with keyword counts and source paths.
-- `.kw [name-or-text]` — with a keyword name, full keyword documentation (signature, argument types, docstring, tags) without leaving the REPL; in-session alternative to `robotcode doc keyword <Library> "<Keyword>"`. Names resolve as in a suite (case/space/underscore-insensitive), including the explicit `Owner.Keyword` form (e.g. `.kw BuiltIn.Log`) to disambiguate when several imports share a keyword name. With **no argument** it lists every loaded keyword grouped by library/resource; with **partial text** that isn't an exact keyword it lists the matching keyword names — handy for discovery (`.kw click` to find every click keyword).
+- `.kw [name-or-text]` — with a keyword name, full keyword documentation (signature, argument types, docstring, tags) without leaving the REPL. Names resolve as in a suite (case/space/underscore-insensitive), including the explicit `Owner.Keyword` form (e.g. `.kw BuiltIn.Log`) to disambiguate when several imports share a keyword name. With **no argument** it lists every loaded keyword grouped by library/resource; with **partial text** that isn't an exact keyword it lists the matching keyword names (`.kw click`).
 - `.doc <name>` — full documentation for an imported library or resource. Only what the session has imported is shown, addressed by its namespace name (a library imported with `AS` is found under the alias); a name that isn't loaded reports that instead of showing an empty page.
 - `.cwd` — print the working directory that relative imports/variable files resolve against.
 - `.clear` — clear the screen.
 - `.save [-a] [-t NAME] [--keep-failed] FILENAME` — export the session as a runnable `.robot` file (see *Move experiments into tests*).
 - `.exit [CODE]` / `.quit [CODE]` — clean exit (aliases); with `CODE` the process exits with that code (see *Exit code*).
 
-A **human** on the rich backend also gets Tab completion, syntax highlighting, persistent history, and shortcuts (F1 help · Ctrl-R search · Ctrl-L clear · Ctrl-D exit). In the doc viewer that `.kw`/`.doc` open, the keyword names in a `.kw` listing are follow-able links — Tab to one and press Enter to open its documentation, `[` to go back to the list. An agent on the plain backend uses the dot commands instead (the list comes back as plain text).
-
 ## Exit code
 
 The session is one test, and it fails as soon as a statement fails without being handled. A failure caught by `TRY`/`EXCEPT`, `Run Keyword And Expect Error`, or `Run Keyword And Ignore Error` doesn't count, nor do `Skip` and `Pass Execution`. How that reaches the exit code depends on how the session runs:
 
-- **Non-interactive** — piped or redirected input, or script files without `--inspect`: exit code `1` if a statement failed, otherwise `0`. This is what the piped fallback relies on.
+- **Non-interactive** — piped or redirected input, or script files without `--inspect`: exit code `1` if a statement failed, otherwise `0`.
 - **Interactive** — stdin is a terminal: exit code `0` regardless of failures. This depends on stdin being a terminal, not on agent detection, so a session driven through a pseudo-terminal counts as interactive too.
 - `--statusrc` makes the exit code report failures in any session; `--nostatusrc` — or `no-status-rc = true` in `robot.toml` — keeps it at `0`.
 - `.exit CODE` ends the session with that code in any session. Dot commands work at the prompt and in piped input, not inside a script file.
@@ -114,7 +123,7 @@ With `-o output.xml`, the session test in the output files shows the same failur
 
 ## Debugging from the REPL
 
-The same debugger is available for the **whole REPL session**, but it starts **detached** — attach it with `.debug on` (or start with `--debugger-attached`, or just pass `--break …`). Once attached you can debug a keyword *as you build it*: arm a breakpoint, run the keyword, and when it's hit, execution pauses in a `(rdb)` prompt with the live call stack, the variables in each frame, a source listing, and the ability to run further keywords in the paused context. `.debug off` detaches again without losing your breakpoints.
+The same debugger is available for the **whole REPL session**, but it starts **detached** — attach it with `.debug on` (or start with `--debugger-attached`, or just pass `--break …`). Once attached you can debug a keyword *as you build it*: arm a breakpoint, run the keyword, and when it's hit, execution pauses at a `(rdb)` prompt with the live stack and variables. `.debug off` detaches again without losing your breakpoints.
 
 This is for debugging a keyword **you call yourself at the prompt** while building or exploring it. To debug an **existing failing test**, don't paste or rebuild it in here — run the real one in place with [`robotcode robot-debug`](debugging.md), scoped to that one test by name (`-bl "<longname>"` / `-t "<name>"`, not the whole file), which keeps the suite's setup/teardown, variables, and imports intact.
 
@@ -124,23 +133,21 @@ Breakpoints can be armed three ways — the interactive one is unique to the REP
 - **From the start, via flags**: `robotcode repl --break "<Keyword>"` / `--break file.robot:42`, plus the `--break-on-*` exception flags, arm breakpoints before the first prompt — and passing any of them (or `--debugger-attached`) attaches the debugger from the start.
 - **From the file**: an embedded `Breakpoint` keyword (after `Library    robotcode.repl.Repl`) pauses whenever the debugger is attached (in the REPL, once you've attached with `.debug on`) — a no-op in a normal `robot` run.
 
-At a `(rdb)` stop you get the full debug command set — `.where` (stack), `.vars` (variables), `.print ${x}`, `.step` / `.next` / `.continue`, and the rest. It is the *same* debugger as [`robotcode robot-debug`](debugging.md), which attaches it to a real run through the runner (scoped to whatever test/suite you select) rather than to single keywords typed at the prompt — **[debugging.md](debugging.md) is the full reference** for the breakpoint types, every debug command, and stepping through a session interactively.
+At a `(rdb)` stop you get the full debug command set — `.where`, `.vars`, `.print ${x}`, `.step` / `.next` / `.continue`, and the rest. It is the *same* debugger as [`robotcode robot-debug`](debugging.md), and **[debugging.md](debugging.md) is the full reference** for breakpoints, debug commands and stepping.
 
 One trap: at the `(rdb)` prompt `Ctrl-D` **resumes** the run (unlike the `>>>` prompt, where `Ctrl-D` exits) — leave a stop with `.continue` / `.detach` / `.abort`.
 
 ## Gotchas
 
 - **No section headers in the REPL**: `*** Settings ***` / `*** Keywords ***` / `*** Test Cases ***` fail with `No keyword with name '...' found` — import with the `Import Library` / `Import Resource` / `Import Variables` keywords instead (see *Start or reuse a REPL* for the Settings-style aliases).
-- **The REPL debugger starts detached** — a failing keyword just prints its error and leaves you at the `>>>` prompt; nothing pauses (unlike `robotcode robot-debug`, which is attached). Attach with `.debug on` to make breakpoints and failures pause into `(rdb)` — see *Debugging from the REPL* for the attach/detach mechanics.
 - **Bare relative paths in the BuiltIn import keywords need RF 7.4+**: `Import Resource    foo/my.resource` (and the `Import Library` / `Import Variables` path forms) only resolve against the importing file's directory starting in RF 7.4. On RF ≤ 7.3 such calls fail with `Resource file '...' does not exist.` — fall back to `${CURDIR}/foo/my.resource` or put the directory on the module search path.
-- **A "statement" can be a whole multi-line block**, not only a single keyword — send a `FOR`/`IF`/`TRY` block's lines through to its `END` before waiting for the prompt. (Driving the session one statement at a time, and why the plain backend keeps captured I/O clean, is in *Start or reuse a REPL*.)
 
 ### Close the REPL when done
 
 Shut the REPL down so spawned subprocesses (browser, DB connection, server, …) don't linger — `.exit` is the clean exit:
 
-1. Type `.exit` (or `.quit`) at the `>>>` prompt and press Enter.
-2. If that doesn't return to the shell, for example because a statement still runs, send SIGTERM (`kill <pid>`): it stops the statement and ends the session the same way, with exit code `253`. A second SIGTERM forces the end.
+- A session: `robotcode session stop <ID>` — it also stops a statement that still runs.
+- A REPL you run in a terminal yourself: type `.exit` (or `.quit`) at the `>>>` prompt. If a statement still runs, send SIGTERM (`kill <pid>`): it stops the statement and ends the REPL with exit code `253`; a second SIGTERM forces the end.
 
 ## Explore the system under test
 
