@@ -1,8 +1,6 @@
 # Static analysis — `robotcode analyze code`
 
-`robotcode analyze code [PATHS]` parses the project's `.robot` and `.resource` files, resolves their imports, libraries, and variables, and reports diagnostics — **without executing anything**. It catches what a plain text scan can't, because resolution runs with the project's installed Robot Framework, `robot.toml`, and active profiles. Comes from the optional **`analyze`** package (`pip install "robotcode[analyze]"`, or `[all]`).
-
-Reach for it on "find issues", "check my robot code", "any undefined keywords / wrong arguments?", "are there unused keywords or variables?", and as a pre-commit / CI gate before running.
+`robotcode analyze code [PATHS]` parses the project's `.robot` and `.resource` files, resolves their imports, libraries, and variables, and reports diagnostics — **without executing anything**. It catches what a plain text scan can't, because resolution runs with the project's installed Robot Framework, `robot.toml`, and active profiles.
 
 ## Contents
 
@@ -14,11 +12,10 @@ Reach for it on "find issues", "check my robot code", "any undefined keywords / 
 - Exit code (CI gating)
 - Machine-readable output
 - Cache
-- Common workflows
 
 ## What it reports
 
-One diagnostic per line — `path:line:col: [SEVERITY] CODE: message` — then a summary line `Files: N, Errors: N, Warnings: N, Infos: N, Hints: N`. The severity tag is the **full word** (`[ERROR]`, `[WARNING]`, `[INFO]`, `[HINT]`), so `grep '\[E\]'` matches nothing — use `--severity` (below) instead of grepping.
+One diagnostic per line — `path:line:col: [SEVERITY] CODE: message` — then a summary line `Files: N, Errors: N, Warnings: N, Infos: N, Hints: N`. The severity tag is the **full word** (`[ERROR]`, `[WARNING]`, `[INFO]`, `[HINT]`).
 
 Typical diagnostics:
 
@@ -37,7 +34,7 @@ robotcode analyze code tests/acceptance/billing/    # narrow by path
 robotcode analyze code --filter '**/*.robot'        # narrow by glob
 ```
 
-`analyze code` accepts paths on the command line, so it composes with git to lint only changed files — see *Common workflows*.
+`analyze code` accepts paths on the command line, so it composes with git to lint only changed files — see workflow C in [workflows.md](workflows.md).
 
 ## Focusing the output
 
@@ -94,10 +91,10 @@ exit-code-mask = ["warn", "info", "hint"]
 ## Machine-readable output
 
 ```bash
-robotcode --format json analyze code                # JSON to stdout (global --format, like results/discover)
+robotcode --format json analyze code                # JSON to stdout
 ```
 
-For JSON, use the global **`--format json`** *before* the subcommand — the same option as for `results` / `discover`. `--full-paths` emits absolute paths instead of project-relative ones; `--show-tracebacks` restores the Robot Framework tracebacks and `PYTHONPATH` dumps the concise output hides (only when you need a diagnostic's full body).
+`--full-paths` emits absolute paths instead of project-relative ones; `--show-tracebacks` restores the Robot Framework tracebacks and `PYTHONPATH` dumps the concise output hides (only when you need a diagnostic's full body).
 
 ## Cache
 
@@ -109,10 +106,3 @@ robotcode analyze code --no-cache-namespaces   # one-off fresh run, cache untouc
 ```
 
 Inspect with `robotcode analyze cache info` (or `list` / `path`); `cache prune` removes the whole cache directory.
-
-## Common workflows
-
-Two orchestrated flows live in [workflows.md](workflows.md):
-
-- **Lint only the files about to commit** (workflow C) — feed `analyze code` the changed `.robot` / `.resource` files from `git diff`.
-- **Full-project sweep & cleanup** (workflow D) — baseline → errors first → `--collect-unused` → suppress noise → gate CI → refresh a stale cache.

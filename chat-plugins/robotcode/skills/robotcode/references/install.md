@@ -2,7 +2,7 @@
 
 Getting `robotcode` into a project's own Python environment — and the right sub-packages (extras) alongside it — so the CLI sees the project's libraries, resources, and local modules.
 
-**Before you install, confirm it's really missing.** robotcode is often already in the project's environment (the RobotCode IDE extension and typical setups install it), so first get *into* that environment — activate its venv, or invoke through the manager (`hatch run` / `uv run` / `poetry run` / `pdm run` + `robotcode …`), or use the IDE-configured interpreter — and just try the command. An empty `command -v robotcode` in an unactivated or base shell is **not** a reason to install. This workflow applies only once robotcode is genuinely absent from the project's own environment: `command -v robotcode` (or `Get-Command robotcode` on Windows) comes up empty *with the environment active*, **or** a `robotcode <X>` invocation fails with `Error: No such command 'X'` (which means the sub-package shipping `X` isn't installed).
+**Before you install, confirm it's really missing.** robotcode is often already in the project's environment (the RobotCode IDE extension and typical setups install it), so first get *into* that environment — activate its venv, or invoke through the manager (`hatch run` / `uv run` / `poetry run` / `pdm run` + `robotcode …`), or use the IDE-configured interpreter — and just try the command. An empty `command -v robotcode` in an unactivated or base shell is **not** a reason to install. This workflow applies only once robotcode is genuinely absent from the project's own environment: `command -v robotcode` (or `Get-Command robotcode` on Windows) comes up empty *with the environment active*, **or** a `robotcode <X>` invocation fails with `No such command 'X'` (which means the sub-package shipping `X` isn't installed).
 
 ## Contents
 
@@ -33,7 +33,7 @@ Minimum for this skill is `robotcode[runner,analyze,repl]`:
 
 - `runner` — `robotcode robot` / `run` / `rebot` / `discover` / `libdoc` / `testdoc` / `results`
 - `analyze` — `robotcode analyze code` and `robotcode analyze cache`
-- `repl` — `robotcode repl` (interactive shell), `robotcode doc` (library, resource and keyword documentation) **and** `robotcode robot-debug` / `run-debug` (the command-line debugger). Both ship in `repl` — the command-line debugger is **not** in the `debugger` extra below.
+- `repl` — `robotcode repl` (interactive shell), `robotcode session`, `robotcode doc` (library, resource and keyword documentation) **and** `robotcode robot-debug` / `run-debug` (the command-line debugger).
 
 Other available extras the user may want included:
 
@@ -77,25 +77,17 @@ robotcode --version
 robotcode discover info     # shows the bound Robot Framework + Python
 ```
 
-If `robotcode` is installed but not on `PATH`, the venv isn't active — invoke it via the manager (`uv run robotcode ...`, `poetry run robotcode ...`, `hatch run robotcode ...`, `pdm run robotcode ...`). The CLI itself is fully cross-platform.
+If `robotcode` is installed but not on `PATH`, the venv isn't active — invoke it via the manager (`uv run robotcode ...`, `poetry run robotcode ...`, `hatch run robotcode ...`, `pdm run robotcode ...`).
 
 ## 5. If a command is missing later
 
 robotcode itself can be installed while a command the agent needs isn't — the user did a partial install at some earlier point. The error looks like:
 
 ```
-Error: No such command 'analyze'.
+[ ERROR ] No such command 'analyze'.
 ```
 
-**Don't read this as a typo and don't retry with a different command name.** It means the corresponding sub-package isn't in the environment. Map the missing command to the extra that ships it:
-
-| Command(s) | Needed extra |
-| --- | --- |
-| `robot` / `run` / `rebot` / `discover` / `libdoc` / `testdoc` / `results` | `runner` |
-| `analyze code` / `analyze cache` | `analyze` |
-| `repl` / `robot-debug` / `run-debug` / `doc` | `repl` |
-| `debug` (DAP server for editors) | `debugger` |
-| `repl-server` | `replserver` |
+**Don't read this as a typo and don't retry with a different command name.** It means the corresponding sub-package isn't in the environment. Step 2 lists which extra ships which command.
 
 Treat it the same way as a fresh install: **ask the user before adding the missing extra.** One user-prompt round-trip covers:
 

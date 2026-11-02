@@ -9,7 +9,7 @@
 - Where config lives, and the loading order
 - Profiles
 - Common patterns
-- Gotchas
+- Good to know
 
 ## What goes in it
 
@@ -69,8 +69,6 @@ RobotCode merges several files; a later one overrides settings from the earlier 
 2. **`pyproject.toml`** — project root, under `[tool.robot]`. Robot settings here only if you deliberately keep a single config file (see split-by-concern below).
 3. **`robot.toml`** — project root; the **shared, committed** project configuration — the team's single source of truth and what makes runs reproducible. Everything the team needs to run the suite the same way belongs here, in version control.
 4. **`.robot.toml`** — project root; **personal, per-developer overrides**, deliberately **git-ignored**. For local-only tweaks that must not affect teammates — a local library/browser path, an extra `python-path`, a personal `default-profiles`, a temporary `log-level`. Nothing the team relies on goes here.
-
-**Why it is split this way.** The three layers divide responsibility on purpose. The committed `robot.toml` is the team's shared baseline — it is what makes runs reproducible, so anything the whole team needs to run the suite identically lives there, in version control. `.robot.toml` (git-ignored) and the global user config are the *personal* layers: they stay out of the repo and **can** differ from machine to machine, so a developer **can** adjust things locally — a local library/browser path, an extra `python-path`, a personal `default-profiles` — without changing what everyone else runs. They are optional; their point is to *allow* per-developer overrides, not to require them. The committed `robot.toml` stays the common baseline, and any per-machine difference comes only from these optional layers. The same split tells you where a new setting belongs: if a correct, identical run depends on it, it goes in the committed `robot.toml`; if it is a machine- or person-specific convenience, it goes in `.robot.toml` or the user-global file.
 
 **`robot.toml` vs. `pyproject.toml` — split by concern.** Keep *Python*-project configuration (build, dependencies, and Python tools like ruff/mypy/pytest) in `pyproject.toml`, and *Robot Framework* configuration (paths, variables, profiles, RF/rebot options, RobotCode settings) in **`robot.toml`** — even when the project already has a `pyproject.toml`. RobotCode *can* read Robot settings from a `[tool.robot]` section in `pyproject.toml` (it loads before `robot.toml`, so `robot.toml` wins on conflict), but the clean practice is to keep the two apart. `robot.toml` also keeps its keys at the top level (`output-dir = "results"`, `[profiles.dev]`), so it stays flat and readable instead of nesting everything under `[tool.robot]` / `[tool.robot.profiles.<name>]`.
 
@@ -150,10 +148,8 @@ enabled.if = "platform.system() == 'Windows'"
 variables = { DRIVER_PATH = "C:\\drivers" }
 ```
 
-## Gotchas
+## Good to know
 
-- **`extend-` vs. plain replaces silently.** A profile's plain `variables = { … }` *replaces* the inherited/default variables (the others are dropped); use `extend-variables` to add. Same for `includes`, `python-path`, `metadata`, etc.
-- **Config changes longnames.** `paths` and name-transform settings change suite/test *names* from what the files literally say — so select a single test by its `discover` / `results` **longname** (`-bl`), never by its file path. See [debugging.md](debugging.md).
+- **Config changes longnames.** `paths` and name-transform settings change suite/test *names* from what the files literally say — so take them from `discover` or `results`, see [SKILL.md](../SKILL.md#selecting-one-test-or-suite).
 - **CLI overrides config.** Flags on the command line win over `robot.toml`; use them to narrow a one-off run, not as a substitute for the config.
 - **`config show` is the merged result, so it includes the user-global defaults.** A setting that isn't in the project's `robot.toml` / `pyproject.toml` is usually one of those user-level defaults (source #1 above) rather than something the project sets. `config show -s` (each file's own contribution) and `config files` show which file each setting comes from, which attributes any setting to its layer.
-- **Verify, don't guess.** Confirm keys/types with `config info desc` and the merged result with `config show` — and preview a profile's selection with `discover` — before trusting an edit.

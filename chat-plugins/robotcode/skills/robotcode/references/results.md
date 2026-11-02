@@ -2,44 +2,28 @@
 
 `robotcode results` inspects a finished Robot Framework run — the `output.xml` / `output.json` it wrote — from the terminal. It reads the file **server-side** and returns only the slice you ask for: headline counts, per-test listings, the execution tree, aggregates, or a run-to-run diff. The output file is auto-discovered from the active profile (override with `-o`), so it works the same on your own run, a CI artifact, or a colleague's — without ever loading the raw file into context.
 
-Reach for it whenever a run has finished and the question is "did it pass, what failed, why, or what changed?" — five subcommands (`summary`, `show`, `log`, `stats`, `diff`) cover those, detailed below. Parsing `output.xml` directly is almost always the wrong move (see §1 for why); let `results` filter server-side instead.
-
-> **Note**: RobotCode auto-detects non-interactive use and disables paging/colors automatically — no extra flags needed. (If a wrapper ever forces a pager, `--no-pager --no-color` before the subcommand makes it explicit.)
+Reach for it whenever a run has finished and the question is "did it pass, what failed, why, or what changed?" — five subcommands (`summary`, `show`, `log`, `stats`, `diff`) cover those, detailed below.
 
 ## Contents
 
 1. The shared option surface across all five subcommands
 2. `summary` — the headline
 3. `show` — list individual tests
-4. `log` — the report.html in plain text
+4. `log` — the log.html in plain text
 5. `stats` — aggregate by tag / suite / status
 6. `diff` — compare two runs
 7. Auto-discovery and `-o` overrides
 8. For custom analysis: `robot.api.ExecutionResult`
-9. JSON output during the run (RF 7+) and xUnit XML
-10. Reporting back to the user
 
 ## 1. The shared option surface
 
 Five subcommands share a consistent option surface — auto-discovering the output file from the active profile, accepting:
 
 - Standard Robot filters: `-i <tag>` / `-e <tag>` / `-s <suite>` / `-t <test>` / `--status pass|fail|skip|not-run` (with `--failed` / `--passed` / `--skipped` as shortcuts on `show` / `log` / `stats`)
-- Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output); no glob ambiguity. Available on all five subcommands
+- Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output). Available on all five subcommands
 - Test-metadata filters (RF 7.5+): `-btm <pattern>` / `-ebtm <pattern>` — select by the test's `[Metadata]` with the same patterns as `robotcode robot` and `discover` (`-btm Issue:4409` → the results of every test for issue 4409). A result file holds the values the run used, so variables in a value are already replaced there. Available on all five subcommands
 - Full-text search: `--search TEXT` / `--search-regex PATTERN` — searches across names, messages, tags, documentation, metadata, and keyword names/args/docs/messages
 - Output-file override: `-o PATH` (file or directory)
-
-`--format json` / `--format text` is a **global** flag — put it *before* the subcommand (`robotcode --format json results summary`), not after it, the same as for `analyze` / `discover`.
-
-All five emit text or JSON:
-
-- **`summary`** — headline counts; add `--failed` to list failing tests below the counts
-- **`show`** — one line per test (status, name, source, first failure-message line)
-- **`log`** — full execution tree for matching tests (keywords, control flow, messages)
-- **`stats`** — aggregate by `tag` / `suite` / `status`
-- **`diff`** — compare two output files (status changes, added/removed tests)
-
-Reaching for `xmllint`, `grep` on `output.xml`, opening the file with a generic read tool, or writing a custom parser is almost always wrong — the CLI covers every common case, and the rare ones map to the Python API (section 8). **`output.xml` for a non-trivial run is routinely tens to hundreds of megabytes**; pulling it into your context burns tokens for no benefit since `robotcode results` already filters server-side. Override the auto-discovered file with `-o PATH` / `--output PATH` on any subcommand (same flag name as `robot --output`).
 
 ## 2. `robotcode results summary` — the headline
 
@@ -72,9 +56,9 @@ robotcode results show --sort status                  # FAIL → SKIP → PASS �
 robotcode results show -bl "MyProject.Login.Login Works"  # exact-match by full longname
 ```
 
-One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--show-tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`). `--failed` / `--passed` / `--skipped` are additive shortcuts for `--status fail|pass|skip`.
+One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--show-tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`).
 
-## 4. `robotcode results log` — the report.html in plain text
+## 4. `robotcode results log` — the log.html in plain text
 
 ```bash
 robotcode results log                                            # full trace, all tests
@@ -90,7 +74,7 @@ robotcode results log --failed --extract /tmp/artefacts          # write referen
 robotcode results log --execution-messages                       # also the `<errors>` messages from outside the tests (imports, parsing)
 ```
 
-Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `report.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed. `--max-depth N` is your friend on deeply nested suites: it collapses everything below level `N` to a child-count summary. For deeper inspection add `--keyword-info` (each keyword's `[Documentation]`/`[Tags]`/`[Timeout]`) or `--suite-info` (suite-level metadata). For HTML-rich messages, `pip install robotcode-runner[html]` improves conversion quality.
+Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `log.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed.
 
 ## 5. `robotcode results stats` — aggregate by tag / suite / status
 
@@ -137,16 +121,3 @@ for t in r.suite.all_tests:
 ```
 
 `r.suite.statistics`, iterable `r.suite.all_tests`, `test.full_name`, `test.message`, `test.status`, `test.elapsed_time`, etc. — no ElementTree, no XPath. Run it via the project's runtime so the same Robot Framework version reads what wrote.
-
-## 9. JSON output during the run (RF 7+) and xUnit XML
-
-`robotcode results` reads both XML and JSON outputs, so there's rarely a reason to switch formats. The exceptions — both for downstream tooling, not for agent consumption:
-
-```bash
-robotcode robot --output output.json ...           # RF 7+: smaller file / external JSON consumer
-robotcode robot --xunit xunit.xml ...              # xUnit-format XML for CI dashboards (Jenkins, GitLab, GitHub)
-```
-
-## 10. Reporting back to the user
-
-Lead with the headline (`X passed, Y failed, Z skipped`), then a short list of failed tests with a one-line reason each. Mention the paths to `log.html` / `report.html` so the user can open them; don't parse them. Don't dump JSON or XML in the response.

@@ -27,23 +27,21 @@ metadata:
 
 RobotCode must run from the project's Python environment. Do not use isolated runners such as `uvx robotcode ...` or `pipx run robotcode ...` for real projects; they cannot see the project's libraries, resources, and local Python modules.
 
-**It is probably already installed — try it before installing anything.** Most projects already have robotcode in their environment (the RobotCode IDE extension and typical setups put it in the project's venv). So first get *into* that environment — activate the project venv, invoke through the project's runner (`hatch run robotcode …`, `uv run robotcode …`, `poetry run robotcode …`, `pdm run robotcode …`), or use the interpreter the IDE is configured with — and just run the command. Treat installing as a **fallback**, reached only when `robotcode` is genuinely missing there: `command -v robotcode` is empty *with that environment active*, or a command fails with `Error: No such command 'X'`. Don't make installing the first move — see [references/install.md](references/install.md) only once you've confirmed it's actually absent.
+**It is probably already installed — try it before installing anything.** Most projects already have robotcode in their environment (the RobotCode IDE extension and typical setups put it in the project's venv). So first get *into* that environment — activate the project venv, invoke through the project's runner (`hatch run robotcode …`, `uv run robotcode …`, `poetry run robotcode …`, `pdm run robotcode …`), or use the interpreter the IDE is configured with — and just run the command. Read [references/install.md](references/install.md) only when `robotcode` is genuinely missing there: `command -v robotcode` is empty *with that environment active*, or a command fails with `No such command 'X'` (the extra with that command is missing; don't retry other spellings).
 
 ## Pick the mode first
 
-Decide what the user actually wants *before* reaching for a command — these intents have different entry points, and mixing them up is the most common mistake: especially writing a `.robot` test file when the user asked you to *do* something, or reaching for the REPL to fix/debug a real test when that's the **debugger's** job. Several can chain in one task (explore → author → run → inspect).
+Decide what the user actually wants *before* reaching for a command — these intents have different entry points, and mixing them up is the most common mistake. Several can chain in one task (explore → author → run → inspect).
 
-- **Use the REPL — explore, with no existing test in play** — *"try this keyword", "open a Robot shell", "go to … and check", "fetch …", "build this keyword step by step", "does this keyword/library work?", "so I can watch it drive the app".* Standalone interactive work: poke at a keyword, drive the application, prototype a keyword/test line by line. **Not for anything involving a real test case** — running it, watching it run, stepping it, inspecting its live state, or *why it fails*: the REPL runs in a *different context* (no suite setup, variables, or `__init__.robot`), so use **Debug** for that — it runs the *real* test in its real context, with keywords available at the `(rdb)` stop. "Interactive" does **not** mean the REPL once a test case is in play. See [references/repl.md](references/repl.md).
+- **Use the REPL — explore, with no existing test in play** — *"try this keyword", "open a Robot shell", "go to … and check", "fetch …", "build this keyword step by step", "does this keyword/library work?", "so I can watch it drive the app".* Standalone interactive work: poke at a keyword, drive the application, prototype a keyword or test line by line. Prefer it over a throwaway `.robot` file: what worked at the prompt promotes into a test cheaply (`.save`), whereas a prematurely written test wastes effort, can't be watched, and tears its browser/connection down at the run's end. [**Not for anything involving a real test case**](#a-real-test-case-the-debugger-not-the-repl). See [references/repl.md](references/repl.md). Run it with `robotcode repl`, or with `robotcode session start repl` if your shell tool can't keep a command running and write to its input.
 - **Author tests or keywords** — *"write / create / add a test or suite".* See [references/authoring.md](references/authoring.md).
-- **Run a suite or tests** — *"run the tests", "execute the smoke suite", "run only tag X", "run just suite Y / this one test".* A whole suite, or a subset filtered by tag/suite/name. **To run one test, task, or suite, select it by longname (`-bl`), not a `.robot` file** — a single file becomes the top suite and skips the parent suites' `__init__.robot` (a whole directory is fine; it loads it). See [Running tests](#running-tests--robotcode-robot).
+- **Run a suite or tests** — *"run the tests", "execute the smoke suite", "run only tag X", "run just suite Y / this one test".* A whole suite, or a subset filtered by tag/suite/name. To run one test or suite, [select it by longname](#selecting-one-test-or-suite). See [Running tests](#running-tests--robotcode-robot).
 - **Inspect or compare a finished run** — *"what failed?", "did it pass?", "why did X fail?", "did this regress?", "what changed since the last run?".* No re-run; try this **first** for "why did X fail?". See [references/results.md](references/results.md).
-- **Debug a live run** — *"fix this test", "why does this test fail / won't it run?", "step through it", "watch / inspect this test as it runs", "break at line X", "what is `${response}` there?", "try this in the actual test/suite".* Pause the real run; inspect the live stack/variables **and run keywords at the `(rdb)` prompt in the real context**. This — not the REPL — is how you experiment *inside* a real test or suite. Also the tightest **loop while developing or fixing a test**: run it via `robot-debug` rather than a plain `robot` run, so a failure stops you live to investigate and prove a fix on the spot — then write that fix into the file and re-run to confirm, since running it at the prompt doesn't change the source (a clean pass just runs through). See [references/debugging.md](references/debugging.md).
-- **Analyze / lint the code** — *"find issues", "check my robot code", "any undefined keywords / wrong arguments?", "are there unused keywords or variables?".* Static analysis (errors, undefined keywords, wrong args, unresolved/unused variables), no run. See [references/analyze.md](references/analyze.md).
-- **Inventory / understand the project** — *"what tests/tasks/tags/suites exist?", "which tests or tasks have tag X?", "how big is this?".* See [Discovery](#discovery--whats-in-the-project).
+- **Debug a live run** — *"fix this test", "why does this test fail / won't it run?", "step through it", "watch / inspect this test as it runs", "break at line X", "what is `${response}` there?", "try this in the actual test/suite".* Pause the real run; inspect the live stack/variables and run keywords at the `(rdb)` prompt in the real context. Also the tightest loop while developing or fixing a test: a failure stops you live to prove a fix on the spot; then write that fix into the file and re-run, since running it at the prompt doesn't change the source. This, not the REPL, is how you experiment *inside* a real test or suite. See [references/debugging.md](references/debugging.md). Run it with `robotcode robot-debug`, or with `robotcode session start debug` if your shell tool can't keep a command running and write to its input.
+- **Analyze / lint the code** — *"find issues", "check my robot code", "any undefined keywords / wrong arguments?", "are there unused keywords or variables?".* Static analysis, no run. See [references/analyze.md](references/analyze.md).
+- **Inventory / understand the project** — *"what tests/tasks/tags/suites exist?", "which tests or tasks have tag X?", "how big is this?".* `robotcode discover`, not grep. See [Discovery](#discovery--whats-in-the-project).
 - **Configure the project** — *"set up robot.toml", "add a CI profile", "configure variables/paths", "what's my effective config?".* See [references/config.md](references/config.md).
-- **Look up a keyword or library** — *"what does X do?", "what args does it take?", "which keywords does this resource have?".* `robotcode doc keywords` / `robotcode doc keyword`; see [Documentation lookup priority](#documentation-lookup-priority).
-
-For **standalone exploration** ("watch me", "try …", "do it for me") prefer the REPL over writing a throwaway `.robot` file — a working session promotes into a test cheaply (`.save`), whereas a prematurely written test wastes effort, can't be watched, and tears its browser/connection down at the run's end. But the moment a **real test or suite** is in play — fixing it, stepping it, or asking *why it fails* — use the **debugger** (or read the recorded failure with [`results`](references/results.md) first), **not the REPL**, because only the debugger runs the test in its real context. In short: **the REPL is for trying things out; the debugger is for debugging a real test or task.**
+- **Look up a keyword or library** — *"what does X do?", "what args does it take?", "which keywords does this resource have?".* `robotcode doc keywords` / `robotcode doc keyword`. See [Documentation lookup priority](#documentation-lookup-priority).
 
 ## Tests or tasks? (RPA)
 
@@ -70,31 +68,6 @@ For non-obvious RobotCode CLI details that are not library/resource keyword docu
 1. <https://robotcode.io/llms-full.txt> — complete RobotCode docs as LLM-friendly text.
 2. <https://robotcode.io/llms.txt> — small navigation index for individual pages.
 
-## Contents
-
-- **Setup** — If robotcode is missing, read [references/install.md](references/install.md).
-- **Cross-cutting** — Global options, output formats, profiles, tags, suites, tests.
-- **Commands** — Discovery, static analysis, library info, REPL, runs, debugging, configuration.
-- **Results** — Inspecting finished runs; full reference in [references/results.md](references/results.md). **Always read this file before issuing any `robotcode results` command — do not guess flags from `--help` output alone.**
-- **Scale** — Large-project tactics in [references/large-projects.md](references/large-projects.md).
-- **Recipes** — Multi-step workflows in [references/workflows.md](references/workflows.md).
-- **REPL** — Interactive exploration and step-by-step development of tests and keywords in [references/repl.md](references/repl.md).
-- **Debugging** — Pausing a live run at a breakpoint and inspecting the stack/variables (`robotcode robot-debug`, `repl --break`) in [references/debugging.md](references/debugging.md).
-- **Authoring** — Writing/extending tests and reusable keywords (reuse → prototype → analyze → run) in [references/authoring.md](references/authoring.md).
-- **Configuration** — `robot.toml` and profiles (loading order, inheritance, `extend-`, computed `{ expr }` / `{ if }` values, previewing a profile with `discover`) in [references/config.md](references/config.md).
-- **Reference** — Gotchas that prevent common agent mistakes.
-
-## If robotcode isn't installed (or a command is missing)
-
-If `command -v robotcode` fails *with the project environment active*, or `robotcode <command>` reports `Error: No such command 'X'`, read [references/install.md](references/install.md) before installing anything.
-
-Key rules:
-
-- Install into the project environment, not an isolated tool runner.
-- The base `robotcode` package is only the CLI core; commands live in extras such as `runner`, `analyze`, and `repl`.
-- Ask before installing. Decide both install scope and extras in one user prompt.
-- `Error: No such command 'X'` means the relevant extra is missing; do not retry alternate spellings.
-
 ## Global options worth knowing
 
 Global options go before the subcommand:
@@ -108,21 +81,21 @@ Use these often:
 
 - `-p, --profile <name>` — select a profile globally for `config`, `profiles`, `discover`, `analyze`, `results`, `doc`, and `robot`. **Repeatable** — pass it several times (`-p ci -p docker`) to merge profiles, and each `<name>` is a glob (`-p "ci*"` selects every matching profile). See [Configuration & profiles](#configuration--profiles) for merge order.
 - `-r, --root <dir>` — override project-root detection only when needed.
-- `--format {text|json|json_indent|toml}` — request structured output where supported (global; goes before the subcommand).
+- `--format {text|json|json_indent|toml}` — request structured output where supported.
 - `-d, --dry` — print what would happen.
 
 ## Output formats (`--format`)
 
 Default to text output. It is designed to be readable directly and avoids unnecessary parsing.
 
-Use JSON only when a script, `jq`, CI pipeline, editor integration, or nested tree projection needs structured data. `discover`, `config`, `profiles`, `results`, and `analyze code` all honor the global `--format json` (before the subcommand — e.g. `robotcode --format json analyze code`). `robot` / `rebot` run Robot Framework directly; the global `--format` does not change Robot's native console output.
+Use JSON only when a script, `jq`, CI pipeline, editor integration, or nested tree projection needs structured data. `discover`, `config`, `profiles`, `results`, and `analyze code` all honor the global `--format json`. `robot` / `rebot` run Robot Framework directly; the global `--format` does not change Robot's native console output.
 
 ## Concepts: profiles, tags, suites, tests
 
 | Concept | What it is | User language | Flag |
 | --- | --- | --- | --- |
-| **Profile** | Named preset in `robot.toml` / `pyproject.toml` | "use the dev profile", "ci + docker profiles" | `--profile <name>` before the subcommand (repeatable; multiple merge) |
-| **Tag** | `[Tags]` label on tests/tasks | "smoke tests", "slow ones" | `-i <tag>` / `-e <tag>` |
+| **Profile** | Named preset in `robot.toml` / `pyproject.toml` | "use the dev profile", "ci + docker profiles" | `--profile <name>` (repeatable; multiple merge) |
+| **Tag** | `[Tags]` label on tests | "smoke tests", "slow ones" | `-i <tag>` / `-e <tag>` |
 | **Suite** | `.robot` file or directory-derived suite | "Login suite" | `-s <name-pattern>` |
 | **Test** / **Task** | One `*** Test Cases ***` entry (or `*** Tasks ***` in RPA) | "test called Login Works", "the task" | `-t <name-pattern>` (alias `--task`) or `-bl <longname>` |
 
@@ -134,32 +107,26 @@ robotcode discover tags --no-tests
 robotcode discover suites
 ```
 
-## Robot Framework options work everywhere
+## Selecting one test or suite
 
-`discover`, `robot`, `run`, and `rebot` accept Robot Framework options such as `-i`, `-e`, `-s`, `-t`, variables, listeners, and pre-run modifiers. Tag patterns use Robot Framework syntax (`smokeANDcritical`, `regressionNOTwip`, `ui_*`), not shell glob semantics.
+`discover`, `robot`, `run`, `robot-debug`, `session start debug` and `rebot` accept Robot Framework options such as `-i`, `-e`, `-s`, `-t`, variables, listeners, and pre-run modifiers; `results` takes the same selectors. Tag patterns use Robot Framework syntax (`smokeANDcritical`, `regressionNOTwip`, `ui_*`), not shell glob semantics.
 
 RobotCode also adds exact longname filters:
 
 - `-bl, --by-longname "Suite.Sub.Test"` — include by exact longname (a test, task, or whole suite).
-- `-ebl, --exclude-by-longname "Suite.Sub.Test"` — exclude by exact longname (test, task, or suite).
-- `-btm, --by-test-metadata "Issue:4409"` — include tests/tasks whose own `[Metadata]` matches (RF 7.5+). Terms `NAME:VALUE` with `*` / `?`, combined with `AND` / `OR` / `NOT` written as separate upper-case words: `"Author:Hans* NOT Reviewer:*"`, `"*:4409"`. Every line of a multi-line value is a value of its own.
+- `-ebl, --exclude-by-longname "Suite.Sub.Test"` — exclude by exact longname.
+- `-btm, --by-test-metadata "Issue:4409"` — include tests whose own `[Metadata]` matches (RF 7.5+). Terms `NAME:VALUE` with `*` / `?`, combined with `AND` / `OR` / `NOT` written as separate upper-case words: `"Author:Hans* NOT Reviewer:*"`, `"*:4409"`. Every line of a multi-line value is a value of its own.
 - `-ebtm, --exclude-by-test-metadata "Owner:*"` — exclude by the same patterns (RF 7.5+).
 
-Use longname filters when you copied a full name from `discover` or `results show` and want to avoid glob ambiguity. Use the metadata filters for data a project keeps in `[Metadata]` rather than tags — "all tests for issue 4409" is `robotcode discover tests -btm Issue:4409`; `robotcode discover metadata --values` lists the names and values in use. Suite `Metadata` is listed there too, but only a test's own metadata is selectable.
+Use the metadata filters for data a project keeps in `[Metadata]` rather than tags — "all tests for issue 4409" is `robotcode discover tests -btm Issue:4409`; `robotcode discover metadata --values` lists the names and values in use. Suite `Metadata` is listed there too, but only a test's own metadata is selectable.
 
-**To run or debug one specific test, task, or suite, select it by its longname (`-bl "<longname>"`) — never by passing the `.robot` file.** This holds for `robotcode robot` and `robotcode robot-debug` alike: pointing Robot at a single file makes it the top suite, so the parent suites' `__init__.robot` (suite setup/teardown, suite variables, tags, and timeouts) never runs and it behaves unlike a real run (and a file with several tests runs them all). Get the longname from `discover` or `results`. The one path form that's fine is a whole **directory** (it loads its `__init__.robot`) — never a single `.robot` file. The top suite is named after `paths`, not after the project's folder (`paths = ["tests"]` gives `Tests`); take names for `-s` and `-bl` from `robotcode discover suites`.
+**To run, debug or inspect one test, task or suite, select it by longname (`-bl "<longname>"`), never by a single `.robot` file.** This holds for `robot`, `robot-debug`, `session start debug`, `discover` and `results`. A single file becomes the top suite, so the parent suites' `__init__.robot` (setup/teardown, variables, tags, timeouts) never runs and it behaves unlike a real run; a file with several tests also runs them all. A whole **directory** is fine: it loads its `__init__.robot`. Get the longname from `robotcode discover` or `robotcode results`. The top suite is named after `paths`, not after the project's folder (`paths = ["tests"]` gives `Tests`); take names for `-s` and `-bl` from `robotcode discover suites`.
 
 ## Discovery — what's in the project?
 
 Use `robotcode discover` to inspect what the active profile would see without executing tests.
 
-**Do not answer "what tests, tasks, tags, or suites exist?" by reading or grepping `.robot` files** — and that includes grepping for `*** Tasks ***` or `*** Test Cases ***`; use `robotcode discover` (`discover tasks` for an RPA project). Which tests, tasks, suites, and tags actually exist is decided at *resolution time*, and a static file scan misses all of it:
-
-- **Robot's own rules** decide which files even become suites vs. resources vs. ignored, how directories nest into suites, and how `__init__.robot` and naming shape the tree.
-- **`robot.toml` / profiles** set the `paths` in scope, plus variables and name transforms that change suite and test names from what the file literally says.
-- **`-i/-e/-s/-t` filters and pre-run modifiers** add, remove, rename, or retag tests *before* execution — so a literal `[Tags]` line in a file is not necessarily the effective tag set, and a `*** Test Cases ***` entry may not survive into the run at all.
-
-`discover` performs that whole resolution with the project's installed Robot Framework and returns the real answer; grep cannot. (Same reasoning as preferring `robotcode doc` over reading library source.) When the user constrains by tag/suite/profile, pass the matching filters so the inventory reflects exactly that scope.
+**Do not answer "what tests, tasks, tags, or suites exist?" by reading or grepping `.robot` files** — and that includes grepping for `*** Tasks ***` or `*** Test Cases ***`; use `robotcode discover` (`discover tasks` for an RPA project). Which tests, tasks, suites, and tags actually exist is decided at *resolution time* — by Robot's own rules, by `robot.toml` and profiles (`paths`, variables, name transforms), and by filters and pre-run modifiers that add, remove, rename, or retag tests — and a static file scan misses all of it. `discover` performs that whole resolution with the project's installed Robot Framework. When the user constrains by tag/suite/profile, pass the matching filters.
 
 | Goal | Command |
 | --- | --- |
@@ -171,19 +138,19 @@ Use `robotcode discover` to inspect what the active profile would see without ex
 | Metadata names/values and what carries them (test metadata RF 7.5+) | `robotcode discover metadata --values --tests` / `--suites` |
 | `.robot` / `.resource` files after `.gitignore` / `.robotignore` | `robotcode discover files` |
 
-Filter discovery like a run with Robot options (`-i`, `-e`, `-s`, `-t`, paths, variables). Add `--search TEXT` or `--search-regex PATTERN` to match names, paths, docs, tags, metadata, and test-body content. Use `--format json` when an integration needs the tree shape.
+Filter discovery like a run (see [Selecting one test or suite](#selecting-one-test-or-suite)). Add `--search TEXT` or `--search-regex PATTERN` to match names, paths, docs, tags, metadata, and test-body content. Use `--format json` when an integration needs the tree shape.
 
 Parse-time diagnostics are **off by default**. Add `--diagnostics` (e.g. `robotcode discover --diagnostics tests`) to print the full `robot` parsing errors and warnings — on stderr, before the results — when you need them.
 
 ## Static analysis — `analyze code`
 
-`robotcode analyze code [PATHS]` statically checks the project — undefined/duplicate keywords, unresolved variables, wrong argument counts, failing imports, deprecated syntax, and (opt-in) unused keywords/variables — **without running anything**. Output is one diagnostic per line (`path:line:col: [SEVERITY] CODE: message`, the tag a full word like `[ERROR]`) plus a summary; the exit code is a **bitmask** (`1` errors, `2` warnings, `4` infos, `8` hints — check bits, not values).
+`robotcode analyze code [PATHS]` statically checks the project — undefined/duplicate keywords, unresolved variables, wrong argument counts, failing imports, deprecated syntax, and (opt-in) unused keywords/variables — **without running anything**. Output is one diagnostic per line (`path:line:col: [SEVERITY] CODE: message`, the tag a full word like `[ERROR]`) plus a summary; the exit code is a **bitmask** (`1` errors, `2` warnings, `4` infos, `8` hints — check bits, not values), unlike `robot`'s.
 
-Filter with `--severity` / `--code` (not `grep`), find dead code with `--collect-unused`, suppress with `# robotcode: ignore[CODE]` or `-mi`, and gate CI by masking severities out of the exit code. **[references/analyze.md](references/analyze.md)** is the full reference — every flag, the diagnostic codes, the suppression scopes, exit-code masking, machine-readable output, and the cache.
+Filter with `--severity` / `--code` (not `grep`), find dead code with `--collect-unused`, suppress with `# robotcode: ignore[CODE]` or `-mi`, and gate CI by masking severities out of the exit code. **[references/analyze.md](references/analyze.md)** is the full reference.
 
 ## Library & keyword information — `doc`, `repl`
 
-Use `robotcode doc` for Robot Framework library, resource, and keyword documentation. Prefer it before generic documentation tools: it loads the target anew on every call in the project environment — with `robot.toml`, the selected profiles, variables, the Python path, and the import arguments you give — and can document project-local libraries, `.resource` files, and the keywords of suite files that external docs cannot see.
+Use `robotcode doc` for Robot Framework library, resource, and keyword documentation. It loads the target anew on every call in the project environment — with `robot.toml`, the selected profiles, variables, the Python path, and the import arguments you give — and can document project-local libraries, `.resource` files, and the keywords of suite files.
 
 ```bash
 robotcode doc keywords BuiltIn                                         # every keyword: name, arguments, first paragraph of its doc
@@ -195,13 +162,9 @@ robotcode doc keywords "MyLib::config.yaml::strict"                    # import 
 robotcode -p dev doc keywords 'MyLib::${MODE}'                         # variables resolve from robot.toml, profiles and -v
 ```
 
-The output is Markdown. `robotcode doc lib <Target>` prints the whole documentation page — long, so prefer `keywords` to find a keyword and `keyword` to read it. `robotcode --format json doc keywords …` gives structured entries (`name`, `args`, `short_doc`, `tags`, `doc`). A target that cannot be imported, not initialised with the given arguments, or whose keywords cannot be read (such as `Remote` without a running server) prints nothing, reports Robot Framework's error on stderr and exits `1`: fix the target or its arguments rather than reading the library source. A keyword name without a match also exits `1` and suggests similar names. `robotcode doc browse` is a terminal viewer for humans; in an agent session it prints the page like `doc lib`.
+The output is Markdown. `robotcode doc lib <Target>` prints the whole documentation page — long, so prefer `keywords` to find a keyword and `keyword` to read it. `robotcode --format json doc keywords …` gives structured entries (`name`, `args`, `short_doc`, `tags`, `doc`). If a target can't be imported, fix it or its arguments rather than reading the library source.
 
-Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, exploring against the live application, or developing a test case or keyword one line at a time and saving it. **From an agent, run it as a session:** `robotcode session start repl` starts it in the background and prints its ID; each `robotcode session send <ID> '<input>'` then runs one input and returns with its output and an exit code (`0` passed, `1` failed), so you read each answer before you choose the next input; `robotcode session stop <ID>` ends it. Never start a bare `robotcode repl` and wait for it to exit — it waits at its prompt forever (see [references/repl.md](references/repl.md#driving-the-repl-from-an-agent)). (To debug a *real* failing test, reach for `robotcode robot-debug`, not the REPL — see [references/debugging.md](references/debugging.md).) REPL input is not a `.robot` file: no section headers, no indentation, and imports are keyword calls — `Import Library    Collections` (the Settings-style `Library    Collections` works too, as a REPL alias). No agent-specific flags are needed — RobotCode auto-detects when it runs under an AI agent and drops to a plain, capture-safe backend on its own. For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
-
-`robotcode repl-server` is for external clients that attach to a REPL session; use it only when such an integration is explicitly needed.
-
-`robotcode testdoc` generates browsable test/suite documentation (the Robot Framework `testdoc` tool); reach for it only when the user explicitly wants a generated test-doc artefact, not for answering keyword questions.
+Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, exploring against the live application, or developing a test case or keyword one line at a time and saving it. **Can your shell tool keep a command running and write to its input,** as `write_stdin` or `send_to_terminal` do (a background process fed through a file or a FIFO doesn't count)? Then start `robotcode repl` there and write one input at a time, reading the answer up to the prompt `>>> ` before you choose the next. **If not, run it as a session:** `robotcode session start repl` starts it in the background and prints its ID; each `robotcode session send <ID> '<input>'` then runs one input and returns with its output and an exit code (`0` passed, `1` failed), so you read each answer before you choose the next input; `robotcode session stop <ID>` ends it. Never start a bare `robotcode repl` and wait for it to exit — it waits at its prompt forever. REPL input is not a `.robot` file: no section headers, no indentation, and imports are keyword calls — `Import Library    Collections` (the Settings-style `Library    Collections` works too, as a REPL alias). For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
 
 ## Running tests — `robotcode robot`
 
@@ -214,27 +177,31 @@ robotcode robot -bl "Suite.Sub.Test Name"
 robotcode robot --rerunfailed output.xml
 ```
 
-**To run one specific test, task, or suite, select it by longname (`-bl "<longname>"`, copied from `discover` or `results`) — not by its file path.** Pointing Robot at a single `.robot` file makes that file the top suite, so the parent suites' `__init__.robot` — its Suite Setup/Teardown, suite variables, and the setup/tags/timeouts it applies — never runs, and it can behave differently than in a full run. Selecting by longname builds the whole suite tree from `robot.toml` paths, so that initialization applies. To run a whole **directory** tree, pass the directory (it loads its `__init__.robot`) — just never a single `.robot` file. The same holds under the debugger (see *Debugging a run*).
+To run one test or suite, [select it by longname](#selecting-one-test-or-suite). To run a whole directory tree, pass the directory.
 
-Do not append paths or output options by default; `robot.toml` often already provides them. Add CLI paths only to narrow a one-off run (a *directory* is fine — it loads its `__init__.robot`; a single test file is not, see above).
+Do not append paths or output options by default; `robot.toml` often already provides them. Add CLI paths only to narrow a one-off run.
 
-Runs can be long. Use the maximum timeout your tool supports or run in the background; wait for the process exit code. Do not watch `output.xml` for completion because it is written continuously during a run.
+Runs can be long. Use the maximum timeout your tool supports or run in the background; wait for the process exit code. Do not watch `output.xml` for completion: it is written continuously during a run.
 
 Robot returns the number of failed tests, capped at 250. Non-zero means failures or execution errors; inspect with `robotcode results summary`. Exit code `252` is the exception: the run didn't start (invalid data or options, such as an invalid `robot.toml`), so read the error output instead — `results summary` would show the previous run.
 
 ## Debugging a run — `robotcode robot-debug`
 
-`robotcode robot-debug` (alias `run-debug`) runs a real suite through the same runner as `robotcode robot` but pauses at breakpoints and opens a `pdb`-style debug prompt with the live call stack, per-frame variables, introspection of the loaded keywords / libraries / resources (with their docs and sources), and the ability to run any keyword in the paused context. It takes the **full `robotcode robot` option set** plus trigger flags; the same debugger is available in `robotcode repl`, where it starts **detached** (attach with `.debug on`, `--debugger-attached`, or by passing `--break …`) and breakpoints can be set up front with `--break` or interactively at the prompt with `.break`. Comes from the `repl` extra.
+`robotcode robot-debug` (alias `run-debug`) runs a real suite through the same runner as `robotcode robot` but pauses at breakpoints and opens a `pdb`-style debug prompt with the live call stack, per-frame variables, introspection of what's loaded, and the ability to run any keyword in the paused context. It takes the **full `robotcode robot` option set** plus trigger flags. The same debugger is available in `robotcode repl`, where it starts detached (attach with `.debug on`, `--debugger-attached`, or by passing `--break …`).
 
 ```bash
-robotcode robot-debug -bl "Suite.Login Works"            # debug ONE known test by longname (preferred — never a bare .robot file)
+robotcode robot-debug -bl "Suite.Login Works"            # debug ONE known test by longname
 robotcode robot-debug --break login.robot:42 -t "Login Works"  # break at a line, but scope the run to that test
 robotcode robot-debug tests/                              # whole suite: pause at the first uncaught failure (default)
 robotcode robot-debug --break "Submit Login" tests/      # keyword breakpoint across a suite
 robotcode repl --break "Open Browser"                    # break at the REPL prompt
 ```
 
-Target one test by its **longname** (`-bl`), never a bare `.robot` file — a file path skips the parent suites' `__init__.robot` (suite setup/variables), exactly as it would for `robotcode robot` above. Reach for it over `results` when a recorded log isn't enough and you need the **live** state at the failure point. **Like the REPL, drive it as a session, step by step:** `robotcode session start debug <robot-debug options>` runs to the first stop and prints its ID and the output up to there; then one `robotcode session send <ID> '<command>'` per step (`.where` / `.vars --user` / `.print ${x}` / a keyword / `.continue`), each chosen from what the last answer showed. The session stays open after the run until `robotcode session stop <ID>`; `robotcode session restart <ID>` runs it again with the breakpoints as they are. Never start a bare `robot-debug` and wait for it to exit — it waits at its prompt forever. See [references/debugging.md](references/debugging.md#driving-the-session-from-an-agent). Full breakpoint triggers, debug commands, and the interactive workflow are in [references/debugging.md](references/debugging.md).
+Scope it like a run: [by longname](#selecting-one-test-or-suite). Reach for it over `results` when a recorded log isn't enough and you need the **live** state at the failure point. **Like the REPL, drive it step by step.** If your shell tool can keep a command running and write to its input, start `robotcode robot-debug` there and write one command at a time, reading the answer up to the prompt `(rdb) `. **If not, run it as a session:** `robotcode session start debug <robot-debug options>` runs to the first stop and prints its ID and the output up to there; then one `robotcode session send <ID> '<command>'` per step (`.where` / `.vars --user` / `.print ${x}` / a keyword / `.continue`), each chosen from what the last answer showed. The session stays open after the run until `robotcode session stop <ID>`; `robotcode session restart <ID>` runs it again with the breakpoints as they are. Never start a bare `robot-debug` and wait for it to exit; end a stop with `.continue` / `.detach` / `.abort`. Full breakpoint triggers, debug commands, and the interactive workflow are in [references/debugging.md](references/debugging.md#start-or-reuse-a-debug-session).
+
+### A real test case: the debugger, not the REPL
+
+**A real test case is involved → the debugger, never the REPL.** Running, watching, stepping, or inspecting a `*** Test Cases ***` (or `*** Tasks ***`) entry live, not only when it fails, is the debugger: it pauses the real run with the suite's setup, variables, imports, and `__init__.robot` all live, and you run keywords at the `(rdb)` stop. The REPL has **no test**: it runs only the keywords you type, in a different context, so "trying the test in the REPL" runs a misleading copy. "Interactive" alone does not mean REPL. **For "fix this test" or "why does it fail or not run?"**, read the recorded error first with `robotcode results` (`show --failed`, `log`), which often names the cause; if it doesn't, debug the actual test. Don't detour into external tools or an MCP probe first.
 
 ## Configuration & profiles
 
@@ -248,13 +215,13 @@ Target one test by its **longname** (`-bl`), never a bare `.robot` file — a fi
 | List / show profiles | `robotcode profiles list` / `robotcode --profile <name> profiles show` |
 | Preview a profile's effect on a run | `robotcode --profile <name> discover tests` |
 
-**To explain, write, or edit a setting, read its documentation from `config info desc <key>`** (type, description, and a TOML example; wildcards `*tag*`, `rebot.*`) instead of guessing, then confirm the result with `config show`. **A setting's effective value can come from a profile** — when explaining what is actually in effect, account for the active profile(s): `robotcode --profile <name> config show` shows the value under that profile, and `config show -s` attributes each setting to the file or profile it came from. Profiles (`[profiles.<name>]`) layer onto the top-level settings; `--profile` is repeatable and globbed, and multiple profiles merge by `precedence`.
-
-**Full reference — loading order, profile inheritance / `precedence` / `enabled` / `extend-`, recipes, and previewing a profile with `discover` — see [references/config.md](references/config.md).**
+**To explain, write, or edit a setting, read its documentation from `config info desc <key>`** instead of guessing, then confirm the result with `config show`. A setting's effective value can come from a profile, so account for the active profile(s) when explaining what is in effect. **Full reference — loading order, profile inheritance / `precedence` / `enabled` / `extend-`, computed `{ expr }` / `{ if }` values, recipes, and previewing a profile with `discover` — see [references/config.md](references/config.md).**
 
 ## Interpreting results
 
-Use `robotcode results` to inspect a finished run. Do not read, grep, parse, or summarize raw `output.xml` unless the user explicitly asks for raw XML. To find out whether a value or an argument occurred in a run, use `robotcode results log --search <text>`: it shows only the tests where it appears, also as an argument of a keyword. Real Robot Framework outputs can be hundreds of megabytes; loading them into chat wastes context and is slower than asking RobotCode for the exact slice you need. `robotcode results` reads the same file server-side and returns bounded summaries, listings, logs, stats, diffs, or JSON. See [references/results.md](references/results.md) for full examples.
+Use `robotcode results` to inspect a finished run. **Always read [references/results.md](references/results.md) before issuing any `robotcode results` command — do not guess flags from `--help` output alone.** To find out whether a value or an argument occurred in a run, use `robotcode results log --search <text>`: it shows only the tests where it appears, also as an argument of a keyword.
+
+**Do not read, grep, parse, or summarize raw `output.xml`** unless the user explicitly asks for raw XML. Real Robot Framework outputs can be hundreds of megabytes; `robotcode results` reads the same file server-side and returns bounded summaries, listings, logs, stats, diffs, or JSON.
 
 - `summary` — headline counts; add `--failed` for failing tests.
 - `show` — one line per test with filters, caps, tags, sorting, and full-message options.
@@ -266,7 +233,7 @@ Report results with counts first, then short failure reasons, then `log.html` / 
 
 ## Working with large projects
 
-For large projects, see [references/large-projects.md](references/large-projects.md). Default to filtering or aggregation before enumeration. Prefer source-side filters, `discover tags` / `discover suites`, bounded `results` queries, and JSON projections with `jq` when the tree shape matters.
+For large projects, see [references/large-projects.md](references/large-projects.md). Default to filtering or aggregation before enumeration.
 
 ## Common workflows
 
@@ -277,20 +244,3 @@ For multi-step workflows, see [references/workflows.md](references/workflows.md)
 - Lint only changed Robot files.
 - Analyze a project and manage suppressions / exit-code masks.
 - Fix a whole failing run: triage by cause, debug one representative per cause, re-validate with `--rerunfailed` against a *pinned* output file (intermediate runs overwrite `output.xml`).
-
-## Gotchas — agent-correction notes
-
-- For Robot Framework library, resource, or keyword documentation, do not start with Context7, web search, or generic knowledge. Query project-local `robotcode doc keywords` / `robotcode doc keyword` first; fall back to external documentation only when `robotcode doc` cannot answer or the topic is outside the local Robot environment.
-- Global options belong before the subcommand; otherwise Robot Framework may reject them.
-- `analyze code` and `robot` have different exit-code semantics.
-- **JSON from `analyze code` → `robotcode --format json analyze code`** (global `--format`, *before* the subcommand — same as `results` / `discover`).
-- `output.xml` is not a completion signal and should not be read directly for normal result analysis. After a run, use `robotcode results summary`, `show`, `log`, `stats`, or `diff` instead of loading a potentially huge XML file into context.
-- `Error: No such command 'X'` means a RobotCode extra is missing.
-- `uvx` / `pipx` isolates RobotCode from the project and gives wrong answers for real projects.
-- `No profiles defined.` is an empty result, not an error.
-- REPL syntax is not `.robot` file syntax.
-- **A real test case is involved → `robotcode robot-debug`, never the REPL.** Running, watching, stepping, or inspecting a `*** Test Cases ***` (or `*** Tasks ***`) entry live — *not only when it fails* — is the debugger: `robot-debug -bl "<longname>"` pauses the real run so you inspect the live stack/variables and run keywords at the `(rdb)` stop, with the suite's setup, variables, imports, and `__init__.robot` all live. The REPL has **no test or task** — it runs only the keywords you type, in a different context — so "trying the test in the REPL" runs a misleading *copy*. The REPL is only for when **no** test or task is in play (a keyword, a library, free exploration). "Interactive" alone does not mean REPL.
-- **One test, task, or suite → select it by longname (`-bl`), never a bare `.robot` file — for `robotcode robot` and `robot-debug` alike.** A single file becomes the top suite and skips the parent `__init__.robot` (setup/variables), so it behaves unlike a real run. Longname from `discover`/`results`; a whole *directory* tree is the one path form that's fine (it loads its `__init__.robot`).
-- **"Fix this test/task" / "why does it fail or not run?"** → read the recorded error first with `robotcode results` (`show --failed`, `log`) — it often names the cause; if not, debug the *actual* test with `robotcode robot-debug -bl "<longname>"` (longname rule above). Don't reconstruct it in a REPL or detour into external tools / an MCP probe first — that's a *different context* and chases the wrong cause.
-- **`robot-debug`/`repl` wait at their prompt** — run them as a session (`robotcode session start debug` / `repl`) and step through live, end a stop with `.continue`/`.detach`/`.abort`; never start one without input and block on its exit (it waits forever). At `(rdb)`, `Ctrl-D` *resumes* — use `.abort` to stop. (Missing `repl` extra → `Error: No such command 'robot-debug'` or `'session'`.)
-- "What tests/**tasks**/tags/suites exist?" — and any "which tests or tasks have tag X / are in suite Y" question — is answered with `robotcode discover` (`discover tasks` for tasks), never by reading or grepping `.robot` files (don't `grep` for `*** Tasks ***` / `*** Test Cases ***`). The effective set is resolved at runtime (paths, config, profiles, variables, pre-run modifiers); static sources don't show it.

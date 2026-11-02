@@ -2,8 +2,6 @@
 
 Stringing the right commands together matters as much as picking the right command. Five multi-step flows where the orchestration isn't obvious from the individual sections in [SKILL.md](../SKILL.md).
 
-> **Note**: RobotCode auto-detects non-interactive use and disables paging/colors automatically — no extra flags needed.
-
 ## Contents
 
 - [A. Run tests and report what failed](#a-run-tests-and-report-what-failed) — the default `run → summarize` lifecycle
@@ -14,24 +12,24 @@ Stringing the right commands together matters as much as picking the right comma
 
 ## A. Run tests and report what failed
 
-The default lifecycle: invoke a run, wait for *completion*, then summarize — never reach for the `output.xml` file directly even though the run prints its path.
+The default lifecycle: invoke a run, wait for *completion*, then summarize.
 
 1. **Run** with whatever filters / profile the task needs:
    ```bash
    robotcode --profile <p> robot -i <tag> -e <wip>
    ```
-   **Set the shell timeout to the maximum your tool supports, or run in background** — never guess "how long this will take" and pick a number. The run's `Output: …/output.xml` printout is a human-facing pointer, not a parsing target.
-2. **Wait for the process to exit.** The exit code is the completion signal (0 = all passed, `N` = N failed tests, capped at 250). `output.xml` is *not* a completion marker — it's written continuously throughout the run.
+   **Set the shell timeout to the maximum your tool supports, or run in background** — never guess "how long this will take" and pick a number.
+2. **Wait for the process to exit.** The exit code is the completion signal (0 = all passed, `N` = N failed tests, capped at 250).
 3. **Summarize via the CLI:**
    ```bash
    robotcode results summary --failed
    ```
    That gives counts plus a one-line-per-failure listing. For deeper drill-downs use `results show --failed --top N` or jump straight to workflow B. See [results.md](results.md) for the full `results` reference.
-4. **Report back to the user**: headline first (`X passed, Y failed, Z skipped`), then the listed failures with a one-line reason each, then mention `log.html` / `report.html` paths from the run output for human follow-up. Don't dump JSON or XML into the response.
+4. **Report back to the user** as [SKILL.md](../SKILL.md#interpreting-results) says.
 
 ## B. Investigate a failing test
 
-When the user asks "why did `X` fail?", drill down to that specific test without re-running. The key move: once you have the test's **full longname** from `show`, use `-bl` (exact match) instead of `-t` (glob) on the follow-up commands — no ambiguity if multiple tests share a name, no risk of accidentally matching siblings.
+When the user asks "why did `X` fail?", drill down to that specific test without re-running. The key move: once you have the test's **full longname** from `show`, use `-bl` (exact match) instead of `-t` (glob) on the follow-up commands.
 
 1. **List the failures and pick the exact test.**
    ```bash
@@ -44,7 +42,7 @@ When the user asks "why did `X` fail?", drill down to that specific test without
    ```bash
    robotcode results log -bl "<full longname from step 1>"
    ```
-   `-bl` is exact-match on longname — no glob ambiguity. Add `--max-depth 2` on a first read for deeply nested suites; raise it (or drop the flag) once you've located the failing keyword. Combine with `--level WARN` if the trace is noisy.
+   Add `--max-depth 2` on a first read for deeply nested suites; raise it (or drop the flag) once you've located the failing keyword. Combine with `--level WARN` if the trace is noisy.
 
 3. **Resolve a confusing keyword** (only if the log surfaces one whose behaviour isn't obvious):
    ```bash
@@ -55,13 +53,13 @@ When the user asks "why did `X` fail?", drill down to that specific test without
    ```bash
    robotcode robot-debug -bl "<full longname from step 1>"   # -bl scopes the run to that one test, so the pause lands in it
    ```
-   Select the failing test by its **longname** (`-bl`, exact) rather than handing over the file — a bare `.robot` file skips the parent suites' `__init__.robot` (suite setup/variables/tags), so the test runs unlike a real run; selecting by longname builds the full suite tree (its `__init__.robot` runs), only that test executes, and the pause lands inside it instead of on whichever test in the file fails first. It pauses (at the first uncaught failure by default, or a breakpoint you set); inspect with `.where` / `.vars` / `.print ${x}`, move with `.step` / `.next` / `.continue`, and decide each step from what you see. **Always end with a resuming command** (`.continue`/`.detach`/`.abort`) and never start it and wait for its exit — with no input the prompt blocks forever. See [debugging.md](debugging.md).
+   It pauses (at the first uncaught failure by default, or a breakpoint you set); inspect with `.where` / `.vars` / `.print ${x}`, move with `.step` / `.next` / `.continue`, and decide each step from what you see. [debugging.md](debugging.md#start-or-reuse-a-debug-session) says how to drive it.
 
 5. **Re-run just that one test to confirm a fix.**
    ```bash
    robotcode robot -bl "<full longname from step 1>"
    ```
-   By longname, not the file path — so the parent suites' `__init__.robot` runs and the confirm-run matches a real run (a bare `.robot` file would skip that directory-level setup). For re-validating *several* previously failing tests at once — or making a whole run of failures green — see **workflow E**, which feeds `--rerunfailed` from a *pinned* output file (the default `output.xml` is overwritten by intermediate runs, including the `robot-debug` run in step 4, so it's not a reliable rerun source).
+   For re-validating *several* previously failing tests at once — or making a whole run of failures green — see **workflow E**, which feeds `--rerunfailed` from a *pinned* output file (the default `output.xml` is overwritten by intermediate runs, including the `robot-debug` run in step 4, so it's not a reliable rerun source).
 
 ## C. Lint only the files about to commit
 
@@ -79,10 +77,10 @@ Exit code is a bitmask (see [analyze.md](analyze.md)): non-zero with bit 1 set m
 Full static-analysis sweep and cleanup. `analyze code` is the entry point — **[analyze.md](analyze.md)** is the full reference (every flag, the diagnostic codes, the suppression scopes, exit-code masking, the cache). The order that works:
 
 1. **Baseline scan** — `robotcode analyze code` (no path = `robot.toml` `paths`; narrow with a path or `--filter '<glob>'`).
-2. **Errors first** — `--severity error` (CI usually blocks only on errors; the severity tag is a full word, so filter, don't `grep`).
+2. **Errors first** — `--severity error` (CI usually blocks only on errors).
 3. **Unused items** — add `--collect-unused` for `KeywordNotUsed` / `VariableNotUsed` (off by default; noisy on intentionally-exported keywords).
 4. **Suppress what genuinely doesn't apply** — inline `# robotcode: ignore[CODE]`, `-mi CODE` for one run, or project-wide in `robot.toml`.
-5. **Gate CI** — the exit code is a bitmask (`1` errors, `2` warnings, `4` infos, `8` hints); mask the non-blocking ones (`-xm warn -xm info -xm hint`, or `exit-code-mask` in `robot.toml`).
+5. **Gate CI** — mask the non-blocking ones (`-xm warn -xm info -xm hint`, or `exit-code-mask` in `robot.toml`).
 6. **Stale cache?** — after refactors, upgrades, or branch switches, `robotcode analyze cache clear` (or `--no-cache-namespaces` for a one-off).
 
 ## E. Fix a whole failing run

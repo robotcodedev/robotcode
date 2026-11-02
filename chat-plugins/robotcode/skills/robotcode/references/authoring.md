@@ -13,7 +13,6 @@ It applies whenever the task is to write, create, or extend a `.robot`/`.resourc
 5. Check statically before you run
 6. Run just what you added, then iterate
 7. Refactor into reusable keywords / resources
-8. Best practices
 
 ## 1. Before writing: reuse, don't reinvent
 
@@ -29,7 +28,7 @@ robotcode discover tags                            # the tag vocabulary already 
 robotcode discover metadata --values               # the metadata names and values already in use (RF 7.5+)
 ```
 
-Resolve every keyword you intend to call against `robotcode doc` rather than from memory — it reflects the *installed* library version, the project's import arguments and variables, and project-local resources. See *Documentation lookup priority* in [SKILL.md](../SKILL.md).
+Resolve every keyword you intend to call against `robotcode doc` rather than from memory (see *Documentation lookup priority* in [SKILL.md](../SKILL.md)).
 
 ## 2. Match the project's conventions
 
@@ -52,7 +51,7 @@ If locators, keyword sequencing, or a library's behavior are uncertain, **verify
 
 Standard sections — `*** Settings ***` (Library / Resource / Variables, Suite/Test Setup + Teardown), `*** Variables ***`, `*** Keywords ***`, and `*** Test Cases ***`. Build calls from the keywords found in step 1; add `[Tags]` so the test is selectable later. Keep each test a complete user/system flow and push mechanical detail down into keywords.
 
-For an **RPA task suite**, use `*** Tasks ***` in place of `*** Test Cases ***` (don't put both kinds in one run — Robot Framework errors), and the `Test*` settings have `Task*` equivalents: `Task Setup` / `Task Teardown` / `Task Template` / `Task Timeout`, plus the `Set Task Variable` keyword. The rest of this loop is identical.
+For an **RPA task suite**, use `*** Tasks ***` in place of `*** Test Cases ***`; see *Tests or tasks?* in [SKILL.md](../SKILL.md). The rest of this loop is identical.
 
 ## 5. Check statically before you run
 
@@ -62,14 +61,12 @@ This is RobotCode's biggest authoring advantage — a fast feedback loop that ne
 robotcode analyze code path/to/new.robot
 ```
 
-Catches missing keywords, wrong/missing arguments, unresolved variables, and duplicate/unused imports. Loop write → `analyze code` → fix *before* spending time on a real run. For the diagnostic format, severity/exit-code rules, suppression, and `--collect-unused`, see [analyze.md](analyze.md) — the full reference (*Static analysis* in [SKILL.md](../SKILL.md) is the summary).
-
-> If you author inside an editor with the RobotCode extension, the language server surfaces these same diagnostics inline as you type — the CLI `analyze code` is the headless equivalent.
+Catches missing keywords, wrong/missing arguments, unresolved variables, and duplicate/unused imports. Loop write → `analyze code` → fix *before* spending time on a real run. For the diagnostic format, severity/exit-code rules, suppression, and `--collect-unused`, see [analyze.md](analyze.md).
 
 For control-flow-heavy suites, a Robot Framework dry run is a good final structural check — it resolves all keywords and imports without executing bodies:
 
 ```bash
-robotcode robot --dryrun path/to/new.robot
+robotcode robot --dryrun -bl "Suite.Sub.New Suite"
 ```
 
 ## 6. Run just what you added, then iterate
@@ -77,13 +74,13 @@ robotcode robot --dryrun path/to/new.robot
 Don't run the whole suite to test one new case:
 
 ```bash
-robotcode discover tests path/to/new.robot          # confirm it's picked up; copy the longname
-robotcode robot -bl "Suite.Sub.New Test Name"        # run only it (exact longname, no glob ambiguity)
+robotcode discover tests -t "New Test Name"          # confirm it's picked up; copy the longname
+robotcode robot -bl "Suite.Sub.New Test Name"        # run only it
 robotcode results summary --failed                   # then inspect — see results.md
 robotcode results log -bl "Suite.Sub.New Test Name"  # full execution tree if it failed
 ```
 
-That run-and-read loop confirms the test is wired up and shows a recorded failure. **When a test fails and you want to fix it live, switch to the debugger:** run it through `robotcode robot-debug -bl "<longname>"` rather than a plain `robot` run, so the failure stops you in the live context to inspect and prove a fix on the spot. That trial is ephemeral — so **write the proven fix back into the `.robot` / `.resource` file** and re-run to confirm; running a keyword at the prompt doesn't change your source. (The session mechanics — break-on-failure, `.where` / `.vars` / `.print`, `.continue` — are in [debugging.md](debugging.md).) Drop to the REPL only to refine an *isolated* building block (a locator, a wait, a keyword sequence), not to reproduce a failing *test*.
+That run-and-read loop confirms the test is wired up and shows a recorded failure. **When a test fails and you want to fix it live, switch to the [debugger](debugging.md)**, then write the proven fix back into the file and re-run to confirm. Drop to the REPL only to refine an *isolated* building block (a locator, a wait, a keyword sequence), not to reproduce a failing *test*.
 
 ## 7. Refactor into reusable keywords / resources
 
@@ -105,12 +102,3 @@ robotcode analyze code --collect-unused                              # spot keyw
 ```
 
 `--collect-unused` is noisy on resource files that *intentionally* export keywords for other suites — suppress `KeywordNotUsed` there rather than narrowing the run to other paths (see [analyze.md](analyze.md), or workflow D in [workflows.md](workflows.md)).
-
-## 8. Best practices
-
-- **Reuse before you write** (§1) — a `doc` / `discover` check up front prevents duplicate keywords and misplaced files.
-- **Assert observable outcomes**, not just "no error" — check the resulting state after each meaningful step.
-- **Prefer stable identifiers** (primary keys, slugs, ISO codes, robust locators) over volatile ones (timestamps, generated UUIDs, list indices).
-- **Tag for selectability** so the test slots into the existing `-i` / `-e` scheme.
-- **Keep tests as flows**, push detail into keywords, and keep keywords single-purpose.
-- **`analyze code` clean is the definition of done** for the static side; a green targeted run is the dynamic side.
