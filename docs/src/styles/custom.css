@@ -109,3 +109,41 @@
   border: 1px solid var(--sl-color-gray-5);
   border-radius: 0.375rem;
 }
+
+/* The agent sessions of Working with the Agent: the session in a frame of its own, the prompts as bubbles and the
+   answers with an accent line, as in the agent demo of the home page, so that the answers do not read as the text of
+   the guide. The pages get the frames from playground/robotcode-demo/agent-sessions/assemble_page.py. */
+.sl-markdown-content .rc-session {
+  padding: 1rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
+}
+
+.sl-markdown-content .rc-session-prompt {
+  width: fit-content;
+  max-width: 85%;
+  margin-inline-start: auto;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.9rem 0.9rem 0.2rem 0.9rem;
+  background: var(--sl-color-accent);
+  color: var(--sl-color-black);
+}
+
+.sl-markdown-content .rc-session-prompt :is(a, code) {
+  color: inherit;
+}
+
+.sl-markdown-content .rc-session-prompt code {
+  background: rgb(0 0 0 / 15%);
+}
+
+.sl-markdown-content .rc-session-answer {
+  padding-inline-start: 0.75rem;
+  border-inline-start: 3px solid var(--sl-color-accent);
+}
+
+/* A collapsed session names the session and, in normal weight, its first prompt. */
+.sl-markdown-content details.rc-session-details > summary span {
+  font-weight: normal;
+}

@@ -6,6 +6,8 @@ const GROUP_LABELS: Record<string, string> = {
   vscode: "VS Code",
   pycharm: "PyCharm",
   cli: "Command Line",
+  "ai-agents": "AI Agents",
+  "working-with-the-agent": "Working with the Agent",
   "robot-toml": "Project Configuration",
   tips: "Tips & Tricks",
 };

@@ -165,7 +165,7 @@ $ printf 'Evaluate    1 + 1\nLog    hello\n' | robotcode repl --show-prompt
 
 `--no-show-prompt` (or `ROBOTCODE_REPL_SHOW_PROMPT=0`) hides the prompts in an agent's session; `ROBOTCODE_REPL_SHOW_PROMPT=1` shows them like `--show-prompt`.
 
-You usually don't need `--plain` for **piped/redirected input or AI agents** — the default `auto` backend already falls back to `plain` in those cases (see the table above). Reach for `--plain` to force the basic prompt on an interactive terminal too, or to be explicit in scripts. The agent fallback covers popular environments (Claude Code, Cursor, Copilot CLI, OpenCode, Codex, …); see [AI-agent detection](/guides/ai-agents/#ai-agent-detection) for the full marker list and the override hatches.
+You usually don't need `--plain` for **piped/redirected input or AI agents** — the default `auto` backend already falls back to `plain` in those cases (see the table above). Reach for `--plain` to force the basic prompt on an interactive terminal too, or to be explicit in scripts. The agent fallback covers popular environments (Claude Code, Cursor, Copilot CLI, OpenCode, Codex, …); see [AI-agent detection](/guides/ai-agents/how-the-skill-works/#ai-agent-detection) for the full marker list and the override hatches.
 
 Combining `--plain` with a non-`plain` `--backend` value is rejected as a usage error; combining it with `--no-history` is fine (plain mode has no history file anyway).
 
