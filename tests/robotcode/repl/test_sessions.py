@@ -101,6 +101,12 @@ def _touch(path: Path) -> str:
     return f"Evaluate    __import__('pathlib').Path('{path.as_posix()}').touch()"
 
 
+def _waiting_for(path: Path) -> str:
+    """A statement that waits for the file `path`, by which a test lets an input go on at the right moment."""
+    exists = f"__import__('pathlib').Path('{path.as_posix()}').exists()"
+    return f"Wait Until Keyword Succeeds    30s    50ms    Should Be True    {exists}"
+
+
 def _wait_for_file(path: Path) -> None:
     deadline = time.monotonic() + 30
     while not path.exists() and time.monotonic() < deadline:
@@ -974,9 +980,11 @@ def test_status_tells_whether_a_session_runs_waits_or_has_ended(
     assert json.loads(_robotcode("--format", "json", "session", "status", session_id).stdout) == {"state": "waits"}
 
     written = tmp_path / "written"
-    statement = f"Sleep    0.3s\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
+    go_on = tmp_path / "go-on"
+    statement = f"{_waiting_for(go_on)}\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
     assert _robotcode("session", "send", "--timeout", "0.1", session_id, statement).exit_code == 124
-    # Once the statement has written to the console after the answer of `send`.
+    # Only now, so that the statement writes to the console after the answer of `send`, however long that took.
+    go_on.touch()
     _wait_for_file(written)
     assert _robotcode("session", "status", session_id).stdout == "runs\n"
     # `status` took none of that output.
@@ -1144,9 +1152,11 @@ def test_restart_prints_the_output_it_got_when_it_gives_up(
 ) -> None:
     session_id = _started(_start(started, "repl"))
     written = tmp_path / "written"
-    statement = f"Sleep    0.3s\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
+    go_on = tmp_path / "go-on"
+    statement = f"{_waiting_for(go_on)}\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
     assert _robotcode("session", "send", "--timeout", "0.1", session_id, statement).exit_code == 124
-    # Once the statement has written to the console after the answer of `send`.
+    # Only now, so that the statement writes to the console after the answer of `send`, however long that took.
+    go_on.touch()
     _wait_for_file(written)
     # Shorter than the start of a new process.
     monkeypatch.setattr(session_cli, "_STARTUP_LIMIT", 0.05)
