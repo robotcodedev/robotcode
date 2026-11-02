@@ -65,12 +65,14 @@ The draft still has three places from before sessions:
 
 | Case | Change |
 |---|---|
-| 07 repl-explore-no-file | `must_run` `robotcode session start repl`; the rubric says session |
-| 08 debug-why-test-fails | `must_run` `robotcode session start debug`, with `-t` or `-bl` on the same line; the rubric says session and that the agent stops it |
-| 09 debug-break-at-line | `must_run` `robotcode session start debug`, with the `--break` |
-| 10 repl-interactive-breakpoint | `must_run` `robotcode session start repl` |
+| 07 repl-explore-no-file | The query names Robot Framework, because without that Haiku and Sonnet don't load the skill, not with the old one either; `must_run` `robotcode session start repl` and `robotcode session send`; the rubric says session |
+| 08 debug-why-test-fails | `must_run` `robotcode session start debug`, with `-t` or `-bl` on the same line, and `robotcode session send`; the rubric says session and that the agent stops it or says how to end it |
+| 09 debug-break-at-line | `must_run` `robotcode session start debug`, with the `--break`, and `robotcode session send`; the rubric as in 08 |
+| 10 repl-interactive-breakpoint | `must_run` `robotcode session start repl` and `robotcode session send`; the rubric as in 08 |
 | 11 (new) suite-name-from-paths | "Run only the checkout suite."; `must_not_run` a name that starts with the folder of the fixture (`Demo Project` and its spellings) |
 | 12 (new) results-search-value | Asks whether the last run used a value that a test passes to a keyword; `must_run` `robotcode results` with `--search`; `must_not_run` `grep` on XML |
+
+`robotcode session stop` is not in `must_run`: when someone asks for a stop, leaving the session paused and saying how to end it is right, as Haiku and Opus did.
 
 `run.py` gets an option `--plugin-dir`, passed on to `claude`, and the README says when to use it. Without it, the harness would test the released skill. It stays a small change: the harness knows nothing else about the plugin.
 
@@ -83,7 +85,7 @@ The draft still has three places from before sessions:
 > - **A sandbox around the whole agent**, such as a container, a dev container or a virtual machine: sessions work there without any setting, and nothing outside that sandbox sees them. An agent's own sandbox for each command has to be off in there; Codex's is on by default (`--sandbox danger-full-access`).
 > - **A sandbox for each command**, which Codex uses by default and Claude Code and GitHub Copilot CLI offer: a session can't outlive the command that started it. `session start` says what it can't do and exits with code `252`. An agent with a tool that writes to a running command, as Codex has, can drive `robotcode repl` or `robotcode robot-debug` in its own terminal instead. Claude Code and Copilot CLI have no such tool and have to find another way.
 >
-> This was checked on Linux and on Windows, where Claude Code has no such sandbox. macOS is not checked.
+> This was checked on Linux and on Windows, where Claude Code has no such sandbox; the way through the terminal only on Linux. macOS is not checked.
 
 ### D7: Checks
 
