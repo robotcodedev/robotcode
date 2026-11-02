@@ -4,11 +4,11 @@
 
 ### Requirement: Guides grouped by tool and topic
 
-The Guides sidebar SHALL list, in this order, the overview and the groups VS Code, PyCharm, Command Line, AI Agents, Project Configuration and Tips & Tricks. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
+The Guides sidebar SHALL list, in this order, the overview and the groups VS Code, PyCharm, Command Line, Project Configuration, AI Agents and Tips & Tricks. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
 
 #### Scenario: Order in the sidebar
 - **WHEN** a reader opens `/guides/`
-- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, Project Configuration and Tips & Tricks in this order
+- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, Project Configuration, AI Agents and Tips & Tricks in this order
 - **AND** every group is collapsed
 
 #### Scenario: Names by subject
