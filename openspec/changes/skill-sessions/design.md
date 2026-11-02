@@ -48,7 +48,9 @@ Rejected: a new reference for sessions. It adds a reading step, and the trials s
 
 `references/debugging.md`, in place of the draft's sentence:
 
-> If a `session` command fails in a sandbox, handle it as for the REPL (see [repl.md](repl.md#start-or-reuse-a-repl)).
+> If a `session` command fails in a sandbox, your agent runs each command in a sandbox of its own, and a session can't outlive that command. Don't try to leave the sandbox. See [repl.md](repl.md#start-or-reuse-a-repl) for what the messages are and what works.
+
+This one has to stand on its own: in the evals, Sonnet read only `debugging.md` and then tried to repeat the command outside the sandbox.
 
 - The signs are robotcode's own messages, not the texts of the system (`Read-only file system`, `Permission denied`), which differ between Linux and Windows.
 - No way for an agent without such a tool, by the maintainer's decision to leave that to the agent. In the measurements, Claude Code and Copilot found one.
@@ -83,6 +85,9 @@ Done on `next`: the first round with this plan (`4362bec`), the rest directly on
 | 15, 16 | A session started earlier, a breakpoint set during the run |
 | 17 | The agent's own sandbox for each command |
 | 18, 19 | One test by longname, a global option before the subcommand |
+| 20 | A missing extra: a real install without `analyze`, where installing would work |
+
+The maintainer's review added two things to `run.py`. The sandbox hides the other runs and the home folder, apart from the agent's own configuration and what it and `robotcode` run from: with its questions off an agent reads what it likes, and one run of opencode with Gemini searched the home folder and sent file names and titles of sessions to its model. A model with `haiku` in its name gets the skill named in its prompt, as the guide advises, so its runs measure how it follows the skill and no longer whether it finds it.
 
 `robotcode session stop` is not in `must_run`: when someone asks for a stop, leaving the session paused and saying how to end it is right, as Haiku and Opus did.
 
@@ -114,7 +119,7 @@ By the maintainer's decision, this replaces "a session first, the terminal only 
 > - **Yes:** start `robotcode repl` there and work at its prompt: write one input, wait until the output ends with the prompt `>>> `, read the answer, then choose the next input from what you saw. `.exit` ends it.
 > - **No:** run the REPL as a **session**. It runs in the background and keeps its state — variables, imports, open browsers and connections — between your commands, and each command returns with the answer to one input: send one input, read the answer, then choose the next input from what you saw.
 
-`references/debugging.md` says the same under a new section "Start or reuse a debug session", with `robotcode robot-debug` and the prompt `(rdb) `. That section moves from the end to right after the contents, as in `repl.md`, and the headings "… from an agent" go, because every reader of the skill is an agent. `SKILL.md` says the same in short with the REPL and the debugger.
+`references/debugging.md` says the same under a new section "Start or reuse a debug session", with `robotcode robot-debug` and the prompt `(rdb) `. That section moves from the end to right after the contents, as in `repl.md`, and the headings "… from an agent" go, because every reader of the skill is an agent. `SKILL.md` says the same in short with the REPL and the debugger. Its mode list also names both ways to start each of them, because in the maintainer's review `robotcode session` was hidden in those long paragraphs and in no overview.
 
 The wording asks for the tool rather than whether the agent "can work interactively": both behaved the same in the measurements, and the maintainer chose this one. The two names can change with the versions of those agents.
 
@@ -124,7 +129,7 @@ All four groups of the review, with the places in `playground/agent-skill-befund
 
 - **What works automatically:** the input of the REPL, paging and colors, `doc browse` in an agent session, the language server in an editor, "comes from the extra …", the console output staying visible. For people, this stays in `guides/ai-agents/how-the-skill-works`.
 - **What the agent sees anyway or can't send:** `Ctrl-D`, `.exit` at a stop, error messages word for word, the format of the banner, `No profiles defined.`
-- **What is explained several times:** see D10, and whole blocks such as the contents of `SKILL.md`, the section on installing there, the example shared by `repl.md` and `authoring.md`, and the validation at the end of `repl.md`.
+- **What is explained several times:** see D10, and whole blocks such as the contents of `SKILL.md`, the section on installing there, the example shared by `repl.md` and `authoring.md`, and the validation at the end of `repl.md`. One thing of those blocks stays, after the maintainer's review: computed values, which only the contents had named, go to the section on configuration.
 - **What isn't for agents:** phrases that trigger the skill in references (`SKILL.md` has them), general Robot Framework knowledge, `.clear`, the section on the REPL's exit code at a terminal, xUnit output, `repl-server`, `testdoc`.
 
 ### D10: Where a rule stays
@@ -145,12 +150,15 @@ In `SKILL.md`, in the section on its topic. The other places link there, and a r
 
 The maintainer's reason for this place: `-bl` works for running, debugging, discovering and more, so it needs one place to link to. Rejected: all rules in the Gotchas, far from the commands they concern; all rules in the mode list, where `-bl` would hang on one mode. Measured, none of the three differs beyond the noise (see Context).
 
+Asking before installing stands in `references/install.md` only, which `SKILL.md` links to for a missing command. Measured with case 20, on a real install without the extra, a sentence on it in `SKILL.md` changes nothing: 17 of 18 runs with it and 17 of 18 without, and every run read the reference. The maintainer left it out.
+
 ### D11: What is wrong rather than repeated
 
 - `references/workflows.md`, `references/authoring.md` and the examples in `SKILL.md` show `robotcode robot-debug` without saying how to drive it, because the first round only touched three files. The options hold either way, so the examples stay, and the text links to how to drive it.
 - The section "A session, end to end" of `references/debugging.md` hands over a single `.robot` file, uses no session and shows `(rdb)`, which answers of a session don't have. It goes; the section on starting already shows the flow.
 - `references/results.md` says `report.html` where the tree of keywords is in `log.html`.
 - `references/debugging.md` doesn't say that several steps in one shell command, or a shell loop over inputs, skip reading the answers. Opus did that with every variant, so a sentence goes in with "One `send` per command".
+- `SKILL.md` and `references/install.md` quote `Error: No such command 'X'`. Since `c2add74cd` the message is `[ ERROR ] No such command 'X'.`, so `SKILL.md` and the running text of `install.md` quote the part that both have, and its example shows the message as it is now.
 
 ### D12: Naming the skill with smaller models
 

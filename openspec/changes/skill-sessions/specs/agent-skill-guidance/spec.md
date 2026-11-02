@@ -26,6 +26,14 @@ What the RobotCode agent skill tells an agent about driving the REPL and the deb
 - **WHEN** the skill describes `robotcode repl` and `robotcode robot-debug`
 - **THEN** it warns against starting one of them without input and waiting for it to exit
 
+### Requirement: The ways to start in the overview
+
+The mode list of `SKILL.md` SHALL name both ways to start the REPL and the debugger.
+
+#### Scenario: The overview
+- **WHEN** an agent reads the mode list of `SKILL.md`
+- **THEN** the REPL and the debugger each name their own command and `robotcode session start`, with the condition for the session
+
 ### Requirement: Driving a session
 
 A session SHALL be driven one input at a time, reading each answer before choosing the next. The skill SHALL give the meaning of the exit codes of `session send` (0, 1, 124, 252), name `status`, `result`, `wait`, `interrupt` and `restart`, and tell the agent to end the session with `session stop`. It SHALL NOT name a fixed list of inputs through a pipe as a fallback.
@@ -99,6 +107,14 @@ A rule of the skill SHALL stand once, in `SKILL.md` in the section on its topic,
 - **WHEN** an example in the skill starts the debugger for one test
 - **THEN** it selects the test by longname, and the text says or links to how to drive the debugger
 
+### Requirement: Asking before installing
+
+`SKILL.md` SHALL send an agent to `references/install.md` for a missing `robotcode` or a message `No such command 'X'`, which means a missing extra. The reference SHALL say to ask the user before installing anything, and what to ask.
+
+#### Scenario: A missing extra
+- **WHEN** a command fails with `No such command 'X'`
+- **THEN** the agent installs nothing without asking and names what is missing
+
 ### Requirement: Names of suites
 
 The skill SHALL say that the top suite of a run is named after the `paths` of the project, not after its folder, and that the names for `-s` and `-bl` come from `robotcode discover suites`.
@@ -134,6 +150,18 @@ The evals of the plugin repository SHALL accept a session or the prompt in a ter
 #### Scenario: A right answer on a wrong way
 - **WHEN** an agent gets the right answer through a fixed list of inputs or a throwaway test file
 - **THEN** the case fails
+
+#### Scenario: A missing extra in a case
+- **WHEN** the harness runs the case in which a command fails with `No such command` and the agent installs something
+- **THEN** the case fails
+
+#### Scenario: What a run can see
+- **WHEN** the harness runs an agent in its sandbox around the whole agent
+- **THEN** the agent sees neither the other runs nor the user's home folder, apart from its own configuration and what it and `robotcode` run from
+
+#### Scenario: A small model
+- **WHEN** the harness runs a model with `haiku` in its name
+- **THEN** the prompt names the skill, as the guide tells the users of such a model
 
 #### Scenario: A skill that isn't released
 - **WHEN** the harness runs with the plugin folder of a working copy
