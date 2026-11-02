@@ -44,6 +44,6 @@ In the evals: nine new cases, including `authoring.md`, `config.md` and `large-p
 
 ## Impact
 
-- `robotcode`: `packages/repl/` (debugger controller, console interpreter, session), `packages/runner/` (robot options, `results --help`), `src/robotcode/cli/commands/config.py`, tests under `tests/robotcode/`; `docs/src/content/docs/guides/cli/robot-debug.md`, `sessions.md`; `reference/cli.md` (generated); prose of the guide pages of `docs-ai-agents-guide`, which stay uncommitted with that change; `chat-plugins/` (synced).
+- `robotcode`: `packages/repl/` (debugger controller, console interpreter, session), `packages/runner/` (robot options, `results --help`), `src/robotcode/cli/commands/config.py`, tests under `tests/robotcode/`; `docs/src/content/docs/guides/cli/robot-debug.md`, `sessions.md`; `reference/cli.md` (generated); prose of the guide pages of `docs-ai-agents-guide`; `chat-plugins/` (synced).
 - `robotframework-agent-plugins`, branch `next`: `plugins/robotcode/skills/robotcode/`, `evals/robotcode/`. The maintainer pushes.
 - `docs-ai-agents-guide`: task 3.8 waits for this change, because its recordings show the skill's commands.

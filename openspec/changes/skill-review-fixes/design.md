@@ -160,7 +160,7 @@ Round 2 shows whether it still loads; case 29 whether it loads too often. If it 
 - `guides/cli/sessions.md`: the exit code of `send` for a dot command (lines 105–114); what `session stop` leaves (line 190).
 - `reference/cli.md`: regenerated with `hatch run create-cmd-line-docs`.
 - Other pages that say `.abort` writes no reports, found with `grep`.
-- The guide of `docs-ai-agents-guide`: the prose at `running-what-you-need.md:64` and `a-profile-for-the-ci-server.md:49`, which stays uncommitted with that change; the excerpt at line 111 comes with its task 3.8.
+- The guide of `docs-ai-agents-guide`: the prose at `running-what-you-need.md:64` and `a-profile-for-the-ci-server.md:49`; the excerpt at line 111 comes with task 3.8 of that change.
 
 ### D9: The evals
 

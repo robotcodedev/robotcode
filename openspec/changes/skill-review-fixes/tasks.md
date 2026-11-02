@@ -36,7 +36,7 @@ Each fix with its own tests, which pass with the fix and fail without it.
 ## 5. The docs
 
 - [ ] 5.1 Update `guides/cli/robot-debug.md`, `guides/cli/sessions.md` and other pages on `.abort` (D8). Verify: `grep -rn "no reports" docs/src/content/docs/guides` finds nothing about `.abort`; `npm run docs:build` passes.
-- [ ] 5.2 Correct the prose of the guide's pages (D8); they stay uncommitted with `docs-ai-agents-guide`. Verify: `grep -rn -E -- "(-p|--profile) [a-z]+ config show" docs/src/content/docs` finds only the recorded excerpt that task 3.8 of that change replaces.
+- [ ] 5.2 Correct the prose of the guide's pages (D8). Verify: `grep -rn -E -- "(-p|--profile) [a-z]+ config show" docs/src/content/docs` finds only the recorded excerpt that task 3.8 of that change replaces.
 
 ## 6. Round 2
 
@@ -49,7 +49,7 @@ Each fix with its own tests, which pass with the fix and fail without it.
 
 ## 8. Commits
 
-- [ ] 8.1 Ask for the commits of robotcode, one per fix of section 2, and of the docs. Verify: `git show --stat` of each lists only its own paths; the guide's files are not among them.
+- [ ] 8.1 Ask for the commits of robotcode, one per fix of section 2, and of the docs. Verify: `git show --stat` of each lists only its own paths.
 - [ ] 8.2 Ask for the commits in `robotframework-agent-plugins` on `next`: the skill (`docs(skill)`) and the evals (`test(skill)`). After them, sync the vendored copy with `hatch run build:sync-chat-plugin` and ask for `chore(chat-plugin): sync robotcode skill from agent-plugins`, and for the plan (`docs(openspec)`). Verify: `python scripts/sync_manifests.py --check` and `hatch run build:sync-chat-plugin --check` pass, the commits are signed, and `chat-plugins/.upstream.json` names the new commit.
 
 ## Workflow follow-up
