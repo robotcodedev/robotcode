@@ -219,4 +219,9 @@ Each open session has a file in a folder only you can open: `$XDG_RUNTIME_DIR/ro
 
 ## Where sessions can't run
 
-A session has to write that folder, open its channel and keep running after the command that started it has returned. The sandbox of an AI agent can forbid that, as that of Codex does on Linux. There `session start` says what it can't do and exits with code `252`, and the agent can drive [`robotcode repl`](/guides/cli/repl/) or [`robotcode robot-debug`](/guides/cli/robot-debug/) in its own terminal instead.
+A session has to write that folder, open its channel and keep running after the command that started it has returned. Whether it can depends on what the sandbox of an AI agent covers:
+
+- **A sandbox around the whole agent**, such as a container, a dev container or a virtual machine: sessions work there without any setting, and nothing outside that sandbox sees them. An agent's own sandbox for each command has to be off in there; Codex's is on by default (`--sandbox danger-full-access`).
+- **A sandbox for each command**, which Codex uses by default and Claude Code and GitHub Copilot CLI offer: a session can't outlive the command that started it. `session start` says what it can't do and exits with code `252`. An agent with a tool that writes to a running command, as Codex has, can drive [`robotcode repl`](/guides/cli/repl/) or [`robotcode robot-debug`](/guides/cli/robot-debug/) in its own terminal instead. Claude Code and Copilot CLI have no such tool and have to find another way.
+
+This was checked on Linux and on Windows, where Claude Code has no such sandbox; the way through the terminal only on Linux. macOS is not checked.
