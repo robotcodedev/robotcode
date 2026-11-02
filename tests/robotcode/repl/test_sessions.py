@@ -1241,6 +1241,40 @@ def test_a_session_that_moved_to_no_other_channel_isnt_open(address: Any, monkey
         session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
 
 
+def _sent_signals(monkeypatch: pytest.MonkeyPatch) -> List[int]:
+    """The signals that a session process sends to its main thread, which they then don't reach."""
+    sent: List[int] = []
+    if sys.platform == "win32":
+        monkeypatch.setattr(signal, "raise_signal", sent.append)
+    else:
+        monkeypatch.setattr(signal, "pthread_kill", lambda thread, signum: sent.append(signum))
+    return sent
+
+
+def test_a_signal_waits_until_robot_framework_handles_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    # As for a `stop` that reaches the new process of a restart while it starts: the signal would end it at once.
+    sent = _sent_signals(monkeypatch)
+    handlers = iter([signal.SIG_DFL, signal.SIG_DFL, print])
+    monkeypatch.setattr(signal, "getsignal", lambda signum: next(handlers))
+    server: Any = SimpleNamespace(_run_ended=False)
+
+    _session.SessionServer._signal(server, signal.SIGTERM)
+
+    assert sent == [signal.SIGTERM]
+    # It looked until it found the handler.
+    assert list(handlers) == []
+
+
+def test_no_signal_goes_to_a_process_whose_run_has_ended(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent = _sent_signals(monkeypatch)
+    monkeypatch.setattr(signal, "getsignal", lambda signum: signal.SIG_DFL)
+    server: Any = SimpleNamespace(_run_ended=True)
+
+    _session.SessionServer._signal(server, signal.SIGTERM)
+
+    assert sent == []
+
+
 class _Connection:
     """A connection to a process that answers with `answer`, or ends with it when it is an exception."""
 

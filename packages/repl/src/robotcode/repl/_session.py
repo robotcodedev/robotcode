@@ -1144,7 +1144,13 @@ class SessionServer:
             _write_entry(self._entry)
 
     def _signal(self, signum: int) -> None:
-        """Let the interpreter, in the main thread, handle `signum` as when the signal arrives."""
+        """Let the interpreter, in the main thread, handle `signum` as when the signal arrives. Robot Framework handles
+        signals only during a run; without its handlers, as in the new process of a restart that is still starting, the
+        signal would end the process at once. So it waits for them, unless the REPL or the run has ended already."""
+        while signal.getsignal(signum) in (signal.SIG_DFL, signal.default_int_handler):
+            if self._run_ended:
+                return
+            time.sleep(0.01)
         if sys.platform == "win32":
             signal.raise_signal(signum)
         else:
