@@ -618,7 +618,12 @@ class SessionServer:
             idle_timeout=idle_timeout,
             last_request=now,
         )
-        _write_entry(self._entry)
+        try:
+            _write_entry(self._entry)
+        except OSError as e:
+            # A sandbox can keep the process from writing there, even where `session start` could create the folder.
+            self._listener.close()
+            raise SessionError(f"Can't create the files of the session in {sessions_dir()}: {e.strerror or e}.") from e
         threading.Thread(target=self._accept, name="robotcode-session", daemon=True).start()
         # Only once the file exists: until then, `session start` reads the pipe itself if the process ends before it is
         # ready.

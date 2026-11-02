@@ -594,6 +594,22 @@ def test_start_says_why_where_the_session_cant_open_its_channel(
     assert open_sessions() == []
 
 
+def test_a_session_that_cant_write_its_file_says_why(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # As in the sandbox of an agent on Windows, where `session start` finds nothing against the folder.
+    def refuse(entry: SessionEntry) -> None:
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(_session, "_write_entry", refuse)
+    monkeypatch.setattr(_session, "_own_pipe", lambda output: output)
+    session_id = _session.new_session_id(SessionKind.REPL)
+
+    expected = f"Can't create the files of the session in {sessions_dir()}: Permission denied."
+    with pytest.raises(_session.SessionError, match=re.escape(expected)):
+        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60, 0)
+
+    assert _session._channel_gone(_session._address(session_id))
+
+
 @pytest.mark.skipif(sys.platform != "linux", reason="only Linux takes the folder of the sessions from the environment")
 def test_no_warning_without_a_runtime_folder_in_the_environment(session_project: Path) -> None:
     # As in a container. In a process of its own, as pytest catches the warnings of its own process.
