@@ -35,7 +35,7 @@ Resolve every keyword you intend to call against `robotcode doc` rather than fro
 A new file is only useful if discovery and runs pick it up and it looks like its neighbours:
 
 ```bash
-robotcode config show       # effective paths, output-dir, variables, python-path, profiles
+robotcode profiles show     # the paths, output-dir, variables and python-path in effect
 robotcode config files      # which config files are in play
 ```
 
@@ -51,7 +51,7 @@ If locators, keyword sequencing, or a library's behavior are uncertain, **verify
 
 Standard sections — `*** Settings ***` (Library / Resource / Variables, Suite/Test Setup + Teardown), `*** Variables ***`, `*** Keywords ***`, and `*** Test Cases ***`. Build calls from the keywords found in step 1; add `[Tags]` so the test is selectable later. Keep each test a complete user/system flow and push mechanical detail down into keywords.
 
-For an **RPA task suite**, use `*** Tasks ***` in place of `*** Test Cases ***`; see *Tests or tasks?* in [SKILL.md](../SKILL.md). The rest of this loop is identical.
+For an **RPA task suite**, use `*** Tasks ***` in place of `*** Test Cases ***`; `Task Setup` / `Task Teardown` / `Task Template` / `Task Timeout` and `Set Task Variable` replace their `Test*` counterparts. `robotcode robot --rpa` forces task mode for a run and `rebot --rpa` reports in it; never pass `--rpa` to `discover`. `--task` is an alias of `--test`, and `-t` / `-bl` select tasks the same way. The rest of this loop is identical, with `robotcode discover tasks` in place of `discover tests`.
 
 ## 5. Check statically before you run
 
@@ -61,7 +61,7 @@ This is RobotCode's biggest authoring advantage — a fast feedback loop that ne
 robotcode analyze code path/to/new.robot
 ```
 
-Catches missing keywords, wrong/missing arguments, unresolved variables, and duplicate/unused imports. Loop write → `analyze code` → fix *before* spending time on a real run. For the diagnostic format, severity/exit-code rules, suppression, and `--collect-unused`, see [analyze.md](analyze.md).
+Catches missing keywords, wrong/missing arguments, unresolved variables, and duplicate imports. Loop write → `analyze code` → fix *before* spending time on a real run. For the diagnostic format, severity/exit-code rules, suppression, and `--collect-unused`, see [analyze.md](analyze.md).
 
 For control-flow-heavy suites, a Robot Framework dry run is a good final structural check — it resolves all keywords and imports without executing bodies:
 
@@ -74,7 +74,7 @@ robotcode robot --dryrun -bl "Suite.Sub.New Suite"
 Don't run the whole suite to test one new case:
 
 ```bash
-robotcode discover tests -t "New Test Name"          # confirm it's picked up; copy the longname
+robotcode discover tests -t "New Test Name"          # confirm it's picked up; copy the longname (`discover tasks` for a task)
 robotcode robot -bl "Suite.Sub.New Test Name"        # run only it
 robotcode results summary --failed                   # then inspect — see results.md
 robotcode results log -bl "Suite.Sub.New Test Name"  # full execution tree if it failed

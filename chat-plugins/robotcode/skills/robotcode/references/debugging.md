@@ -10,7 +10,7 @@ Reach for the debugger when a recorded log isn't enough and you need the **live*
 
 Beyond post-mortem analysis, `robot-debug` also makes a tight **inner loop while you develop or fix a test**: run the test through it instead of a plain `robot` run, and break-on-failure (on by default) stops you at the failure in the live context — inspect, then prove a fix by running the corrected keyword right there. That trial is ephemeral, so once it works **write the fix back into the `.robot` / `.resource` file** and re-run to confirm — running a keyword at the prompt doesn't change the source; `.continue` only carries the current run on. A clean pass just runs to completion, so it doubles as a quick "does it run?" check.
 
-**To debug why a test fails, debug *that* test.** Find its longname (from [`results`](results.md) or `discover`), then:
+**To debug why a test fails, debug *that* test.** Find its longname with `discover`, then:
 
 - **Select it [by longname](../SKILL.md#selecting-one-test-or-suite), not the `.robot` file.** A bare path also stops at the **first** failure in the file, which may be a different test.
 - **Read the recorded error with [`results`](results.md) first.** It often already names the cause — a variable or value, not what poking the live system would suggest — so bring up the debugger for the live values only if you still need them.
@@ -26,11 +26,11 @@ Beyond post-mortem analysis, `robot-debug` also makes a tight **inner loop while
 - **[Stepping & resuming](#stepping--resuming)**
 - **[Managing breakpoints at runtime](#managing-breakpoints-at-runtime)** — conditions, ignore counts, logpoints
 - **[Exception breakpoints](#exception-breakpoints)** — `.catch`
-- **[Ending a session](#ending-a-session)** — `.detach` / `.abort`
+- **[Ending the run](#ending-the-run)** — `.detach` / `.abort`
 
 ## Start or reuse a debug session
 
-If a debug session of this project is already open (`robotcode session list`), reuse it: `robotcode session restart <ID>` runs it again.
+If a debug session you started for this test is still open (`robotcode session list`), `robotcode session restart <ID>` runs it again. For another test, start a new one: a restart runs what the session was started with.
 
 The debugger is an **interactive** program: it stops at a breakpoint, prints the `(rdb)` prompt, and waits. Drive it step by step: at each stop you read `.where` / `.vars` / `.print ${x}` and pick the next command from what you just saw, stepping with `.step` / `.next` / `.continue` exactly as the [session loop](#how-a-debug-session-works) describes. You don't decide the commands up front — choosing each step from the live state *is* debugging, and it's the reason you stopped the run instead of reading the recorded log.
 
@@ -48,16 +48,17 @@ robotcode session send debug-7b2d9e04 '.continue'                               
 
 - `start debug` takes the full `robotcode robot-debug` option set; options of `robotcode` itself (`-p …`) go before `session`. A run that ends before it stops anywhere prints its whole output with `start`.
 - **One `send` per command or keyword**, in single quotes, and read its answer before the next step: no two steps in one shell command, no shell loop over inputs. A dot command goes in a `send` of its own, so `.break …` and `.continue` are two `send`s; a keyword block with its `END` is one `send`.
-- **Exit code of `send`:** `0` / `1` the command or keyword passed / failed, `124` the run still goes after `--timeout` (default 60 s; `robotcode session wait <ID>` waits for the next stop or the end), `252` an error of robotcode itself. When the run ends, the answer ends with `The run has ended with exit code N.` (N counts the failed tests); then `robotcode session status <ID>` prints `ended`, and `robotcode session result <ID>` prints N.
+- **Exit code of `send`:** `0` / `1` the command or keyword passed / failed, `124` the run still goes after `--timeout` (default 60 s), `252` an error of robotcode itself. When the run ends, the answer ends with `The run has ended with exit code N.` N counts the failed tests, unless the run didn't start (`252`) or was aborted (`253`). Then `robotcode session status <ID>` prints `ended`, and `robotcode session result <ID>` prints N.
 - `robotcode session interrupt <ID>` pauses a running run at the next keyword, as `Ctrl-C` does.
 - The session **stays open after the run**, as a debugger does: `robotcode session restart <ID>` runs it again in a new process — with the breakpoints as they are, and with Python libraries you changed since — and `robotcode session stop <ID>` ends it, mid-run too (as `.abort`). Stop it when you are done.
+- **A debug run replaces the output files of the last run.** If that run is still needed, add `--output NONE --log NONE --report NONE` to `start`.
 
-If a `session` command fails in a sandbox, your agent runs each command in a sandbox of its own, and a session can't outlive that command. Don't try to leave the sandbox. See [repl.md](repl.md#start-or-reuse-a-repl) for what the messages are and what works.
+If a `session` command fails in a sandbox, your agent runs each command in a sandbox of its own, and a session can't outlive that command. Don't try to leave the sandbox. See [repl.md](repl.md#start-or-reuse-a-repl) for the messages.
 
 ## Two ways in
 
-- **`robotcode robot-debug`** (alias `run-debug`) — debug a run, scoped however you need: narrow it to a single test with `-t`/`-bl` (the usual case when debugging one failure), to a suite or tag, or run the lot. Takes the **full [`robotcode robot`](../SKILL.md) option set** (paths, `-v`, `-i`/`-e`/`-s`/`-t`, `--profile`, …) plus the trigger flags below.
-- **`robotcode repl`** — the *same* debugger in the [REPL](repl.md), but it **starts detached**: attach it with `.debug on` or `--debugger-attached` (or `--break …`), and a keyword that reaches a breakpoint drops you into the same `(rdb)` prompt — see [repl.md](repl.md#debugging-from-the-repl).
+- **`robotcode robot-debug`** (alias `run-debug`) — debug a run, scoped however you need: narrow it to a single test with `-t`/`-bl` (the usual case when debugging one failure), to a suite or tag, or run the lot. Takes the **full [`robotcode robot`](../SKILL.md) option set** (paths, `-v`, `-i`/`-e`/`-s`/`-t`, …) plus the trigger flags below.
+- **`robotcode repl`** — the *same* debugger in the [REPL](repl.md#debugging-from-the-repl), for keywords you type at the prompt.
 
 ## How a debug session works
 
@@ -67,8 +68,8 @@ If a `session` command fails in a sandbox, your agent runs each command in a san
    * breakpoint  Submit Login  (login.robot:42)
    (rdb)
    ```
-3. **Inspect and act** — walk the stack, print variables, step, add breakpoints, or **type a keyword to run it in the paused context** (its result is echoed as `=> <value>` and any variable it assigns stays in scope, exactly like at the REPL prompt).
-4. **Resume** with `.continue` (or a step command), or end the session with `.detach` / `.abort`.
+3. **Inspect and act** — walk the stack, print variables, step, add breakpoints, or **type a keyword to run it in the paused context** (its result is echoed as `=> <value>` and any variable it assigns stays in scope, exactly like at the REPL prompt). A block such as `FOR` … `END` works only as one `send` of a session; at a terminal `(rdb)` prompt each line is an input of its own.
+4. **Resume** with `.continue` (or a step command), or end the run with `.detach` / `.abort`.
 
 ## Setting breakpoints
 
@@ -76,7 +77,7 @@ Triggers combine freely. Pass them to `robot-debug` (most also work on `repl`):
 
 | Trigger | How |
 | --- | --- |
-| **Line** | `--break path/to/test.robot:42` — pause when execution reaches that line. Repeatable. |
+| **Line** | `--break login.robot:42` — pause when execution reaches that line, in every file whose path ends so (`tests/login.robot:42` narrows it). The line must hold a keyword call: the `(path:line)` that `results` and `discover` print is the line of the test's name, where nothing stops. Repeatable. |
 | **Keyword** | `--break "Open Browser"` — pause whenever that keyword is about to run. Repeatable. |
 | **Embedded `Breakpoint`** | A `Breakpoint` step in a `.robot` / `.resource` — see below. No flag needed. |
 | **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first step of the run. |
@@ -109,11 +110,11 @@ Login
     Input Text    id=user    ${USER}
 ```
 
-`Breakpoint` is a **no-op in a normal `robot` run** and a **hard breakpoint** whenever the debugger is attached (under `robot-debug`, or in `repl` once you've attached with `.debug on`). (`Breakpoint` is the only keyword from `robotcode.repl.Repl` meant for your own suites; `Repl` and `Exit` are internal.)
+`Breakpoint` is a **no-op in a normal `robot` run** and a **hard breakpoint** whenever the debugger is attached. (`Breakpoint` is the only keyword from `robotcode.repl.Repl` meant for your own suites; `Repl` and `Exit` are internal.)
 
 ## At a stop: inspecting state
 
-At the `(rdb)` prompt you have the full debug command set, every shell dot-command (`.kw`, `.doc`, …), and keyword execution in context. Each command has a long name and often a one- or two-letter shortcut; long names accept any unambiguous prefix (`.cond` → `.condition`), except `.abort`, which must be typed in full.
+At the `(rdb)` prompt you have the full debug command set, every shell dot-command (`.kw`, `.doc`, …), and keyword execution in context. Each command has a long name and often a one- or two-letter shortcut; long names accept any unambiguous prefix (`.cond` → `.condition`).
 
 **Stack & frames.** Execution is a stack of keyword frames — `#0` is the innermost (where you stopped), higher numbers are its callers. Variable lookups and expressions are evaluated **in the selected frame**, so moving frames changes what `.print` sees:
 
@@ -127,7 +128,7 @@ At the `(rdb)` prompt you have the full debug command set, every shell dot-comma
 
 | Command | Effect |
 | --- | --- |
-| `.vars` / `.v` | Variables in scope (Local / Test / Suite / Global), name + value; `--user` skips Robot internals. |
+| `.vars` / `.v` | Variables in scope (Local / Test / Suite / Global), name + value; `--user` skips Robot internals. A keyword's locals show in its own frame: at a library keyword or in a `FOR`, go `.up` until `.where` marks that keyword. `.print ${x}` finds them from any frame. |
 | `.print <expr>` / `.p` | Evaluate a variable or expression in the selected frame. |
 | `.pprint <expr>` / `.pp` | Same, pretty-printed — readable for nested dicts / lists. |
 | `.whatis <expr>` | Print the Python type of a variable or expression. |
@@ -141,7 +142,7 @@ At the `(rdb)` prompt you have the full debug command set, every shell dot-comma
 | `.list` / `.l` | Show the source at the current stop, current line marked `->`. |
 | `.source <kw>` | Show a keyword's source. Resolves imported library/resource keywords; a keyword defined in the *running suite file* isn't resolvable by name — use `.list` at the stop instead. |
 
-**What's loaded and available:** `.imports`, `.kw`, `.kw <name>` and `.doc <name>` work at the stop too, against the paused run's namespace; see [repl.md](repl.md#dot-commands).
+**What's loaded and available:** `.imports`, `.kw`, `.kw <name>` and `.doc <name>` work at the stop too, against the paused run's namespace; see [repl.md](repl.md#dot-commands). As with `.source`, `.kw` doesn't find a keyword defined in the running suite file.
 
 ## Stepping & resuming
 
@@ -167,20 +168,20 @@ Add, remove, and refine breakpoints from the prompt — each is referenced by th
 | `.delete <n>` · `.disable <n>` / `.enable <n>` | Remove / turn off / on breakpoint `<n>`; bare form applies to all. |
 | `.commands <n>` | Attach debugger commands replayed at each hit (see logpoints). |
 
-A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway, even past `.ignore` or with `silent` commands, and appends the error to the stop line (`— condition error: Variable '${item_id}' not found.`). A keyword breakpoint stops at the call, before the keyword's arguments are bound, so its condition sees the caller's variables; to test an argument, put a line breakpoint on the keyword's first body line instead. `.ignore` skips the next *N* triggering hits.
+A **condition** is evaluated in the stopped frame each time the breakpoint is reached; if the expression itself raises, the debugger stops anyway, even past `.ignore` or with `silent` commands, and says so at the stop. A keyword breakpoint stops at the call, before the keyword's arguments are bound, so its condition sees the caller's variables; to test an argument, put a line breakpoint on the keyword's first body line instead. `.ignore` skips the next *N* triggering hits.
 
 **Logpoints (log and continue).** There's no dedicated command; you get the "print on every hit, never stop" effect by attaching commands to a breakpoint — a leading `silent` suppresses the banner and a trailing resuming command carries on:
 
 ```
 (rdb) .commands 1
-Enter commands for breakpoint 1, one per line; `end` to finish:
+enter commands for breakpoint 1, one per line; `end` to finish:
 (com) silent
 (com) .print ${item}
 (com) .continue
 (com) end
 ```
 
-Now every hit prints `${item}` and runs on without pausing.
+Now every hit prints `${item}` and runs on without pausing. In a session, each of these lines is a `send` of its own, and only `end` answers.
 
 ## Exception breakpoints
 
@@ -193,11 +194,13 @@ Pause on *failures* rather than locations. The CLI flags set the initial filters
 | `.catch test` / `.catch suite` | `--break-on-failed-test` / `--break-on-failed-suite` | Pause at a failing test / suite end. |
 | `.catch off` | — | Clear all exception breakpoints. Bare `.catch` shows what's armed. |
 
+A `.catch` replaces the armed filters; a flag adds to the default `uncaught`.
+
 `uncaught` stops *before* the failure unwinds, so the state that caused it is still on the stack — this is what makes the default `robotcode robot-debug tests/` useful for chasing an intermittent or hard-to-reproduce failure.
 
-## Ending a session
+## Ending the run
 
 | Command | Effect |
 | --- | --- |
-| `.detach` | Detach the debugger and let the run **finish normally** — no more stops. Your breakpoints/filters are kept (re-arm with `.debug on`). |
-| `.abort` | Abort the run **immediately** — no further keywords, no reports. |
+| `.detach` | Detach the debugger and let the run **finish normally** — no more stops. Your breakpoints/filters are kept. |
+| `.abort` | End the run: the current test fails, the remaining tests don't run, teardowns run without further stops (`--skipteardownonexit` skips them), and the output files are written. Exit code `253`. |

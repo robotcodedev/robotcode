@@ -36,7 +36,7 @@ When the user asks "why did `X` fail?", drill down to that specific test without
    robotcode results show --failed                                # short list with messages
    robotcode results show --search "<error fragment>"             # narrow if the user mentioned a symptom
    ```
-   The output gives one line per test with the **full longname** (e.g. `MyProject.Acceptance.Login.Login With Invalid Password`). Copy that for the next steps.
+   The output gives one line per test with the **full longname** (e.g. `MyProject.Acceptance.Login.Login With Invalid Password`). Copy that for the next steps; it holds if the run had the same paths as this one, see [SKILL.md](../SKILL.md#selecting-one-test-or-suite).
 
 2. **Look at the test's execution tree.**
    ```bash
@@ -70,18 +70,18 @@ git diff --name-only --diff-filter=ACMR HEAD | grep -E '\.(robot|resource)$' \
   | xargs -r robotcode analyze code
 ```
 
-Exit code is a bitmask (see [analyze.md](analyze.md)): non-zero with bit 1 set means errors — block the commit; only bits 2+ (warnings/infos/hints) means non-blocking.
+Block the commit when bit 1 of the exit code is set: that means errors, see [analyze.md](analyze.md#exit-code-ci-gating).
 
 ## D. Analyze a project for code issues
 
-Full static-analysis sweep and cleanup. `analyze code` is the entry point — **[analyze.md](analyze.md)** is the full reference (every flag, the diagnostic codes, the suppression scopes, exit-code masking, the cache). The order that works:
+Full static-analysis sweep and cleanup. `analyze code` is the entry point — **[analyze.md](analyze.md)** is the reference (the main flags and diagnostic codes, the suppression scopes, exit-code masking, the cache). The order that works:
 
-1. **Baseline scan** — `robotcode analyze code` (no path = `robot.toml` `paths`; narrow with a path or `--filter '<glob>'`).
+1. **Baseline scan** — `robotcode analyze code` (no path = the whole project; narrow with a path or `--filter '<glob>'`).
 2. **Errors first** — `--severity error` (CI usually blocks only on errors).
 3. **Unused items** — add `--collect-unused` for `KeywordNotUsed` / `VariableNotUsed` (off by default; noisy on intentionally-exported keywords).
 4. **Suppress what genuinely doesn't apply** — inline `# robotcode: ignore[CODE]`, `-mi CODE` for one run, or project-wide in `robot.toml`.
 5. **Gate CI** — mask the non-blocking ones (`-xm warn -xm info -xm hint`, or `exit-code-mask` in `robot.toml`).
-6. **Stale cache?** — after refactors, upgrades, or branch switches, `robotcode analyze cache clear` (or `--no-cache-namespaces` for a one-off).
+6. **Stale cache?** — after refactors, upgrades, or branch switches, `robotcode analyze cache clear` (or `--no-cache-namespaces` for one run without the namespace cache).
 
 ## E. Fix a whole failing run
 
@@ -94,9 +94,9 @@ So the loop is: **triage with `results` → fix per cause → re-validate** — 
 
 The one thing to get right is that **`output.xml` is not a stable snapshot across this loop.** Every run through the runner overwrites the default `output.xml` — including `robotcode robot-debug` and any confirm-the-fix run. So pin the full run's output to its own filename, treat it as the immutable source for both `results` and `--rerunfailed`, and keep intermediate runs from writing over it.
 
-1. **Run once and pin the output.** Give the full run its own file (or copy `output.xml` aside immediately):
+1. **Run once and pin the output.** Give the full run its own file (or copy `output.xml` aside immediately). `--output` is relative to the output directory, here `results`, while `-o`, `--rerunfailed` and `rebot` take paths from the project root; the run prints its `Output:`.
    ```bash
-   robotcode robot --output results/full.xml          # the immutable source of truth for this loop
+   robotcode robot --output full.xml                  # writes results/full.xml, the immutable source of truth for this loop
    ```
 
 2. **Triage against the pinned file — cluster failures, don't debug yet.** Pass `-o` explicitly so you never read a clobbered default:
@@ -117,15 +117,15 @@ The one thing to get right is that **`output.xml` is not a stable snapshot acros
 
 5. **Re-validate from the pinned file into a *new* file, and iterate.** `--rerunfailed` selects the tests that failed *in the file you hand it*, so feed it the pinned full run — not the mutated default — and write the rerun somewhere new so each round is preserved:
    ```bash
-   robotcode robot --rerunfailed results/full.xml --output results/rerun1.xml
+   robotcode robot --rerunfailed results/full.xml --output rerun1.xml
    robotcode results summary --failed -o results/rerun1.xml
    ```
-   Still red? Repeat from the rerun file (`--rerunfailed results/rerun1.xml --output results/rerun2.xml`) — the source advances `full → rerun1 → rerun2`, each one kept. For a consolidated final report where reruns supersede the originals:
+   Still red? Repeat from the rerun file (`--rerunfailed results/rerun1.xml --output rerun2.xml`) — the source advances `full → rerun1 → rerun2`, each one kept. For a consolidated final report where reruns supersede the originals:
    ```bash
    robotcode rebot --merge results/full.xml results/rerun1.xml
    ```
 
-**The exception — when you genuinely debug the *whole* run.** If a test fails only as part of the full run but passes in isolation — state leaking between tests, execution-order dependence, shared suite setup/teardown — then scoping to one test with `-bl`/`-t` *hides* the bug. Run the whole suite under the debugger and let it stop at each failing test so you can watch the interplay. `--break-on-failed-test` pauses at each failing test's **end** (after the keyword has unwound) — which is what you want here: you inspect the accumulated suite/global state, not a mid-keyword frame. The `--output NONE --log NONE --report NONE` triple is here for the same reason as step 3 — keep this whole-suite debug run from overwriting the pinned `full.xml`:
+**The exception — when you genuinely debug the *whole* run.** If a test fails only as part of the full run but passes in isolation — state leaking between tests, execution-order dependence, shared suite setup/teardown — then scoping to one test with `-bl`/`-t` *hides* the bug. Run the whole suite under the debugger and let it stop at each failing test so you can watch the interplay. `--break-on-failed-test --no-break-on-exception` pauses at each failing test's **end** (after the keyword has unwound) — which is what you want here: you inspect the accumulated suite/global state, not a mid-keyword frame. The `--output NONE --log NONE --report NONE` triple is here for the same reason as step 3 — keep this whole-suite debug run from overwriting the pinned `full.xml`:
    ```bash
-   robotcode robot-debug --break-on-failed-test tests/ --output NONE --log NONE --report NONE
+   robotcode robot-debug --break-on-failed-test --no-break-on-exception --output NONE --log NONE --report NONE tests/
    ```

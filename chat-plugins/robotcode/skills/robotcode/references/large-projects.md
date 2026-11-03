@@ -16,7 +16,7 @@ At scale, enumerating everything floods the terminal and the context window — 
 Filter *before* the output is generated: the standard Robot Framework filters `-i` / `-e` / `-s` / `-t` are what bulk-narrow a huge run — combining a path argument with `-i <tag>` is usually enough to cut 100k tests down to a workable subset.
 
 ```bash
-robotcode discover tests tests/acceptance/billing/ -i smoke -e wip
+robotcode discover tests -i smoke -e wip tests/acceptance/billing/
 ```
 
 Don't pipe a huge enumeration through `grep` — that ingests it into your context first.
@@ -40,7 +40,6 @@ Once an enumeration is too large to read inline, write it once and grep it many 
 
 ```bash
 robotcode discover tests > /tmp/tests.txt
-wc -l /tmp/tests.txt                          # count
 grep -i 'billing'  /tmp/tests.txt | head -50  # sample matches
 grep -c 'goto'     /tmp/tests.txt             # how many tests have "goto" in the longname
 ```
@@ -75,4 +74,4 @@ Robot Framework's `output.xml` for 100k tests can be gigabytes. Don't load it wh
 - `robotcode results show --failed --top 50` — capped failure listing
 - `robotcode results log -bl "<full longname>"` — drill into one specific test's tree rather than the whole report
 - Add `-o PATH` (file or directory) to any of the above when the file isn't in the auto-discovered location — typical for CI artefacts downloaded locally, runs from a colleague, or older runs you've archived
-- Write JSON output (`--output results.json`, RF 7.0+) instead of XML — smaller file, faster parse, same `robotcode results` interface
+- Write JSON output (`--output results.json`, RF 7.0+) instead of XML — smaller file, faster parse, same `robotcode results` interface; pass it with `-o`, because auto-discovery prefers an `output.xml`

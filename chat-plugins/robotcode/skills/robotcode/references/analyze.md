@@ -29,7 +29,7 @@ Typical diagnostics:
 ## Running it & narrowing scope
 
 ```bash
-robotcode analyze code                              # no path → whatever robot.toml `paths` covers
+robotcode analyze code                              # no path → the whole project, also outside robot.toml `paths`
 robotcode analyze code tests/acceptance/billing/    # narrow by path
 robotcode analyze code --filter '**/*.robot'        # narrow by glob
 ```
@@ -53,7 +53,7 @@ Off by default — opt in:
 robotcode analyze code --collect-unused
 ```
 
-Surfaces `KeywordNotUsed` / `VariableNotUsed`. Run it on the whole project: with paths or `--filter`, only references inside the selection count, so anything used only elsewhere is reported as unused. Great for cleanup, but **noisy** on libraries/resources that *intentionally* export keywords for other projects — ignore it on those paths (`-mi KeywordNotUsed`) or persist the policy in config (below).
+Surfaces `KeywordNotUsed` / `VariableNotUsed`. Run it on the whole project: with paths or `--filter`, only references inside the selection count, so anything used only elsewhere is reported as unused. Great for cleanup, but **noisy** on libraries/resources that *intentionally* export keywords for other projects — put `# robotcode: ignore[KeywordNotUsed]` at column 0 of those files, or persist the policy in config (below). `-mi KeywordNotUsed` turns it off everywhere.
 
 ## Severity & suppression (modifiers)
 
@@ -102,7 +102,7 @@ robotcode --format json analyze code                # JSON to stdout
 
 ```bash
 robotcode analyze cache clear              # wipe cache contents
-robotcode analyze code --no-cache-namespaces   # one-off fresh run, cache untouched
+robotcode analyze code --no-cache-namespaces   # one run without the namespace cache
 ```
 
 Inspect with `robotcode analyze cache info` (or `list` / `path`); `cache prune` removes the whole cache directory.

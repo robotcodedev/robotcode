@@ -2,7 +2,7 @@
 
 Getting `robotcode` into a project's own Python environment — and the right sub-packages (extras) alongside it — so the CLI sees the project's libraries, resources, and local modules.
 
-**Before you install, confirm it's really missing.** robotcode is often already in the project's environment (the RobotCode IDE extension and typical setups install it), so first get *into* that environment — activate its venv, or invoke through the manager (`hatch run` / `uv run` / `poetry run` / `pdm run` + `robotcode …`), or use the IDE-configured interpreter — and just try the command. An empty `command -v robotcode` in an unactivated or base shell is **not** a reason to install. This workflow applies only once robotcode is genuinely absent from the project's own environment: `command -v robotcode` (or `Get-Command robotcode` on Windows) comes up empty *with the environment active*, **or** a `robotcode <X>` invocation fails with `No such command 'X'` (which means the sub-package shipping `X` isn't installed).
+An empty `command -v robotcode` in an unactivated or base shell is **not** a reason to install. This workflow applies only once robotcode is genuinely absent from the project's own environment: `command -v robotcode` (or `Get-Command robotcode` on Windows) comes up empty *with the environment active*, **or** the first word after `robotcode` fails with `No such command 'X'`, which means the sub-package shipping `X` isn't installed. Further down, as in `robotcode discover test`, the message means a wrong subcommand. If robotcode is older than this skill, the extra is there and the command isn't: update robotcode.
 
 ## Contents
 
@@ -14,7 +14,7 @@ Getting `robotcode` into a project's own Python environment — and the right su
 
 ## 1. The non-negotiable: in-project install
 
-**robotcode must be installed *into* the project's environment** — not run in isolation. It needs access to everything the test suite imports: Robot Framework's standard libraries, third-party libs (`SeleniumLibrary`, `Browser`, etc.), the project's own `lib/` and `resources/` directories, and any local Python modules. Isolated runners like `uvx robotcode ...` or `pipx run robotcode ...` create a separate environment that can't see any of those, so they don't work for real projects — only an in-project install does.
+**robotcode must be installed *into* the project's environment** — not run in isolation. It needs access to everything the test suite imports: Robot Framework's standard libraries, third-party libs (`SeleniumLibrary`, `Browser`, etc.), the project's own `lib/` and `resources/` directories, and any local Python modules. Only an in-project install does.
 
 ## 2. Before installing: ask the user two things
 
@@ -38,7 +38,7 @@ Minimum for this skill is `robotcode[runner,analyze,repl]`:
 Other available extras the user may want included:
 
 - `debugger` — `robotcode debug`, the Debug Adapter Protocol server the editor extensions drive for graphical step-debugging. This is **not** what `robotcode robot-debug` needs (that's the `repl` extra above); only add `debugger` for DAP/editor integration.
-- `languageserver` — LSP for IDE integration (usually installed by the VS Code / Neovim extension automatically, not manually)
+- `languageserver` — LSP for IDE integration (an editor extension usually brings its own)
 - `replserver` — network-attachable REPL
 - `yaml` — YAML variable files
 - `lint` — `robotframework-robocop` integration
@@ -87,7 +87,7 @@ robotcode itself can be installed while a command the agent needs isn't — the 
 [ ERROR ] No such command 'analyze'.
 ```
 
-**Don't read this as a typo and don't retry with a different command name.** It means the corresponding sub-package isn't in the environment. Step 2 lists which extra ships which command.
+**Don't retry with a different command name.** For a first word after `robotcode`, it means the corresponding sub-package isn't in the environment. Step 2 lists which extra ships which command.
 
 Treat it the same way as a fresh install: **ask the user before adding the missing extra.** One user-prompt round-trip covers:
 

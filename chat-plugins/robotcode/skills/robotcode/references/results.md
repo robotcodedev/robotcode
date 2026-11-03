@@ -17,13 +17,13 @@ Reach for it whenever a run has finished and the question is "did it pass, what 
 
 ## 1. The shared option surface
 
-Five subcommands share a consistent option surface — auto-discovering the output file from the active profile, accepting:
+Five subcommands share a consistent option surface:
 
 - Standard Robot filters: `-i <tag>` / `-e <tag>` / `-s <suite>` / `-t <test>` / `--status pass|fail|skip|not-run` (with `--failed` / `--passed` / `--skipped` as shortcuts on `show` / `log` / `stats`)
 - Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output). Available on all five subcommands
-- Test-metadata filters (RF 7.5+): `-btm <pattern>` / `-ebtm <pattern>` — select by the test's `[Metadata]` with the same patterns as `robotcode robot` and `discover` (`-btm Issue:4409` → the results of every test for issue 4409). A result file holds the values the run used, so variables in a value are already replaced there. Available on all five subcommands
+- Test-metadata filters (RF 7.5+): `-btm <pattern>` / `-ebtm <pattern>` — select by the test's own `[Metadata]` with the same patterns as `robotcode robot` and `discover`: terms `NAME:VALUE` with `*` / `?`, combined with `AND` / `OR` / `NOT` as separate upper-case words (`-btm Issue:4409` → the results of every test for issue 4409, `"Author:Hans* NOT Reviewer:*"`). Every line of a multi-line value is a value of its own. A result file holds the values the run used, so variables in a value are already replaced there. Available on all five subcommands
 - Full-text search: `--search TEXT` / `--search-regex PATTERN` — searches across names, messages, tags, documentation, metadata, and keyword names/args/docs/messages
-- Output-file override: `-o PATH` (file or directory)
+- Output-file override: `-o PATH` (file or directory), except on `diff`, whose `CURRENT` takes its place
 
 ## 2. `robotcode results summary` — the headline
 
@@ -104,7 +104,7 @@ robotcode --format json results diff baseline.xml              # structured diff
 
 ## 7. Auto-discovery and `-o` overrides
 
-Auto-discovery (when `-o` is omitted) picks the active profile's configured output file, with timestamp-glob fallback, then `./output.xml` as last resort. `-o PATH` (file or directory) works the same way on all five subcommands and points at any XML / JSON — useful for inspecting an older run, a colleague's run, or a CI artefact downloaded locally.
+Auto-discovery (when `-o` is omitted) picks the active profile's configured output file, with timestamp-glob fallback, then `./output.xml` as last resort. `-o PATH` (file or directory) points at any XML / JSON — useful for inspecting an older run, a colleague's run, or a CI artefact downloaded locally.
 
 ## 8. For custom analysis: `robot.api.ExecutionResult`
 
@@ -120,4 +120,4 @@ for t in r.suite.all_tests:
         print(t.full_name, t.elapsed_time)
 ```
 
-`r.suite.statistics`, iterable `r.suite.all_tests`, `test.full_name`, `test.message`, `test.status`, `test.elapsed_time`, etc. — no ElementTree, no XPath. Run it via the project's runtime so the same Robot Framework version reads what wrote.
+`r.suite.statistics`, iterable `r.suite.all_tests`, `test.full_name`, `test.message`, `test.status`, `test.elapsed_time`, etc. (these names from RF 7.0) — no ElementTree, no XPath. Run it via the project's runtime so the same Robot Framework version reads what wrote.

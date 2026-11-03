@@ -32,7 +32,7 @@ Don't memorize or guess keys — the catalog is the tool:
 - `robotcode config info desc <key>` — type, description, and a TOML example. Wildcards work: `config info desc "*tag*"`, `config info desc "rebot.*"`.
 - `robot --help` — the underlying Robot Framework options these keys mirror.
 
-`config info desc <key>` is the authoritative source whether you're **explaining** a setting (its meaning and accepted type) or **editing** one. When editing, the reliable loop is **look up (`config info desc`) → write the TOML → verify (`config show`)** — don't hand-write keys from memory. When explaining a setting's *value*, note that `config show` reports what is actually in effect and a profile can override the top-level value, so use `robotcode --profile <name> config show` (or `config show -s` to attribute each setting to its file/profile) to report the value under the active profile rather than just the default.
+`config info desc <key>` is the authoritative source whether you're **explaining** a setting (its meaning and accepted type) or **editing** one. When editing, the reliable loop is **look up (`config info desc`) → write the TOML → verify (`profiles show`)** — don't hand-write keys from memory. When explaining a setting's *value*, report what is in effect: a profile can override the top-level value, and only `robotcode [-p <name>] profiles show` applies the profiles. `config show -s` shows which file a setting comes from.
 
 ## Computed values: `expr` and `if`
 
@@ -45,7 +45,7 @@ output-dir = { expr = "f'results/{date.today()}'" }
 BUILD = { expr = "environ.get('BUILD_ID', 'local')" }
 ```
 
-Profiles add a **condition**: `enabled` and `hidden` take `{ if = "<python expression>" }` (or the dotted form `enabled.if = "..."`), evaluated as a boolean — this is how a profile switches itself on only on CI, on a given OS, and so on:
+Profiles add a **condition**: `enabled` and `hidden` take `{ if = "<python expression>" }` (or the dotted form `enabled.if = "..."`), evaluated as a boolean. This decides whether a profile that is **selected** (through `-p`, `default-profiles` or `inherits`) is used, on CI only, on a given OS, and so on; it doesn't select one:
 
 ```toml
 [profiles.ci]
@@ -59,7 +59,7 @@ These are **not** arbitrary Python. The string must be a single *expression* (no
 
 Attribute and method calls on those objects are fine (`environ.get('CI')`, `platform.system()`, `Path.cwd() / 'app'`). Any other name — `os`, `open`, `__import__`, a module you weren't given a global for — is rejected when the value is evaluated, with `Name access to '<name>' is not allowed`; that error almost always means the expression reached for something outside this safe set.
 
-When explaining such a setting, `config info desc` tells you whether it accepts an expression (the `StringExpression` in its type), and `config show` reports the **evaluated** result that is actually in effect — not the `{ expr = … }` source.
+When explaining such a setting, `config info desc` tells you whether it accepts an expression (the `StringExpression` in its type), and `profiles show` reports the **evaluated** result that is actually in effect (`-n` keeps the `{ expr = … }` source).
 
 ## Where config lives, and the loading order
 
@@ -76,7 +76,8 @@ Inspect what is actually in play instead of guessing:
 
 - `robotcode config files` — which config files were found and their roles/precedence.
 - `robotcode config root` — the detected project root, and how it was discovered.
-- `robotcode config show` — the merged, effective configuration. `--format json` for machine output; `-s` / `--single` to see each file's own contribution.
+- `robotcode config show` — the configuration as written, with the files merged, without applying a profile or evaluating anything. `-s` / `--single` shows each file's own contribution; for JSON, `robotcode --format json config show`.
+- `robotcode [-p <name>] profiles show` — what is in effect, with the profiles applied and the expressions evaluated.
 
 ## Profiles
 
@@ -95,7 +96,7 @@ variables = { ENVIRONMENT = "production", API_URL = "https://api.example.com" }
 ```
 
 - **`inherits`** — pull in other profiles by name: `inherits = ["base"]` (string or list).
-- **`hidden` / `enabled`** — `hidden = true` keeps a profile out of listings; `enabled.if = "<python expression>"` (e.g. `enabled.if = "platform.system() == 'Windows'"`) switches it on conditionally.
+- **`hidden` / `enabled`** — `hidden = true` keeps a profile out of listings; `enabled.if = "<python expression>"` (e.g. `enabled.if = "platform.system() == 'Windows'"`) uses a selected profile only under that condition.
 - **`precedence`** — a number (default `0`); when several profiles merge, the higher-precedence one wins a conflicting scalar key.
 - **`extend-` prefix** — within a merge a plain key **replaces** the accumulated value, while its `extend-` twin **appends** to it. Supported on `variables`, `includes` / `excludes`, `python-path`, `metadata`, and more (check `config info`).
 - **`default-profiles`** — which profile(s) apply when no `--profile` is given.
@@ -106,8 +107,8 @@ variables = { ENVIRONMENT = "production", API_URL = "https://api.example.com" }
 robotcode --profile dev robot tests/          # one profile
 robotcode -p base -p "win*" robot tests/      # repeatable; each value is a glob; all matches merge
 robotcode profiles list                        # defined profiles
-robotcode --profile dev profiles show          # a single profile's own definition
-robotcode -p base -p win config show           # the merged, effective config for a selection
+robotcode --profile dev profiles show          # what is in effect under this profile
+robotcode -p base -p win profiles show         # the same for a selection, merged
 ```
 
 Merge order: default (top-level) settings first → profiles by ascending `precedence` → for equal precedence, the order given on the command line.
@@ -129,6 +130,8 @@ The longnames it prints are exactly what you pass to `robotcode robot -bl "<long
 
 ```toml
 # A base profile others inherit, plus environment profiles
+default-profiles = ["windows"]
+
 [profiles.base]
 log-level = "INFO"
 variables = { TIMEOUT = "20s" }
@@ -142,7 +145,7 @@ inherits = ["base"]
 extend-variables = { ENVIRONMENT = "ci" }
 extend-includes = ["smoke"]                           # adds to any inherited includes
 
-# Platform-conditional profile
+# Selected above, used only on Windows
 [profiles.windows]
 enabled.if = "platform.system() == 'Windows'"
 variables = { DRIVER_PATH = "C:\\drivers" }
@@ -150,6 +153,6 @@ variables = { DRIVER_PATH = "C:\\drivers" }
 
 ## Good to know
 
-- **Config changes longnames.** `paths` and name-transform settings change suite/test *names* from what the files literally say — so take them from `discover` or `results`, see [SKILL.md](../SKILL.md#selecting-one-test-or-suite).
+- **Config changes longnames.** `paths` and name-transform settings change suite/test *names* from what the files literally say — so take them from `discover`, see [SKILL.md](../SKILL.md#selecting-one-test-or-suite).
 - **CLI overrides config.** Flags on the command line win over `robot.toml`; use them to narrow a one-off run, not as a substitute for the config.
-- **`config show` is the merged result, so it includes the user-global defaults.** A setting that isn't in the project's `robot.toml` / `pyproject.toml` is usually one of those user-level defaults (source #1 above) rather than something the project sets. `config show -s` (each file's own contribution) and `config files` show which file each setting comes from, which attributes any setting to its layer.
+- **`config show` includes the user-global defaults.** A setting that isn't in the project's `robot.toml` / `pyproject.toml` is usually one of those (source #1 above). `config show -s` and `config files` show which file a setting comes from.
