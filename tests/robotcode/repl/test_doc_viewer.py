@@ -331,6 +331,15 @@ def test_build_anchor_to_line_map_numbers_repeated_headings() -> None:
     assert mapping == {"x": 0, "x-1": 4}
 
 
+def test_build_anchor_to_line_map_skips_a_code_line_that_reads_like_the_heading() -> None:
+    from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
+
+    md = "### Start Coverage\n\n```text\nStop Coverage\n```\n\n### Stop Coverage\n\nStops."
+    rendered = "Start Coverage\n\n Stop Coverage\n\nStop Coverage\n\nStops."
+    mapping = _build_anchor_to_line_map(md, rendered)
+    assert mapping == {"start-coverage": 0, "stop-coverage": 4}
+
+
 def test_build_anchor_to_line_map_finds_a_heading_with_a_code_span() -> None:
     from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
 

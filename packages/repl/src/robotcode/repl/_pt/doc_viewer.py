@@ -59,7 +59,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from robot.utils import MultiMatcher
 
-from robotcode.robot.utils.markdown_docs import heading_anchors
+from robotcode.robot.utils.markdown_docs import code_lines_before_headings, heading_anchors
 
 
 def render_markdown_to_ansi(text: str, *, width: int = 80) -> str:
@@ -267,10 +267,15 @@ def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, 
     cursor = 0
     # `heading_anchors` skips `#` lines of fenced code blocks, which are no headings,
     # and numbers repeated anchors as the links of the page do
-    for _, raw_title, anchor in heading_anchors(md_source):
+    for (_, raw_title, anchor), code_lines in zip(heading_anchors(md_source), code_lines_before_headings(md_source)):
         display = _strip_md_emphasis(raw_title)
+        # a line of a code block can read like the heading after it
+        skip = code_lines.count(display)
         for j in range(cursor, len(rendered_lines)):
             if rendered_lines[j].strip() == display:
+                if skip:
+                    skip -= 1
+                    continue
                 result[anchor] = j
                 cursor = j + 1
                 break

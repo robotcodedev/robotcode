@@ -18,6 +18,7 @@ __all__ = [
     "LinkResolver",
     "ReferenceTarget",
     "anchor_link_resolver",
+    "code_lines_before_headings",
     "code_span",
     "code_span_variables",
     "escape_link_text",
@@ -60,7 +61,7 @@ class ReferenceTarget(NamedTuple):
 LinkResolver = Callable[[str, str], Optional[str]]
 
 # indented more than three spaces a fence belongs to a list item
-_RE_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+_RE_FENCE = re.compile(r"^\s*(`{3,}(?!.*`)|~{3,})")
 _RE_ATX_HEADING = re.compile(r"^( {0,3})(#{1,6})(?=\s|$)(.*)$")
 _RE_HEADING_TITLE = re.compile(r"^ {0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$")
 _RE_ADMONITION = re.compile(r"^(\s*(?:>\s*)+)\[!([A-Za-z]+)\][ \t]*(.*?)\s*$")
@@ -198,6 +199,19 @@ def iter_headings(text: str) -> Iterator[Tuple[int, str]]:
         match = None if in_code else _RE_HEADING_TITLE.match(line)
         if match:
             yield len(match.group(1)), match.group(2)
+
+
+def code_lines_before_headings(text: str) -> List[List[str]]:
+    """For every ATX heading, the lines of code blocks since the heading before it, stripped."""
+    result: List[List[str]] = []
+    lines: List[str] = []
+    for line, in_code in _iter_lines(text):
+        if in_code:
+            lines.append(line.strip())
+        elif _RE_HEADING_TITLE.match(line):
+            result.append(lines)
+            lines = []
+    return result
 
 
 def heading_anchors(text: str) -> List[Tuple[int, str, str]]:
@@ -522,8 +536,11 @@ def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
 
 
 def code_span(text: str) -> str:
-    """`text` as inline code, with a fence longer than any run of backticks in it."""
-    fence = "`" * (max((len(run) for run in _RE_BACKTICKS.findall(text)), default=0) + 1)
+    """`text` as inline code, with the shortest fence that no run of backticks in it has."""
+    runs = {len(run) for run in _RE_BACKTICKS.findall(text)}
+    fence = "`"
+    while len(fence) in runs:
+        fence += "`"
     padding = " " if text.startswith("`") or text.endswith("`") else ""
     return f"{fence}{padding}{text}{padding}{fence}"
 

@@ -1284,7 +1284,7 @@ class KeywordDoc(SourceEntity):
         in_code = False
         for raw_line in self._format_doc_fragment(text, link_resolver, targets).splitlines():
             line = raw_line.strip()
-            if re.match(r"(`{3,}|~{3,})", line):
+            if re.match(r"(`{3,}(?!.*`)|~{3,})", line):
                 in_code = not in_code
                 new_line = True
             elif not line:

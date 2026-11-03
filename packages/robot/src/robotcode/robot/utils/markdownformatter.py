@@ -5,7 +5,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Final, Iterator, List, Optional, Tuple
 
-from .markdown_docs import escape_link_text
+from .markdown_docs import code_span, escape_link_text
 
 # Gets a name in single backticks of documentation in Robot Framework's format and
 # returns the target of a link to it, or `None` if it stays inline code.
@@ -13,7 +13,18 @@ NameLinker = Callable[[str], Optional[str]]
 
 # a name in single backticks, not code in double backticks
 _RE_NAME: Final["re.Pattern[str]"] = re.compile(r"(?<!`)`([^`]+)`(?!`)")
-_RE_NAME_PLACEHOLDER: Final["re.Pattern[str]"] = re.compile("\ue000(\\d+)\ue001")
+_RE_CODE_SPAN: Final["re.Pattern[str]"] = re.compile(
+    r"""
+\\.                     # what Markdown reads as an escaped character
+| (?<!`) (`+) (?!`)      # a run of backticks (group 1)
+  ([^\ue000]+?)          # anything but code that is already held (group 2)
+  (?<!`) \1 (?!`)        # up to the next run of the same length
+| `+                     # a run of backticks without a partner
+""",
+    re.VERBOSE,
+)
+_RE_THREE_BACKTICKS: Final["re.Pattern[str]"] = re.compile("(?<!`)```(?!`)")
+_RE_LONG_BACKTICKS: Final["re.Pattern[str]"] = re.compile("`{3,}")
 
 
 class Formatter(ABC):
@@ -44,7 +55,7 @@ class MarkDownFormatter:
     def __init__(self, name_linker: Optional[NameLinker] = None) -> None:
         """`name_linker` turns names in single backticks into links, as Libdoc links them.
 
-        Headings and preformatted text keep their names.
+        Headings keep their names, in preformatted text they lose their backticks.
         """
         self._results: List[str] = []
         line_formatter = _line_formatter if name_linker is None else LineFormatter(name_linker)
@@ -180,23 +191,27 @@ class LinkFormatter:
     def remove_link(self, text: str) -> str:
         # 2nd, 4th, etc. token contains link, others surrounding content
         tokens = self._link.split(text)
-        if len(tokens) > 1:
-            formatters: Iterator[Callable[[str], Any]] = itertools.cycle([self._remove_link])
-            return "".join(f(t) for f, t in zip(formatters, tokens))
-        return text
+        formatters: Iterator[Callable[[str], str]] = itertools.cycle((str, self._remove_link))
+        return "".join(f(t) for f, t in zip(formatters, tokens))
 
     def _remove_link(self, text: str) -> str:
-        if "|" not in text:
-            return text
-
         link, content = (t.strip() for t in text.split("|", 1))
-        if self._is_image(content):
-            return self._get_image(content, link)
-
-        return content
+        return content or link
 
     def _is_image(self, text: str) -> bool:
         return text.startswith("data:image/") or text.lower().endswith(self._image_exts)
+
+
+def _code_text(text: str) -> str:
+    """The text of code as a reader copies it: as written, only links and names lose their markup,
+    which Libdoc does not show either."""
+    return _RE_NAME.sub(r"\1", LinkFormatter().remove_link(text))
+
+
+def _hold(held: List[str], text: str) -> str:
+    """Puts text behind a placeholder, so that the other formatting cannot change it."""
+    held.append(text)
+    return f"\ue000{len(held) - 1}\ue001"
 
 
 class LineFormatter:
@@ -246,30 +261,38 @@ _                          # end of italic
             ("#", self._quote_hash),
             ("*", self._format_bold),
             ("_", self._format_italic),
-            ("``", self._format_code),
             ("", LinkFormatter().format_link),
         ]
 
     def format(self, line: str) -> str:
-        links: List[str] = []
-        if self._name_linker is not None and "`" in line:
-            # before the other formatting, which makes ``code`` the same code span as a `name`
-            line = _RE_NAME.sub(lambda m: self._link_name(m, links), line)
+        held: List[str] = []
+        if "\ue000" in line:
+            # the documentation's own character must not read as a placeholder
+            line = line.replace("\ue000", _hold(held, "\ue000"))
+        if "`" in line:
+            # what Robot Framework reads as code decides first, then what else Markdown reads as code
+            line = self._code.sub(lambda m: m.group(1) + _hold(held, code_span(_code_text(m.group(3)))), line)
+            line = _RE_CODE_SPAN.sub(lambda m: self._hold_span(m, held), line)
         for marker, formatter in self._formatters:
             if marker in line:
                 line = formatter(line)
-        if links:
-            line = _RE_NAME_PLACEHOLDER.sub(lambda m: links[int(m.group(1))], line)
+        # backwards, the documentation's own character can be part of held code
+        for index, text in reversed(list(enumerate(held))):
+            line = line.replace(f"\ue000{index}\ue001", text)
         return line
 
-    def _link_name(self, match: re.Match[str], links: List[str]) -> str:
-        assert self._name_linker is not None
-        target = self._name_linker(match.group(1))
-        if target is None:
-            return match.group(0)
-        # the link waits behind a placeholder, so the other formatting cannot change it
-        links.append(f"[{escape_link_text(match.group(1))}]({target})")
-        return f"\ue000{len(links) - 1}\ue001"
+    def _hold_span(self, match: re.Match[str], held: List[str]) -> str:
+        text, fence, span = match.group(0, 1, 2)
+        if fence is None:
+            # Markdown must not pair a backtick left over with the code written here
+            return text if text.startswith("\\") else text.replace("`", "\\`")
+        # for Robot Framework this is no code, but Markdown shows it as code
+        if len(fence) > 1:
+            return _hold(held, text)
+        target = None if self._name_linker is None else self._name_linker(span)
+        if target is not None:
+            return _hold(held, f"[{escape_link_text(span)}]({target})")
+        return _hold(held, code_span(_code_text(span)))
 
     def _quote_lower_then(self, line: str) -> str:
         return line.replace("<", "\\<")
@@ -283,9 +306,6 @@ _                          # end of italic
     def _format_italic(self, line: str) -> str:
         return self._italic.sub("\\1*\\3*", line)
 
-    def _format_code(self, line: str) -> str:
-        return self._code.sub("\\1`\\3`", line)
-
 
 _line_formatter = LineFormatter()
 
@@ -295,8 +315,16 @@ class PreformattedFormatter(Formatter):
         return line.startswith("| ") or line == "|"
 
     def format(self, lines: List[str]) -> str:
-        lines = [LinkFormatter().remove_link(line[2:]) for line in lines]
-        return "```text\n" + "\n".join(lines) + "\n```\n"
+        text = "\n".join(self._format_line(line[2:]) for line in lines)
+        # a line of backticks must not end the block
+        fence = "`" * max((len(run) + 1 for run in _RE_LONG_BACKTICKS.findall(text)), default=3)
+        return f"{fence}text\n{text}\n{fence}\n"
+
+    def _format_line(self, line: str) -> str:
+        # the whole block is code, so double backticks have nothing left to say
+        line = _code_text(LineFormatter._code.sub(r"\1\3", line))
+        # a backtick can't be escaped, Libdoc shows three in a row as one
+        return _RE_THREE_BACKTICKS.sub("`", line)
 
 
 class ParagraphFormatter(Formatter):

@@ -341,6 +341,12 @@ class TestLinksWithinThePage:
         keyword = zeta.to_markdown(link_resolver=anchor_link_resolver)
         assert "Runs after `Alpha Kw`, see `Section`." in keyword
 
+    def test_code_can_be_copied_and_names_outside_of_it_are_links(self, tmp_path: Path) -> None:
+        page = _page(_write_library(tmp_path, "PageCodeLib", CODE_LIBRARY))
+
+        assert "Instances live in `vscode/<n>`, see [Alpha Kw](#alpha-kw)." in page
+        assert "```text\nAlpha Kw    foo    # Returns ${True}\n```" in page
+
     def test_names_without_a_heading_stay_code(self, tmp_path: Path) -> None:
         lib_file = tmp_path / "PageNoHeadingLib.py"
         lib_file.write_text(
@@ -557,6 +563,17 @@ class Beta(Enum):
 
 def paint(first: Alpha, second: Beta):
     """Uses `Beta` and [Beta]."""
+'''
+
+CODE_LIBRARY = '''\
+class PageCodeLib:
+    """Instances live in ``vscode/<n>``, see `Alpha Kw`.
+
+    | `Alpha Kw`    foo    # Returns ``${True}``
+    """
+
+    def alpha_kw(self):
+        """Does nothing."""
 '''
 
 TEXT_LIBRARY = '''\
