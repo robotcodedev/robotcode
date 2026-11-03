@@ -994,6 +994,29 @@ def test_status_tells_whether_a_session_runs_waits_or_has_ended(
     assert _robotcode("session", "status", session_id).stdout == "ended\n"
 
 
+@pytest.mark.parametrize(
+    ("command", "message"),
+    [
+        (".foo", "Unknown dot-command"),
+        (".print ${nope}", "nope"),
+        (".set ${nope} x", "nope"),
+        (".doc", "Usage: .doc"),
+        (".break", "usage: .break"),
+    ],
+)
+def test_a_dot_command_that_cant_do_what_was_asked_exits_with_1(
+    command: str, message: str, started: List[str], session_project: Path
+) -> None:
+    session_id = _debug_at_stop(started, session_project)
+
+    result = _robotcode("session", "send", session_id, command)
+
+    assert result.exit_code == 1, result.output
+    assert message in result.stdout
+    # The session goes on, and the next input is judged on its own.
+    assert _robotcode("session", "send", session_id, ".vars").exit_code == 0
+
+
 def test_result_prints_the_exit_code_once_the_run_has_ended(started: List[str], session_project: Path) -> None:
     session_id = _debug_at_stop(started, session_project)
     result = _robotcode("session", "result", session_id)

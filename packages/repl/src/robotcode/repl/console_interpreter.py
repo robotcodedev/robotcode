@@ -471,8 +471,7 @@ class ConsoleInterpreter(BaseInterpreter):
         arg = (m.group(2) or "").strip()
         attr_name, error = self._resolve_dot_command(name)
         if attr_name is None:
-            if self.app is not None:
-                self.app.echo(error or f"Unknown dot-command: .{name}. Try .help.")
+            self._dot_command_failed(error or f"Unknown dot-command: .{name}. Try .help.")
             return True
         getattr(self, attr_name)(arg)
         return True
@@ -736,10 +735,14 @@ class ConsoleInterpreter(BaseInterpreter):
         if self.app is not None:
             self.app.echo(text)
 
+    def _dot_command_failed(self, text: str) -> None:
+        """Say that a dot-command couldn't do what was asked."""
+        self._echo(text)
+
     def _require_stop(self) -> bool:
         """Guard for commands that only mean something while paused."""
         if self._stop is None:
-            self._echo("not at a breakpoint")
+            self._dot_command_failed("not at a breakpoint")
             return False
         return True
 
@@ -747,7 +750,7 @@ class ConsoleInterpreter(BaseInterpreter):
         """Guard for commands that need a wired debug controller. (Distinct from
         the attach/detach *state* — a detached controller is still wired.)"""
         if self._controller is None:
-            self._echo("no debugger available")
+            self._dot_command_failed("no debugger available")
             return False
         return True
 
@@ -1377,12 +1380,12 @@ class ConsoleInterpreter(BaseInterpreter):
         if self.app is None:
             return
         if not arg:
-            self.app.echo("Usage: .doc <library-or-resource-name>")
+            self._dot_command_failed("Usage: .doc <library-or-resource-name>")
             return
 
         lib_doc, error = self._resolve_doc_target(arg)
         if lib_doc is None:
-            self.app.echo(error or f"Could not load {arg!r}.")
+            self._dot_command_failed(error or f"Could not load {arg!r}.")
             return
 
         self.show_doc(
@@ -1445,7 +1448,7 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             self.app.echo(str(Path.cwd()))
         except OSError as e:
-            self.app.echo(f"(working directory unavailable: {e})")
+            self._dot_command_failed(f"(working directory unavailable: {e})")
 
     @dot_command("exit", "quit")
     def _exit(self, arg: str) -> None:
@@ -1465,13 +1468,13 @@ class ConsoleInterpreter(BaseInterpreter):
           .exit 3
         """
         if self._stop is not None:
-            self._echo("at a debug stop — use .continue or .detach to resume, or .abort to quit the run")
+            self._dot_command_failed("at a debug stop — use .continue or .detach to resume, or .abort to quit the run")
             return
         if arg:
             try:
                 self.exit_code = int(arg)
             except ValueError:
-                self._echo("Usage: .exit [CODE]")
+                self._dot_command_failed("Usage: .exit [CODE]")
                 return
         raise EOFError
 
@@ -1515,7 +1518,7 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             opts = parser.parse_args(_split_command_args(arg))
         except (argparse.ArgumentError, SystemExit, ValueError):
-            self.app.echo("Usage: .save [-a] [-t NAME] [--keep-failed] FILENAME")
+            self._dot_command_failed("Usage: .save [-a] [-t NAME] [--keep-failed] FILENAME")
             return
 
         recorded: List[str] = list(self._session_lines or [])
@@ -1541,7 +1544,7 @@ class ConsoleInterpreter(BaseInterpreter):
             else:
                 path.write_text(content, encoding="utf-8")
         except OSError as e:
-            self.app.echo(f"Could not write {opts.filename}: {e}")
+            self._dot_command_failed(f"Could not write {opts.filename}: {e}")
             return
 
         summary = f"{len(lines)} {'entry' if len(lines) == 1 else 'entries'}"
@@ -1656,7 +1659,7 @@ class ConsoleInterpreter(BaseInterpreter):
         (default 10) — `.source Open Browser 25`.
         """
         if not arg:
-            self._echo("usage: .source <keyword-name> [lines]")
+            self._dot_command_failed("usage: .source <keyword-name> [lines]")
             return
         # Split off a trailing line-count (the plain-backend window size). Keyword
         # names contain spaces, so only a trailing integer token counts.
@@ -1666,7 +1669,7 @@ class ConsoleInterpreter(BaseInterpreter):
             name, count = head[0], max(1, int(head[1]))
         found = lookup_keyword_owner(name)
         if found is None:
-            self._echo(f"keyword {name!r} not found")
+            self._dot_command_failed(f"keyword {name!r} not found")
             return
         owner, runtime_kw, is_resource = found
         kw_name = getattr(runtime_kw, "name", name)
@@ -1676,7 +1679,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if source is None:
             source = getattr(runtime_kw, "source", None)
         if source is None or line is None:
-            self._echo(f"(no source available for {kw_name})")
+            self._dot_command_failed(f"(no source available for {kw_name})")
             return
         source, line = str(source), int(line)
         header = f"{kw_name}  ({os.path.basename(source)}:{line})"
@@ -1707,7 +1710,7 @@ class ConsoleInterpreter(BaseInterpreter):
             target = int(arg)
         except ValueError:
             top = len(self._stop.stack) - 1 if self._stop else 0
-            self._echo(f"usage: .frame <n>  (0..{top})")
+            self._dot_command_failed(f"usage: .frame <n>  (0..{top})")
             return
         self._move_frame(target)
 
@@ -1717,12 +1720,12 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_stop():
             return
         if not arg:
-            self._echo("usage: .print <variable-or-expression>")
+            self._dot_command_failed("usage: .print <variable-or-expression>")
             return
         try:
             value = self._controller.evaluate_expression(self._selected_frame(), arg)  # type: ignore[union-attr]
         except Exception as e:  # surface lookup/eval failures to the prompt
-            self._echo(f"! {e}")
+            self._dot_command_failed(f"! {e}")
             return
         self._echo(f"{arg} = {_repr.repr(value)}")
 
@@ -1732,12 +1735,12 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_stop():
             return
         if not arg:
-            self._echo("usage: .pprint <variable-or-expression>")
+            self._dot_command_failed("usage: .pprint <variable-or-expression>")
             return
         try:
             value = self._controller.evaluate_expression(self._selected_frame(), arg)  # type: ignore[union-attr]
         except Exception as e:  # surface lookup/eval failures to the prompt
-            self._echo(f"! {e}")
+            self._dot_command_failed(f"! {e}")
             return
         self._echo(pprint.pformat(value))
 
@@ -1747,12 +1750,12 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_stop():
             return
         if not arg:
-            self._echo("usage: .whatis <variable-or-expression>")
+            self._dot_command_failed("usage: .whatis <variable-or-expression>")
             return
         try:
             value = self._controller.evaluate_expression(self._selected_frame(), arg)  # type: ignore[union-attr]
         except Exception as e:  # surface lookup/eval failures to the prompt
-            self._echo(f"! {e}")
+            self._dot_command_failed(f"! {e}")
             return
         self._echo(f"{arg}: {type(value).__name__}")
 
@@ -1784,7 +1787,7 @@ class ConsoleInterpreter(BaseInterpreter):
             self._display_exprs.remove(arg)
             self._echo(f"no longer displaying {arg}")
         else:
-            self._echo(f"not displaying: {arg}")
+            self._dot_command_failed(f"not displaying: {arg}")
 
     @dot_command("set", group="Debugger")
     def _set(self, arg: str) -> None:
@@ -1803,18 +1806,18 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         parts = arg.split(None, 1)
         if len(parts) < 2:
-            self._echo("usage: .set ${name} <value>")
+            self._dot_command_failed("usage: .set ${name} <value>")
             return
         name, value = parts[0], parts[1]
         if not (name.startswith("${") and name.endswith("}")) or "[" in name:
-            self._echo(f"! .set only supports whole scalar variables (${{...}}), not {name}")
+            self._dot_command_failed(f"! .set only supports whole scalar variables (${{...}}), not {name}")
             return
         try:
             new_repr = self._controller.set_variable(  # type: ignore[union-attr]
                 self._selected_frame(), name, value, evaluate=False
             )
         except Exception as e:  # surface NameError / unknown-variable to the prompt
-            self._echo(f"! {e}")
+            self._dot_command_failed(f"! {e}")
             return
         self._echo(f"{name} = {new_repr}")
 
@@ -1822,7 +1825,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_controller():
             return
         if not arg:
-            self._echo("usage: .break <file:line | keyword name> [, <condition>]")
+            self._dot_command_failed("usage: .break <file:line | keyword name> [, <condition>]")
             return
         spec, condition = arg, None
         if "," in arg:  # `.break <loc>, <condition>`
@@ -1891,11 +1894,11 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             bp_id = int(token)
         except (TypeError, ValueError):
-            self._echo(f"not a breakpoint number: {token}")
+            self._dot_command_failed(f"not a breakpoint number: {token}")
             return None
         bp = controller.get_breakpoint(bp_id)
         if bp is None:
-            self._echo(f"no breakpoint {bp_id}")
+            self._dot_command_failed(f"no breakpoint {bp_id}")
         return bp
 
     @dot_command("condition", group="Debugger")
@@ -1905,7 +1908,7 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         parts = arg.split(None, 1)
         if not parts:
-            self._echo("usage: .condition <breakpoint-number> [<expression>]")
+            self._dot_command_failed("usage: .condition <breakpoint-number> [<expression>]")
             return
         bp = self._bp_by_arg(parts[0])
         if bp is None:
@@ -1923,7 +1926,7 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         parts = arg.split()
         if len(parts) != 2:
-            self._echo("usage: .ignore <breakpoint-number> <count>")
+            self._dot_command_failed("usage: .ignore <breakpoint-number> <count>")
             return
         bp = self._bp_by_arg(parts[0])
         if bp is None:
@@ -1931,7 +1934,7 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             count = int(parts[1])
         except ValueError:
-            self._echo(f"not a count: {parts[1]}")
+            self._dot_command_failed(f"not a count: {parts[1]}")
             return
         bp.ignore_count = max(0, count)
         bp.hits = 0  # the next `count` triggering hits are skipped from now
@@ -1996,7 +1999,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_controller():
             return
         if not arg.strip():
-            self._echo("usage: .commands <breakpoint-number>")
+            self._dot_command_failed("usage: .commands <breakpoint-number>")
             return
         bp = self._bp_by_arg(arg.strip())
         if bp is None:
@@ -2044,7 +2047,7 @@ class ConsoleInterpreter(BaseInterpreter):
         for token in tokens:
             target = _CATCH_SHORTHANDS.get(token.lower())
             if target is None:
-                self._echo(f"unknown catch filter: {token}; try uncaught, all, test, suite, off")
+                self._dot_command_failed(f"unknown catch filter: {token}; try uncaught, all, test, suite, off")
                 return
             mapped.add(target)
         controller.set_exception_breakpoints(mapped)
@@ -2076,7 +2079,7 @@ class ConsoleInterpreter(BaseInterpreter):
             controller.set_attached(False)
             self._echo("debugger: detached")
         else:
-            self._echo("usage: .debug on|off")
+            self._dot_command_failed("usage: .debug on|off")
 
     @dot_command("detach", group="Debugger")
     def _detach(self, arg: str) -> None:
@@ -2101,7 +2104,7 @@ class ConsoleInterpreter(BaseInterpreter):
         """Abort the run and exit. Use `.detach` to let the suite finish instead."""
         del arg
         if self._stop is None:
-            self._echo("no run to abort")
+            self._dot_command_failed("no run to abort")
             return
         # Robot can't be cleanly stopped mid-keyword from a logger callback — a
         # raised exception is swallowed by suite.run() — so exit via SystemExit,

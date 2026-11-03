@@ -1221,6 +1221,10 @@ class SessionInterpreter(ConsoleInterpreter):
         if not self._server.at_line_start():
             super()._end_console_line()
 
+    def _dot_command_failed(self, text: str) -> None:
+        self._server.line_failed()
+        super()._dot_command_failed(text)
+
     def _evaluate_at_stop(self, line: str) -> bool:
         # A keyword at a stop fails the input as at the REPL prompt.
         try:
