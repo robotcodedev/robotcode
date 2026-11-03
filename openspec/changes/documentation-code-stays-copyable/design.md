@@ -24,6 +24,8 @@ See proposal.md, section Why, for the problem.
 
 Robot Framework's format has no way to say which language a preformatted block holds. It can contain Robot Framework code, JavaScript, JSON or anything else.
 
+It has no way to escape a backtick either. Libdoc replaces every pair in a line with `` re.sub("`(.+?)`", …) ``. A backslash and `&#96;` stay visible, and a single backtick in a line stays as it is. As a side effect of that pattern, three backticks in a row show as one: ```` ```date``` ```` gives `` `date` ``.
+
 **What real documentation contains.** Browser 21.0.0, SeleniumLibrary, SSHLibrary, DatabaseLibrary, RequestsLibrary, and the standard libraries of RF 7.4 without Telnet; the standard libraries of RF 7.5 are written in Markdown.
 - 4113 code spans: 3 hold a URL, all in Browser; none holds bold, italic or `[a|b]`.
 - About 1200 distinct lines in preformatted blocks: 355 hold names in single backticks and 25 hold double backticks, partly the same lines; 1 holds a link; 6 are headers like `*** Settings ***`.
@@ -49,13 +51,13 @@ Robot Framework's format has no way to say which language a preformatted block h
 
 Alternative: make each step skip code spans. That repeats the same check in five places.
 
-### One pattern finds code, Robot Framework's reading first
+### What we write as code, Markdown has to read as code
 
-The scan runs left to right over one pattern with two branches:
-1. Robot Framework's own code pattern, unchanged. It decides what a span is, so ``` ``a``b`` ``` stays one span as in Libdoc.
-2. A run of backticks up to the next run of the same length, which is how Markdown reads a code span. This catches `` `<x>` `` and ``` ``<a>``s ```.
+A backslash can't protect `<` inside code, so the text of code is only safe if Markdown really reads it as code. Two passes find it:
+1. Robot Framework's own code pattern, unchanged. It decides first, over the whole line, so ``` ``a``b`` ``` stays one span as in Libdoc, and an unpaired ``` `` ``` before ``` ``a`` ``` cannot take its opener.
+2. A scan of the rest, left to right, with three branches: a backslash and the character after it, which Markdown reads as an escape and which stay as they are; a run of backticks up to the next run of the same length, which is how Markdown reads a code span (`` `<x>` ``, ``` ``<a>``s ```); and a run without a partner, whose backticks get escaped, or Markdown would pair them with the code written here. A span can't reach across code that is already held.
 
-A span of single backticks with a link target from the name linker becomes the link, as today, and everything else stays code. One scan means placeholders never nest.
+A span of single backticks with a link target from the name linker becomes the link, as today, and everything else stays code.
 
 Alternative: only Robot Framework's code pattern, as the issue describes. `` `<div data-automation="automation-id-2">` `` in SeleniumLibrary would keep its backslash.
 
@@ -69,11 +71,21 @@ Other backtick runs stay exactly as written. For Robot Framework they are no cod
 
 `PreformattedFormatter` removes double backticks with Robot Framework's code pattern, then applies the same helper. `*` and `_` stay.
 
+Three backticks in a row become one, as the last step, so that the result cannot pair up as a name. This is the only way an author can keep backticks in a block, such as ``const s = ```Hello ${name}```;``, and it gives the same text as Libdoc. It relies on a side effect that Robot Framework does not document. There are no such lines in the checked libraries. Only exactly three count: longer runs depend on what follows them in Libdoc and stay as written.
+
 ### `remove_link` touches only links
 
 Today it runs on every token of the line, so `| a | b [x|y] c | d` becomes `byd`. It now handles only the link tokens, the way `format_link` already separates them.
 
-Its image branch goes too. `[Title|image.png]` writes `![Title](image.png)` as text into the block, which nobody can paste. The rule `[url|text]` → `text` gives `image.png`; there are no real occurrences. `[image.png|Title]` keeps giving `Title`.
+Its image branch goes too. `[Title|image.png]` writes `![Title](image.png)` as text into the block, which nobody can paste. The rule `[url|text]` → `text` gives `image.png`; there are no real occurrences. `[image.png|Title]` keeps giving `Title`. A link without text gives its target, as `_get_link` and Libdoc do: `[,|]` gives `,`.
+
+### Fences
+
+`code_span` takes the shortest fence that no run of backticks in the text has, so ``` ``True``/``False`` ``` stays `` `True``/``False` `` as before. The fence detection in `markdown_docs` and in argument descriptions follows CommonMark: a backtick fence has no other backtick on its line, so `` ```x``` y `` is no code block. A preformatted block takes a fence longer than any run of backticks in it, or a line of four would end it.
+
+### The viewer finds the heading, not a code line
+
+Without backticks, a block line can read exactly like the next heading, and the REPL's viewer finds headings by comparing text. Per heading, it now skips as many matches as code blocks since the heading before it have such lines. `Start Coverage` in Browser ends its example with `` `Stop Coverage` ``.
 
 ### Rejected: splitting code spans around links and bold
 
@@ -85,11 +97,13 @@ Browser's real line ``` `Wait For Response`   [https://…|response] => … ``` 
 
 ## Risks / Trade-offs
 
-- **Other code in a block loses backticks.** A JavaScript template string or `` `date` `` in a block is read as a name → This is what Libdoc shows too, so authors already see it there, and the checked libraries have no such case.
+- **Other code in a block loses backticks.** A JavaScript template string or `` `date` `` in a block is read as a name → This is what Libdoc shows too, so authors already see it there and can write three backticks instead. The checked libraries have no such case.
+- **Robot Framework changes its pattern.** Three backticks would then show differently in Libdoc → They stay one in RobotCode until someone notices; a test pins it.
 - **Literal `[a|b]` in code becomes `b`.** A regular expression, for example → Also what Libdoc shows. There are no such spans in the checked libraries, and the one real block hit is an intended link.
 - **`*bold*` in code shows its asterisks,** where Libdoc shows bold → Intended. This keeps `*** Test Cases ***` intact, which Libdoc breaks.
 - **Blocks written for Libdoc look odd.** Browser writes `***** *Variables* *****`, which Libdoc shows as `*** Variables ***` → They stay as written. Robot Framework still parses them as the section.
-- **The placeholder characters in a documentation itself** can collide with the placeholders, now in any line with code rather than only with a linked name → Left as is. They are private-use characters, and a collision needs both of them around a number.
+- **The placeholder characters in a documentation itself** would read as placeholders → A documentation's own U+E000 is held first, like code, and comes back last.
+- **Cases that stay as they are.** Each needs input that the checked libraries don't have: a variable directly before a span that Robot Framework does not read as code (`` ${v}``<x>`` ``), code in a link target (``[``my file``|text]``, broken in Libdoc too), runs that Libdoc pairs differently (`` | `a``` ``), a block inside an argument description. Backslashes in plain text belong to `documentation-text-keeps-its-characters`.
 
 ## Checked with a prototype
 
