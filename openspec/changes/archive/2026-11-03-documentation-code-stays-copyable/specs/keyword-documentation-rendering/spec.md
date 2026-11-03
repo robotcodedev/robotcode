@@ -150,7 +150,7 @@ When a keyword has documented arguments, the rendered keyword documentation SHAL
 
 ### Requirement: Other Robot-format text converts as before
 
-Link texts and all other text SHALL be converted as before, apart from the names in single backticks that the full page links (requirement "Names in Robot-format documentation" of `library-documentation-markdown`), code (requirements "Code keeps the text of the documentation", "Markup of links and names falls away in code" and "Backticks in preformatted blocks") and, in VS Code, the links of the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`, which replace these links there.
+Link texts and all other text SHALL be converted as before, apart from the names in single backticks that the full page links (requirement "Names in Robot-format documentation" of `library-documentation-markdown`), code, by its own requirements, and, in VS Code, the links of the requirement "Links in documentation open the Documentation Viewer" of `vscode-documentation-viewer`, which replace these links there.
 
 #### Scenario: Link text
 - **WHEN** a Robot-format keyword documentation contains `[http://example.com|example]`
