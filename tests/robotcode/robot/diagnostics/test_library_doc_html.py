@@ -53,4 +53,6 @@ def test_html_documentation_without_markdown_package_reports_the_missing_module(
     )
 
     assert result.returncode == 0, result.stderr
-    assert "DataError: Markdown format requires 'markdown' module to be installed." in result.stdout
+    # The rest of the message is Robot Framework's wording, which changed in 7.5.1.
+    assert "DataError:" in result.stdout
+    assert "'markdown' module" in result.stdout
