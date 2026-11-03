@@ -292,7 +292,7 @@ def results() -> None:
     robotcode results summary
     robotcode results summary --failed
     robotcode results show --failed
-    robotcode results log "*Login*"
+    robotcode results log -t "*Login*"
     robotcode --format json results summary
     ```
     """
