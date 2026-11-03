@@ -18,7 +18,9 @@ from prompt_toolkit.application import create_app_session
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 from robot.output import LOGGER
+from robot.running.signalhandler import STOP_SIGNAL_MONITOR
 
+from robotcode.repl import base_interpreter
 from robotcode.robot.config import utils as config_utils
 
 # `robotcode.runner.cli.robot` is shadowed by the re-exported click command, so
@@ -31,6 +33,15 @@ def _prompt_toolkit_dummy_session() -> Iterator[None]:
     with create_pipe_input() as inp:
         with create_app_session(input=inp, output=DummyOutput()):
             yield
+
+
+@pytest.fixture
+def signal_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """For a test that ends a run as a signal does, in this process: the second such signal would end
+    the process, and the first changes how Robot Framework stops."""
+    monkeypatch.setattr(base_interpreter, "_ending_signal_count", 0)
+    monkeypatch.setattr(base_interpreter, "_signal_ends_run", False)
+    monkeypatch.setattr(STOP_SIGNAL_MONITOR, "_signal_count", 0)
 
 
 @pytest.fixture(autouse=True)

@@ -424,11 +424,16 @@ def test_detach_disables_further_stops() -> None:
     assert len(_stop_lines(messages)) == 1
 
 
-def test_abort_aborts_the_run() -> None:
-    # `.abort` exits via SystemExit (the only thing Robot propagates from a
-    # logger callback); the run does not finish.
-    with pytest.raises(SystemExit):
-        _run_debug(STEP_SUITE, [".abort"], stop_on_entry=True)
+def test_abort_ends_the_run_as_a_signal_does(signal_state: None) -> None:
+    interpreters: List[ConsoleInterpreter] = []
+
+    messages = _run_debug(
+        STEP_SUITE, [".abort"], stop_on_entry=True, keyword_breakpoints=["Outer"], prepare=interpreters.append
+    )
+
+    assert "aborting the run" in messages
+    assert len(_stop_lines(messages)) == 1
+    assert interpreters[0].exit_code == 253
 
 
 # ---------------------------------------------------------------------------
@@ -521,10 +526,9 @@ def test_wait_at_stop_reads_through_interpreter_read_line() -> None:
     assert interpreter._pending_action is None
 
 
-def test_wait_at_stop_clears_state_when_abort_unwinds() -> None:
-    # `.abort` raises SystemExit straight through the prompt loop; the stop state
-    # must STILL be cleared (try/finally) so the interactive shell prompt isn't
-    # left wedged in a phantom debug state after the run unwinds.
+def test_wait_at_stop_clears_state_after_abort(signal_state: None) -> None:
+    # `.abort` lets the run go on to its end; the stop state must be cleared so the
+    # interactive shell prompt isn't left wedged in a phantom debug state after the run.
     app = _CaptureApp()
     interpreter = ConsoleInterpreter(app=app)
     controller = DebugController()
@@ -532,8 +536,7 @@ def test_wait_at_stop_clears_state_when_abort_unwinds() -> None:
     interpreter.set_controller(controller)
     interpreter.read_line = _Reader([".abort"])  # type: ignore[method-assign]
     try:
-        with pytest.raises(SystemExit):
-            interpreter.wait_at_stop(_fake_stop())
+        assert interpreter.wait_at_stop(_fake_stop()) == ResumeAction.CONTINUE
     finally:
         LOGGER.unregister_logger(interpreter._logger)
     assert interpreter._stop is None

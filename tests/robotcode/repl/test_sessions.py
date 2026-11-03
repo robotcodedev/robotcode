@@ -843,6 +843,10 @@ def test_pass_execution_and_skip_at_a_stop_dont_fail(started: List[str], session
     assert _robotcode("session", "send", session_id, "Skip    skipped at the stop").exit_code == 0
 
 
+def _results_can_be_read(project: Path) -> bool:
+    return _robotcode("results", "summary", "-o", str(project / "results" / "output.xml")).exit_code == 0
+
+
 def test_an_idle_debug_session_aborts_its_run(started: List[str], session_project: Path) -> None:
     session_id = _debug_at_stop(started, session_project, "--idle-timeout", "0.03")
 
@@ -851,6 +855,34 @@ def test_an_idle_debug_session_aborts_its_run(started: List[str], session_projec
         time.sleep(0.1)
 
     assert read_entry(session_id) is None
+    assert _results_can_be_read(session_project)
+
+
+def test_stop_at_a_stop_leaves_a_result_that_can_be_read(started: List[str], session_project: Path) -> None:
+    session_id = _debug_at_stop(started, session_project)
+
+    assert _robotcode("session", "stop", session_id).exit_code == 0
+
+    assert _results_can_be_read(session_project)
+
+
+def test_abort_in_a_session_ends_the_run_with_exit_code_253(started: List[str], session_project: Path) -> None:
+    session_id = _debug_at_stop(started, session_project)
+
+    result = _robotcode("session", "send", session_id, ".abort")
+
+    assert "The run has ended with exit code 253." in result.stderr, result.output
+    assert _robotcode("session", "result", session_id).stdout == "253\n"
+    assert _results_can_be_read(session_project)
+
+
+def test_restart_at_a_stop_ends_the_run_and_starts_a_new_one(started: List[str], session_project: Path) -> None:
+    session_id = _debug_at_stop(started, session_project)
+
+    assert "debug.robot:4)" in _robotcode("session", "restart", session_id).stdout
+
+    assert _robotcode("session", "stop", session_id).exit_code == 0
+    assert _results_can_be_read(session_project)
 
 
 def test_interrupt_pauses_a_debug_run_and_stop_aborts_it(started: List[str], session_project: Path) -> None:

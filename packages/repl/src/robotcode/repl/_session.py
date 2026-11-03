@@ -1178,7 +1178,7 @@ class SessionInterpreter(ConsoleInterpreter):
     @property
     def termination_requested(self) -> bool:
         """Whether a signal has asked the REPL or the run to end, as SIGTERM does."""
-        return self._termination_requested
+        return self._termination_requested and not self._aborted
 
     def read_line(
         self, prompt: str, *, multiline_continuation: bool = False, prefill: str = "", completer: Any = None

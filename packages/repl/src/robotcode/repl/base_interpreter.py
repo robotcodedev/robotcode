@@ -436,6 +436,8 @@ class BaseInterpreter(abc.ABC):
         self.exit_code: Optional[int] = None
         # Set by a signal that ends the session or the run.
         self._termination_requested = False
+        # Set by `.abort`, which ends the run by the same way as a signal but isn't one from outside.
+        self._aborted = False
         # Set while a statement of the input runs: SIGTERM then stops it at its next keyword.
         self._running_statement = False
 

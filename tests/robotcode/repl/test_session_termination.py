@@ -294,6 +294,63 @@ def test_sigterm_at_a_debugger_stop_ends_the_run(tmp_path: Path, start: Callable
     assert not any("test runs" in line for line in run.stdout)
 
 
+def test_abort_ends_the_run_with_a_result_that_can_be_read(tmp_path: Path, start: Callable[..., _Command]) -> None:
+    (tmp_path / "suite.robot").write_text(_TWO_TESTS, encoding="utf-8")
+    run = start("robot-debug", "--stop-on-entry", "-o", str(tmp_path / "output.xml"), "suite.robot")
+    run.wait_for_output("* entry")
+
+    run.send(".abort")
+
+    assert run.wait() == 253, run.errors
+    assert _run_results(tmp_path / "output.xml") == [
+        ("First", "FAIL", "Execution terminated by signal"),
+        ("Second", "FAIL", "Test execution stopped due to a fatal error."),
+    ]
+    assert not any("test runs" in line for line in run.stdout)
+
+
+def test_abort_at_a_stop_in_a_repl_ends_it_with_a_result_that_can_be_read(
+    tmp_path: Path, start: Callable[..., _Command]
+) -> None:
+    repl = start("repl", "--break", "Log", "-o", str(tmp_path / "output.xml"))
+    repl.send("Log    hello")
+    repl.wait_for_output("* breakpoint")
+
+    repl.send(".abort")
+
+    assert repl.wait() == 253, repl.errors
+    assert [test.name for test in ExecutionResult(str(tmp_path / "output.xml")).suite.tests] == ["RobotCode REPL"]
+
+
+def test_abort_runs_the_teardown_without_stopping_in_it(tmp_path: Path, start: Callable[..., _Command]) -> None:
+    (tmp_path / "suite.robot").write_text(
+        "*** Test Cases ***\nFirst\n    Log To Console    first test runs\n"
+        "    [Teardown]    Log To Console    teardown runs\n",
+        encoding="utf-8",
+    )
+    run = start("robot-debug", "--stop-on-entry", "--break", "suite.robot:4", "-o", "output.xml", "suite.robot")
+    run.wait_for_output("* entry")
+
+    run.send(".abort")
+
+    assert run.wait() == 253, run.errors
+    assert any("teardown runs" in line for line in run.stdout)
+    assert not any("* breakpoint" in line for line in run.stdout)
+
+
+def test_sigterm_ends_a_teardown_that_runs_after_abort(tmp_path: Path, start: Callable[..., _Command]) -> None:
+    (tmp_path / "Napping.py").write_text(_NAPPING_LIBRARY, encoding="utf-8")
+    (tmp_path / "suite.robot").write_text(_LONG_NAP_WITH_LONG_TEARDOWN, encoding="utf-8")
+    run = start("robot-debug", "--stop-on-entry", "-o", "output.xml", "suite.robot")
+    run.wait_for_output("* entry")
+    run.send(".abort")
+    run.wait_for_output("tearing down")
+
+    run.terminate()
+
+    assert run.wait(timeout=15) == 253, run.errors
+
+
 def test_sigterm_during_a_keyword_ends_the_run(tmp_path: Path, start: Callable[..., _Command]) -> None:
     (tmp_path / "suite.robot").write_text(_TWO_TESTS, encoding="utf-8")
     run = start("robot-debug", "-o", str(tmp_path / "output.xml"), "suite.robot")

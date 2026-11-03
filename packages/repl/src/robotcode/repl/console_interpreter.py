@@ -21,6 +21,7 @@ import pprint
 import re
 import reprlib
 import shlex
+import signal
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -31,6 +32,7 @@ from robot import result, running
 from robot.errors import ExecutionFailed, ExecutionPassed, ExecutionStatus
 from robot.running import Keyword
 from robot.running.context import EXECUTION_CONTEXTS
+from robot.running.signalhandler import STOP_SIGNAL_MONITOR
 from robot.utils import normalize
 
 from robotcode.plugin import Application
@@ -666,9 +668,9 @@ class ConsoleInterpreter(BaseInterpreter):
         silent = bool(bp is not None and bp.commands and bp.commands[0] == "silent" and not stop.description)
         if not silent:
             self._render_stop(stop)
-        # try/finally so the stop state is always cleared, even if `.abort`
-        # (SystemExit) or a Ctrl-C during an at-stop evaluation unwinds through
-        # the loop — otherwise a stale `_stop` would leave the interactive shell
+        # try/finally so the stop state is always cleared, even if a Ctrl-C
+        # during an at-stop evaluation unwinds through the loop — otherwise a
+        # stale `_stop` would leave the interactive shell
         # prompt wedged in a phantom debug state after the run returns.
         try:
             if bp is not None and bp.commands:
@@ -697,9 +699,9 @@ class ConsoleInterpreter(BaseInterpreter):
                     # already; the REPL prompt adds nothing to it either.
                     pass
                 except Exception as e:  # a throwing command must not eject the debug prompt
-                    # `.abort` (SystemExit), Ctrl-C, and DebugTerminated are
-                    # BaseException, not Exception, so they still propagate.
-                    self._echo(f"! {e}")
+                    # Ctrl-C and DebugTerminated are BaseException, not
+                    # Exception, so they still propagate.
+                    self._dot_command_failed(f"! {e}")
             return self._pending_action
         finally:
             self._stop = None
@@ -2101,13 +2103,21 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("abort", group="Debugger")
     def _abort(self, arg: str) -> None:
-        """Abort the run and exit. Use `.detach` to let the suite finish instead."""
+        """End the run: the current test fails, the rest don't run, teardowns run, the output is written.
+
+        Use `.detach` to let the suite finish instead.
+        """
         del arg
         if self._stop is None:
             self._dot_command_failed("no run to abort")
             return
-        # Robot can't be cleanly stopped mid-keyword from a logger callback — a
-        # raised exception is swallowed by suite.run() — so exit via SystemExit,
-        # the one exception Robot does propagate.
         self._echo("aborting the run")
-        sys.exit(1)
+        self._pending_action = ResumeAction.CONTINUE
+        self.exit_code = 253
+        self._aborted = True
+        try:
+            # As SIGTERM does, so that Robot Framework writes the output files to their end.
+            STOP_SIGNAL_MONITOR(signal.SIGTERM, None)
+        except ExecutionStatus:
+            # For a keyword that runs: from here it would get lost, the next keyword that starts stops the run.
+            pass

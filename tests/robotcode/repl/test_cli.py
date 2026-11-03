@@ -536,7 +536,7 @@ def test_robot_debug_stop_on_entry_end_to_end(tmp_path: Path) -> None:
     assert "#0  BuiltIn.Log" in result.output  # .where rendered the stack with the keyword's full name
 
 
-def test_robot_debug_abort_aborts_end_to_end(tmp_path: Path) -> None:
+def test_robot_debug_abort_aborts_end_to_end(tmp_path: Path, signal_state: None) -> None:
     suite = tmp_path / "s.robot"
     suite.write_text("*** Test Cases ***\nT\n    Log    one\n    Log    two\n", encoding="utf-8")
     result = CliRunner().invoke(
@@ -545,7 +545,8 @@ def test_robot_debug_abort_aborts_end_to_end(tmp_path: Path) -> None:
         input=".abort\n",
     )
     assert "aborting the run" in result.output
-    assert result.exit_code != 0  # SystemExit from .abort
+    assert result.exit_code == 253
+    assert ExecutionResult(str(tmp_path / "output.xml")).suite.statistics.failed == 1
 
 
 def test_robot_debug_breaks_on_uncaught_failure_by_default(tmp_path: Path) -> None:

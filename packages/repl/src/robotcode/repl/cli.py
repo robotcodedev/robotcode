@@ -705,14 +705,20 @@ def robot_debug(
     session: ContextManager[object] = server if server is not None else contextlib.nullcontext()
     try:
         with session, interpreter.forward_events(echo_messages=False):
-            _invoke_runner(
-                ctx,
-                by_longname,
-                exclude_by_longname,
-                by_test_metadata,
-                exclude_by_test_metadata,
-                robot_options_and_args,
-            )
+            try:
+                _invoke_runner(
+                    ctx,
+                    by_longname,
+                    exclude_by_longname,
+                    by_test_metadata,
+                    exclude_by_test_metadata,
+                    robot_options_and_args,
+                )
+            except SystemExit:
+                # After `.abort` the code says that, not how many tests failed.
+                if interpreter.exit_code is None:
+                    raise
+                raise SystemExit(interpreter.exit_code) from None
     except DebugTerminated:
         app.echo("Debugger: run terminated.")
     finally:
