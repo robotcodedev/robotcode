@@ -122,10 +122,10 @@ def _normalize_source(source: str) -> str:
 
 
 def _breakpoint_source(source: str) -> str:
-    """What a line breakpoint matches by: an absolute path, or one that leaves the folder with `..`,
+    """What a line breakpoint matches by: a path with a root or a drive, or one that leaves the folder with `..`,
     as an absolute path; any other as it is, see `_source_matches`."""
     path = Path(source)
-    return _normalize_source(source) if path.is_absolute() or ".." in path.parts else str(path)
+    return _normalize_source(source) if path.anchor or ".." in path.parts else str(path)
 
 
 def _source_matches(source: str, frame_source: str) -> bool:

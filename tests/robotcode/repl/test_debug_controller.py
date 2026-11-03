@@ -300,6 +300,14 @@ def test_line_breakpoint_with_an_absolute_path_matches_only_that_file(tmp_path: 
     assert frontend.stops == [(StopReason.BREAKPOINT, "Outer Keyword", 13)]
 
 
+def test_line_breakpoint_with_a_root_but_no_drive_is_an_absolute_path() -> None:
+    # On Windows `/tmp/x.robot` isn't absolute for pathlib, but it still names one file on the current drive.
+    breakpoint_ = DebugController().add_line_breakpoint(_SOURCE, 3)
+
+    assert breakpoint_.source == str(normalized_path(_SOURCE))
+    assert breakpoint_.where == f"{_SOURCE}:3"
+
+
 def test_line_breakpoint_with_a_parent_folder_is_a_path_from_the_current_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
