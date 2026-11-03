@@ -61,7 +61,7 @@ More on profiles: [Profiles](/guides/robot-toml/profiles/).
 
 ## What to watch out for
 
-- **Check what a profile changes.** A profile named after a system doesn't make the tests reach it. Ask the agent what a profile changes, or look yourself with `robotcode -p <profile> config show`.
+- **Check what a profile changes.** A profile named after a system doesn't make the tests reach it. Ask the agent what a profile changes, or look yourself with `robotcode -p <profile> profiles show`.
 - **A run replaces the results of the last one.** As in [step 2](/guides/ai-agents/working-with-the-agent/writing-a-test/), ask for another output directory if you still need them.
 - **Point the agent to `robotcode results` when it reads `output.xml`.** In the session *Another browser*, it searched `output.xml` with `grep` to see which browser ran, which the skill tells it not to do: an `output.xml` can be hundreds of megabytes, and `robotcode results log` shows the arguments of `New Browser` too.
 

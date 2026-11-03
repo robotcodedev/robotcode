@@ -46,7 +46,7 @@ The project already had a `ci` profile, so the agent extended it instead of addi
 
 ### It checks the result without running the tests
 
-`robotcode -p ci config show` shows the configuration with the profile, a dry run with `--dry` the options and arguments `robot` would get, and `robotcode -p ci discover tests` the tests the profile includes. From the session:
+`robotcode -p ci profiles show` shows the configuration with the profile, a dry run with `--dry` the options and arguments `robot` would get, and `robotcode -p ci discover tests` the tests the profile includes. From the session:
 
 <!-- excerpt: a-profile-for-the-ci-server -->
 ```console

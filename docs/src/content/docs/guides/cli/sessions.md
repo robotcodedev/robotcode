@@ -107,7 +107,7 @@ The exit code of `send` says how the input went, so a script or an agent doesn't
 | Exit code | Meaning |
 | --- | --- |
 | `0` | The statement passed. |
-| `1` | The statement failed. |
+| `1` | The statement failed, or a dot command couldn't do what was asked. |
 | `124` | It still runs after `--timeout`; `session wait` prints the rest. |
 | `252` | An error of robotcode itself, such as an ID without an open session, or a `send` after the end of the REPL or the run. |
 
@@ -187,7 +187,7 @@ A restarted REPL session starts without the variables and imports of before. Whe
 
 A session ends:
 
-- with `robotcode session stop ID`, which prints the output since the last command. A debug run that hasn't ended is aborted as with `.abort`, without reports; with the debugger detached, it ends as on `Ctrl-C`;
+- with `robotcode session stop ID`, which prints the output since the last command. A debug run that hasn't ended is aborted as with `.abort`, so its teardowns run and its output files can be read; with the debugger detached, it ends as on `Ctrl-C`;
 - with `robotcode session stop --project`, together with the other sessions of the project the current folder belongs to, the folder RobotCode finds for its `robot.toml`. A session belongs to the project of the folder `session start` ran in, also when a debug run's suite lies elsewhere;
 - with `robotcode session stop --all`, together with all your other sessions;
 - when it has waited for 15 minutes without a request, at its prompt or after the end of its REPL or run, so that a forgotten session doesn't keep a browser open. `--idle-timeout MINUTES` at the start changes the time; a statement that runs doesn't count as waiting;
