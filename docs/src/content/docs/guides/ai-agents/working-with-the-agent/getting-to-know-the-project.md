@@ -33,20 +33,26 @@ The sessions below start with *"Which tests cover the cart requirements SHOP-201
 
 Which files become suites, which tests a profile includes and which tags a test ends up with is decided when Robot Framework resolves the project: by its rules for suites and `__init__.robot` files, by the `paths`, variables and profiles in `robot.toml`, and by filters and pre-run modifiers. A search through the files sees none of that. The skill therefore tells the agent not to answer such questions by reading or searching the `.robot` files, but with `robotcode discover`, which resolves the project with its installed Robot Framework.
 
-For the three cart requirements, the agent selected the tests by their metadata. From the session *Coverage*:
+For the three cart requirements, the agent asked for the metadata of the tests. From the session *Coverage*:
 
 <!-- excerpt: coverage -->
 ```console
-$ robotcode discover tests -btm "Requirement:SHOP-201 OR Requirement:SHOP-202 OR Requirement:SHOP-203"; echo ---; robotcode discover metadata --values --tests
-# Tests
+$ robotcode discover metadata --values --tests --search-regex 'SHOP-20[0-9]' ; echo "---exit $?"; robotcode discover metadata --values --tests; echo "---"; ls requirements/
+# Metadata
 
-- **Tests.Cart.Add Item To Cart** (`tests/cart.robot:15`)
-- **Tests.Cart.Remove Item From Cart** (`tests/cart.robot:22`)
-- **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
+## Tests and Tasks
+
+- **Requirement**
+  - `SHOP-201`
+    - **Tests.Cart.Add Item To Cart** (`tests/cart.robot:15`)
+  - `SHOP-202`
+    - **Tests.Cart.Remove Item From Cart** (`tests/cart.robot:22`)
+  - `SHOP-203`
+    - **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
 …
 ```
 
-Each test has its long name, such as `Tests.Cart.Add Item To Cart`: the names of its suites, then its own. `robotcode discover metadata --values --tests` lists every metadata value with the tests that carry it. To answer whether every requirement file in `requirements/` has a test, the agent then read the files and compared each acceptance criterion with these tests.
+`robotcode discover metadata --values --tests` lists every metadata value with the tests that carry it. Each test has its long name, such as `Tests.Cart.Add Item To Cart`: the names of its suites, then its own. Asked which tests name no requirement, the agent compared this list with all tests from `robotcode discover tests` and found the four tests of the search suite.
 
 ### It looks keywords up where they are installed
 
@@ -54,7 +60,7 @@ Each test has its long name, such as `Tests.Cart.Add Item To Cart`: the names of
 
 <!-- excerpt: keywords -->
 ```console
-$ robotcode doc keyword resources/orders.resource "Create Order"
+$ robotcode doc keyword resources/orders.resource "Create Order" 2>&1; echo ------; cat resources/orders.resource
 ### Keyword *Create Order*
 
 #### Arguments: 
@@ -69,7 +75,7 @@ $ robotcode doc keyword resources/orders.resource "Create Order"
 
 ### It counts before it lists
 
-In a project with thousands of tests, a list of every test would fill the chat and tell you little. The skill tells the agent to filter or aggregate before it lists. In the session *A large project*, it asked for the tags without their tests, for the suites and, for the last run, for statistics by tag:
+In a project with thousands of tests, a list of every test would fill the chat and tell you little. The skill tells the agent to filter or aggregate before it lists. In the session *A large project*, it asked for the suites and the tags without listing their tests, counted the tests of each team's tag and, for the last run, asked for statistics by tag:
 
 <!-- excerpt: a-large-project -->
 ```console
@@ -78,7 +84,7 @@ In a project with thousands of tests, a list of every test would fill the chat a
 
 | Name       | Total | Pass | Fail | Skip | Elapsed |
 | ---------- | ----: | ---: | ---: | ---: | ------: |
-| regression |  4500 | 4460 |   40 |    0 |  5.50 s |
+| regression |  4500 | 4460 |   40 |    0 |  5.62 s |
 | accounts   |  1000 |  992 |    8 |    0 |  1.19 s |
 …
 ```
@@ -108,12 +114,32 @@ More on the commands: [Discovering Tests](/guides/cli/discovering-tests/) and [B
 *Loaded the skill `robotcode:robotcode`*
 
 ```console
-$ robotcode discover tests -btm "Requirement:SHOP-201 OR Requirement:SHOP-202 OR Requirement:SHOP-203"; echo ---; robotcode discover metadata --values --tests
-# Tests
+$ robotcode discover metadata --values --tests --search-regex 'SHOP-20[0-9]' ; echo "---exit $?"; robotcode discover metadata --values --tests; echo "---"; ls requirements/
+# Metadata
 
-- **Tests.Cart.Add Item To Cart** (`tests/cart.robot:15`)
-- **Tests.Cart.Remove Item From Cart** (`tests/cart.robot:22`)
-- **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
+## Tests and Tasks
+
+- **Requirement**
+  - `SHOP-201`
+    - **Tests.Cart.Add Item To Cart** (`tests/cart.robot:15`)
+  - `SHOP-202`
+    - **Tests.Cart.Remove Item From Cart** (`tests/cart.robot:22`)
+  - `SHOP-203`
+    - **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
+- **Risk**
+  - high
+    - **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
+
+## Suites
+
+- **Application**
+  - Demo web shop
+- **Browser**
+  - ${BROWSER}
+- **Owner**
+  - Team Checkout
+- **Shop URL**
+  - ${BASE_URL}
 
 ## Statistics
 
@@ -121,53 +147,47 @@ $ robotcode discover tests -btm "Requirement:SHOP-201 OR Requirement:SHOP-202 OR
 - _Suites with tests:_ 1
 - _Tests:_ 3
 
----
-# Metadata
+_Filters: search-regex=SHOP-20\[0-9\]_
 …
+---
+SHOP-110.md
 ```
 
 <div class="rc-session-answer">
 
-**Agent:** Each of the three cart requirements is covered by exactly one test, all in `tests/cart.robot`:
+**Agent:** Each cart requirement is covered by exactly one test, all in `tests/cart.robot`:
 
-| Requirement | Test | Location |
-|---|---|---|
-| SHOP-201 | Tests.Cart.Add Item To Cart | `tests/cart.robot:15` |
-| SHOP-202 | Tests.Cart.Remove Item From Cart | `tests/cart.robot:22` |
-| SHOP-203 | Tests.Cart.Cart Total Adds Up (also tagged `Risk high`) | `tests/cart.robot:29` |
+| Requirement | Test | Location | Risk |
+|---|---|---|---|
+| SHOP-201 | Add Item To Cart | `tests/cart.robot:15` | not set |
+| SHOP-202 | Remove Item From Cart | `tests/cart.robot:22` | not set |
+| SHOP-203 | Cart Total Adds Up | `tests/cart.robot:29` | high |
 
-I found these by searching the tests' `[Metadata]    Requirement` values with `robotcode discover`. No other test names any of these three requirements.
+This comes from each test's `[Metadata]    Requirement` tag, as resolved by `robotcode discover`. It shows which test claims which requirement, but I didn't check that the test steps actually verify it. I also didn't run the tests.
 
-To run just these three:
-```bash
-robotcode robot -btm "Requirement:SHOP-201 OR Requirement:SHOP-202 OR Requirement:SHOP-203"
-```
+`requirements/` contains only `SHOP-110.md`, so these three requirements have no files there to compare the tests against. No test claims SHOP-110 either.
 
 </div>
 
 <div class="rc-session-prompt">
 
-**You:** Does every requirement in `requirements/` have a test?
+**You:** Which tests don't name a requirement?
 
 </div>
 
-*…*
-
 ```console
-$ cat requirements/SHOP-110.md; echo ---; robotcode discover tests -s "Tests.Search"; echo ---; robotcode discover tests --search SHOP-110
-# SHOP-110: Search products
-
-As a customer, I want to search the products of the shop by their name, so that I quickly find what I want to buy.
-
-## Acceptance criteria
-
-1. The start page has a search field labelled "Search products".
-2. When I type a text and press Enter, the shop lists every product whose name contains the text, with its price.
-3. The search ignores upper and lower case.
-4. When no product matches, the shop shows "No products found".
----
+$ robotcode discover tests; echo "---"; robotcode discover suites
 # Tests
 
+- **Tests.Cart.Add Item To Cart** (`tests/cart.robot:15`)
+- **Tests.Cart.Remove Item From Cart** (`tests/cart.robot:22`)
+- **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
+- **Tests.Login.Login Works** (`tests/login.robot:11`)
+- **Tests.Login.Logout Works** (`tests/login.robot:18`)
+- **Tests.Login.Login With A Wrong Password Fails** (`tests/login.robot:26`)
+- **Tests.Orders.Order Coffee** (`tests/orders.robot:14`)
+- **Tests.Orders.Express Order** (`tests/orders.robot:21`)
+- **Tests.Orders.Sold Out Product Cannot Be Ordered** (`tests/orders.robot:27`)
 - **Tests.Search.Find Coffee** (`tests/search.robot:11`)
 - **Tests.Search.Find Tea** (`tests/search.robot:12`)
 - **Tests.Search.Find Several** (`tests/search.robot:13`)
@@ -175,42 +195,25 @@ As a customer, I want to search the products of the shop by their name, so that 
 
 ## Statistics
 
-- _Suites:_ 2
-- _Suites with tests:_ 1
-- _Tests:_ 4
+- _Suites:_ 5
+- _Suites with tests:_ 4
+- _Tests:_ 13
 
----
-# Tests
 …
-
-## Statistics
-
-- _Suites:_ 1
-
-_Filters: search=SHOP-110_
 ```
-
-*…*
 
 <div class="rc-session-answer">
 
-**Agent:** No. `requirements/` holds just one file, **SHOP-110 (Search products)**, and no test names it. Every test that names a requirement points to one with no file in `requirements/`.
+**Agent:** The four tests in the search suite don't name a requirement:
 
-**SHOP-110 has no linked test.** No test has `Requirement    SHOP-110` in its metadata, and the text "SHOP-110" appears nowhere in the tests. The search suite `tests/search.robot` tests this feature, but its four tests have no `Requirement` metadata. Your conventions only require it for login, cart and orders, so that's allowed, but it leaves SHOP-110 unlinked. The search tests also only partly cover its four acceptance criteria:
+| Test | Location |
+|---|---|
+| Find Coffee | `tests/search.robot:11` |
+| Find Tea | `tests/search.robot:12` |
+| Find Several | `tests/search.robot:13` |
+| Find Nothing | `tests/search.robot:14` |
 
-| # | Criterion | Covered? |
-|---|---|---|
-| 1 | Start page has a search field labelled "Search products" | No. The tests call `Search Products` in the in-memory `ShopLibrary` and never open the web page. |
-| 2 | Lists every product whose name contains the text, **with its price** | Partly. `Search Should Find` checks that exactly the expected products come back, but not their prices. |
-| 3 | Search ignores upper and lower case | No. Every search text is lowercase (`coff`, `tea`, `e`, `xyz`). |
-| 4 | No match shows "No products found" | Partly. `Find Nothing` checks the result is empty, but not the message. |
-
-**The other direction doesn't line up either.** The tests name nine requirements: SHOP-101–103 for login, SHOP-201–203 for cart and SHOP-301–303 for orders. None of them has a file in `requirements/`. Those files are either missing or kept somewhere else.
-
-Possible next steps, if you want them:
-- Add `[Metadata]    Requirement    SHOP-110` to the search tests. The suite uses a test template, so it could go on each test.
-- Add tests for criterion 3 (for example, searching `COFF` should find coffee) and for the price and the "No products found" message. Criterion 1 needs a Browser-library test against `BASE_URL`.
-- Check where the requirement files for SHOP-101 to SHOP-303 are.
+The other nine of the 13 tests each name one requirement. This matches `AGENTS.md`, which only asks the login, cart and orders tests to name a requirement, so these four don't break the convention.
 
 </div>
 
@@ -234,7 +237,7 @@ Possible next steps, if you want them:
 *Loaded the skill `robotcode:robotcode`*
 
 ```console
-$ ls resources libraries; for f in resources/*.resource ShopLibrary; do t=$f; [ "$f" = ShopLibrary ] && t=libraries/ShopLibrary.py; echo "== $t"; robotcode doc keywords "$t" "create order" 2>&1; done
+$ ls resources libraries; for t in resources/*.resource libraries/ShopLibrary.py; do echo "== $t"; robotcode doc keywords "$t" "Create Order" 2>&1 | head -30; done
 libraries:
 ShopLibrary.py
 
@@ -247,11 +250,41 @@ shop.resource
 
 _(no keyword matches)_
 == resources/orders.resource
-…
+# Resource *orders*
+
+- **Create Order** `(product, quantity = 1, express = ${False})` — Creates an order for `quantity` items of `product` and returns its id.
+== resources/shop.resource
+# Resource *shop*
+
+_(no keyword matches)_
+== libraries/ShopLibrary.py
+# Library *ShopLibrary*
+
+_(no keyword matches)_
 ```
 
+<div class="rc-session-answer">
+
+**Agent:** `Create Order` is defined in `resources/orders.resource` and takes three arguments:
+
+| Argument | Default | Required |
+|---|---|---|
+| `product` | none | yes |
+| `quantity` | `1` | no |
+| `express` | `${False}` | no |
+
+It creates an order for `quantity` items of `product` and returns the order's id.
+
+</div>
+
+<div class="rc-session-prompt">
+
+**You:** And what does it do to place the order?
+
+</div>
+
 ```console
-$ robotcode doc keyword resources/orders.resource "Create Order"
+$ robotcode doc keyword resources/orders.resource "Create Order" 2>&1; echo ------; cat resources/orders.resource
 ### Keyword *Create Order*
 
 #### Arguments: 
@@ -267,37 +300,7 @@ Creates an order for `quantity` items of `product` and returns its id.
 
 
 Fails if the product is out of stock.
-```
-
-<div class="rc-session-answer">
-
-**Agent:** `Create Order` is in `resources/orders.resource` and takes three arguments:
-
-| Argument | Default | Meaning |
-|---|---|---|
-| `product` | required | The product to order |
-| `quantity` | `1` | How many items to order |
-| `express` | `${False}` | Whether the order is an express order |
-
-It returns the new order's id, and it fails if the product is out of stock.
-
-Example:
-```robotframework
-${order_id}=    Create Order    Coffee Mug    quantity=3    express=${True}
-```
-
-The product name in the example is made up. The real products are defined in `libraries/ShopLibrary.py`.
-
-</div>
-
-<div class="rc-session-prompt">
-
-**You:** And what does it do to place the order?
-
-</div>
-
-```console
-$ cat resources/orders.resource
+------
 *** Settings ***
 Documentation    Ordering from the demo shop.
 
@@ -312,11 +315,27 @@ Create Order
     [Arguments]    ${product}    ${quantity}=1    ${express}=${False}
     Log    Ordered ${quantity} x ${product} (express: ${express})
     ${id}=    Place Order    ${product}    ${quantity}    ${express}
-…
+    RETURN    ${id}
+
+Order Status Should Be
+    [Documentation]    Checks the status of ``order``: ``placed`` or ``express``.
+    [Arguments]    ${order}    ${expected}
+    ${status}=    Order Status    ${order}
+    Should Be Equal    ${status}    ${expected}
+
+Submit Order
+    [Documentation]    Submits ``order`` for delivery.
+    [Arguments]    ${order}
+    Log    Submitted ${order}
+
+Checkout
+    [Documentation]    Checks ``order`` out and submits it.
+    [Arguments]    ${order}
+    Submit Ordr    ${order}
 ```
 
 ```console
-$ robotcode doc keyword libraries/ShopLibrary.py "Place Order"; grep -n "def place_order" -A30 libraries/ShopLibrary.py
+$ robotcode doc keyword libraries/ShopLibrary.py "Place Order" 2>&1; echo ------; grep -n "def place_order" -A25 libraries/ShopLibrary.py
 ### Keyword *Place Order*
 
 #### Arguments: 
@@ -331,24 +350,49 @@ $ robotcode doc keyword libraries/ShopLibrary.py "Place Order"; grep -n "def pla
 
 
 #### Documentation:
+Places an order and returns its id. Fails if `product` is out of stock.
 …
+73:    def place_order(self, product: str, quantity: int = 1, express: bool = False) -> str:
+74-        """Places an order and returns its id. Fails if ``product`` is out of stock."""
+75-        if self._stock.get(product, 0) < quantity:
+76-            raise AssertionError(f"{product} is out of stock")
+77-        self._stock[product] -= quantity
+78-        order = f"order-{4711 + len(self._orders)}"
+79-        self._orders[order] = "express" if express else "placed"
+80-        return order
+81-
+82-    @keyword
+83-    def order_status(self, order: str) -> str:
+84-        """Returns the status of ``order``: ``placed`` or ``express``."""
+85-        return self._orders[order]
+86-
+87-    @keyword
+88-    def search_products(self, text: str) -> list[str]:
+89-        """Returns the products whose name contains ``text``."""
+90-        return sorted(product for product in PRICES if text in product)
 ```
 
 <div class="rc-session-answer">
 
-**Agent:** `Create Order` (`resources/orders.resource:8`) is a thin wrapper. It logs a line like `Ordered 3 x Coffee Mug (express: False)`, then passes its three arguments unchanged to the `Place Order` keyword from `ShopLibrary` and returns the id it gets back.
+**Agent:** `Create Order` doesn't place the order itself. It logs the request and hands off to the `Place Order` keyword from `libraries/ShopLibrary.py`:
 
-The work happens in `place_order` in `libraries/ShopLibrary.py:73`, against the shop's in-memory data:
+```robotframework
+Log    Ordered ${quantity} x ${product} (express: ${express})
+${id}=    Place Order    ${product}    ${quantity}    ${express}
+RETURN    ${id}
+```
 
-1. **Checks stock:** if the shop has fewer than `quantity` of `product` in stock, it fails with `<product> is out of stock`. A product the shop doesn't know counts as 0 in stock, so it fails the same way.
-2. **Reduces stock:** it subtracts `quantity` from that product's stock.
-3. **Creates the id:** ids are numbered `order-4711`, `order-4712`, and so on, by how many orders exist so far.
-4. **Sets the status:** the order gets the status `express` if `express` is true, otherwise `placed`. You can check it with `Order Status Should Be`.
-5. **Returns the id.**
+`Place Order` (`libraries/ShopLibrary.py:73`) then does the following in the in-memory shop:
 
-There's no server or browser involved, and nothing is submitted for delivery. `Submit Order` is a separate step, and it only logs a message.
+1. **Checks stock:** if there's less stock than `quantity`, it fails with `<product> is out of stock`. An unknown product counts as zero stock, so it fails the same way.
+2. **Reduces stock:** it subtracts `quantity` from the product's stock.
+3. **Creates the id:** the id is `order-<4711 + number of existing orders>`, so the first order is `order-4711`.
+4. **Records the status:** the order's status is `express` if `express` is true, otherwise `placed`.
+5. **Returns the id:** `Create Order` passes it back to the caller.
 
-While reading the file I noticed a bug nearby: `Checkout` (`resources/orders.resource:31`) calls `Submit Ordr`, a misspelling of `Submit Order`. Any test that uses `Checkout` will fail with "No keyword with name 'Submit Ordr' found." I can fix it if you want.
+No payment or delivery step happens here, and the order is only marked `placed` or `express`.
+
+While reading the same file, I noticed that `Checkout` in `resources/orders.resource` calls `Submit Ordr`, which looks like a typo for `Submit Order`. No keyword I saw in that file has that name, so `Checkout` would probably fail when run, though I haven't run it.
 
 </div>
 
@@ -360,50 +404,57 @@ While reading the file I noticed a bug nearby: `Checkout` (`resources/orders.res
 
 *…*
 
-<div class="rc-session-answer">
-
-**Agent:** `mug` is the sold-out product (stock 0). I'll try it in the REPL, with an in-stock order for comparison:
-
-</div>
+```console
+$ robotcode session list; robotcode session start repl
+No session is open.
+Started session repl-4a611478.
+```
 
 ```console
-$ printf '%s\n' 'Import Resource    ${CURDIR}/resources/orders.resource' '${id}=    Create Order    mug' '${id}=    Create Order    coffee    quantity=2' 'Order Status Should Be    ${id}    placed' '${err}=    Run Keyword And Expect Error    *    Create Order    beans    quantity=21' 'Log To Console    ${err}' | timeout 120 robotcode repl 2>&1 | tail -40; echo "exit: ${PIPESTATUS[1]}"
+$ robotcode session send repl-4a611478 'Import Resource    ${CURDIR}/resources/orders.resource'; echo "exit=$?"
+exit=0
+```
+
+```console
+$ robotcode session send repl-4a611478 '${id}=    Create Order    mug'; echo "exit=$?"
 [ INFO ] Ordered 1 x mug (express: False)
 [ FAIL ] mug is out of stock
-[ INFO ] Ordered 2 x coffee (express: False)
-[ INFO ] ${id} = order-4711
-[ INFO ] ${id} = order-4711
-[ INFO ] ${status} = placed
-[ INFO ] Ordered 21 x beans (express: False)
-[ FAIL ] beans is out of stock
-[ INFO ] ${err} = beans is out of stock
-beans is out of stock
-exit: 1
+exit=1
+```
+
+```console
+$ robotcode session send repl-4a611478 '.vars --user'; echo "exit=$?"
+  ${BASE_URL}  'http://localhost:8080'
+  ${BROWSER}   'chromium'
+exit=0
+```
+
+```console
+$ robotcode session stop repl-4a611478; echo "exit=$?"; git status --short
+exit=0
 ```
 
 <div class="rc-session-answer">
 
-**Agent:** Ordering a sold-out product fails right away, with a clear message:
+**Agent:** `Create Order` fails when the product is sold out. I tried it in a REPL session with `mug`, the only product with zero stock in `ShopLibrary`:
 
 ```
+>>> ${id}=    Create Order    mug
 [ INFO ] Ordered 1 x mug (express: False)
 [ FAIL ] mug is out of stock
 ```
 
-What I saw in the REPL:
+- **The failure:** the keyword fails with `mug is out of stock`, which would fail a test unless it's handled.
+- **No order id:** `${id}` was never set, as it's missing from the session's variables afterwards.
+- **Misleading log line:** `Ordered 1 x mug` still appears because `Create Order` logs it before calling `Place Order`. A log can therefore say "Ordered" for an order that was never placed.
 
-- **`Create Order    mug` fails with `mug is out of stock`.** The log line comes first because `Create Order` logs before it calls `Place Order`. So a log can show "Ordered 1 x mug" even though no order exists.
-- **A failed order leaves nothing behind.** The coffee order right after it got `order-4711`, the first id, so the mug attempt used no id and changed no stock.
-- **Asking for more than is in stock fails the same way.** `beans` has 20 in stock, and ordering 21 gives `beans is out of stock`. The message says "out of stock" even though the product isn't sold out, which could confuse someone reading a failed test.
-- **The in-stock order works:** coffee × 2 returned `order-4711` with status `placed`.
-
-The REPL exited with code 1 because the mug statement failed, which was the point of the test. The other statements ran normally.
-
-To test this in a suite, catch the failure like this:
+To test this case on purpose, wrap the call so the failure is the expected result:
 
 ```robotframework
 Run Keyword And Expect Error    mug is out of stock    Create Order    mug
 ```
+
+I didn't run that line, and the session has been stopped. No project files changed.
 
 </div>
 
@@ -427,7 +478,16 @@ Run Keyword And Expect Error    mug is out of stock    Create Order    mug
 *Loaded the skill `robotcode:robotcode`*
 
 ```console
-$ robotcode discover tags --no-tests 2>&1 | tail -30; robotcode discover suites 2>&1 | tail -30
+$ command -v robotcode; robotcode profiles list 2>&1 | head -20; robotcode discover suites 2>&1 | tail -30; robotcode discover tags 2>&1 | tail -30; for t in accounts catalog checkout payments shipping smoke regression; do echo "== $t"; robotcode discover tests -i $t 2>&1 | tail -4; done
+~/shop-platform/.venv/bin/robotcode
+No profiles defined.
+…
+## Statistics
+
+- _Suites:_ 506
+- _Suites with tests:_ 500
+- _Tests:_ 5000
+
 # Tags
 
 - **accounts**
@@ -440,46 +500,63 @@ $ robotcode discover tags --no-tests 2>&1 | tail -30; robotcode discover suites 
 
 ## Statistics
 
-…
-
 - _Suites:_ 506
 - _Suites with tests:_ 500
 - _Tests:_ 5000
+
+== accounts
+- _Suites:_ 102
+- _Suites with tests:_ 100
+- _Tests:_ 1000
+
+== catalog
+- _Suites:_ 102
+- _Suites with tests:_ 100
+- _Tests:_ 1000
+
+== checkout
+- _Suites:_ 102
+- _Suites with tests:_ 100
+- _Tests:_ 1000
+
+== payments
+- _Suites:_ 102
+- _Suites with tests:_ 100
+- _Tests:_ 1000
+
+== shipping
+- _Suites:_ 102
+- _Suites with tests:_ 100
+- _Tests:_ 1000
+
+== smoke
+- _Suites:_ 506
+- _Suites with tests:_ 500
+- _Tests:_ 500
+
+== regression
+- _Suites:_ 506
+- _Suites with tests:_ 500
+- _Tests:_ 4500
 ```
+
+*…*
 
 <div class="rc-session-answer">
 
-**Agent:** Now count per team via tag filters.
+**Agent:** The project has **5,000 tests** in 500 suites, split evenly across the five teams:
 
-</div>
+| Team | Tests | Suites |
+|---|---:|---:|
+| accounts | 1,000 | 100 |
+| catalog | 1,000 | 100 |
+| checkout | 1,000 | 100 |
+| payments | 1,000 | 100 |
+| shipping | 1,000 | 100 |
 
-```console
-$ for t in accounts catalog checkout payments shipping smoke regression; do echo -n "$t: "; robotcode discover tests -i $t 2>/dev/null | grep -oP '_Tests:_ \K\d+'; done; echo -n "untagged-team: "; robotcode discover tests -e accounts -e catalog -e checkout -e payments -e shipping 2>/dev/null | grep -oP '_Tests:_ \K\d+'
-accounts: 1000
-catalog: 1000
-checkout: 1000
-payments: 1000
-shipping: 1000
-smoke: 500
-regression: 4500
-untagged-team:
-```
+Across all teams, 500 tests are tagged `smoke` and 4,500 `regression`.
 
-<div class="rc-session-answer">
-
-**Agent:** The project has **5,000 tests** in 500 suite files. They are split evenly across the five teams, 1,000 tests each:
-
-| Team | Tests |
-|---|---|
-| accounts | 1,000 |
-| catalog | 1,000 |
-| checkout | 1,000 |
-| payments | 1,000 |
-| shipping | 1,000 |
-
-The team totals add up to 5,000, so every test carries exactly one team tag. By type, **500 are `smoke`** and **4,500 are `regression`**.
-
-I got these numbers with `robotcode discover`, which applies the project's config the same way a real run does, so it counts what a run would actually see. Nothing was executed.
+These counts come from `robotcode discover`, filtered by team tag, so nothing was run. I didn't separately compare the tags against the `tests/` folders. However, the five team counts add up to exactly 5,000, so no test can be missing a team tag or carrying two.
 
 </div>
 
@@ -492,7 +569,7 @@ I got these numbers with `robotcode discover`, which applies the project's confi
 *…*
 
 ```console
-$ robotcode results summary 2>&1 | head -20; robotcode results stats --by tag 2>&1
+$ robotcode results summary 2>&1 | tail -20; echo ----; robotcode results stats --by tag --sort failed 2>&1 | tail -30
 # Summary — results/output.xml
 
 - _Status:_ ❌ **FAIL**
@@ -500,56 +577,44 @@ $ robotcode results summary 2>&1 | head -20; robotcode results stats --by tag 2>
 - _Passed:_ 4960
 - _Failed:_ 40
 - _Skipped:_ 0
-- _Started:_ 2026-10-29 19:24:57
-- _Ended:_ 2026-10-29 19:25:04
-- _Elapsed:_ 6.79 s
+- _Started:_ 2026-11-03 22:26:12
+- _Ended:_ 2026-11-03 22:26:19
+- _Elapsed:_ 6.96 s
 - _Messages:_ 40 FAIL
 
+----
 # Stats
 
 ## By Tag
 
 | Name       | Total | Pass | Fail | Skip | Elapsed |
 | ---------- | ----: | ---: | ---: | ---: | ------: |
-| regression |  4500 | 4460 |   40 |    0 |  5.50 s |
+| regression |  4500 | 4460 |   40 |    0 |  5.62 s |
 | accounts   |  1000 |  992 |    8 |    0 |  1.19 s |
-| catalog    |  1000 |  992 |    8 |    0 |  1.26 s |
+| catalog    |  1000 |  992 |    8 |    0 |  1.34 s |
 | checkout   |  1000 |  992 |    8 |    0 |  1.21 s |
 | payments   |  1000 |  992 |    8 |    0 |  1.18 s |
-| shipping   |  1000 |  992 |    8 |    0 |  1.29 s |
-| smoke      |   500 |  500 |    0 |    0 |  629 ms |
-```
-
-```console
-$ robotcode results show --failed 2>&1 | sed -E 's/.*\) *//' | sort | uniq -c | sort -rn | head
-     40   > Status of the item is done, expected failed
-     40 _
-      5 
-      1 - _Total:_ 40
-      1 ## Statistics
-      1 - _Started:_ 2026-10-29 19:24:57
-      1 - _Skipped:_ 0
-      1 # Show — results/output.xml
-      1 - _Passed:_ 0
-      1 _Filters: status=fail_
+| shipping   |  1000 |  992 |    8 |    0 |  1.34 s |
+| smoke      |   500 |  500 |    0 |    0 |  636 ms |
 ```
 
 <div class="rc-session-answer">
 
-**Agent:** All five teams had failures in the last run, 8 each. Of the 5,000 tests, **4,960 passed and 40 failed** (run of 2026-10-29 19:24, `results/output.xml`).
+**Agent:** All five teams had failures in the last run, with **8 failed tests each**. That's 40 failures out of 5,000 tests, and the other 4,960 passed.
 
-| Team | Failed / Total |
-|---|---|
-| accounts | 8 / 1,000 |
-| catalog | 8 / 1,000 |
-| checkout | 8 / 1,000 |
-| payments | 8 / 1,000 |
-| shipping | 8 / 1,000 |
+| Team | Failed | Passed |
+|---|---:|---:|
+| accounts | 8 | 992 |
+| catalog | 8 | 992 |
+| checkout | 8 | 992 |
+| payments | 8 | 992 |
+| shipping | 8 | 992 |
 
-- **Only `regression` tests failed** (40 of 4,500). All 500 `smoke` tests passed.
-- **All 40 failures have the same error:** `Status of the item is done, expected failed`. One message, split evenly across every team, points to a single shared cause rather than separate team-level bugs. I haven't dug into it yet.
+All 40 failures are `regression` tests; all 500 `smoke` tests passed. The run started today at 22:26:12.
 
-The full report is in `results/log.html` and `results/report.html`.
+I haven't looked at why the tests failed. An identical count in every team could point to a shared cause, so I can check the failure messages next if you'd like.
+
+The full report is in `results/report.html`, and the detailed log is in `results/log.html`.
 
 </div>
 

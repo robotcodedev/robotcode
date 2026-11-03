@@ -40,8 +40,10 @@ The skill tells the agent to decide first what you want, because each kind of re
 | Find out why a test fails, or step through it | the [debugger](/guides/cli/robot-debug/), `robotcode robot-debug` |
 | Check the code | `robotcode analyze code` |
 | Know which tests, tasks, suites and tags exist | [`robotcode discover`](/guides/cli/discovering-tests/) |
-| Set up the configuration | `robot.toml` and its profiles, with `robotcode config info desc` for a setting's documentation and `robotcode config show` for the result |
+| Set up the configuration | `robot.toml` and its profiles, with `robotcode config info desc` for a setting's documentation and `robotcode profiles show` for the result |
 | Look up a keyword or a library | `robotcode doc keywords` and `robotcode doc keyword` |
+
+An agent whose shell tool can't keep a command running and write to its input runs the REPL and the debugger with [`robotcode session`](/guides/cli/sessions/), one input per command.
 
 Several of these can follow each other in one task, for example trying something out, writing the test, running it and looking at the results. Everything applies to tasks as well: in an RPA project, read "task" for "test". Only a run gets `--rpa`, and `robotcode discover tasks` lists the tasks.
 

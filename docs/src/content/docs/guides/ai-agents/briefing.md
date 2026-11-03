@@ -15,6 +15,8 @@ What it **can't** infer is the surrounding setup and intent. Capturing those onc
 - **The system under test** — what the application is, how to reach it (base URLs per environment, which profile points where), and any test data or accounts. Keep secrets out — describe *how* credentials are provided (env vars, a vault), not the values themselves.
 - **Project conventions** — naming, tags, suite layout, and where new keywords belong, so generated tests match what you already have.
 
+Name the RobotCode skill there instead of saying how to run the tests, as in *"Use the RobotCode skill for all work on the tests."* A rule such as "run tests with `robotcode robot`" repeats what the skill says, and as a standing rule it names only one of the ways the skill chooses from, such as the debugger or the results of a finished run.
+
 Keep it short and factual; this is standing context the agent reads on every request, not a place to duplicate `robot.toml`.
 
 ## Which file the agent reads
@@ -37,7 +39,7 @@ Robot Framework tests for our web shop, run with RobotCode.
 ## Environment
 
 - Python dependencies are managed with uv (`pyproject.toml`, `uv.lock`). The project's environment is `.venv`, and it is active in the terminal. After changing `pyproject.toml`, run `uv sync`.
-- RobotCode is installed in `.venv` with all extras. Run tests with `robotcode robot`, not with `robot`, so that `robot.toml` and its profiles apply.
+- RobotCode is installed in `.venv` with all extras. Use the RobotCode skill for all work on the tests.
 - The Browser library needs `rfbrowser init` after it is installed or updated. It downloads Playwright and the browsers.
 
 ## The shop
@@ -55,5 +57,5 @@ Robot Framework tests for our web shop, run with RobotCode.
 - Runs write their results to `results/`.
 ```
 
-It names the environment and how to set up the Browser library, says where the shop comes from and what the profiles point to, and lists the conventions a new test should follow. Everything else, such as the paths, the variables and the profiles' settings, the agent reads from `robot.toml` through `robotcode`.
+It names the environment, the RobotCode skill and how to set up the Browser library, says where the shop comes from and what the profiles point to, and lists the conventions a new test should follow. Everything else, such as the paths, the variables and the profiles' settings, the agent reads from `robot.toml` through `robotcode`.
 

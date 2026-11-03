@@ -1,12 +1,12 @@
 ---
 title: A Profile for the CI Server
-description: "Step 7 of the tutorial: let the agent write a CI profile in robot.toml from the documentation of each setting, and check it with config show, a dry run and discover."
+description: "Step 7 of the tutorial: let the agent write a CI profile in robot.toml, and check it with profiles show, a dry run and discover."
 sidebar:
   label: 7. A Profile for the CI Server
   order: 150.47
 ---
 
-Finally, set up how CI runs the tests: a profile in `robot.toml` with the system to test, a browser without a window and a folder for the results. The agent writes it from the documentation of each setting and checks the result before CI runs it.
+Finally, set up how CI runs the tests: a profile in `robot.toml` with the system to test, a browser without a window and a folder for the results. The agent finds out how the settings work, writes the profile and checks the result before CI runs it.
 
 ## What you learn
 
@@ -27,22 +27,16 @@ The session below starts with *"Add a profile for our CI server: the staging sho
 
 ### It reads the setting's documentation
 
-`robotcode config info desc <key>` prints a setting's type, its description and a TOML example. The skill tells the agent to read it before it writes a setting, instead of guessing. From the session *A profile for the CI server*:
-
-<!-- excerpt: a-profile-for-the-ci-server -->
-```console
-$ robotcode config info desc output-dir | head -20
-# robot.toml configuration settings
-
-## output-dir
-
-Type: `str | StringExpression | None`
-…
-```
+`robotcode config info desc <key>` prints a setting's type, its description and a TOML example. The skill tells the agent to read it before it writes a setting, instead of guessing. In the session *A profile for the CI server*, the agent didn't call it: it read the skill's reference on configuration, and `output-dir` and the variables were already in `robot.toml`. Ask for it when you want to know what a setting does.
 
 ### It extends what is there
 
-The project already had a `ci` profile, so the agent extended it instead of adding a second one. A profile in `[profiles.<name>]` adds to the top-level settings of `robot.toml` when you select it.
+The project already had a `ci` profile, so the agent extended it instead of adding a second one:
+
+<!-- excerpt: a-profile-for-the-ci-server -->
+> The `ci` profile is already there, and it's the one the CI server runs (`robotcode -p ci robot`). I'll extend it, because a second profile wouldn't be picked up by the workflow.
+
+A profile in `[profiles.<name>]` adds to the top-level settings of `robot.toml` when you select it.
 
 ### It checks the result without running the tests
 
@@ -50,7 +44,9 @@ The project already had a `ci` profile, so the agent extended it instead of addi
 
 <!-- excerpt: a-profile-for-the-ci-server -->
 ```console
-$ robotcode -p ci --dry robot 2>&1; echo ---; robotcode -p ci discover tests
+$ robotcode -p ci profiles show; echo "--- dry"; robotcode -p ci --dry robot; echo "exit=$?"; echo "--- discover"; robotcode -p ci discover info 2>&1 | head -20; robotcode -p ci discover tests 2>&1 | tail -5
+…
+--- dry
 Dry run, not executing any commands. Would execute robot with the following options and arguments:
 variable = ['BASE_URL:https://staging.shop.example', 'BROWSER:chromium', 'HEADLESS:true']
 outputdir = 'results/ci'
@@ -65,6 +61,10 @@ More on profiles: [Profiles](/guides/robot-toml/profiles/) and the [`robot.toml`
 
 - **Settings come from several places.** A `robot.toml` for your user, the project's `robot.toml` and the selected profiles add up. `robotcode config show -s` shows where each value comes from.
 - **The profile goes before the subcommand.** In the CI workflow, it is `robotcode -p ci robot`, not `robotcode robot -p ci`.
+- **A setting only counts if something uses it.** In the session, the agent pointed out that the new setting has no effect yet:
+
+  <!-- excerpt: a-profile-for-the-ci-server -->
+  > The CI profile now has all three settings, but the headless setting does nothing yet because no test opens a browser. The change is in `robot.toml` and isn't committed.
 
 ## The sessions
 
@@ -82,33 +82,8 @@ More on profiles: [Profiles](/guides/robot-toml/profiles/) and the [`robot.toml`
 
 *Loaded the skill `robotcode:robotcode`*
 
-*…*
-
-````console
-$ robotcode config info desc output-dir | head -20
-# robot.toml configuration settings
-
-## output-dir
-
-Type: `str | StringExpression | None`
-
-Where to create output files. The default is the
-directory where tests are run from and the given path
-is considered relative to that unless it is absolute.
-
-…
-````
-
 ```console
-$ python - <<'EOF'
-p='robot.toml'
-s=open(p).read()
-s=s.replace('BROWSER = "chromium"\n','BROWSER = "chromium"\nHEADLESS = "false"\n')
-s=s.replace('[profiles.ci]\ndescription = "Staging shop"\n','[profiles.ci]\ndescription = "CI server: staging shop, headless browser"\noutput-dir = "results/ci"\n')
-s=s.replace('BASE_URL = "https://staging.shop.example"\n','BASE_URL = "https://staging.shop.example"\nHEADLESS = "true"\n')
-open(p,'w').write(s)
-EOF
-cat robot.toml; robotcode -p ci config show; robotcode -p ci discover suites | tail -5; robotcode -p dev config show | grep -A4 variables
+$ cat robot.toml; echo ---; cat .github/workflows/tests.yml; echo ---; ls -a; git log --stat | head -40; grep -rn "BASE_URL\|HEADLESS\|BROWSER\|headless" --include=* -r . --exclude-dir=.venv --exclude-dir=.git --exclude=uv.lock | head -40
 paths = ["tests"]
 python-path = ["libraries"]
 output-dir = "results"
@@ -116,46 +91,135 @@ output-dir = "results"
 [variables]
 BASE_URL = "http://localhost:8080"
 BROWSER = "chromium"
-HEADLESS = "false"
 
 [profiles.dev]
 description = "Local shop in Firefox"
 extend-variables = { BROWSER = "firefox" }
 
 [profiles.ci]
-description = "CI server: staging shop, headless browser"
-output-dir = "results/ci"
+description = "Staging shop"
 
 [profiles.ci.extend-variables]
 BASE_URL = "https://staging.shop.example"
-HEADLESS = "true"
 
 
+---
+name: Tests
+on: push
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install robotframework robotcode[runner]
 …
-```
-
-```console
-$ robotcode -p ci --dry robot 2>&1 | tail -5
-Dry run, not executing any commands. Would execute robot with the following options and arguments:
-variable = ['BASE_URL:https://staging.shop.example', 'BROWSER:chromium', 'HEADLESS:true']
-outputdir = 'results/ci'
-pythonpath = ['libraries']
-tests
 ```
 
 <div class="rc-session-answer">
 
-**Agent:** There was already a `ci` profile pointing at the staging shop, so I extended it instead of adding a second one. Your CI server already runs `robotcode -p ci robot`, so it picks this up as is. I checked with a dry run of `robotcode -p ci robot`: it would use `BASE_URL:https://staging.shop.example`, `HEADLESS:true` and `outputdir = 'results/ci'`. I haven't run any tests with it.
+**Agent:** A `ci` profile already exists, so I'm checking how the headless setting would actually reach the browser.
 
-Changes in `robot.toml`:
+</div>
+
+*…*
+
+<div class="rc-session-answer">
+
+**Agent:** The `ci` profile is already there, and it's the one the CI server runs (`robotcode -p ci robot`). I'll extend it, because a second profile wouldn't be picked up by the workflow.
+
+</div>
+
+```console
+$ python - <<'EOF'
+import re
+s=open('robot.toml').read()
+old='''description = "Staging shop"
+
+[profiles.ci.extend-variables]
+BASE_URL = "https://staging.shop.example"
+'''
+new='''description = "Staging shop, browser without a window, results in results/ci"
+output-dir = "results/ci"
+
+[profiles.ci.extend-variables]
+BASE_URL = "https://staging.shop.example"
+HEADLESS = "true"
+'''
+assert old in s
+open('robot.toml','w').write(s.replace(old,new))
+EOF
+git diff; robotcode -p ci profiles show; echo "--- default"; robotcode profiles show; echo "--- dev"; robotcode -p dev profiles show; echo "--- run"; robotcode -p ci robot; echo "exit=$?"; ls results results/ci; robotcode results summary results/ci/output.xml 2>&1 | head; git status --short
+diff --git a/robot.toml b/robot.toml
+index d09d302..d4df59b 100644
+--- a/robot.toml
++++ b/robot.toml
+@@ -11,9 +11,11 @@ description = "Local shop in Firefox"
+ extend-variables = { BROWSER = "firefox" }
+ 
+ [profiles.ci]
+-description = "Staging shop"
++description = "Staging shop, browser without a window, results in results/ci"
++output-dir = "results/ci"
+ 
+ [profiles.ci.extend-variables]
+ BASE_URL = "https://staging.shop.example"
++HEADLESS = "true"
+ 
+ 
+output-dir = "results/ci"
+python-path = [
+    "libraries",
+]
+paths = [
+    "tests",
+]
+
+[variables]
+BASE_URL = "https://staging.shop.example"
+BROWSER = "chromium"
+HEADLESS = "true"
+…
+Tests :: Web shop acceptance tests                                    | FAIL |
+13 tests, 12 passed, 1 failed
+==============================================================================
+Output:  ~/webshop/results/ci/output.xml
+Log:     ~/webshop/results/ci/log.html
+Report:  ~/webshop/results/ci/report.html
+exit=1
+results:
+ci
+
+results/ci:
+log.html
+output.xml
+report.html
+Usage: robotcode results summary [OPTIONS]
+Try 'robotcode results summary --help' for help.
+
+[ ERROR ] Got unexpected extra argument (results/ci/output.xml)
+ M robot.toml
+```
+
+<div class="rc-session-answer">
+
+**Agent:** One test failed, so I'm checking whether my change caused it by running it without the profile.
+
+</div>
+
+*…*
+
+<div class="rc-session-answer">
+
+**Agent:** The CI profile now has all three settings, but the headless setting does nothing yet because no test opens a browser. The change is in `robot.toml` and isn't committed.
+
+I extended the existing `ci` profile rather than adding a new one, because `.github/workflows/tests.yml` already runs `robotcode -p ci robot`:
 
 ```toml
-[variables]
-...
-HEADLESS = "false"
-
 [profiles.ci]
-description = "CI server: staging shop, headless browser"
+description = "Staging shop, browser without a window, results in results/ci"
 output-dir = "results/ci"
 
 [profiles.ci.extend-variables]
@@ -163,13 +227,14 @@ BASE_URL = "https://staging.shop.example"
 HEADLESS = "true"
 ```
 
-- **Headless:** the project had no way to set this yet, so I added a `HEADLESS` variable. It's `false` by default, so local and `dev` runs still open a window, and `true` under `ci`.
-- **Results:** `ci` now writes to `results/ci`. Other runs still write to `results/`.
+`profiles show` confirms these values under `-p ci`, and the default and `dev` profiles are unchanged. A real run with `-p ci` wrote its output, log and report to `results/ci/`.
 
-Two things you should know:
+**Test run:** 12 of 13 tests passed. `Tests.Login.Login Works` fails with `Welcome back, alice! != Welcome back, Alice!`, and it fails the same way without the profile, so this change didn't cause it. The CI job will stay red until that's fixed; I left it alone since it's a separate question whether the shop or the test is wrong.
 
-1. **Nothing uses `HEADLESS` yet.** No keyword in `resources/` opens a browser at the moment; the suites run against the in-memory `ShopLibrary`. When you add the Browser library steps, pass the variable through for headless mode to take effect: `New Browser    ${BROWSER}    headless=${HEADLESS}`.
-2. **The CI workflow can't run browser tests as it stands.** `.github/workflows/tests.yml` only runs `pip install robotframework robotcode[runner]`. It doesn't install the Browser library or run `rfbrowser init`, and it doesn't use the project's uv environment. The current tests don't need any of that. Browser tests will, so I can update the workflow when you get there.
+**Before this works in a real browser:**
+- **Headless has no effect yet:** nothing in `tests/`, `resources/` or `libraries/` uses the Browser library, and the suites run against the in-memory `ShopLibrary`. For the same reason, they don't connect to the staging URL either, which only appears in a log message and the metadata. When browser tests arrive, they need to pass it on, e.g. `New Browser    ${BROWSER}    headless=${HEADLESS}`.
+- **`HEADLESS` only exists under `ci`:** a keyword using it would fail with an undefined variable in other runs, so it will also need a default in the top-level `[variables]`.
+- **The CI workflow is missing the Browser setup:** it installs only `robotframework robotcode[runner]`, with no Browser library and no `rfbrowser init`. Browser tests would fail there until that's added. It also uses `pip` rather than `uv sync`, so it doesn't use your locked versions.
 
 </div>
 
@@ -180,16 +245,40 @@ Two things you should know:
 </div>
 
 ```console
-$ robotcode -p ci --dry robot 2>&1; echo ---; robotcode -p ci discover tests
+$ robotcode -p ci profiles show; echo "--- dry"; robotcode -p ci --dry robot; echo "exit=$?"; echo "--- discover"; robotcode -p ci discover info 2>&1 | head -20; robotcode -p ci discover tests 2>&1 | tail -5
+output-dir = "results/ci"
+python-path = [
+    "libraries",
+]
+paths = [
+    "tests",
+]
+
+[variables]
+BASE_URL = "https://staging.shop.example"
+BROWSER = "chromium"
+HEADLESS = "true"
+
+--- dry
 Dry run, not executing any commands. Would execute robot with the following options and arguments:
 variable = ['BASE_URL:https://staging.shop.example', 'BROWSER:chromium', 'HEADLESS:true']
 outputdir = 'results/ci'
 pythonpath = ['libraries']
 tests
----
-# Tests
+exit=251
+--- discover
+# Info
 
+- _Robot Framework:_ 7.5.1
 …
+- _Python:_ 3.13.18
+- _Executable:_ .venv/bin/python
+- _Machine:_ x86_64
+- _Platform:_ linux
+- _System:_ Linux
+- _System Version:_ #1 SMP PREEMPT_DYNAMIC Sat, 31 Oct 2026 06:43:52 +0000
+
+
 - _Suites:_ 5
 - _Suites with tests:_ 4
 - _Tests:_ 13
@@ -197,25 +286,27 @@ tests
 
 <div class="rc-session-answer">
 
-**Agent:** With the `ci` profile, `robotcode -p ci robot` would hand Robot Framework these options. I got them from a dry run and a test discovery; I didn't run the tests.
+**Agent:** This is what `robotcode -p ci robot` passes to Robot Framework, from a dry run that executed nothing:
 
-| Setting | Value |
-|---|---|
-| `BASE_URL` | `https://staging.shop.example` (from `ci`) |
-| `HEADLESS` | `true` (from `ci`) |
-| `BROWSER` | `chromium` (default) |
-| Output dir | `results/ci` (from `ci`) |
-| Python path | `libraries` |
-| Paths | `tests` |
+```
+variable   = ['BASE_URL:https://staging.shop.example', 'BROWSER:chromium', 'HEADLESS:true']
+outputdir  = 'results/ci'
+pythonpath = ['libraries']
+tests
+```
 
-The profile doesn't filter by tags, so it runs all **13 tests** in 4 suites:
+| Setting | Value | Comes from |
+|---|---|---|
+| `BASE_URL` | `https://staging.shop.example` | `ci` profile, overrides `http://localhost:8080` |
+| `HEADLESS` | `true` | `ci` profile, new |
+| `BROWSER` | `chromium` | top-level `[variables]` |
+| `output-dir` | `results/ci` | `ci` profile, overrides `results` |
+| `python-path` | `libraries` | top-level |
+| `paths` | `tests` | top-level |
 
-- **Cart:** Add Item To Cart, Remove Item From Cart, Cart Total Adds Up
-- **Login:** Login Works, Logout Works, Login With A Wrong Password Fails
-- **Orders:** Order Coffee, Express Order, Sold Out Product Cannot Be Ordered
-- **Search:** Find Coffee, Find Tea, Find Several, Find Nothing
+The run selects all 13 tests in 4 suites, with no tag filters. These values match the earlier real run, which wrote to `results/ci/`.
 
-Right now `BASE_URL` changes only the "Shop URL" metadata and a log message, because the tests run against the in-memory `ShopLibrary`. It will start to matter once Browser library tests use it. If CI should run only the smoke tests, I can add `includes = ["smoke"]` to the profile.
+The dry run's exit code of 251 comes from the dry run itself, not from a test result.
 
 </div>
 

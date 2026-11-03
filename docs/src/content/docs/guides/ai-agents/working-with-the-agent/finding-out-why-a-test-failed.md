@@ -40,7 +40,7 @@ For "why did this test fail?", the skill tells the agent to read the finished ru
 
 # Log
 
-### Test: Tests.Login.Login Works (`tests/login.robot:11`) ❌ **FAIL** _(19:15:43 · 1 ms)_
+### Test: Tests.Login.Login Works (`tests/login.robot:11`) ❌ **FAIL** _(22:37:01 · 1 ms)_
 …
 ```
 
@@ -52,7 +52,7 @@ For "why did this test fail?", the skill tells the agent to read the finished ru
 
 <!-- excerpt: comparing-runs -->
 ```console
-$ robotcode results diff results/nightly/output.xml results/output.xml; echo ---; robotcode results summary -o results/nightly/output.xml --failed
+$ robotcode results diff results/nightly/output.xml results/output.xml; echo "diff exit: $?"; robotcode results summary -o results/nightly/output.xml; robotcode results summary --failed; robotcode results stats --by suite -o results/nightly/output.xml; robotcode results stats --by suite; git status --short
 # Diff — results/nightly/output.xml → results/output.xml
 
 ## New passes (1)
@@ -63,10 +63,19 @@ $ robotcode results diff results/nightly/output.xml results/output.xml; echo ---
 
 ### It goes into the debugger when the log isn't enough
 
-Asked to show in the debugger what the shop returns, the agent ran only that test with `robotcode robot-debug`, stopped at the failure and called the shop's keywords in the paused test. It wrote the results of the debug run to a folder of its own, so the recorded run stayed as it was. Which side to change, it left to you:
+Asked to show in the debugger what the shop returns, the agent started only that test as a debug session, stopped it at the keyword that asks the shop, stepped over the keyword and printed its result:
 
 <!-- excerpt: a-failing-test -->
-> This matches the recorded run, so the failure reproduces every time. Whether the shop or the test should change is still your call, as before.
+```console
+$ robotcode session send debug-1aeb5b83 '.print ${greeting}'; echo "exit=$?"
+${greeting} = 'Welcome back, alice!'
+exit=0
+```
+
+With `--output NONE --log NONE --report NONE`, the debug run wrote no output files, so the recorded run stayed as it was. Which side to change, it left to you:
+
+<!-- excerpt: a-failing-test -->
+> Which fix is right still depends on what SHOP-101 specifies.
 
 After your answer, it fixed the library and ran all tests again. [Step 5](/guides/ai-agents/working-with-the-agent/debugging-step-by-step/) shows the debugger in detail.
 
@@ -75,7 +84,7 @@ More on the commands: [Analyzing Results](/guides/cli/analyzing-results/).
 ## What to watch out for
 
 - **Name the run if it isn't the last one.** Without a path, the agent reads the output of the project's configuration, and a new run replaces it.
-- **Keep the run you investigate.** A new run, also one in the debugger, writes to the same output directory unless the agent writes elsewhere. Ask for that, as the agent did by itself in *A failing test*.
+- **Keep the run you investigate.** A new run, also one in the debugger, replaces the output files of the last one unless it writes elsewhere. In *A failing test*, the agent kept the run while it debugged, and told you that the run after the fix replaced it. Ask for another output directory if you still need the results.
 - **Decide what is wrong.** The results show where the test and the system disagree, not which of them is right. When the agent asks, answer before it changes anything.
 
 ## The sessions
@@ -97,7 +106,7 @@ More on the commands: [Analyzing Results](/guides/cli/analyzing-results/).
 *…*
 
 ```console
-$ robotcode results summary --failed; robotcode results log -t "Login Works"; ls -la; find . -name "output*.xml" -not -path "./.venv/*"
+$ robotcode results summary --failed; echo ---; robotcode --format json results summary | head -40; echo ---; robotcode results log -t "*Login Works*"; echo ---; robotcode results show --search "Login Works"; echo ---; ls -la; ls -la .github/workflows 2>/dev/null; find . -path ./.venv -prune -o \( -name 'output*.xml' -o -name 'output*.json' \) -print
 # Summary — results/output.xml
 
 - _Status:_ ❌ **FAIL**
@@ -105,9 +114,9 @@ $ robotcode results summary --failed; robotcode results log -t "Login Works"; ls
 - _Passed:_ 12
 - _Failed:_ 1
 - _Skipped:_ 0
-- _Started:_ 2026-10-29 19:15:43
-- _Ended:_ 2026-10-29 19:15:43
-- _Elapsed:_ 49 ms
+- _Started:_ 2026-11-03 22:37:01
+- _Ended:_ 2026-11-03 22:37:01
+- _Elapsed:_ 68 ms
 - _Messages:_ 3 FAIL
 
 ## Failures (1)
@@ -115,30 +124,32 @@ $ robotcode results summary --failed; robotcode results log -t "Login Works"; ls
 - ❌ **FAIL** Tests.Login.Login Works (`tests/login.robot:11`)
   > Welcome back, alice! != Welcome back, Alice!
 
+---
+…
+---
 # Log
 
-### Test: Tests.Login.Login Works (`tests/login.robot:11`) ❌ **FAIL** _(19:15:43 · 1 ms)_
+### Test: Tests.Login.Login Works (`tests/login.robot:11`) ❌ **FAIL** _(22:37:01 · 1 ms)_
 
 _Metadata:_ Requirement: SHOP-101
 
 > Welcome back, alice! != Welcome back, Alice!
 
-- **shop.Open Shop As** `alice` ✅ **PASS** _(19:15:43 · 0 ms)_
-  - **ShopLibrary.Log In** `${user}` `${password}` ✅ **PASS** _(19:15:43 · 0 ms)_
-  - **BuiltIn.Log** `Opened ${BASE_URL} as ${user}` ✅ **PASS** _(19:15:43 · 0 ms)_
+- **shop.Open Shop As** `alice` ✅ **PASS** _(22:37:01 · 0 ms)_
+  - **ShopLibrary.Log In** `${user}` `${password}` ✅ **PASS** _(22:37:01 · 0 ms)_
+  - **BuiltIn.Log** `Opened ${BASE_URL} as ${user}` ✅ **PASS** _(22:37:01 · 0 ms)_
     - `[INFO] Opened http://localhost:8080 as alice`
-- **shop.Welcome Message Should Be** `Welcome back, Alice!` ❌ **FAIL** _(19:15:43 · 0 ms)_
+- **shop.Welcome Message Should Be** `Welcome back, Alice!` ❌ **FAIL** _(22:37:01 · 1 ms)_
   > Welcome back, alice! != Welcome back, Alice!
-  - `${greeting}` = **ShopLibrary.Greeting** ✅ **PASS** _(19:15:43 · 0 ms)_
+  - `${greeting}` = **ShopLibrary.Greeting** ✅ **PASS** _(22:37:01 · 0 ms)_
     - `[INFO] ${greeting} = Welcome back, alice!`
-  - **BuiltIn.Should Be Equal** `${greeting}` `${expected}` ❌ **FAIL** _(19:15:43 · 0 ms)_
+  - **BuiltIn.Should Be Equal** `${greeting}` `${expected}` ❌ **FAIL** _(22:37:01 · 0 ms)_
     > Welcome back, alice! != Welcome back, Alice!
     - `[FAIL] Welcome back, alice! != Welcome back, Alice!`
 
 - _Elapsed:_ 1 ms
 
-_Filters: test=Login Works_
-
+_Filters: test=\*Login Works\*_
 …
 ```
 
@@ -146,26 +157,35 @@ _Filters: test=Login Works_
 
 <div class="rc-session-answer">
 
-**Agent:** `Login Works` fails on a capitalisation mismatch in the greeting. The test expects `Welcome back, Alice!` but the shop returns `Welcome back, alice!`.
+**Agent:** **`Login Works` failed because the greeting's capitalisation doesn't match what the test expects.** However, the only recorded run may not be last night's.
 
-**Which run this is:** the only result on disk is `results/output.xml`, timestamped today (2026-10-29) at 19:15, not last night. That run had 13 tests: 12 passed and only `Tests.Login.Login Works` failed. If last night's run was in CI, its output isn't here. Download that artifact and I can check whether it failed the same way.
-
-**What happened** (`tests/login.robot:11`):
-1. `Open Shop As    alice` passed and logged in as `alice`.
-2. `Welcome Message Should Be    Welcome back, Alice!` called `Greeting`, which returned `Welcome back, alice!`. `Should Be Equal` then failed with `Welcome back, alice! != Welcome back, Alice!`.
-
-**Cause:** `greeting` in `libraries/ShopLibrary.py` builds the text from the login name exactly as it was typed:
-```python
-return f"Welcome back, {self._user}!"
+```
+Welcome back, alice! != Welcome back, Alice!
 ```
 
-The user is `alice` in lowercase (`USERS = {"alice": ..., "bob": ...}`), so the greeting is lowercase too.
+**Cause**
+- **The steps:** `Open Shop As    alice` passed, so the login itself works. The failure is in the next step, `Welcome Message Should Be`, which does an exact, case-sensitive comparison.
+- **Expected value:** `tests/login.robot:16` expects `Welcome back, Alice!`.
+- **Actual value:** `libraries/ShopLibrary.py:40` builds the greeting directly from the login name, `f"Welcome back, {self._user}!"`. The user is `alice` in lowercase, and the shop has no separate display name.
 
-**Is it the test or the shop?** I can't tell from the repo. The test is linked to requirement `SHOP-101`, but `requirements/` only contains `SHOP-110.md`, so there's nothing to say how the name should be shown. Two possible fixes:
-- If the shop should capitalise names, change the library to use `self._user.capitalize()`, or give each user a display name.
-- If lowercase is correct, change the expected text in the test to `Welcome back, alice!`.
+As the code stands, this test fails every time, so it's not flaky or caused by timing or the environment. It was also the only failure in that run: 12 of 13 tests passed.
 
-I haven't changed anything. Tell me which behaviour is intended and I'll make the fix and re-run the test.
+**Is this last night's run?**
+- **Timing:** the only output in the project is `results/output.xml`, and it started today (2026-11-03) at 22:37:01, not last night.
+- **Environment:** that run used `http://localhost:8080`, so it's a local run with no `ci` profile. A CI run would use the staging URL.
+- **Schedule:** `.github/workflows/tests.yml` only runs on push, so this workflow has no nightly job.
+
+If last night's run happened somewhere else, send me its `output.xml` and I'll check it. The failure could be different there, especially against staging.
+
+**Which side is wrong?**
+I can't tell from the repo whether the shop or the test is wrong. The test's requirement, SHOP-101, isn't in `requirements/`, which only contains `SHOP-110.md`. The test's documentation only says "greeted by name".
+
+- **If customers should see "Alice":** fix the shop, for example with a display name or by capitalising the name in `greeting`.
+- **If the login name is meant to be shown as is:** change the expected text in the test to `Welcome back, alice!`.
+
+Do you know which SHOP-101 specifies? I haven't changed anything, and once you tell me I can make the fix. `Login Works` is tagged `smoke`, so the smoke test stays red until then.
+
+The full log is in `results/log.html`.
 
 </div>
 
@@ -177,110 +197,124 @@ I haven't changed anything. Tell me which behaviour is intended and I'll make th
 
 *…*
 
-<div class="rc-session-answer">
-
-**Agent:** Before starting, I'll check where a run writes its output. Starting the debugger would otherwise overwrite `results/output.xml`, which holds the only recorded run.
-
-</div>
-
-*…*
-
 ```console
-$ D=/tmp/dbg; rm -rf $D; mkdir -p $D; mkfifo $D/in
-nohup sleep 600 > $D/in 2>/dev/null &
-nohup robotcode robot-debug --outputdir $D/out -bl "Tests.Login.Login Works" < $D/in > $D/log 2>&1 &
-for i in $(seq 1 30); do grep -q "(rdb)" $D/log && break; sleep 1; done; cat $D/log
+$ robotcode session start debug --output NONE --log NONE --report NONE --break "ShopLibrary.Greeting" -bl "Tests.Login.Login Works"; echo "exit=$?"
+Started session debug-1aeb5b83.
 ==============================================================================
 Tests :: Web shop acceptance tests                                            
 ==============================================================================
 Tests.Login :: Logging in to the shop and out again.                          
 ==============================================================================
 Login Works :: A user who logs in is greeted by name.                 
-* exception  BuiltIn.Should Be Equal  (resources/shop.resource:19)  — Keyword failed: Welcome back, alice! != Welcome back, Alice!
-(rdb)
+* breakpoint  ShopLibrary.Greeting  (resources/shop.resource:18)
+exit=0
 ```
 
 ```console
-$ D=/tmp/dbg
-for c in '.where' '.list' '.print ${greeting}' '.print ${expected}' 'Greeting' 'Current User'; do echo "$c" > $D/in; sleep 1; done; cat $D/log | sed -n '/(rdb)/,$p'
-(rdb) > #0  BuiltIn.Should Be Equal         resources/shop.resource:19
+$ robotcode session send debug-1aeb5b83 '.where'; echo "exit=$?"
+> #0  ShopLibrary.Greeting            resources/shop.resource:18
   #1  shop.Welcome Message Should Be  tests/login.robot:16
   #2  Login Works                     tests/login.robot:11
   #3  Login                           tests/login.robot
   #4  Tests                           tests
-(rdb)      14  
+exit=0
+```
+
+```console
+$ robotcode session send debug-1aeb5b83 '.list'; echo "exit=$?"
+     13      Log    Opened ${BASE_URL} as ${user}
+     14  
      15  Welcome Message Should Be
      16      [Documentation]    Checks the greeting the shop shows the user who is logged in.
      17      [Arguments]    ${expected}
-     18      ${greeting}=    Greeting
-->   19      Should Be Equal    ${greeting}    ${expected}
+->   18      ${greeting}=    Greeting
+     19      Should Be Equal    ${greeting}    ${expected}
      20  
      21  User Should Be Logged Out
      22      [Documentation]    Checks that nobody is logged in.
      23      ${user}=    Current User
-     24      Should Be Equal    ${user}    ${None}
-(rdb) ${greeting} = 'Welcome back, alice!'
-(rdb) ${expected} = 'Welcome back, Alice!'
-(rdb) => 'Welcome back, alice!'
-(rdb) => 'alice'
-(rdb)
+exit=0
 ```
 
 <div class="rc-session-answer">
 
-**Agent:** Now I'll end the session so the run finishes, and clean up.
+**Agent:** Stopped just before the keyword runs. Next I'll step over it to see what comes back.
 
 </div>
 
 ```console
-$ D=/tmp/dbg
-echo '.detach' > $D/in; sleep 3; tail -8 $D/log; pkill -f "sleep 600" ; pgrep -fa robot-debug || echo "debugger exited"; ls -la results/output.xml
-Exit code 144
+$ robotcode session send debug-1aeb5b83 '.next'; echo "exit=$?"
+* step  BuiltIn.Should Be Equal  (resources/shop.resource:19)
+exit=0
+```
+
+```console
+$ robotcode session send debug-1aeb5b83 '.print ${greeting}'; echo "exit=$?"
+${greeting} = 'Welcome back, alice!'
+exit=0
+```
+
+```console
+$ robotcode session send debug-1aeb5b83 '.print ${expected}'; echo "exit=$?"
+${expected} = 'Welcome back, Alice!'
+exit=0
+```
+
+```console
+$ robotcode session send debug-1aeb5b83 '.whatis ${greeting}'; echo "exit=$?"
+${greeting}: str
+exit=0
+```
+
+```console
+$ robotcode session send debug-1aeb5b83 'Current User'; echo "exit=$?"
+=> 'alice'
+exit=0
+```
+
+```console
+$ robotcode session stop debug-1aeb5b83; echo "exit=$?"; robotcode session list; ls -l --time-style=long-iso results/; git status --short
+aborting the run
+Second signal will force exit.
+| FAIL |
+Execution terminated by signal
+------------------------------------------------------------------------------
+Tests.Login :: Logging in to the shop and out again.                  | FAIL |
 1 test, 0 passed, 1 failed
 ==============================================================================
 Tests :: Web shop acceptance tests                                    | FAIL |
 1 test, 0 passed, 1 failed
 ==============================================================================
-Output:  /tmp/dbg/out/output.xml
-Log:     /tmp/dbg/out/log.html
-Report:  /tmp/dbg/out/report.html
+Output:  NONE
+exit=0
+No session is open.
+…
 ```
-
-*…*
 
 <div class="rc-session-answer">
 
-**Agent:** In a live run the shop returns `'Welcome back, alice!'`, with a lowercase "a". The test expects `'Welcome back, Alice!'`.
-
-I ran only `Tests.Login.Login Works` under `robotcode robot-debug`. It stopped at the failing `Should Be Equal` in `resources/shop.resource:19`:
+**Agent:** The debugger confirms it: **the shop returns `'Welcome back, alice!'`**, with a lowercase `a`. I paused the real test at `resources/shop.resource:18` and stepped over the `Greeting` call, which stopped on the comparison at line 19.
 
 ```
-* exception  BuiltIn.Should Be Equal  (resources/shop.resource:19)  — Keyword failed: Welcome back, alice! != Welcome back, Alice!
-
-(rdb) .where
-> #0  BuiltIn.Should Be Equal         resources/shop.resource:19
-  #1  shop.Welcome Message Should Be  tests/login.robot:16
-  #2  Login Works                     tests/login.robot:11
-
-(rdb) .list
-     18      ${greeting}=    Greeting
-->   19      Should Be Equal    ${greeting}    ${expected}
-
+* breakpoint  ShopLibrary.Greeting  (resources/shop.resource:18)
+(rdb) .next
+* step  BuiltIn.Should Be Equal  (resources/shop.resource:19)
 (rdb) .print ${greeting}
 ${greeting} = 'Welcome back, alice!'
 (rdb) .print ${expected}
 ${expected} = 'Welcome back, Alice!'
-(rdb) Greeting
-=> 'Welcome back, alice!'
+(rdb) .whatis ${greeting}
+${greeting}: str
 (rdb) Current User
 => 'alice'
 ```
 
-At the prompt I also called the shop's keywords directly in the paused test. `Greeting` gave the same text again, and `Current User` returned `'alice'`. So the shop puts the login name into the greeting exactly as it's stored, lowercase.
+- **The mismatch:** the two strings differ only in the capital `A`. The value is a plain string, so there's no type mismatch involved.
+- **Where the lowercase comes from:** `Current User` also returns `'alice'` in the paused test, so the greeting simply repeats the stored login name unchanged.
 
-This matches the recorded run, so the failure reproduces every time. Whether the shop or the test should change is still your call, as before.
+I stopped the session at that point, so `Should Be Equal` never ran and the test shows as failed because I aborted it. The run wrote no output files, so `results/` still holds the earlier run, and nothing in the repo changed.
 
-I let the run finish without further stops. Its output went to a scratch directory, so `results/output.xml` from the earlier run is unchanged.
+Which fix is right still depends on what SHOP-101 specifies.
 
 </div>
 
@@ -290,53 +324,101 @@ I let the run finish without further stops. Its output went to a scratch directo
 
 </div>
 
-*…*
-
 ```console
-$ python - <<'EOF'
+$ grep -n -i -E "welcome|alice|bob|display|greet" webshop/index.html; echo ---; grep -rn -E "alice|bob|Current User" tests resources; python - <<'E'
+import re
 p='libraries/ShopLibrary.py'
 s=open(p).read()
-s=s.replace('USERS = {"alice": "secret", "bob": "secret"}\n','USERS = {"alice": "secret", "bob": "secret"}\nDISPLAY_NAMES = {"alice": "Alice", "bob": "Bob"}\n')
-s=s.replace('        return f"Welcome back, {self._user}!"','        return f"Welcome back, {DISPLAY_NAMES[self._user]}!"')
-s=s.replace('"""Returns the greeting the shop shows the user who is logged in."""','"""Returns the greeting the shop shows the user who is logged in, with their display name."""')
+s=s.replace('''USERS = {"alice": "secret", "bob": "secret"}
+''','''USERS = {"alice": "secret", "bob": "secret"}
+DISPLAY_NAMES = {"alice": "Alice", "bob": "Bob"}
+''')
+s=s.replace('''return f"Welcome back, {self._user}!"''','''return f"Welcome back, {DISPLAY_NAMES[self._user]}!"''')
 open(p,'w').write(s)
-EOF
-grep -n "DISPLAY_NAMES\|display name" libraries/ShopLibrary.py
-7:DISPLAY_NAMES = {"alice": "Alice", "bob": "Bob"}
-39:        """Returns the greeting the shop shows the user who is logged in, with their display name."""
-40:        return f"Welcome back, {DISPLAY_NAMES[self._user]}!"
-```
-
-<div class="rc-session-answer">
-
-**Agent:** Now I'll re-run the full suite to confirm the fix (this writes a new `results/`, as AGENTS.md specifies).
-
-</div>
-
-```console
-$ robotcode robot 2>&1 | tail -6; robotcode results summary --failed | head -12
-Tests :: Web shop acceptance tests                                    | PASS |
-13 tests, 13 passed, 0 failed
-==============================================================================
-Output:  ~/webshop/results/output.xml
+E
+git diff; robotcode analyze code; echo "analyze exit=$?"; robotcode robot -bl "Tests.Login.Login Works"; echo "login exit=$?"; robotcode robot; echo "all exit=$?"; robotcode results summary --failed; git status --short
+12:    .product { display: flex; justify-content: space-between; padding: .6rem .8rem; margin-top: .5rem; background: #fff; border-radius: .5rem; }
+---
+tests/orders.robot:8:Test Setup       Open Shop As    alice
+tests/cart.robot:8:Test Setup       Open Shop As    alice
+tests/login.robot:15:    Open Shop As    alice
+tests/login.robot:22:    Open Shop As    bob
+tests/login.robot:30:    Run Keyword And Expect Error    Wrong password for alice    Open Shop As    alice    password=guess
+resources/shop.resource:23:    ${user}=    Current User
+diff --git a/libraries/ShopLibrary.py b/libraries/ShopLibrary.py
+index f74a7f4..0c33fc0 100644
+--- a/libraries/ShopLibrary.py
++++ b/libraries/ShopLibrary.py
+@@ -4,6 +4,7 @@ from robot.api import logger
+ from robot.api.deco import keyword, library
+ 
+ USERS = {"alice": "secret", "bob": "secret"}
++DISPLAY_NAMES = {"alice": "Alice", "bob": "Bob"}
+ PRICES = {"coffee": 4.50, "tea": 3.20, "beans": 9.90, "mug": 12.00}
+ 
+ 
+@@ -36,7 +37,7 @@ class ShopLibrary:
+     @keyword
+     def greeting(self) -> str:
+         """Returns the greeting the shop shows the user who is logged in."""
+-        return f"Welcome back, {self._user}!"
++        return f"Welcome back, {DISPLAY_NAMES[self._user]}!"
+ 
+     @keyword
+     def current_user(self) -> str | None:
+…
 Log:     ~/webshop/results/log.html
 Report:  ~/webshop/results/report.html
+all exit=0
 # Summary — results/output.xml
 
-…
+- _Status:_ ✅ **PASS**
+- _Total:_ 13
+- _Passed:_ 13
+- _Failed:_ 0
+- _Skipped:_ 0
+- _Started:_ 2026-11-03 22:38:07
+- _Ended:_ 2026-11-03 22:38:07
+- _Elapsed:_ 44 ms
+- _Messages:_ 2 FAIL
+
+ M libraries/ShopLibrary.py
 ```
+
+*…*
 
 <div class="rc-session-answer">
 
-**Agent:** I fixed the shop, and `Login Works` now passes. The full run passed all 13 tests.
+**Agent:** I've fixed the shop, and `Login Works` now passes. A full run of the default local profile passes all 13 tests. The change isn't committed yet.
 
-The change is in `libraries/ShopLibrary.py`:
-- I added a display name for each test user, next to `USERS`: `DISPLAY_NAMES = {"alice": "Alice", "bob": "Bob"}`.
-- `Greeting` now uses that display name instead of the login name, so the shop says `Welcome back, Alice!`. I also updated its docstring to say so.
+**The fix**
+In `libraries/ShopLibrary.py`, the shop now keeps display names separately from login names, and the greeting uses the display name:
 
-Login itself still uses the lowercase names `alice` and `bob`, so no tests or resources needed changing.
+```diff
+ USERS = {"alice": "secret", "bob": "secret"}
++DISPLAY_NAMES = {"alice": "Alice", "bob": "Bob"}
+...
+-        return f"Welcome back, {self._user}!"
++        return f"Welcome back, {DISPLAY_NAMES[self._user]}!"
+```
 
-Running the suite again replaced the result files in `results/`, so the old failed run is no longer there.
+Logging in still uses `alice`, and `Current User` still returns `alice`. "Bob" is my assumption, following the same pattern as "Alice".
+
+**Things to check**
+- **Greeting with nobody logged in:** `Greeting` now fails with `KeyError: None`, where it used to return `Welcome back, None!`. No test does this, and I think failing is better than a wrong greeting.
+- **Earlier results replaced:** the new runs overwrote `results/`, so the failing run's `output.xml` and logs are gone. They weren't tracked by git, so they can't be restored, though re-running the old code would reproduce the failure.
+- **Staging not covered:** I only ran this against the in-memory shop, not with the `ci` profile. The fix is in the test library, so if staging's real greeting is what failed, it still needs its own fix.
+
+**A separate bug I didn't fix**
+`robotcode analyze code` reports an error at `resources/orders.resource:31`:
+
+```
+KeywordNotFound: No keyword with name 'Submit Ordr' found.
+```
+
+It's a typo for `Submit Order` in the `Checkout` keyword. It doesn't show up in the runs because no test or resource calls `Checkout`, but any new test that does will fail. It was already there before my change, and I can fix it too if you like.
+
+Do you want me to commit the shop fix?
 
 </div>
 
@@ -362,11 +444,10 @@ Running the suite again replaced the result files in `results/`, so the old fail
 *…*
 
 ```console
-$ robotcode robot 2>&1 | tail -30; echo EXIT=$?
-Tests.Orders :: Placing orders.                                               
-==============================================================================
-Order Coffee :: An order for a product in stock is placed.            | PASS |
-------------------------------------------------------------------------------
+$ git ls-files results | head; git check-ignore results/output.xml; robotcode results summary -o results/output.xml; robotcode robot; echo "exit code: $?"
+results/output.xml
+# Summary — results/output.xml
+
 …
 ==============================================================================
 Tests :: Web shop acceptance tests                                    | PASS |
@@ -375,11 +456,11 @@ Tests :: Web shop acceptance tests                                    | PASS |
 Output:  ~/webshop/results/output.xml
 Log:     ~/webshop/results/log.html
 Report:  ~/webshop/results/report.html
-EXIT=0
+exit code: 0
 ```
 
 ```console
-$ robotcode results diff results/nightly/output.xml results/output.xml; echo ---; robotcode results summary -o results/nightly/output.xml --failed
+$ robotcode results diff results/nightly/output.xml results/output.xml; echo "diff exit: $?"; robotcode results summary -o results/nightly/output.xml; robotcode results summary --failed; robotcode results stats --by suite -o results/nightly/output.xml; robotcode results stats --by suite; git status --short
 # Diff — results/nightly/output.xml → results/output.xml
 
 ## New passes (1)
@@ -389,41 +470,34 @@ $ robotcode results diff results/nightly/output.xml results/output.xml; echo ---
 
 _Summary:_ 1 new passes.
 
----
-# Summary — results/nightly/output.xml
-
-- _Status:_ ❌ **FAIL**
-- _Total:_ 13
-- _Passed:_ 12
-- _Failed:_ 1
-- _Skipped:_ 0
-- _Started:_ 2026-10-29 19:15:43
-- _Ended:_ 2026-10-29 19:15:43
-- _Elapsed:_ 49 ms
-- _Messages:_ 3 FAIL
-
-## Failures (1)
-
-- ❌ **FAIL** Tests.Login.Login Works (`tests/login.robot:11`)
-  > Welcome back, alice! != Welcome back, Alice!
+diff exit: 0
+…
 ```
 
 *…*
 
 <div class="rc-session-answer">
 
-**Agent:** I ran all 13 tests with the default config, then compared the results with `results/nightly/output.xml`. Everything passed this time: 13 passed, 0 failed. Last night's run had 13 passed except one failure.
+**Agent:** All 13 tests pass now, and the only change from the nightly run is that `Tests.Login.Login Works` went from fail to pass. The nightly run had 12 passed and 1 failed.
 
-**What changed since the nightly run:**
+| | Nightly | Now |
+|---|---|---|
+| **Passed** | 12 | 13 |
+| **Failed** | 1 | 0 |
+| **Skipped** | 0 | 0 |
 
-- **`Tests.Login.Login Works` (`tests/login.robot:11`) went from failing to passing.** Last night it failed with `Welcome back, alice! != Welcome back, Alice!`. In other words, the shop greeted the user by their lowercase login name instead of their display name.
-- No test failed that had passed before, and no tests were added or removed. The other 12 tests passed in both runs.
+No tests were added or removed, none newly fail, and all the other tests have the same status and tags.
 
-The fix is probably in `libraries/ShopLibrary.py`. The welcome message is now built from `DISPLAY_NAMES` (line 40), and the file was last modified after the nightly run's results. There's no git history here, so I can't confirm exactly what was changed.
+**The fixed test:** the nightly run failed with `Welcome back, alice! != Welcome back, Alice!`. The greeting used the login name, but the test expects the capitalised name.
 
-One caveat: I don't know which profile the nightly run used. The CI uses `-p ci`. That shouldn't matter for this comparison, because the suites run the shop in memory through `ShopLibrary`.
+**Why it passes now:** the fix is your uncommitted change in `libraries/ShopLibrary.py`, which adds `DISPLAY_NAMES` and uses it in `greeting`. It's the only difference in the working tree, and the test itself didn't change. Until it's committed, tonight's nightly and CI will most likely fail the same way.
 
-This run overwrote the previous results in `results/`: `output.xml`, `log.html` and `report.html`. The nightly files are unchanged.
+**How far the comparison goes:**
+- **Profile:** I ran without a profile, so it used `http://localhost:8080`. The nightly's `Login Works` log shows the same URL, but CI runs with `-p ci` against staging, so this run doesn't confirm CI will pass.
+- **Nightly date:** `results/nightly/output.xml` is stamped today at 22:37, under two minutes before this run at 22:38. If you expected a run from last night, check that this is the right file.
+- **Overwritten results:** this run replaced the previous results directly in `results/`, which is ignored by git. That earlier run also had 13 of 13 passing, and `results/nightly` wasn't touched.
+
+The details are in `results/log.html` and `results/report.html`.
 
 </div>
 

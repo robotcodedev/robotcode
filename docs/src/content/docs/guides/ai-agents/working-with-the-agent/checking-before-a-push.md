@@ -35,7 +35,7 @@ The session below starts with *"Check the project for problems before I push."*
 resources/orders.resource:23:1: [WARNING] KeywordNotUsed: Keyword 'Submit Order' is not used.
 resources/orders.resource:28:1: [WARNING] KeywordNotUsed: Keyword 'Checkout' is not used.
 resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 2, Infos: 0, Hints: 0 (in 1.65s)
+Files: 8, Errors: 1, Warnings: 2, Infos: 0, Hints: 0 (in 0.03s)
 exit=3
 …
 ```
@@ -44,18 +44,18 @@ The exit code is a bitmask: 1 for errors, 2 for warnings, 4 for infos and 8 for 
 
 ### It checks with the CI profile too
 
-A profile can set other variables or paths, and so change what a keyword or a variable resolves to. The agent ran the analysis once more with `-p ci`, and `robotcode discover --diagnostics` for the errors and warnings Robot Framework itself reports when it parses the files. Then it ran the tests and read the result with `robotcode results`.
+A profile can set other variables or paths, and so change what a keyword or a variable resolves to. The agent ran the analysis once more with `-p ci`. Then it ran the tests and read the result with `robotcode results`.
 
 ### It sorts what it found and asks
 
 The agent changed nothing. It sorted what it found by what blocks the push:
 
 <!-- excerpt: before-a-push -->
-> I checked the project. It has **one static error, one failing test, and a CI workflow that won't work as written.** I haven't changed anything.
+> **I wouldn't push yet.** The CI would go red because `Login Works` fails, and two other problems also need fixing first. I didn't change any files; the only thing overwritten is the ignored `results/` folder.
 > …
-> **Blocking**
+> **Fix before pushing**
 > …
-> **Worth a look**
+> **Worth fixing soon**
 
 More on the analysis: [Analyzing Code](/guides/cli/analyzing-code/).
 
@@ -84,91 +84,84 @@ More on the analysis: [Analyzing Code](/guides/cli/analyzing-code/).
 *…*
 
 ```console
-$ cd ~/webshop; robotcode analyze code --collect-unused; echo "exit=$?"; robotcode -p ci analyze code; echo "ci exit=$?"; robotcode discover --diagnostics all; robotcode discover metadata --values --tests; robotcode discover tags --tests
-resources/orders.resource:23:1: [WARNING] KeywordNotUsed: Keyword 'Submit Order' is not used.
-resources/orders.resource:28:1: [WARNING] KeywordNotUsed: Keyword 'Checkout' is not used.
+$ robotcode analyze code; echo "exit=$?"; robotcode -p ci analyze code; echo "ci exit=$?"; robotcode profiles list; robotcode discover all; robotcode discover tags --tests; robotcode discover metadata --values --tests;robotcode discover metadata --values --suites; find . -path ./.venv -prune -o -path ./.git -prune -o -type f -print
 resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 2, Infos: 0, Hints: 0 (in 1.65s)
-exit=3
+Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0 (in 1.96s)
+exit=1
 resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0 (in 0.02s)
+Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0 (in 0.03s)
 ci exit=1
-# All
-
-- **Tests** (`tests`)
-  - **Tests.Cart** (`tests/cart.robot`)
-    - **Tests.Cart.Add Item To Cart** (`tests/cart.robot:15`)
-      - _Tags:_ `cart`, `smoke`
-      - _Metadata:_ Requirement: SHOP-201
-    - **Tests.Cart.Remove Item From Cart** (`tests/cart.robot:22`)
-      - _Tags:_ `cart`
-      - _Metadata:_ Requirement: SHOP-202
-    - **Tests.Cart.Cart Total Adds Up** (`tests/cart.robot:29`)
-      - _Tags:_ `cart`
 …
-
-## Statistics
-
-- _Suites:_ 5
-- _Suites with tests:_ 4
-- _Tests:_ 13
 ```
 
 *…*
 
 ```console
-$ cd ~/webshop; robotcode robot > /tmp/run.txt 2>&1; echo "exit=$?"; robotcode results summary --failed; grep -n "Library\|Browser" -r tests resources | head; grep -n "def \|USERS\|PRICES\|STOCK\|=" libraries/ShopLibrary.py | head -50
-exit=1
-# Summary — results/output.xml
+$ robotcode analyze code --collect-unused; echo "exit=$?"; robotcode robot; echo "robot exit=$?"; robotcode results summary --failed; robotcode results show --failed; git status --short
+resources/orders.resource:23:1: [WARNING] KeywordNotUsed: Keyword 'Submit Order' is not used.
+resources/orders.resource:28:1: [WARNING] KeywordNotUsed: Keyword 'Checkout' is not used.
+resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
+Files: 8, Errors: 1, Warnings: 2, Infos: 0, Hints: 0 (in 0.03s)
+exit=3
+…
+# Show — results/output.xml
 
-- _Status:_ ❌ **FAIL**
-- _Total:_ 13
-- _Passed:_ 12
+- ❌ **FAIL** Tests.Login.Login Works (`tests/login.robot:11`) _(22:41:12 · 1 ms)_
+  > Welcome back, alice! != Welcome back, Alice!
+
+## Statistics
+
+- _Total:_ 1
+- _Passed:_ 0
 - _Failed:_ 1
 - _Skipped:_ 0
-- _Started:_ 2026-10-29 19:37:00
-- _Ended:_ 2026-10-29 19:37:00
-- _Elapsed:_ 37 ms
-- _Messages:_ 3 FAIL
+- _Started:_ 2026-11-03 22:41:12
+- _Ended:_ 2026-11-03 22:41:12
+- _Elapsed:_ 38 ms
 
-## Failures (1)
-…
-79:        self._orders[order] = "express" if express else "placed"
-83:    def order_status(self, order: str) -> str:
-88:    def search_products(self, text: str) -> list[str]:
-90:        return sorted(product for product in PRICES if text in product)
+_Filters: status=fail_
 ```
 
 *…*
 
 <div class="rc-session-answer">
 
-**Agent:** I checked the project. It has **one static error, one failing test, and a CI workflow that won't work as written.** I haven't changed anything.
+**Agent:** **I wouldn't push yet.** The CI would go red because `Login Works` fails, and two other problems also need fixing first. I didn't change any files; the only thing overwritten is the ignored `results/` folder.
 
-**Blocking**
+**Fix before pushing**
+1. **Failing test:** `Tests.Login.Login Works` fails with `Welcome back, alice! != Welcome back, Alice!`. `greeting` uses the raw username (`libraries/ShopLibrary.py:39`), while the test expects it capitalized (`tests/login.robot:16`). The fix probably belongs in the library, but SHOP-101 isn't in `requirements/`, so I can't confirm which side is right.
+…
+3. **Keyword typo:** `resources/orders.resource:31` calls `Submit Ordr` instead of `Submit Order`. This is the only error from static analysis. No test calls `Checkout`, so the test runs miss it, and the CI doesn't run `analyze`.
 
-1. **Misspelled keyword:** `resources/orders.resource:31`. `Checkout` calls `Submit Ordr`, but the keyword is `Submit Order`. This is the only error `robotcode analyze code` reports, with both the default and the `ci` profile. No test calls `Checkout` or `Submit Order`, so test runs don't catch it.
+**Worth fixing soon**
+- **Search ignores the requirement:** SHOP-110 says search ignores case, but `search_products` doesn't: `COFF` finds nothing, while `coff` finds `coffee` (`ShopLibrary.py:90`). The web page handles case correctly, but no test covers case-insensitive search.
+- **Web page is untested:** no suite imports the Browser library, so nothing tests `webshop/index.html`, including SHOP-110's "No products found" message.
+- **Missing requirements:** all 9 requirements the tests name (SHOP-101–103, 201–203, 301–303) have no file in `requirements/`. The only file there is SHOP-110, and no test names it.
+- **CI never touches staging:** `-p ci` only changes `BASE_URL`, which is just logged and shown as metadata, so a green run says nothing about staging. Likewise, `-p dev` doesn't actually run anything in Firefox. The README promises both.
+- **CI setup:** it installs unpinned packages with `pip`, ignoring `uv.lock`, and doesn't run `robotcode analyze code`. Adding that step would have caught the typo.
 
-2. **Failing test:** `Tests.Login.Login Works`. Locally 12 of 13 tests pass. This one fails with `Welcome back, alice! != Welcome back, Alice!`. `greeting()` in `libraries/ShopLibrary.py:39` uses the login name as it is, but the test expects it capitalised. This is a smoke test, so the smoke run is red too. You need to decide which side is right; to fix the library, change it to `self._user.capitalize()`, or a display-name lookup.
+**Minor**
+- **Unused code:** the keywords `Submit Order` and `Checkout` are unused, and so is the library keyword `Price Of`.
+- **Login state:** `greeting` returns `Welcome back, None!` when nobody is logged in. From reading the code, a failed login also leaves the previous user logged in.
+- **Sold-out items:** `put_in_cart` doesn't check stock, so a sold-out `mug` can be added to the cart. `Cart Total Adds Up` relies on this.
 
-3. **The CI workflow is out of step with the project:** `.github/workflows/tests.yml`.
-   - It runs `pip install robotframework robotcode[runner]` instead of `uv sync`. That skips `uv.lock` and doesn't install the Browser library or run `rfbrowser init`. The suites don't use Browser yet, so this works for now, but it will break once they do.
-   - `pyproject.toml` takes `robotcode` and its packages from `~/robotcode` (`[tool.uv.sources]`). Switching CI to `uv sync` would fail on that path, and anyone else cloning the repo can't run `uv sync` either. Decide whether those path sources should be pushed at all.
+**What checked out**
+| Check | Result |
+|---|---|
+| Default profile | 12 of 13 passed |
+| `ci` profile | 12 of 13 passed |
+| Clean install using the CI's `pip` packages (Python 3.13) | 12 of 13 passed |
+| Random test order, 3 seeds | 12 of 13 passed each time |
+| `analyze code`, default and `ci` profiles | only the typo above |
+| Project conventions (`Owner`, area tags, `Requirement` and `Risk` metadata) | followed |
+| Git | working tree clean, no generated files tracked |
 
-**Worth a look**
+Only the default run showed by name that `Login Works` was the failure; the other runs matched on counts.
 
-4. **Requirement files are missing.** The tests cite SHOP-101–103, 201–203 and 301–303, but `requirements/` only has `SHOP-110.md`, and no test cites that one.
-5. **Search doesn't meet SHOP-110.** Criterion 3 says search ignores upper and lower case, but `search_products` compares case-sensitively (`text in product`). No test checks this, so a test like `Find Coffee    COFF    coffee` would catch it.
-6. **Unused keywords:** `Submit Order` and `Checkout` in `orders.resource` aren't used anywhere. Once the typo is fixed, either write a test for them or remove them.
-
-**Conventions are followed**
-- Every suite has `Metadata    Owner`.
-- The login, cart and orders suites have their area `Test Tags`.
-- Every login, cart and orders test has a `Requirement`, and the three high-risk tests have `Risk    high`.
-- There are four smoke tests.
-- The profiles `dev` and `ci` resolve correctly, and results go to `results/`, which is in `.gitignore`.
-
-The working tree is clean, so all of this is in commit `558e3cc`. Do you want me to fix 1 and 2 (and whichever of the others you choose) before you push?
+**Next step**
+I can fix the three blockers and add the `analyze` step to the CI. For that, I need two decisions from you:
+- **Greeting:** should it say `Alice`? I'd assume yes and change the library.
+…
 
 </div>
 
