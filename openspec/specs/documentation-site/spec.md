@@ -506,11 +506,11 @@ The screen recordings of VS Code SHALL show the keyboard shortcuts pressed in th
 
 ### Requirement: Guides grouped by tool and topic
 
-The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, PyCharm and Command Line, the page AI Agents, and the groups Project Configuration and Tips & Tricks. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
+The Guides sidebar SHALL list, in this order, the overview and the groups VS Code, PyCharm, Command Line, Project Configuration, AI Agents and Tips & Tricks. Every other guide SHALL be a page of one of these groups, at a path under the group's path. The groups SHALL be shown collapsed, except the group that contains the open page.
 
 #### Scenario: Order in the sidebar
 - **WHEN** a reader opens `/guides/`
-- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, AI Agents, Project Configuration and Tips & Tricks in this order
+- **THEN** the sidebar lists Overview, VS Code, PyCharm, Command Line, Project Configuration, AI Agents and Tips & Tricks in this order
 - **AND** every group is collapsed
 
 #### Scenario: Names by subject
@@ -537,6 +537,11 @@ The Guides sidebar SHALL list, in this order, the overview, the groups VS Code, 
 - **WHEN** a reader opens `/guides/robot-toml/`
 - **THEN** the overview of the group is shown
 - **AND** link cards lead to the guides to `robot.toml` and to Finding Robot Files
+
+#### Scenario: AI Agents group
+- **WHEN** a reader opens `/guides/ai-agents/`
+- **THEN** the overview of the group is shown
+- **AND** the group AI Agents is expanded in the sidebar
 
 #### Scenario: Path of a moved guide
 - **WHEN** a reader opens `/guides/repl/`
