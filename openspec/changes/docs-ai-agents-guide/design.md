@@ -122,7 +122,7 @@ The sessions, by step:
 - **Later prompts:** They react to the agent's answers and are written during the recording. Where the home page steers to a tool ("Show me in the debugger what the shop returns there"), the recording steers the same way.
 - **Order:** "Another browser" and "Comparing runs" build on the session before them, and the other sessions start from a fresh copy of the project.
 - **Links between steps:** A text that refers to a session in another step links it ("Another browser" to "From a requirement", "Debugging step by step" to "Keywords in the REPL").
-- **Interactive sessions:** "Debugging step by step" and "Keywords in the REPL" are the two the maintainer asked for: the user steers each turn, and the debugger or the REPL keeps running between the prompts. With today's skill, Claude Code probably sends a fixed `printf` sequence instead (D9).
+- **Interactive sessions:** "Debugging step by step" and "Keywords in the REPL" are the two the maintainer asked for: the user steers each turn, and the debugger or the REPL keeps running between the prompts. Since task 3.8, Claude Code drives them with `robotcode session` (D9).
 
 ### D4: How a session is shown
 
@@ -146,7 +146,7 @@ The sessions, by step:
   | the rest of the home folder | `~` |
 
   `check_shortened.py` applies the same replacements to the complete session before it compares.
-- **Version line:** It is on the overview of Working with the Agent: "Recorded on <date> with Claude Code <version> (<model>) and RobotCode <version>".
+- **Version line:** It is on the overview of Working with the Agent: "Recorded on <date> with Claude Code <version> (<model>) and RobotCode". It names RobotCode without a version (decided by the maintainer on 2026-11-03), and a line of a session that prints RobotCode's version is left out.
 
 - **Frames:** The session is in a frame that sets it apart from the guide's text; in it, each prompt is a bubble on the right and each answer has an accent line on the left, as in the agent demo of the home page. Without them, the answers could not be told from the guide's text, so the maintainer chose frames at the review on 2026-10-29. `assemble_page.py` puts a `<div>` with the class `rc-session`, `rc-session-prompt` or `rc-session-answer` around them, with blank lines, so that Astro renders the Markdown inside (`rehype-raw`). Their look is in `docs/src/styles/custom.css`, with Starlight's colors for both themes. `page/*.md` and `check_shortened.py` stay without frames.
 - **Collapsed:** Each session is a `<details>` element below its step's explanation; its `<summary>` names the session and its first prompt. Starlight styles `<details>` already, and `getting-started/vscode.mdx` uses it. The frames stay inside.
@@ -180,7 +180,8 @@ The script `playground/robotcode-demo/agent-sessions/record.sh` (git-ignored) do
   - `XDG_CONFIG_HOME` points to an empty folder, so the maintainer's user `robot.toml` stays out.
 - **Claude Code:**
   - `CLAUDE_CONFIG_DIR` is a folder of its own, in which the maintainer logs in once. Only the plugin from the marketplace is installed there (`claude plugin marketplace add robotcodedev/robotframework-agent-plugins`, `claude plugin install robotcode@robotframework-agent-plugins`).
-  - For task 3.8, the recordings take the improved skill with `--plugin-dir` from the working copy of robotframework-agent-plugins on `next`, and the plugin installed in the configuration is off in the session project (decided by the maintainer on 2026-11-02). Until the release, that skill is only on `next`, and the marketplace has the released one. The site goes online only with a `v*` tag, so readers get the sessions together with that skill. `neutral_paths.py` replaces the path of the plugin folder, which can show up in a session.
+  - For task 3.8, the recordings take the improved skill with `--plugin-dir` from the working copy of robotframework-agent-plugins on `next`, and the plugin installed in the configuration is off for the session (`--settings`, so that no file lands in the session project; decided by the maintainer on 2026-11-02). Until the release, that skill is only on `next`, and the marketplace has the released one. The site goes online only with a `v*` tag, so readers get the sessions together with that skill. `neutral_paths.py` replaces the path of the plugin folder, which can show up in a session.
+  - Also for task 3.8: robotcode comes from a snapshot of the checkout's last commit in the work folder, so that unfinished work of a parallel session stays out of the recordings; `neutral_paths.py` shows it as `~/robotcode`. `XDG_RUNTIME_DIR` is a short folder of the recording, so that the agent sees only its own sessions.
   - A session runs as one process: `claude -p --input-format stream-json --output-format stream-json`, with `--strict-mcp-config` (no MCP server, also none of the account) and `--no-chrome`. The script writes each prompt to its input when the answer to the one before has arrived.
   - This keeps the agent's background commands, such as a paused debugger or a REPL, running between the user's prompts: with this input, a background command may run 30 minutes, up to 2 hours.
   - Rejected: one `claude -p --resume` per prompt. Each run ends with its answer, and a run whose prompt is passed as text waits at most 10 minutes for its background commands and then stops them. A debugger started for one prompt would be gone by the next.
@@ -212,7 +213,7 @@ The script runs it once before the session, so the session can ask about the res
 ### D8: Converting and shortening
 
 - **Converter:** `agent-sessions/to_markdown.py` turns a `.jsonl` into the Markdown of D4, complete. It reads the prompts, the tool calls with their results (Bash, Read, Write, Edit, Skill) and the answers. The field names are checked against the first recording.
-- **Shortening:** Done by hand on that Markdown, only by leaving parts out (D4). The version line takes the model, Claude Code's version and the date from the transcript's init event, and RobotCode's version from `robotcode --version` in the session project.
+- **Shortening:** Done by hand on that Markdown, only by leaving parts out (D4). The version line takes the model, Claude Code's version and the date from the transcript's init event.
 
 ### D9: The recordings test the skill
 

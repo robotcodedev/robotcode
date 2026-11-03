@@ -110,11 +110,11 @@ Working with the Agent SHALL show a debugging session in which the user steers t
 
 ### Requirement: Recording of the sessions
 
-The sessions SHALL be recorded in the example project of a web shop that the home page's demos use, and the session on a large project in a generated project with thousands of tests. Claude Code SHALL run in a configuration of its own with only the RobotCode plugin installed, without further instructions, memory or MCP servers. The overview of Working with the Agent SHALL name the versions of Claude Code and RobotCode and the model.
+The sessions SHALL be recorded in the example project of a web shop that the home page's demos use, and the session on a large project in a generated project with thousands of tests. Claude Code SHALL run in a configuration of its own with only the RobotCode plugin installed, without further instructions, memory or MCP servers. The overview of Working with the Agent SHALL name the version of Claude Code and the model.
 
 #### Scenario: Versions
 - **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
-- **THEN** the page names the version of Claude Code, the model and the version of RobotCode the sessions were recorded with
+- **THEN** the page names the version of Claude Code and the model the sessions were recorded with
 
 ### Requirement: Sessions shown as recorded
 
