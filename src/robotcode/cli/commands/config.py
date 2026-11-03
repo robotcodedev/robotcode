@@ -287,7 +287,7 @@ def list(app: Application, name: Optional[List[str]] = None) -> None:
     result = []
     for n in name:
         for field in config_fields.keys():
-            if fnmatchcase(field, n):
+            if field == n or fnmatchcase(field, n):
                 result.append(field)
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -327,7 +327,9 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
         name = ["*"]
 
     config_fields = [
-        (field, value) for field, value in get_config_fields().items() if any(fnmatchcase(field, n) for n in name)
+        (field, value)
+        for field, value in get_config_fields().items()
+        if any(field == n or fnmatchcase(field, n) for n in name)
     ]
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
