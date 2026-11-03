@@ -20,7 +20,7 @@ In the skill (`robotframework-agent-plugins`, branch `next`):
 
 - All findings of the review are corrected, among them `profiles show` for what is in effect under a profile, a debug run overwriting the recorded run, `--output` being relative to `output-dir`, options before a path, tasks in `discover`, `analyze code` without a path, and `enabled`.
 - `SKILL.md` shrinks to about 5000 tokens, in an order that puts running, results and debugging first.
-- The `description` starts with the key use case.
+- The `description` stays as it is: shorter wordings were measured and made agents read the output file before they used the skill.
 
 In the docs: the same errors where they stand there, and the new behaviour of `.abort`, breakpoints and `session send`. News posts stay as released.
 

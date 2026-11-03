@@ -46,13 +46,17 @@ The body of `SKILL.md` SHALL have about 5000 tokens at most, and running a test,
 - **WHEN** only the first 5000 tokens of `SKILL.md` are left in an agent's context
 - **THEN** they hold how to run, select, read the results of and debug a test
 
-### Requirement: The description starts with the key use case
+### Requirement: The description starts with its topic and the instruction to use it
 
-The `description` of the skill SHALL start with what the skill does and SHALL stay under the limit of 1024 characters with room to spare.
+The `description` of the skill SHALL start with its topic and the instruction to use it first, and SHALL stay within the limit of 1024 characters. A change to it SHALL be measured against the wording before it.
 
 #### Scenario: Work on Robot Framework
 - **WHEN** an agent other than a Haiku model is asked one of the cases on Robot Framework without the skill being named
 - **THEN** it loads the skill
+
+#### Scenario: A question on a finished run
+- **WHEN** an agent other than a Haiku model is asked whether the last test run passed
+- **THEN** it loads the skill before it looks at the output file
 
 #### Scenario: Other work
 - **WHEN** an agent is asked for something that has nothing to do with Robot Framework, in a project with `.robot` files

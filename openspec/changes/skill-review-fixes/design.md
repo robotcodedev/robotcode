@@ -67,7 +67,7 @@ A debug run to its end still replaces the recorded run, so the skill needs its s
 
 - `config info desc` and `list`: `field == name or fnmatchcase(field, name)`.
 - `results --help`: `robotcode results log -t "*Login*"`; `reference/cli.md` is regenerated.
-- A `ValueError` from `build_command_line()` becomes a `click.ClickException`, the way of an invalid `robot.toml`, so each command exits with what it exits with for that (252 for those that run Robot Framework, 1 for `discover` and `analyze`). The other commands that evaluate a profile, such as `profiles show`, get a test too.
+- A `ValueError` from `build_command_line()` becomes a `click.ClickException`, the way of an invalid `robot.toml`, so each command exits with what it exits with for that (252 for those that run Robot Framework, 1 for `discover` and `analyze`). `profiles show` already reports it and shows the expression, which is what such a command is for; it gets a test.
 - Dot commands: a method for an error of a dot command, which writes as `_echo` does; the session's interpreter overrides it and also marks the line as failed, as `_record_failure` does for a statement. It replaces `_echo` where a dot command couldn't do what was asked: an unknown or ambiguous name, `.doc` without a target, `.print` and `.set` of a variable that doesn't exist, `.break` that can't be parsed, the others of that kind found on the way. An answer such as "no breakpoints" isn't an error.
 
 ### D5: The corrections in the skill
@@ -148,11 +148,15 @@ Sections that say what to do when stay in `SKILL.md`; what moves is detail that 
 
 ### D7: The `description`
 
-Draft, about 670 characters, what it does first and the instruction to use it first kept, because agents skipped the skill without it:
+It stays as it is. Two shorter wordings lost against it in a direct comparison, with the same body of the skill, Sonnet, case 02, five runs each:
 
-> Runs, debugs, inspects and statically analyzes Robot Framework tests and RPA tasks with the project's RobotCode CLI, which resolves them against the real configuration. Use it first, not memory, grep over `.robot`/`.resource` files, raw `output.xml` or web tools, whenever the user runs a suite, test or task or narrows a run by tag, suite or name; asks why one failed or won't run, or to fix, debug or step through it; asks what a keyword or library does or which tests, tasks, suites or tags exist; configures or explains `robot.toml` and profiles; checks code before running; inspects or compares runs; or tries a keyword interactively, even when RobotCode isn't named.
+| `description` | Passed |
+|---|---|
+| As it was, 1022 characters | 5 of 5 |
+| Its first sentence, the rest shortened, 931 characters | 2 of 5 |
+| What the skill does first, then a softer instruction to use it first, 733 characters | 1 of 5 |
 
-Round 2 shows whether it still loads; case 29 whether it loads too often. If it loads less, the old wording of the first sentence comes back in part.
+The failures read the raw `output.xml` before they had the skill, or didn't load it. What the `description` says works before the skill is loaded, and which of its words do it isn't clear from these runs, so nothing is changed by guesswork. The guides' advice to put the key use case first and to keep room under the limit loses against this measurement. 1022 of 1024 characters is within the limit; an edit later has to take out as much as it adds, and has to be measured the same way.
 
 ### D8: The docs
 
