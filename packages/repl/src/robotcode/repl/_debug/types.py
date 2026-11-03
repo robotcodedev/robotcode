@@ -67,7 +67,8 @@ class StackFrame:
 class Breakpoint:
     """A registered breakpoint with optional attributes (the shared CLI + DAP model).
 
-    `kind` is ``"line"`` (`source`+`line`) or ``"keyword"`` (`name`). The optional
+    `kind` is ``"line"`` (`source`+`line`, with `location` as it was given) or
+    ``"keyword"`` (`name`). The optional
     attributes drive the hit-time decision: `condition` (stop only if the
     expression is truthy — a *failing* condition stops too, past `ignore_count`
     and `temporary`, so the breakage is noticed), `ignore_count` (skip the next N triggering hits), `log_message`
@@ -88,6 +89,13 @@ class Breakpoint:
     enabled: bool = True
     commands: List[str] = field(default_factory=list)
     hits: int = 0
+    location: Optional[str] = None
+    reached: bool = False
+
+    @property
+    def where(self) -> str:
+        """Where the breakpoint was set, as it was given."""
+        return f"{self.name}" if self.kind == "keyword" else f"{self.location}:{self.line}"
 
 
 @dataclass

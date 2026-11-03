@@ -460,8 +460,8 @@ DEBUG_OPTIONS = [
         "break_at",
         metavar="LOCATION",
         multiple=True,
-        help="Break at LOCATION — a `file:line`, or a keyword name or glob pattern "
-        "matched like Robot Framework. Repeatable.",
+        help="Break at LOCATION — a `file:line`, where the end of the path is enough, or a keyword name "
+        "or glob pattern matched like Robot Framework. Repeatable.",
     ),
     click.option(
         "--break-on-exception/--no-break-on-exception",
@@ -694,6 +694,7 @@ def robot_debug(
     )
     if server is not None:
         server.keep_breakpoints(controller)
+    controller.warn_about_unreached_breakpoints()
 
     # `robot-debug` produces the same console output as `robotcode robot` — the run
     # is fully visible. At a stop the debug prompt is interleaved with Robot's live

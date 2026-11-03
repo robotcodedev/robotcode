@@ -8,6 +8,8 @@ in-process suite — the same mechanism the interpreter uses, minus the prompt.
 import dataclasses
 import io
 import json
+import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -16,6 +18,7 @@ from robot.api import get_model
 from robot.output import LOGGER
 
 from robotcode.core.utils.dataclasses import from_json
+from robotcode.core.utils.path import normalized_path
 from robotcode.repl._debug.controller import DebugController
 from robotcode.repl._debug.types import (
     BreakpointState,
@@ -237,6 +240,7 @@ class RecordingFrontend:
     ) -> None:
         self.script: List[ResumeAction] = list(script or [])
         self.stops: List[Tuple[StopReason, str, Any]] = []
+        self.output: List[str] = []
         self._at_stop = at_stop
 
     def wait_at_stop(self, stop: StopEvent) -> ResumeAction:
@@ -248,7 +252,7 @@ class RecordingFrontend:
         return self.script.pop(0) if self.script else ResumeAction.CONTINUE
 
     def on_output(self, text: str, category: str = "console") -> None:
-        pass
+        self.output.append(text)
 
     def on_continued(self) -> None:
         pass
@@ -264,6 +268,158 @@ def test_line_breakpoint_stops_at_that_line() -> None:
     _run_with_observers(STEP_SUITE, controller)
 
     assert frontend.stops == [(StopReason.BREAKPOINT, "Log", 12)]
+
+
+@pytest.mark.parametrize("location", ["probe_suite.robot", "tmp/probe_suite.robot", "./probe_suite.robot"])
+def test_line_breakpoint_matches_by_the_end_of_the_path(location: str) -> None:
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.add_line_breakpoint(location, 12)
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.stops == [(StopReason.BREAKPOINT, "Log", 12)]
+
+
+@pytest.mark.parametrize("location", ["other/probe_suite.robot", "suite.robot", "robot"])
+def test_line_breakpoint_doesnt_match_another_path(location: str) -> None:
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.add_line_breakpoint(location, 12)
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.stops == []
+
+
+def test_line_breakpoint_with_an_absolute_path_matches_only_that_file(tmp_path: Path) -> None:
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.add_line_breakpoint(str(tmp_path / "probe_suite.robot"), 12)
+    controller.add_line_breakpoint(str(normalized_path(_SOURCE)), 13)
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.stops == [(StopReason.BREAKPOINT, "Outer Keyword", 13)]
+
+
+def test_line_breakpoint_with_a_parent_folder_is_a_path_from_the_current_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    location = os.path.join("..", "probe.robot")
+
+    breakpoint_ = DebugController().add_line_breakpoint(location, 3)
+
+    assert breakpoint_.source == str(normalized_path(tmp_path.parent / "probe.robot"))
+    assert breakpoint_.where == f"{location}:3"
+
+
+def test_restored_line_breakpoint_keeps_where_it_was_given() -> None:
+    controller = DebugController()
+    controller.add_line_breakpoint("probe_suite.robot", 12)
+    frontend = RecordingFrontend()
+    taken = DebugController(frontend)
+
+    taken.restore_breakpoints(from_json(json.dumps(dataclasses.asdict(controller.breakpoint_state())), BreakpointState))
+    _run_with_observers(STEP_SUITE, taken)
+
+    assert taken.breakpoints[0].where == "probe_suite.robot:12"
+    assert frontend.stops == [(StopReason.BREAKPOINT, "Log", 12)]
+
+
+def _warned_controller(frontend: RecordingFrontend) -> DebugController:
+    controller = DebugController(frontend)
+    controller.warn_about_unreached_breakpoints()
+    return controller
+
+
+def test_warning_for_breakpoints_no_keyword_reached() -> None:
+    frontend = RecordingFrontend()
+    controller = _warned_controller(frontend)
+    controller.add_line_breakpoint("nosuch.robot", 5)
+    controller.add_line_breakpoint("probe_suite.robot", 11)  # the line of the test's name
+    controller.add_keyword_breakpoint("No Such Keyword")
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.stops == []
+    assert frontend.output == [
+        "[ WARN ] Breakpoint nosuch.robot:5 was never reached.",
+        "[ WARN ] Breakpoint probe_suite.robot:11 was never reached.",
+        "[ WARN ] Breakpoint No Such Keyword was never reached.",
+    ]
+
+
+def test_no_warning_for_a_breakpoint_that_was_reached() -> None:
+    frontend = RecordingFrontend()
+    controller = _warned_controller(frontend)
+    controller.add_line_breakpoint("probe_suite.robot", 12)
+    controller.add_keyword_breakpoint("Inner Keyword")
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert len(frontend.stops) == 2
+    assert frontend.output == []
+
+
+def test_no_warning_for_a_condition_that_stayed_false() -> None:
+    frontend = RecordingFrontend()
+    controller = _warned_controller(frontend)
+    controller.add_line_breakpoint("probe_suite.robot", 12, condition="False")
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.stops == []
+    assert frontend.output == []
+
+
+def test_no_warning_for_a_second_breakpoint_on_a_line_that_was_reached() -> None:
+    frontend = RecordingFrontend()
+    controller = _warned_controller(frontend)
+    controller.add_line_breakpoint("probe_suite.robot", 12)
+    controller.add_line_breakpoint("tmp/probe_suite.robot", 12)
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.output == []
+
+
+def test_no_warning_for_a_disabled_breakpoint() -> None:
+    frontend = RecordingFrontend()
+    controller = _warned_controller(frontend)
+    controller.add_line_breakpoint("nosuch.robot", 5).enabled = False
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.output == []
+
+
+def test_no_warning_after_the_debugger_was_detached() -> None:
+    def detach(stop: StopEvent) -> None:
+        controller.set_attached(False)
+
+    frontend = RecordingFrontend(at_stop=detach)
+    controller = _warned_controller(frontend)
+    controller.add_line_breakpoint("probe_suite.robot", 12)
+    controller.add_line_breakpoint("nosuch.robot", 5)
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.output == []
+
+
+def test_no_warning_unless_asked_for() -> None:
+    # A REPL has no end of a run to say this at.
+    frontend = RecordingFrontend()
+    controller = DebugController(frontend)
+    controller.add_line_breakpoint("nosuch.robot", 5)
+    _run_with_observers(STEP_SUITE, controller)
+
+    assert frontend.output == []
+
+
+def test_restored_breakpoint_counts_as_not_reached() -> None:
+    controller = DebugController(RecordingFrontend())
+    controller.add_line_breakpoint("probe_suite.robot", 12)
+    _run_with_observers(STEP_SUITE, controller)
+    frontend = RecordingFrontend()
+    taken = _warned_controller(frontend)
+
+    taken.restore_breakpoints(controller.breakpoint_state())
+
+    assert not taken.breakpoints[0].reached
 
 
 def test_stack_includes_suite_and_test_frames() -> None:

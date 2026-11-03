@@ -121,6 +121,22 @@ def _normalize_source(source: str) -> str:
     return str(normalized_path(Path(source)))
 
 
+def _breakpoint_source(source: str) -> str:
+    """What a line breakpoint matches by: an absolute path, or one that leaves the folder with `..`,
+    as an absolute path; any other as it is, see `_source_matches`."""
+    path = Path(source)
+    return _normalize_source(source) if path.is_absolute() or ".." in path.parts else str(path)
+
+
+def _source_matches(source: str, frame_source: str) -> bool:
+    """Whether a line breakpoint means the file of a frame: an absolute path exactly, any other by the
+    end of the path, as in gdb, so that `login.robot` finds `tests/login.robot`."""
+    given, actual = Path(source), Path(frame_source)
+    if given.is_absolute():
+        return given == actual
+    return Path(*actual.parts[-len(given.parts) :]) == given
+
+
 class DebugController:
     def __init__(self, frontend: Optional[Frontend] = None) -> None:
         self._stack: List[StackFrame] = []
@@ -159,6 +175,9 @@ class DebugController:
         # breakpoints/filters are kept so re-attaching resumes the same setup.
         self._detached = False
 
+        # set for a run that goes through a suite: at its end, say which breakpoints no keyword reached.
+        self._warn_about_unreached = False
+
     # --- configuration ------------------------------------------------------
 
     def set_frontend(self, frontend: Optional[Frontend]) -> None:
@@ -181,7 +200,8 @@ class DebugController:
     ) -> Breakpoint:
         return self._add_breakpoint(
             kind="line",
-            source=_normalize_source(source),
+            source=_breakpoint_source(source),
+            location=source,
             line=line,
             condition=condition,
             log_message=log_message,
@@ -202,7 +222,7 @@ class DebugController:
 
     def set_line_breakpoints(self, source: str, lines: List[int]) -> None:
         """Replace the line breakpoints for `source` (DAP-style per-source set)."""
-        norm = _normalize_source(source)
+        norm = _breakpoint_source(source)
         self._breakpoints = [bp for bp in self._breakpoints if not (bp.kind == "line" and bp.source == norm)]
         for line in lines:
             self.add_line_breakpoint(source, line)
@@ -212,6 +232,11 @@ class DebugController:
         self._breakpoints = [bp for bp in self._breakpoints if bp.kind != "keyword"]
         for name in names:
             self.add_keyword_breakpoint(name)
+
+    def warn_about_unreached_breakpoints(self) -> None:
+        """Warn at the end of the run about the breakpoints no keyword reached: from the outside, a mistyped
+        path looks like a run that simply went through."""
+        self._warn_about_unreached = True
 
     def get_breakpoint(self, bp_id: int) -> Optional[Breakpoint]:
         return next((bp for bp in self._breakpoints if bp.id == bp_id), None)
@@ -230,7 +255,7 @@ class DebugController:
     def restore_breakpoints(self, state: BreakpointState) -> None:
         """Take over the breakpoints of `breakpoint_state`, in place of those set so far. Their hit counts start at 0,
         as `.ignore` counts the hits of a run."""
-        self._breakpoints = [dataclasses.replace(bp, hits=0) for bp in state.breakpoints]
+        self._breakpoints = [dataclasses.replace(bp, hits=0, reached=False) for bp in state.breakpoints]
         self._next_bp_id = state.next_id
         self._exception_filters = set(state.exception_filters)
 
@@ -288,7 +313,7 @@ class DebugController:
 
     @property
     def line_breakpoints(self) -> Dict[str, Set[int]]:
-        """Active line breakpoints, keyed by normalised source path (derived)."""
+        """Active line breakpoints, keyed by the path they match by (derived)."""
         out: Dict[str, Set[int]] = {}
         for bp in self._breakpoints:
             if bp.kind == "line" and bp.source is not None and bp.line is not None:
@@ -551,6 +576,10 @@ class DebugController:
 
     def end_suite(self, data: "running.TestSuite", result: "result.TestSuite") -> None:
         self._end_exec(result, "failed_suite")
+        if self._warn_about_unreached and not self._stack and not self._detached and self._frontend is not None:
+            for bp in self._breakpoints:
+                if bp.enabled and not bp.reached:
+                    self._frontend.on_output(f"[ WARN ] Breakpoint {bp.where} was never reached.")
 
     def _end_exec(self, result: Any, filter_id: str) -> None:
         # The SUITE/TEST frame pushed at the matching start is on top of the stack.
@@ -685,20 +714,24 @@ class DebugController:
         return True
 
     def _match_breakpoint(self, frame: StackFrame) -> Optional[Breakpoint]:
+        matched: Optional[Breakpoint] = None
         for bp in self._breakpoints:
-            if not bp.enabled:
-                continue
-            if bp.kind == "keyword" and bp.name is not None and self._keyword_matches(bp.name, frame):
-                return bp
-            if (
-                bp.kind == "line"
-                and frame.source is not None
-                and frame.line is not None
-                and bp.source == _normalize_source(frame.source)
-                and bp.line == frame.line
-            ):
-                return bp
-        return None
+            if bp.enabled and self._is_at_breakpoint(bp, frame):
+                # Whether its condition holds or not: the warning is about the place.
+                bp.reached = True
+                matched = matched or bp
+        return matched
+
+    def _is_at_breakpoint(self, bp: Breakpoint, frame: StackFrame) -> bool:
+        if bp.kind == "keyword":
+            return bp.name is not None and self._keyword_matches(bp.name, frame)
+        return (
+            frame.source is not None
+            and frame.line is not None
+            and bp.source is not None
+            and bp.line == frame.line
+            and _source_matches(bp.source, _normalize_source(frame.source))
+        )
 
     @staticmethod
     def _keyword_matches(name: str, frame: StackFrame) -> bool:

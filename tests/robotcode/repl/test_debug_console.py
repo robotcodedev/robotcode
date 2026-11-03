@@ -394,6 +394,17 @@ def test_breakpoints_lists_active() -> None:
     assert "#1  keyword Nonexistent" in text  # numbered listing
 
 
+def test_breakpoints_show_a_line_breakpoint_as_it_was_given() -> None:
+    messages = _run_debug(
+        STEP_SUITE,
+        [".break probe_suite.robot:12", ".break tmp/probe_suite.robot:13", ".breakpoints", ".detach"],
+        stop_on_entry=True,
+    )
+    text = "\n".join(messages)
+    assert "#1  line    probe_suite.robot:12" in text
+    assert "#2  line    tmp/probe_suite.robot:13" in text
+
+
 def test_catch_sets_and_shows_exception_filter() -> None:
     messages = _run_debug(STEP_SUITE, [".catch uncaught", ".catch", ".continue"], stop_on_entry=True)
     # Both `.catch uncaught` (set) and bare `.catch` (show) echo a `catching:`

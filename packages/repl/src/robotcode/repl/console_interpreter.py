@@ -1863,7 +1863,6 @@ class ConsoleInterpreter(BaseInterpreter):
         assert controller is not None  # narrowed by _require_controller
         bps = controller.breakpoints
         for bp in bps:
-            loc = bp.name if bp.kind == "keyword" else f"{os.path.basename(bp.source or '?')}:{bp.line}"
             flags: List[str] = []
             if not bp.enabled:
                 flags.append("disabled")
@@ -1878,7 +1877,7 @@ class ConsoleInterpreter(BaseInterpreter):
             if bp.commands:
                 flags.append(f"{len(bp.commands)} {'cmd' if len(bp.commands) == 1 else 'cmds'}")
             suffix = ("  " + ", ".join(flags)) if flags else ""
-            self._echo(f"  #{bp.id}  {bp.kind:<7} {loc}{suffix}")
+            self._echo(f"  #{bp.id}  {bp.kind:<7} {bp.where}{suffix}")
         filters = controller.exception_filters
         if filters:
             self._echo(f"  catch    {', '.join(sorted(filters))}")

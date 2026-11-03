@@ -1042,6 +1042,45 @@ def test_restart_hands_over_the_breakpoints_as_they_are(started: List[str], sess
     assert "The run has ended with exit code 2." in result.stderr, result.output
 
 
+def test_line_breakpoint_by_file_name_stops_in_every_file_of_that_name(started: List[str], tmp_path: Path) -> None:
+    for folder in ("first", "second"):
+        (tmp_path / "suites" / folder).mkdir(parents=True)
+        (tmp_path / "suites" / folder / "login.robot").write_text(
+            "*** Test Cases ***\nT\n    Log    here\n", encoding="utf-8"
+        )
+
+    result = _start(
+        started, "debug", "-d", str(tmp_path / "results"), "--break", "login.robot:3", str(tmp_path / "suites")
+    )
+    session_id = _started(result)
+
+    # The stop shows the path from the current folder.
+    assert "login.robot:3)" in result.stdout
+    assert "login.robot:3)" in _robotcode("session", "send", session_id, ".continue").stdout
+    assert "The run has ended with exit code 0." in _robotcode("session", "send", session_id, ".continue").stderr
+
+
+def test_a_run_warns_about_a_breakpoint_it_never_reached(started: List[str], tmp_path: Path) -> None:
+    (tmp_path / "wait.robot").write_text("*** Test Cases ***\nT\n    Sleep    1s\n", encoding="utf-8")
+    result = _start(
+        started,
+        "debug",
+        "-d",
+        str(tmp_path / "results"),
+        "--stop-on-entry",
+        "--break",
+        "nosuch.robot:5",
+        str(tmp_path / "wait.robot"),
+    )
+    session_id = _started(result)
+    assert _robotcode("session", "send", "--timeout", "0.1", session_id, ".continue").exit_code == 124
+
+    result = _robotcode("session", "wait", session_id)
+
+    assert "[ WARN ] Breakpoint nosuch.robot:5 was never reached." in result.stdout
+    assert _robotcode("session", "result", session_id).stdout == "0\n"
+
+
 def test_restart_uses_a_python_library_changed_since_the_start(started: List[str], tmp_path: Path) -> None:
     (tmp_path / "Lib.py").write_text("def value():\n    return 'first'\n", encoding="utf-8")
     (tmp_path / "lib.robot").write_text(
