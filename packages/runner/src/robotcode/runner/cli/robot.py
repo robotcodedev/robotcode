@@ -393,7 +393,11 @@ def handle_robot_options(
     root_folder = loaded.root_folder
     profile = cast(RobotBaseProfile, loaded.profile)
 
-    cmd_options = profile.build_command_line()
+    try:
+        cmd_options = profile.build_command_line()
+    except ValueError as e:
+        # An expression in the configuration that can't be evaluated, as invalid as a file that can't be read.
+        raise click.ClickException(str(e)) from e
 
     app.verbose(
         lambda: (

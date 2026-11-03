@@ -76,6 +76,39 @@ def test_invalid_robot_toml_for_robot_tools_exits_with_252(broken_project: Path,
     assert "Invalid TOML file" in result.stderr
 
 
+@pytest.fixture
+def project_with_a_bad_expression(project: Path) -> Path:
+    (project / "robot.toml").write_text('output-dir = { expr = "nope(" }\n', encoding="utf-8")
+    return project
+
+
+def test_expression_that_cant_be_evaluated_for_robot_exits_with_252(project_with_a_bad_expression: Path) -> None:
+    result = _run_robotcode(project_with_a_bad_expression, ["robot", "suite.robot"])
+
+    assert result.returncode == 252, result.stderr
+    assert "[ ERROR ] Evaluation of 'output_dir' failed" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_expression_that_cant_be_evaluated_for_discover_exits_with_1(project_with_a_bad_expression: Path) -> None:
+    result = _run_robotcode(project_with_a_bad_expression, ["discover", "tests", "suite.robot"])
+
+    assert result.returncode == 1, result.stderr
+    assert "[ ERROR ] Evaluation of 'output_dir' failed" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_expression_that_cant_be_evaluated_for_profiles_show_is_reported_and_shown(
+    project_with_a_bad_expression: Path,
+) -> None:
+    result = _run_robotcode(project_with_a_bad_expression, ["profiles", "show"])
+
+    assert result.returncode == 0, result.stderr
+    assert "[ ERROR ] Evaluation of 'output_dir' failed" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert 'expr = "nope("' in result.stdout
+
+
 def test_invalid_robot_toml_for_debug_exits_with_252(broken_project: Path) -> None:
     # `--dry` runs the configuration check without starting a debug session.
     result = _run_robotcode(broken_project, ["--dry", "debug", "-d", "out", "suite.robot"])
