@@ -17,9 +17,10 @@ private val EMPTY_TABLE_HEADER = Regex("""<thead>\s*<tr>(?:\s*<th[^>]*>\s*</th>)
  * It also puts the HTML into an `<html>` element. LSP4IJ 0.21.0 passes this HTML to the Ctrl+hover hint without that
  * element. The hint then takes it for text and turns every line break into `<br>` (`UIUtil.getHtmlBody`), which leaves
  * a large gap in front of tables and an empty line after each heading and paragraph. Quick Documentation and the hover
- * remove the element again. Drop the element once LSP4IJ adds it itself.
+ * remove the element again.
  */
 @Suppress("UnstableApiUsage") class RobotHoverFeature : LSPHoverFeature() {
+    // TODO: drop the <html> element and its test when updating to the LSP4IJ release with redhat-developer/lsp4ij#1852
     override fun convertMarkDownToHtml(content: MarkupContent, file: PsiFile): String? =
         super.convertMarkDownToHtml(content, file)?.let { "<html>${it.replace(EMPTY_TABLE_HEADER, "")}</html>" }
 }
