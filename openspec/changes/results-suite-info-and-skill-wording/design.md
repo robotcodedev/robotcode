@@ -81,16 +81,16 @@ It goes into the first paragraph of "Interpreting results" in `SKILL.md`, after 
 
 ### D6: The eval case and its rounds
 
-`evals/robotcode/cases/30-results-of-another-run.json`, with the query *"Run the login suite with its results in a folder of their own, so that `results/` stays as it is, and tell me which keywords the failed test called in that run."*
+`evals/robotcode/cases/30-results-of-another-run.json`, with the query *"Does the login suite pass with the `ci` profile, and what fails if it doesn't? Keep the results of the last run in `results/` as they are."*
 
-- The console of a run doesn't show the keywords, so the agent needs `robotcode results log`, and a folder of its own means naming the file.
-- `must_run`: `robotcode results` with a subcommand and `-o` or `--output` after it.
+- In the recordings, `results` was a check on the side, not the task. A first query that asked for the keywords of the failed test passed 3 of 3 with Sonnet and with Opus on the old text, because the agents then read `references/results.md` first, so the query changed as planned below. With this one, Sonnet passed 2 of 3 on the old text and Opus 3 of 3.
+- `must_run` stays empty: an agent may rightly answer from the console, or with `robotcode -p ci results summary`, since the profile has an `output-dir` of its own.
 - `must_not_run`: `results -o …` and `results <subcommand> <file>`. A first wrong try fails the case even if the agent corrects itself, because that try is what the sentence is meant to save.
-- `must_answer`: `Login With Credentials`.
+- `must_answer`: `Login Works`.
 
 Rounds, following the maintainer's rule to spend few tokens on evals:
-- Before the sentence: Sonnet, 3 runs.
-- With the sentence: Sonnet, 3 runs, and GitHub Copilot CLI once.
+- Before the sentence: Sonnet and Opus, 3 runs each. Opus joined because the recordings that showed the mistake were made with it.
+- With the sentence: Sonnet and Opus, 3 runs each, and GitHub Copilot CLI once.
 - Codex and opencode don't run for one sentence.
 
 A wrong way goes back to the text and a right way with a failed check goes back to the check, and only that case runs again. If the case passes on the old text, its query changes once, because the recordings showed the mistake in chained commands right after a run. If it still passes, the result goes into the findings, and the sentence stays, as the maintainer decided it.
