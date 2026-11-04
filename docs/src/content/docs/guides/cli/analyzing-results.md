@@ -250,7 +250,7 @@ A test's `[Metadata]` (Robot Framework 7.5+) is printed directly under its heade
 | `--raw-html` | Keep the original HTML markup in log messages. No artefact decoding happens in this mode. |
 | `--execution-messages` | Include the messages Robot Framework reports outside the tests (library import failures, syntax errors, …). |
 | `--keyword-info` | Print each executed keyword's `[Documentation]`, `[Tags]` and `[Timeout]` under its header (and add them to the JSON entry). Off by default; see [`--keyword-info` and `--suite-info`](#--keyword-info-and---suite-info). |
-| `--suite-info` | Group tests under suite headers showing the suite name, source, `Documentation` and `Metadata` (and add a `suites` array plus per-test `suite` ref to the JSON). Off by default. |
+| `--suite-info` | Group tests under suite headers showing the suite name, source, `Documentation` and `Metadata`, with the suites above them first (and add a `suites` array plus per-test `suite` ref to the JSON). Off by default. |
 | `--timestamps` | Show per-message timestamps. |
 | `--timing / --no-timing` | Show / hide start times and elapsed totals. |
 | `--full-paths` | Absolute source paths. |
@@ -284,7 +284,7 @@ Both flags add **structured metadata** to the log output and are independent —
 
 **`--keyword-info`** — for every executed `KEYWORD` / `SETUP` / `TEARDOWN`, the keyword's own `[Documentation]`, `[Tags]` and `[Timeout]` (taken from the keyword definition, not the call) are emitted. In TEXT the renderer prints them as nested `_[Documentation]_` / `_[Tags]_` / `_[Timeout]_` bullets under the keyword's bullet; in JSON they appear as `doc` / `tags` / `timeout` keys on the matching body-item entry. Fields whose underlying setting is empty are dropped, so `BuiltIn.Log` (which has a docstring but no tags) shows only `doc`.
 
-**`--suite-info`** — tests get grouped under one `## Suite:` header per parent suite. The header carries the suite's `fullName`, source path and executed status; below it follow the suite's `Documentation` as a `>` quote (one `>` line per line of the documentation) and one `- _Name:_ value` bullet per `Metadata` key. In JSON, `LogResult.suites` is populated with one entry per surviving suite, and every test gains a `suite` field cross-referencing the parent suite by `fullName`.
+**`--suite-info`** — tests get grouped under one `## Suite:` header per parent suite, and the suites above it get a header of their own first, starting with the top suite, as in `log.html`. The header carries the suite's `fullName`, source path and executed status; below it follow the suite's `Documentation` as a `>` quote (one `>` line per line of the documentation) and one `- _Name:_ value` bullet per `Metadata` key. In JSON, `LogResult.suites` is populated with one entry per surviving suite, and every test gains a `suite` field cross-referencing the parent suite by `fullName`.
 
 Combine both for a maximal view that mirrors the structure of the original `.robot` files:
 
@@ -296,6 +296,10 @@ Example TEXT output:
 
 ```markdown
 # Log
+
+## Suite: MyProject (`tests`) ❌ **FAIL**
+
+- _Environment:_ staging
 
 ## Suite: MyProject.Login (`tests/login/test_login.robot`) ❌ **FAIL**
 > Exercises the login flow against the staging environment.

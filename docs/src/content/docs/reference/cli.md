@@ -2608,7 +2608,7 @@ robotcode results log [OPTIONS]
 
 - `--suite-info / --no-suite-info`
 
-   Group tests under suite headers (name, source, Documentation, Metadata, status). In JSON, populates `suites` and a per-test `suite` reference. Off by default to keep the log compact.  [default: no-suite-info]
+   Group tests under suite headers (name, source, Documentation, Metadata, status), with the suites above them first. In JSON, populates `suites` and a per-test `suite` reference. Off by default to keep the log compact.  [default: no-suite-info]
 
 
 - `--help`
