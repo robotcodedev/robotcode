@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting AI Agents
-description: What to do when an agent answers without robotcode, uses the wrong environment, re-runs a failing test instead of debugging it, writes a test when you only wanted to try something, or when the marketplace plugin behaves differently from the one in VS Code.
+description: What to do when an agent answers without robotcode, loads the wrong skill, uses the wrong environment, re-runs a failing test instead of debugging it, writes a test when you only wanted to try something, or when the marketplace plugin behaves differently from the one in VS Code.
 sidebar:
   label: Troubleshooting
   order: 150.5
@@ -9,6 +9,8 @@ sidebar:
 The problems below are sorted by what you see the agent do.
 
 **The agent answers from generic knowledge instead of using `robotcode`.** A skill is loaded by *relevance* — the agent matches your request against the skill's description and only pulls it in when the request reads as Robot Framework work. A terse prompt in a mixed-language repo ("run it", "fix this test") may not trigger it. Name the domain — mention Robot Framework, a suite, a profile, a keyword, or `robotcode` itself — or invoke the skill explicitly by name (it's called **`robotcode`**). With smaller, faster models such as Claude Haiku, do that even for an ordinary question. See [When the agent loads the skill](/guides/ai-agents/how-the-skill-works/#when-the-agent-loads-the-skill). In VS Code, also confirm `robotcode.ai.enableChatPlugins` is `true` — see [In VS Code](/guides/ai-agents/setting-up/#in-vs-code-github-copilot-chat).
+
+**The agent loads `robotcode` although another skill fits better, or skips `robotcode` although it fits.** Agents choose a skill from a list of the installed skills and their descriptions, and that list has a limited size. Some agents tie the limit to the context window, so it is tighter with a small window; others use a fixed size. In Claude Code, for example, it is 1 % of the window: 8000 characters at 200K, most of which its own skills already use, and `claude --debug` warns when the list overflows. With several skills installed, the list can overflow. Descriptions are then shortened or dropped, often leaving only the name, and the agent can no longer tell what the skill is for. Which skill is hit first depends on the agent: the one used least, the one with the longest description, or the last one in the list. Name the skill you want in your request, and remove or turn off skills you don't need. Some agents also let you raise the limit, such as Claude Code with [`skillListingBudgetFraction`](https://code.claude.com/docs/en/settings-reference#skilllistingbudgetfraction) and Codex with `skills.max_context_tokens`.
 
 **The agent's answers don't match your project** — libraries or keywords it should see are reported as missing, or argument lists look wrong. It is most likely driving a `robotcode` from the wrong environment rather than the project's (see [Prerequisites](/guides/ai-agents/setting-up/#prerequisites)). Have the agent run `robotcode discover info` to show which interpreter and versions it is using, and compare that against the project's environment.
 
