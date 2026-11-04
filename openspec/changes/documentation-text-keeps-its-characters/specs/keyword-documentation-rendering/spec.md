@@ -50,6 +50,10 @@ When documentation in Robot Framework's format is converted to Markdown, on ever
 - **WHEN** a Robot-format documentation has the heading `= Section <b> here =`, or a library has a keyword named `Run <x> Now`
 - **THEN** the reader sees `Section <b> here` and `Run <x> Now`, and links to them find their headings
 
+#### Scenario: Name of a test in the hover
+- **WHEN** the hover for a test named `Run *this* <now>` is shown
+- **THEN** its heading shows `Test Case` and the name as written, in italics
+
 #### Scenario: Only Markdown comes out
 - **WHEN** a Robot-format documentation with bold, italic, code, links, tables and preformatted blocks is converted
 - **THEN** the result is plain Markdown, with no HTML and no characters that only the conversion uses

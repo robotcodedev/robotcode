@@ -65,6 +65,8 @@ Numbered paragraphs follow from the rule that everything Robot Framework does no
 
 `= Section <b> here =` and a keyword named `Run <x> Now` give `## Section <b> here` and `### Run <x> Now` today: Markdown reads `<b>` as HTML and shows nothing, while Libdoc shows the text. Headings get the same escape as other text, and code in them stays, so a name in backticks stays as it is. The anchor of a heading is worked out from its title: links and anchors must keep matching, which the page tests cover. There are no such headings or keyword names in the checked libraries.
 
+The hover of a test or task builds its own text and wrote its heading as `= Test Case *name* =`, relying on Markdown to read the stars. It now writes the heading as Markdown itself and escapes the name like a keyword name, so stars in the name of a test show as written while the name stays italic.
+
 ### Backticks without a partner are part of the escape
 
 `documentation-code-stays-copyable` escapes them right after the scan. The escape here doubles a backslash before punctuation, so it would break `` \` ``. This escape therefore moves into the final step, so that one pass handles all of them.
