@@ -8,6 +8,7 @@ Body-item assertions read the JSON output because the dispatch logic lives
 there; render-only flags are checked against TEXT output.
 """
 
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -640,6 +641,64 @@ def test_log_suite_info_groups_nested_suites_separately(json_result: JsonRunner,
     by_test = {t["fullName"]: t["suite"] for t in data["tests"]}
     assert by_test["Nested.Child.A.Test In A One"] == "Nested.Child.A"
     assert by_test["Nested.Child.B.Test In B One"] == "Nested.Child.B"
+
+
+def test_log_suite_info_json_lists_the_suites_above_a_test(json_result: JsonRunner, nested_output: Path) -> None:
+    data = json_result("log", "--suite-info", output_path=nested_output)
+
+    assert [s["fullName"] for s in data["suites"]] == ["Nested", "Nested.Child", "Nested.Child.A", "Nested.Child.B"]
+
+
+def _suite_and_test_headers(text: str) -> List[str]:
+    return re.findall(r"^#+ ((?:Suite|Test): .+?) \(", strip_ansi(text), re.MULTILINE)
+
+
+def test_log_suite_info_text_shows_the_suites_above_a_test(robotcode_cli: CliRunner, nested_output: Path) -> None:
+    result = robotcode_cli(["results", "log", "--suite-info", "--output", str(nested_output)])
+
+    assert _suite_and_test_headers(result.stdout) == [
+        "Suite: Nested",
+        "Suite: Nested.Child",
+        "Suite: Nested.Child.A",
+        "Test: Nested.Child.A.Test In A One",
+        "Test: Nested.Child.A.Test In A Two",
+        "Suite: Nested.Child.B",
+        "Test: Nested.Child.B.Test In B One",
+        "Test: Nested.Child.B.Test In B Two",
+    ]
+
+
+def test_log_suite_info_text_shows_the_documentation_and_metadata_of_the_top_suite(
+    robotcode_cli: CliRunner, nested_output: Path
+) -> None:
+    out = strip_ansi(robotcode_cli(["results", "log", "--suite-info", "--output", str(nested_output)]).stdout)
+
+    top_suite = out[out.index("## Suite: Nested (") : out.index("## Suite: Nested.Child (")]
+    assert "> Top-level node of a 3-level suite hierarchy" in top_suite
+    assert "- _Area:_ top level" in top_suite
+
+
+def test_log_suite_info_text_shows_only_the_suites_above_a_selected_test(
+    robotcode_cli: CliRunner, nested_output: Path
+) -> None:
+    result = robotcode_cli(
+        ["results", "log", "--suite-info", "-bl", "Nested.Child.A.Test In A One", "--output", str(nested_output)]
+    )
+
+    assert _suite_and_test_headers(result.stdout) == [
+        "Suite: Nested",
+        "Suite: Nested.Child",
+        "Suite: Nested.Child.A",
+        "Test: Nested.Child.A.Test In A One",
+    ]
+
+
+def test_log_suite_info_text_of_one_file_has_one_suite_header(
+    robotcode_cli: CliRunner, keyword_meta_output: Path
+) -> None:
+    result = robotcode_cli(["results", "log", "--suite-info", "--output", str(keyword_meta_output)])
+
+    assert [h for h in _suite_and_test_headers(result.stdout) if h.startswith("Suite:")] == ["Suite: Keyword Meta"]
 
 
 def test_log_suite_info_omits_doc_metadata_when_absent(

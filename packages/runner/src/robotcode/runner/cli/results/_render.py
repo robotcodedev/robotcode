@@ -390,14 +390,18 @@ def render_log(
         out.append("_(no tests matched)_")
         return "\n".join(out) + "\n"
 
-    suite_index = {s.full_name: s for s in (data.suites or [])}
+    suites_to_show = iter(data.suites or [])
     current_suite: Optional[str] = object()  # type: ignore[assignment]
 
     for t in data.tests:
         if with_suite_info and t.suite != current_suite:
             current_suite = t.suite
-            out.append("")
-            out.append(_render_suite_header_md(suite_index.get(t.suite or ""), full_paths=full_paths))
+            # The suites come in the order of the run, so what comes up to a test's suite are those above it.
+            for suite in suites_to_show:
+                out.append("")
+                out.append(_render_suite_header_md(suite, full_paths=full_paths))
+                if suite.full_name == t.suite:
+                    break
 
         out.append("")
         out.append(_test_header_md(t, full_paths=full_paths, show_timing=show_timing, highlight=highlight))
@@ -465,9 +469,7 @@ def render_log(
     return "\n".join(out) + "\n"
 
 
-def _render_suite_header_md(suite: Optional[LogSuite], *, full_paths: bool) -> str:
-    if suite is None:
-        return ""
+def _render_suite_header_md(suite: LogSuite, *, full_paths: bool) -> str:
     head = f"## Suite: {md_escape(suite.full_name)}"
     head += path_paren(source=suite.source, rel_source=suite.rel_source, lineno=None, full_paths=full_paths)
     if suite.status:

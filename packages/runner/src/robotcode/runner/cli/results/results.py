@@ -704,8 +704,8 @@ def show(
     show_default=True,
     help=(
         "Group tests under suite headers (name, source, Documentation, "
-        "Metadata, status). In JSON, populates `suites` and a per-test "
-        "`suite` reference. Off by default to keep the log compact."
+        "Metadata, status), with the suites above them first. In JSON, populates "
+        "`suites` and a per-test `suite` reference. Off by default to keep the log compact."
     ),
 )
 @pass_application
