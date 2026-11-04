@@ -4,6 +4,8 @@ Authoring tests, tasks, and reusable keywords with RobotCode follows a project-a
 
 It applies whenever the task is to write, create, or extend a `.robot`/`.resource` test, task, or keyword — as opposed to a one-off exploration ([repl.md](repl.md)) or running existing tests (workflow A in [workflows.md](workflows.md)). Robot Framework's own syntax is assumed knowledge (or look up keywords with `robotcode doc`).
 
+Rules for writing tests that are already defined elsewhere come first. What this file says about style is a general recommendation for what they leave open.
+
 ## Contents
 
 1. Before writing: reuse, don't reinvent
@@ -41,7 +43,7 @@ robotcode config files      # which config files are in play
 
 - Place the file under one of the configured `paths` so `discover` / `robot` see it without extra CLI arguments.
 - Mirror a sibling `.robot` / `.resource`: section order, naming, tag scheme, Suite Setup/Teardown style, how resources are split.
-- Imports resolve through the project's `python-path` / `robot.toml`, so import by name (`Library    Browser`, `Resource    ../common.resource`) — don't hardcode absolute paths.
+- A resource is found relative to the importing file or through `python-path`. Import it the way the project's files do; if they don't settle it, import by name, with the resource's folder on `python-path`, rather than with a relative path.
 
 ## 3. Prototype the uncertain parts in the REPL
 
