@@ -41,7 +41,7 @@ from robotcode.robot.utils.ast import (
     range_from_node,
     range_from_token,
 )
-from robotcode.robot.utils.markdown_docs import LinkResolver, replace_anchor_links
+from robotcode.robot.utils.markdown_docs import LinkResolver, escape_text, replace_anchor_links
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 from robotcode.robot.utils.variables import contains_variable
 
@@ -335,10 +335,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
         metadata = RobotMetadata((e.name, e.value) for e in test_case.body if isinstance(e, Metadata) and e.name)
 
         section = next((e for e in nodes if isinstance(e, TestCaseSection)), None)
-        if section is not None and section.tasks:
-            txt = f"= Task *{test_case.name}* =\n"
-        else:
-            txt = f"= Test Case *{test_case.name}* =\n"
+        kind = "Task" if section is not None and section.tasks else "Test Case"
+        txt = ""
 
         if doc is not None:
             txt += "\n== Documentation ==\n"
@@ -355,13 +353,20 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                 value = value.replace("\n", "\n  ")
                 txt += f"- {name}: {value}\n"
 
-        txt = namespace.imports_manager.replace_variables_scalar(
-            txt,
-            str(document.uri.to_path().parent),
-            namespace.get_resolvable_variables(),
-            ignore_errors=True,
-        )
-        txt = MarkDownFormatter().format(txt)
+        def replace_variables(text: str) -> str:
+            # a text that is only a variable gives its value, which can be anything
+            return str(
+                namespace.imports_manager.replace_variables_scalar(
+                    text,
+                    str(document.uri.to_path().parent),
+                    namespace.get_resolvable_variables(),
+                    ignore_errors=True,
+                )
+            )
+
+        # the heading is written as Markdown, Robot Framework's format has no emphasis in a heading
+        heading = f"## {kind} *{escape_text(replace_variables(test_case.name))}*\n"
+        txt = "\n".join(part for part in (heading, MarkDownFormatter().format(replace_variables(txt))) if part)
         if self.parent.robot_initialization_options.documentation_viewer_links:
             # a test case has no page, links to a place in its documentation would open nothing
             txt = replace_anchor_links(txt, lambda anchor: None)

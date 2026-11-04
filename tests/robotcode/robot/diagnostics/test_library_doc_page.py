@@ -347,6 +347,21 @@ class TestLinksWithinThePage:
         assert "Instances live in `vscode/<n>`, see [Alpha Kw](#alpha-kw)." in page
         assert "```text\nAlpha Kw    foo    # Returns ${True}\n```" in page
 
+    def test_plain_text_keeps_its_characters(self, tmp_path: Path) -> None:
+        page = _page(_write_library(tmp_path, "PageTextCharsLib", TEXT_CHARACTERS_LIBRARY))
+
+        assert "`${_x_}` and `${x#y}`" in page
+        assert "\\\\\\${name} and \\\\\\d+" in page
+
+    def test_links_find_headings_with_special_characters(self, tmp_path: Path) -> None:
+        page = _page(_write_library(tmp_path, "PageSpecialHeadingLib", SPECIAL_HEADING_LIBRARY))
+
+        assert " Section \\<b> here\n" in page
+        assert " Run \\<x> Now\n" in page
+        anchors = {anchor for _, _, anchor in heading_anchors(page)}
+        targets = {target[1:] for _, target in _links(page) if target.startswith("#")}
+        assert {"run--now", "section--here"} <= targets <= anchors
+
     def test_names_without_a_heading_stay_code(self, tmp_path: Path) -> None:
         lib_file = tmp_path / "PageNoHeadingLib.py"
         lib_file.write_text(
@@ -574,6 +589,34 @@ class PageCodeLib:
 
     def alpha_kw(self):
         """Does nothing."""
+'''
+
+TEXT_CHARACTERS_LIBRARY = r'''
+class PageTextCharsLib:
+    r"""Variables ${_x_} and ${x#y}.
+
+    Escaped \${name} and \\d+ text.
+    """
+
+    def alpha_kw(self):
+        """Does nothing."""
+'''
+
+SPECIAL_HEADING_LIBRARY = '''\
+from robot.api.deco import keyword
+
+
+class PageSpecialHeadingLib:
+    """Intro, see `Run <x> Now` and `Section <b> here`.
+
+    = Section <b> here =
+
+    Text.
+    """
+
+    @keyword("Run <x> Now")
+    def run(self):
+        """Runs."""
 '''
 
 TEXT_LIBRARY = '''\

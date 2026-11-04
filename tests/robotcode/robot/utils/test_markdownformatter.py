@@ -205,11 +205,11 @@ def test_double_backticks_without_a_partner_leave_the_code_after_them() -> None:
 
 
 def test_escaped_backtick_starts_no_code() -> None:
-    assert _format("\\`<b>` is escaped") == "\\`\\<b>\\` is escaped\n\n"
+    assert _format("\\`<b>` is escaped") == "\\\\\\`\\<b>\\` is escaped\n\n"
 
 
 def test_escaped_backslash_before_a_backtick_leaves_the_code() -> None:
-    assert _format("C:\\\\`<a>` y") == "C:\\\\`<a>` y\n\n"
+    assert _format("C:\\\\`<a>` y") == "C:\\\\\\\\`<a>` y\n\n"
 
 
 def test_link_without_text_in_code_shows_its_target() -> None:
@@ -225,3 +225,90 @@ def test_placeholder_characters_in_the_documentation_stay() -> None:
     assert _format("\ue0005\ue001 and ``x``") == "\ue0005\ue001 and `x`\n\n"
     assert _format("\ue0000\ue001 and `a`") == "\ue0000\ue001 and `a`\n\n"
     assert _format("``\ue000`` and ``x``") == "`\ue000` and `x`\n\n"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("\\\\d+", "\\\\\\d+"),
+        ("C:\\\\temp", "C:\\\\\\temp"),
+        ("\\${name}", "\\\\\\${name}"),
+        ("\\\\${name}", "\\\\\\\\${name}"),
+        ("*HTML*Test", "\\*HTML\\*Test"),
+        (".*foo.*", ".\\*foo.\\*"),
+        ("2*3*4", "2\\*3\\*4"),
+        ("*args", "\\*args"),
+        ("__init__", "\\_\\_init\\_\\_"),
+        ("_private", "\\_private"),
+        ("a &lt; b", "a \\&lt; b"),
+        ("[text](http://example.com/x)", "[text\\](http://example.com/x)"),
+        ("~~text~~", "\\~\\~text\\~\\~"),
+        ("a ` b", "a \\` b"),
+    ],
+)
+def test_plain_text_keeps_its_characters(text: str, expected: str) -> None:
+    assert _format(text) == f"{expected}\n\n"
+    assert _format(f"- {text}") == f"- {expected}\n\n"
+    assert _format(f"| x | {text} |").splitlines()[2] == f"| x | {expected} |"
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["snake_case_name", "${my_var}", "${list}[0]", "2 * 3", "R&D", "&{dict}", "C:\\temp", "a~b", "a > b", "a - b"],
+)
+def test_backslashes_only_where_markdown_needs_them(text: str) -> None:
+    assert _format(text) == f"{text}\n\n"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("> quoted", "\\> quoted"),
+        ("+ item", "\\+ item"),
+        ("* item", "\\* item"),
+        ("1. first", "1\\. first"),
+        ("1) first", "1\\) first"),
+        ("-", "\\-"),
+        ("[x]: http://example.com/x", "\\[x]: [http://example.com/x](http://example.com/x)"),
+    ],
+)
+def test_paragraph_that_starts_like_a_markdown_block_stays_a_paragraph(text: str, expected: str) -> None:
+    assert _format(text) == f"{expected}\n\n"
+
+
+def test_robot_framework_markup_stays() -> None:
+    assert _format("*bold* and _italic_ and [http://example.com/x|the docs]") == (
+        "**bold** and *italic* and [the docs](http://example.com/x)\n\n"
+    )
+    assert _format("*a_b* and *2*3*") == "**a_b** and **2\\*3**\n\n"
+
+
+def test_backslash_before_markup_stays_text() -> None:
+    assert _format("\\[http://example.com/x|the docs]") == "\\\\[the docs](http://example.com/x)\n\n"
+
+
+def test_only_markdown_comes_out() -> None:
+    text = "*bold* _italic_ ``<code>`` `name` [http://example.com/x|link] a < b\n\n| =A= |\n| ``c`` |\n\n| `Kw`    x"
+
+    assert _format(text) == (
+        "**bold** *italic* `<code>` `name` [link](http://example.com/x) a \\< b\n\n\n"
+        "| A |\n| :--- |\n| `c` |\n\n\n```text\nKw    x\n```\n"
+    )
+
+
+def test_marker_characters_in_the_documentation_stay() -> None:
+    assert _format("\ue002a\ue003 *b*") == "\ue002a\ue003 **b**\n\n"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("= Section <b> here =", "## Section \\<b> here\n"),
+        ("= *not bold* =", "## \\*not bold\\*\n"),
+        ("= __init__ =", "## \\_\\_init\\_\\_\n"),
+        ("= snake_case =", "## snake_case\n"),
+        ("= `<x>` and <y> =", "## `<x>` and \\<y>\n"),
+    ],
+)
+def test_heading_shows_its_text(text: str, expected: str) -> None:
+    assert _format(text) == expected

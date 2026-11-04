@@ -240,12 +240,12 @@ _SIDEBAR_HINTS = " type: filter · ↑/↓: select · wheel: scroll · Enter or 
 # The rendered-line lookup runs a heading's title through `_strip_md_emphasis`
 # because `rich` consumes those markers when it paints.
 
-_MD_EMPHASIS_RE = re.compile(r"[*_`]")
+_MD_EMPHASIS_RE = re.compile(r"\\([!-/:-@\[-`{-~])|[*_`]")
 
 
 def _strip_md_emphasis(text: str) -> str:
-    """Drop `*`, `_`, `` ` `` markers — `rich` consumes them in rendering."""
-    return _MD_EMPHASIS_RE.sub("", text)
+    """Drop `*`, `_`, `` ` `` markers and the backslash of escapes — `rich` consumes them in rendering."""
+    return _MD_EMPHASIS_RE.sub(lambda m: m.group(1) or "", text)
 
 
 def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, int]:

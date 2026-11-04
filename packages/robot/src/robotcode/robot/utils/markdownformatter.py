@@ -5,7 +5,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Final, Iterator, List, Optional, Tuple
 
-from .markdown_docs import code_span, escape_link_text
+from .markdown_docs import code_span, escape_link_text, escape_text
 
 # Gets a name in single backticks of documentation in Robot Framework's format and
 # returns the target of a link to it, or `None` if it stays inline code.
@@ -19,10 +19,15 @@ _RE_CODE_SPAN: Final["re.Pattern[str]"] = re.compile(
 | (?<!`) (`+) (?!`)      # a run of backticks (group 1)
   ([^\ue000]+?)          # anything but code that is already held (group 2)
   (?<!`) \1 (?!`)        # up to the next run of the same length
-| `+                     # a run of backticks without a partner
 """,
     re.VERBOSE,
 )
+# the documentation's own characters that the conversion uses
+_RE_OWN_MARKERS: Final["re.Pattern[str]"] = re.compile("[\ue000\ue002\ue003]")
+# what is no text: held code (group 1) and the syntax the formatter writes itself (group 2)
+_RE_NOT_TEXT: Final["re.Pattern[str]"] = re.compile("(\ue000\\d+\ue001)|\ue002(.*?)\ue003")
+# what starts a Markdown block: a quote, a list or a reference definition (group 1), a numbered list (groups 2 and 3)
+_RE_BLOCK_START: Final["re.Pattern[str]"] = re.compile(r"^(?:(>|[+-](?=\s|$)|\[(?=[^\]]*\]:))|(\d{1,9})([.)])(?=\s|$))")
 _RE_THREE_BACKTICKS: Final["re.Pattern[str]"] = re.compile("(?<!`)```(?!`)")
 _RE_LONG_BACKTICKS: Final["re.Pattern[str]"] = re.compile("`{3,}")
 
@@ -123,7 +128,7 @@ class HeaderFormatter(SingleLineFormatter):
         if m is not None:
             level, text = m.groups()
 
-            return "%s %s\n" % ("#" * (len(level) + 1), text)
+            return "%s %s\n" % ("#" * (len(level) + 1), _format_heading(text))
         return ""
 
 
@@ -155,15 +160,14 @@ class LinkFormatter:
         return pre + self._get_link(url)
 
     def _get_image(self, src: str, title: Optional[str] = None) -> str:
-        return f"![{title or src}]({self._target(src)})"
+        return _syntax(f"![{escape_text(title or src)}]({self._target(src)})")
 
     def _get_link(self, href: str, content: Optional[str] = None) -> str:
-        return f"[{content or href}]({self._target(href)})"
+        return _syntax("[") + (content or href) + _syntax(f"]({self._target(href)})")
 
     def _target(self, target: str) -> str:
-        # `#` is escaped in the whole line before links are formatted, a link target needs it as it is
-        target = target.replace("\\#", "#")
-        # Markdown takes a target with spaces only in angle brackets; `<` is already escaped in the whole line
+        target = target.replace("<", "\\<")
+        # Markdown takes a target with spaces only in angle brackets
         if " " in target:
             return "<" + target.replace(">", "\\>") + ">"
         return target
@@ -184,7 +188,7 @@ class LinkFormatter:
             content = self._get_image(content, link)
         elif self._is_image(link):
             return self._get_image(link, content)
-        if link.startswith("\\#"):
+        if link.startswith("#"):
             link = link.lower()
         return self._get_link(link, content)
 
@@ -212,6 +216,46 @@ def _hold(held: List[str], text: str) -> str:
     """Puts text behind a placeholder, so that the other formatting cannot change it."""
     held.append(text)
     return f"\ue000{len(held) - 1}\ue001"
+
+
+def _hold_own_markers(line: str, held: List[str]) -> str:
+    return _RE_OWN_MARKERS.sub(lambda m: _hold(held, m.group(0)), line)
+
+
+def _restore(line: str, held: List[str]) -> str:
+    # backwards, the documentation's own characters can be part of held code
+    for index, text in reversed(list(enumerate(held))):
+        line = line.replace(f"\ue000{index}\ue001", text)
+    return line
+
+
+def _syntax(text: str) -> str:
+    """Marks what the formatter writes itself, the escape of the text leaves it alone."""
+    return f"\ue002{text}\ue003"
+
+
+def _escape_line(line: str) -> str:
+    result: List[str] = []
+    position = 0
+    for match in _RE_NOT_TEXT.finditer(line):
+        result.append(escape_text(line[position : match.start()]))
+        result.append(match.group(1) or match.group(2))
+        position = match.end()
+    result.append(escape_text(line[position:]))
+    return "".join(result)
+
+
+def _escape_block_start(match: re.Match[str]) -> str:
+    return f"\\{match.group(1)}" if match.group(1) else f"{match.group(2)}\\{match.group(3)}"
+
+
+def _format_heading(text: str) -> str:
+    """Robot Framework formats nothing in a heading, what Markdown would read as markup is text there."""
+    held: List[str] = []
+    text = _hold_own_markers(text, held)
+    if "`" in text:
+        text = _RE_CODE_SPAN.sub(lambda m: m.group(0) if m.group(1) is None else _hold(held, m.group(0)), text)
+    return _restore(_escape_line(text), held)
 
 
 class LineFormatter:
@@ -257,8 +301,6 @@ _                          # end of italic
 
         self._name_linker = name_linker
         self._formatters: List[Tuple[str, Callable[[str], str]]] = [
-            ("<", self._quote_lower_then),
-            ("#", self._quote_hash),
             ("*", self._format_bold),
             ("_", self._format_italic),
             ("", LinkFormatter().format_link),
@@ -266,9 +308,7 @@ _                          # end of italic
 
     def format(self, line: str) -> str:
         held: List[str] = []
-        if "\ue000" in line:
-            # the documentation's own character must not read as a placeholder
-            line = line.replace("\ue000", _hold(held, "\ue000"))
+        line = _hold_own_markers(line, held)
         if "`" in line:
             # what Robot Framework reads as code decides first, then what else Markdown reads as code
             line = self._code.sub(lambda m: m.group(1) + _hold(held, code_span(_code_text(m.group(3)))), line)
@@ -276,16 +316,14 @@ _                          # end of italic
         for marker, formatter in self._formatters:
             if marker in line:
                 line = formatter(line)
-        # backwards, the documentation's own character can be part of held code
-        for index, text in reversed(list(enumerate(held))):
-            line = line.replace(f"\ue000{index}\ue001", text)
-        return line
+        # last, so that all that is left of the line is text
+        line = _RE_BLOCK_START.sub(_escape_block_start, _escape_line(line))
+        return _restore(line, held)
 
     def _hold_span(self, match: re.Match[str], held: List[str]) -> str:
         text, fence, span = match.group(0, 1, 2)
         if fence is None:
-            # Markdown must not pair a backtick left over with the code written here
-            return text if text.startswith("\\") else text.replace("`", "\\`")
+            return text
         # for Robot Framework this is no code, but Markdown shows it as code
         if len(fence) > 1:
             return _hold(held, text)
@@ -294,17 +332,11 @@ _                          # end of italic
             return _hold(held, f"[{escape_link_text(span)}]({target})")
         return _hold(held, code_span(_code_text(span)))
 
-    def _quote_lower_then(self, line: str) -> str:
-        return line.replace("<", "\\<")
-
-    def _quote_hash(self, line: str) -> str:
-        return line.replace("#", "\\#")
-
     def _format_bold(self, line: str) -> str:
-        return self._bold.sub("\\1**\\3**", line)
+        return self._bold.sub(f"\\1{_syntax('**')}\\3{_syntax('**')}", line)
 
     def _format_italic(self, line: str) -> str:
-        return self._italic.sub("\\1*\\3*", line)
+        return self._italic.sub(f"\\1{_syntax('*')}\\3{_syntax('*')}", line)
 
 
 _line_formatter = LineFormatter()

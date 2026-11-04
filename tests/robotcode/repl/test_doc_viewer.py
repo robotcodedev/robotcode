@@ -340,6 +340,14 @@ def test_build_anchor_to_line_map_skips_a_code_line_that_reads_like_the_heading(
     assert mapping == {"start-coverage": 0, "stop-coverage": 4}
 
 
+def test_build_anchor_to_line_map_finds_a_heading_with_escapes() -> None:
+    from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
+
+    md = "### Run \\<x> \\*Now\n\nRuns."
+    rendered = "Run <x> *Now\n\nRuns."
+    assert list(_build_anchor_to_line_map(md, rendered).values()) == [0]
+
+
 def test_build_anchor_to_line_map_finds_a_heading_with_a_code_span() -> None:
     from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
 

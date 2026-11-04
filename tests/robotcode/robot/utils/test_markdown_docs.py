@@ -561,3 +561,11 @@ def test_render_toc_takes_the_two_highest_levels_of_the_text() -> None:
     assert render_toc(text, extra_entries=["Keywords"]) == (
         "- [First](#first)\n  - [Nested one](#nested-one)\n- [Second](#second)\n- [Keywords](#keywords)"
     )
+
+
+def test_code_span_variables_drops_markdown_escapes_in_code() -> None:
+    assert code_span_variables("See ${x\\#y} and ${\\_z\\_}.") == "See `${x#y}` and `${_z_}`."
+
+
+def test_code_span_variables_leaves_an_escaped_variable() -> None:
+    assert code_span_variables("See \\\\\\${name}.") == "See \\\\\\${name}."

@@ -22,6 +22,7 @@ __all__ = [
     "code_span",
     "code_span_variables",
     "escape_link_text",
+    "escape_text",
     "extract_reference_definitions",
     "heading_anchors",
     "iter_headings",
@@ -35,6 +36,7 @@ __all__ = [
     "section_anchors",
     "shift_headings",
     "slugify",
+    "unescape_text",
     "unique_reference_labels",
 ]
 
@@ -146,6 +148,36 @@ def escape_link_text(text: str) -> str:
     """Escape what would end or change the text of a Markdown link. Underscores stay,
     variables such as `${a_b}` become inline code later and would show the escape."""
     return _RE_LINK_TEXT_SPECIAL.sub(r"\\\1", text)
+
+
+_RE_TEXT_SPECIAL = re.compile(
+    r"""
+  \\(?=[!-/:-@\[-`{-~]|\Z)     # a backslash before ASCII punctuation or at the end
+| [<\#`]                       # always
+| (?<!\s)\* | \*(?!\s)         # a star, unless it has space on both sides
+| (?<![^\W_])_ | _(?![^\W_])   # an underscore, unless it is inside a word
+| &(?=\#?\w+;)                 # what reads as an entity
+| \](?=\()                     # what reads as an inline link
+| ~(?=~) | (?<=~)~             # what reads as strikethrough
+""",
+    re.VERBOSE,
+)
+_RE_ESCAPED_VARIABLE = re.compile(r"(?<!\\)((?:\\\\)+)\$")
+_RE_MARKDOWN_ESCAPE = re.compile(r"\\([!-/:-@\[-`{-~])")
+
+
+def escape_text(text: str) -> str:
+    """Escape what Markdown would read as markup in text that is meant as text, only where
+    it would change the text: `snake_case`, `${list}[0]` and `2 * 3` stay as they are.
+
+    An odd number of backslashes before `$` is an escaped variable and stays one."""
+    text = _RE_TEXT_SPECIAL.sub(r"\\\g<0>", text)
+    return _RE_ESCAPED_VARIABLE.sub(lambda m: m.group(1) + ("\\$" if len(m.group(1)) % 4 else "$"), text)
+
+
+def unescape_text(text: str) -> str:
+    """The text that Markdown shows for `text`, without its escapes."""
+    return _RE_MARKDOWN_ESCAPE.sub(r"\1", text)
 
 
 def anchor_link_resolver(kind: str, name: str) -> Optional[str]:
@@ -555,7 +587,8 @@ def _code_span_variables_in(text: str) -> str:
         # variables that follow each other directly share one code span: `${TEMPDIR}${/}`
         while (following := search_variable(text[end:], "$", ignore_errors=True)).start == 0:
             end += following.end
-        result.append(text[: match.start] + code_span(text[match.start : end]))
+        # inside code an escape would show
+        result.append(text[: match.start] + code_span(unescape_text(text[match.start : end])))
         text = text[end:]
     result.append(text)
     return "".join(result)

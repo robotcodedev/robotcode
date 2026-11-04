@@ -90,6 +90,7 @@ from ..utils.markdown_docs import (
     code_span,
     code_span_variables,
     escape_link_text,
+    escape_text,
     extract_reference_definitions,
     heading_anchors,
     iter_headings,
@@ -99,6 +100,7 @@ from ..utils.markdown_docs import (
     section_anchors,
     shift_headings,
     slugify,
+    unescape_text,
     unique_reference_labels,
 )
 from ..utils.markdownformatter import MarkDownFormatter, NameLinker
@@ -241,18 +243,17 @@ def _page_heading_shift(doc_format: str, levels: int) -> Optional[Callable[[str]
 
 
 # A run of `#` after a space at the end of a keyword name would close its ATX heading: `### Use C #` shows "Use C".
-_RE_CLOSING_HASHES = re.compile(r"(\s)(#+)$")
-_RE_ESCAPED_CLOSING_HASHES = re.compile(r"(\s)\\(#+)$")
 
 
 def _heading_name(name: str) -> str:
-    """A keyword name as the title of its heading: a closing run of `#` escaped."""
-    return _RE_CLOSING_HASHES.sub(r"\1\\\2", name)
+    """A keyword name as the title of its heading: what Markdown would read as markup escaped,
+    also a closing run of `#`."""
+    return escape_text(name)
 
 
 def _heading_title_name(title: str) -> str:
     """The keyword name of a heading title that `_heading_name` wrote."""
-    return _RE_ESCAPED_CLOSING_HASHES.sub(r"\1\2", title)
+    return unescape_text(title)
 
 
 def _match_heading_anchors(headings: List[Tuple[str, str]], titles: List[Set[str]]) -> List[str]:
@@ -1348,7 +1349,8 @@ class KeywordDoc(SourceEntity):
         if add_type:
             result = (
                 f"#{'#' * header_level} "
-                f"{(self.libtype or 'Library').capitalize() if self.is_initializer else 'Keyword'} *{self.name}*\n"
+                f"{(self.libtype or 'Library').capitalize() if self.is_initializer else 'Keyword'} "
+                f"*{_heading_name(self.name)}*\n"
             )
         else:
             if not self.is_initializer:
@@ -1993,9 +1995,9 @@ class LibraryDoc:
         for level, title, anchor in heading_anchors(page):
             if level == header_level + 2:
                 in_introduction = title == "Introduction"
-                section_anchors_by_title.setdefault(normalize_reference(title), anchor)
+                section_anchors_by_title.setdefault(normalize_reference(_heading_title_name(title)), anchor)
             elif level > header_level + 2 and in_introduction:
-                introduction.setdefault(normalize_reference(title), anchor)
+                introduction.setdefault(normalize_reference(_heading_title_name(title)), anchor)
         section_anchors_by_title.update(introduction)
         _, type_anchors = self.get_page_anchors(page, header_level)
 
