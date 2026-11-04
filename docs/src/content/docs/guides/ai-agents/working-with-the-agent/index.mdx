@@ -10,7 +10,7 @@ import AreaOverview from "../../../../../components/AreaOverview.astro";
 
 This tutorial shows how to work with an AI agent on a Robot Framework project, step by step. The steps follow the order in which you get to know a project and work on it: first find out what it contains, then write and run tests, find out why a test failed and debug it, check your changes before a push, and set up the configuration for CI.
 
-Each step explains what you learn, how to ask the agent, what the agent does and why, and what to watch out for. You work with your own project and with the agent you set up on [Setting Up](/guides/ai-agents/setting-up/). What happens behind a request is on [How the Skill Works](/guides/ai-agents/how-the-skill-works/).
+Each step explains what you learn, how to ask the agent, what the agent does and why, and what to watch out for. You work with your own project or the [example project](#the-example-project), and with the agent you set up on [Setting Up](/guides/ai-agents/setting-up/). What happens behind a request is on [How the Skill Works](/guides/ai-agents/how-the-skill-works/).
 
 ## The recorded sessions
 
@@ -21,6 +21,10 @@ The sessions were recorded on 2026-11-03 with Claude Code 2.1.316, the model Cla
 ## The example project
 
 The sessions run in a small example project: a web shop whose tests use an in-memory Python library, `libraries/ShopLibrary.py`, through the keywords in `resources/`. The Browser library is installed for the shop's web page. The suites cover logging in, the cart, orders and the product search. The tests carry their requirement (`[Metadata]    Requirement    SHOP-…`) and, for some, their risk. `robot.toml` defines the profiles `dev` (Firefox) and `ci` (the staging shop). The instruction file the agent reads is on [Briefing the Agent](/guides/ai-agents/briefing/).
+
+Its code is in [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), in the state the sessions start from, so you can try the prompts there. Its README says how to set it up. Some things in it are wrong on purpose, because the sessions find them. Two things differ from the sessions: the tests import their resources by name through `python-path` instead of with relative paths, and the CI workflow installs the project with `uv` instead of `pip` and only starts by hand, because a test fails on purpose.
+
+{/* TODO: with the next release, raise robotcode to the released version in pyproject.toml of robotcodedev/webshop-ai-example and refresh its uv.lock. */}
 
 ## The steps
 
