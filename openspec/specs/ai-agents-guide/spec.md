@@ -159,3 +159,29 @@ Troubleshooting SHALL describe, by symptom, what helps when the agent answers wi
 - **THEN** the page says that agents choose from a list of skills of limited size, and that descriptions in it can be shortened or dropped when it overflows
 - **AND** the page says what helps: naming the skill in the request, removing or turning off skills that aren't needed and, where the agent allows it, raising the limit
 - **AND** the page describes this for agents in general, with Claude Code only as an example
+
+### Requirement: The example project is public
+
+The example project of the sessions SHALL be public in the repository `robotcodedev/webshop-ai-example`, in the state the sessions start from, and the overview of Working with the Agent and Briefing the Agent SHALL link to it.
+
+#### Scenario: Finding the code
+- **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/` or `/guides/ai-agents/briefing/`
+- **THEN** the page links to `robotcodedev/webshop-ai-example`
+
+#### Scenario: Differences from the recordings
+- **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
+- **THEN** the page says that some things in the example project are wrong on purpose, and that its tests import their resources by name and its CI workflow installs the project with `uv` and only starts by hand there, unlike in the sessions
+
+#### Scenario: Running it from a clean clone
+- **WHEN** a reader clones the repository and follows its README
+- **THEN** `robotcode robot` runs 13 tests, of which only `Login Works` fails
+- **AND** `robotcode analyze code` reports the unknown keyword `Submit Ordr`
+- **AND** `robotcode session` is available
+
+#### Scenario: The README doesn't give the answers
+- **WHEN** an agent working in the repository reads its README
+- **THEN** the README says that some things are wrong on purpose, without naming them
+
+#### Scenario: A push runs no tests
+- **WHEN** someone pushes to the repository
+- **THEN** no workflow starts, and the workflow in `.github/workflows/tests.yml` can be started by hand
