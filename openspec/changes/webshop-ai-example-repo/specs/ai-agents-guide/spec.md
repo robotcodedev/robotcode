@@ -12,7 +12,7 @@ The example project of the sessions SHALL be public in the repository `robotcode
 
 #### Scenario: Differences from the recordings
 - **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
-- **THEN** the page says that some things in the example project are wrong on purpose and that its CI workflow only starts by hand there, unlike in the sessions
+- **THEN** the page says that some things in the example project are wrong on purpose, and that its tests import their resources by name and its CI workflow installs the project with `uv` and only starts by hand there, unlike in the sessions
 
 #### Scenario: Running it from a clean clone
 - **WHEN** a reader clones the repository and follows its README

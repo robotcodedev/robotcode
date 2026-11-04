@@ -38,7 +38,8 @@ The content is what `restore` builds, plus `data/restock.csv`, which `record.sh`
 | --- | --- |
 | `pyproject.toml` | no `[tool.uv.sources]`; `robotcode[all]>=2.9.0.dev0`; name `webshop-ai-example` and a description that fits (no session shows the old name) |
 | `uv.lock` | new, resolved from PyPI |
-| `.github/workflows/tests.yml` | `on: workflow_dispatch` instead of `on: push` |
+| `.github/workflows/tests.yml` | `on: workflow_dispatch` instead of `on: push`; `setup-uv` and `uv sync --locked` instead of `setup-python` and `pip install` |
+| `robot.toml`, `tests/*.robot` | `resources` on the `python-path`, and resources imported by name instead of with relative paths |
 | `README.md` | the additions below |
 
 The licence is Apache-2.0, like robotcode and `rbcn25-mastering-robotcode`. That is an assumption of this plan, not a decision of the maintainer.
@@ -50,6 +51,22 @@ The maintainer chose to publish now with `robotcode[all]>=2.9.0.dev0` rather tha
 ### The workflow only starts by hand
 
 `Login Works` fails on purpose, so the workflow would be red on every push. The maintainer chose `on: workflow_dispatch`, with Actions left on, over turning Actions off and over leaving it red. The sessions keep showing `on: push`, and one sentence on the guide says so.
+
+### The workflow installs with `uv`
+
+The workflow first came unchanged from the playground, with `setup-python` and `pip install robotframework robotcode[runner]`. The maintainer questioned that. `pip` ignores `uv.lock`, so it would install release 2.8.0 without `robotcode session` and without the Browser library, while `AGENTS.md` says the dependencies are managed with `uv`.
+
+The workflow now follows uv's guide on GitHub Actions: `astral-sh/setup-uv` and `actions/checkout` pinned to a commit with the version as a comment, a fixed uv version, `uv sync --locked`, then `uv run`. The action's `python-version` input keeps Python 3.13, because the repository has no `.python-version` for `uv python install` to read. The steps ran on a clean clone with uv 0.13.7 and `UV_PYTHON=3.13`. The workflow itself hasn't run on GitHub, because it would fail on purpose.
+
+### Resources are imported by name
+
+The tests first came from the playground with relative imports such as `../resources/shop.resource`. The maintainer doesn't want those, because the resources can be found through the `python-path`. `robot.toml` now has `python-path = ["libraries", "resources"]`, as the guide on `robot.toml` already shows, and the six imports use the file's name. A clean clone gives the same results, and `robotcode doc keyword orders.resource` works too.
+
+The evals' fixture keeps its relative imports: it isn't part of what readers get as an example.
+
+### The skill's advice on style gives way
+
+`references/authoring.md` said "Match the project's conventions" and then prescribed one, with `Resource    ../common.resource` as an import by name. The maintainer asked whether the skill should set conventions at all, since a project can already define them, and that an instruction file like `AGENTS.md` is only one of the places they can be. So the file now says in general terms that rules defined elsewhere come first and that what it says about style is a general recommendation. It says so once, near the top, so that it also covers the other advice, such as tags and extracting keywords. The line on imports states how a resource is found, says to do as the project's files do, and recommends importing by name for what they don't settle.
 
 ### The README
 
@@ -85,7 +102,7 @@ The commands go in `sh` code blocks in the real file.
 
 `working-with-the-agent/index.mdx`, at the end of "The example project":
 
-> Its code is in [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), in the state the sessions start from, so you can try the prompts there. Its README says how to set it up. Some things in it are wrong on purpose, because the sessions find them. Its CI workflow only starts by hand, because a test fails on purpose; the sessions show it running on every push.
+> Its code is in [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), in the state the sessions start from, so you can try the prompts there. Its README says how to set it up. Some things in it are wrong on purpose, because the sessions find them. Two things differ from the sessions: the tests import their resources by name through `python-path` instead of with relative paths, and the CI workflow installs the project with `uv` instead of `pip` and only starts by hand, because a test fails on purpose.
 
 The same page's "You work with your own project and with the agent you set up" becomes "You work with your own project or the [example project](#the-example-project), and with the agent you set up". `ai-agents/index.mdx`'s "You work through them with your own project and the agent you use" becomes "You work through them with your own project or the example project, and with the agent you use". `briefing.md`'s "in a small web shop project with this `AGENTS.md`" becomes "in a small web shop project, [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), with this `AGENTS.md`".
 
@@ -101,5 +118,6 @@ The repository stays free of local paths, and it needs nothing for our own work:
 
 - [The repository and `playground/robotcode-demo` can drift apart] → Changes to the example go into both by hand. The example rarely changes, and a new recording shows any difference.
 - [A later recording would show `on: workflow_dispatch`, or the new README, only if the playground gets them too] → `record.sh` stays as it is for now. The sessions show the state they were recorded in.
+- [The sessions show the relative imports in 3 places, `python-path = ["libraries"]` in 5 and `pip` until they are recorded anew] → The guide names both differences. The maintainer chose to record the sessions anew with the text pass; `playground/robotcode-demo` needs the same changes first, because `record.sh` reads it.
 - [`uv.lock` pins a dev build until the release] → PyPI has kept the dev builds so far, and none is yanked. The `TODO:` replaces it with the release.
 - [Publishing cannot be fully undone] → The repository is created only after the maintainer has seen the files.
