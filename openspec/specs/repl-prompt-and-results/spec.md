@@ -63,7 +63,7 @@ After each statement it reads from its input, `robotcode repl` SHALL print the s
 
 ### Requirement: No result for None or an assignment
 
-Neither `robotcode repl` nor the debugger prompt `(rdb)` SHALL print a result line for a statement whose result is `None` or that assigns a variable; an assignment shows only the message that sets the variable.
+Neither `robotcode repl` nor the debugger prompt `(rdb)` SHALL print a result line for a statement whose result is `None` or that assigns a variable; an assignment shows only the message that sets the variable. An input that is exactly one variable is not such a statement, see `variable-evaluation`.
 
 #### Scenario: Log in the REPL
 - **WHEN** `Log    hello` is entered at the `>>>` prompt
