@@ -23,6 +23,7 @@ from robot.variables import evaluate_expression
 
 from robotcode.core.utils.path import normalized_path
 from robotcode.robot.utils import RF_VERSION
+from robotcode.robot.utils.variables import is_variable
 
 from ..base_interpreter import result_definition_names, result_qualified_name
 from .types import (
@@ -91,9 +92,7 @@ _BREAKPOINT_MARKER = "robotcode.repl.Repl.Breakpoint"
 # Sentinel "stop at any depth" marker for step-in.
 _ANY_DEPTH = 1 << 30
 
-# Matches a SINGLE bare variable token (`${x}`, `@{x}`, `&{x}`, optional `[item]`).
-# `[^{}]*` (not `.*`) keeps a multi-variable expression like `${a} + ${b}` out —
-# it isn't one variable, so it falls through to expression evaluation.
+# Matches the decorated name of a variable to set (`${x}`, `@{x}`, `&{x}`, optional `[item]`).
 _IS_VARIABLE_RE = re.compile(r"^[$@&]\{[^{}]*\}(\[[^\]]*\])?$")
 
 # Keeps value reprs in the variable view bounded, so a giant list/dict/string
@@ -402,14 +401,14 @@ class DebugController:
     def evaluate_expression(self, frame: StackFrame, expression: str) -> Any:
         """Evaluate `expression` in `frame`'s scope and return the value.
 
-        A bare variable reference (``${x}``, ``@{x}``, ``${x}[0]``) returns the
-        raw value with its type preserved (`replace_scalar` resolves item access
-        too); anything else is variable-substituted then evaluated as a Robot
-        expression (so ``${x} + 1`` works).
+        One variable as Robot Framework defines it (``${x}``, ``@{x}``, ``${x}[0]``,
+        ``${${x}}``, ``${{1 + 1}}``) returns its value with the type preserved;
+        anything else is variable-substituted then evaluated as a Robot expression
+        (so ``${x} + 1`` works).
         """
         store = self._frame_store(frame)
         expression = expression.strip()
-        if _IS_VARIABLE_RE.match(expression):
+        if is_variable(expression):
             return store.replace_scalar(expression)
         return _evaluate_value(store.replace_string(expression), store)
 

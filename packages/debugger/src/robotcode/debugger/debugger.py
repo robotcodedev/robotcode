@@ -45,6 +45,7 @@ from robot.variables import evaluate_expression
 from robotcode.core.event import event
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import RF_VERSION
+from robotcode.robot.utils.variables import is_variable
 
 from .dap_types import (
     Breakpoint,
@@ -1982,8 +1983,8 @@ class Debugger:
         """Evaluate expression in expression mode."""
         if expression.startswith("! "):
             return self._evaluate_keyword_expression(expression, evaluate_context)
-        if self.IS_VARIABLE_RE.match(expression.strip()):
-            return self._evaluate_variable_expression(expression, vars, context)
+        if is_variable(expression.strip()):
+            return self._evaluate_variable_expression(expression.strip(), vars, context)
         return internal_evaluate_expression(vars.replace_string(expression), vars)
 
     def _evaluate_keyword_expression(self, expression: str, evaluate_context: Any) -> Any:
@@ -2043,9 +2044,8 @@ class Debugger:
 
     def _evaluate_repl_mode(self, expression: str, vars: Any, evaluate_context: Any) -> Any:
         """Evaluate expression in REPL mode."""
-        parts = self.SPLIT_LINE.split(expression.strip())
-        if parts and len(parts) == 1 and self.IS_VARIABLE_RE.match(parts[0].strip()):
-            return vars.replace_scalar(parts[0].strip())
+        if is_variable(expression.strip()):
+            return vars.replace_scalar(expression.strip())
         return self._evaluate_test_body_expression(expression, evaluate_context)
 
     def _evaluate_test_body_expression(self, expression: str, evaluate_context: Any) -> Any:

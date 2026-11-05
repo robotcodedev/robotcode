@@ -371,6 +371,50 @@ def test_print_evaluates_variable_and_expression() -> None:
     assert "${a} + ${b} = 5" in text  # expression → evaluated (int)
 
 
+ONE_VARIABLE_SUITE = """\
+*** Test Cases ***
+T
+    ${inner}=    Set Variable    x
+    ${x}=    Set Variable    hello
+    Log    done
+"""
+
+
+@pytest.mark.parametrize(
+    ("expression", "value"),
+    [
+        ("${${inner}}", "hello"),
+        ('${{"ich" + "bin" * 5}}', "ichbinbinbinbinbin"),
+    ],
+)
+def test_one_variable_is_not_evaluated_again(expression: str, value: str) -> None:
+    messages = _run_debug(
+        ONE_VARIABLE_SUITE,
+        [".up", f".print {expression}", f".pprint {expression}", f".whatis {expression}", ".continue"],
+        keyword_breakpoints=["Log"],
+    )
+    assert f"{expression} = {value!r}" in messages
+    assert repr(value) in messages
+    assert f"{expression}: str" in messages
+
+
+def test_display_of_one_variable_is_not_evaluated_again() -> None:
+    messages = _run_debug(
+        ONE_VARIABLE_SUITE, [".up", ".display ${${inner}}", ".display", ".continue"], keyword_breakpoints=["Log"]
+    )
+    assert "${${inner}} = 'hello'" in messages
+
+
+def test_condition_of_one_variable_is_not_evaluated_again() -> None:
+    def prepare(interp: ConsoleInterpreter) -> None:
+        interp._controller.add_keyword_breakpoint("Log", condition="${${inner}}")  # type: ignore[union-attr]
+
+    messages = _run_debug(ONE_VARIABLE_SUITE, [".continue"], prepare=prepare)
+    stops = _stop_lines(messages)
+    assert len(stops) == 1
+    assert "condition error" not in stops[0]
+
+
 def test_set_changes_variable() -> None:
     messages = _run_debug(
         VAR_SUITE, [".up", ".set ${a} world", ".print ${a}", ".continue"], keyword_breakpoints=["Log"]
