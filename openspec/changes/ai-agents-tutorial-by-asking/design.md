@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md` for the motivation. The pattern for the pages is the probe of step 4, `playground/tutorial-probe/finding-out-why-a-test-failed.md`, with a preview on the temporary page `working-with-the-agent/zz-probe.md`. Its measurements are in `playground/tutorial-probe/messwerte.md`. The findings on the current pages are in `playground/ai-agents-guide-befunde.md`.
+See `proposal.md` for the motivation. The pattern for the pages is the probe of step 4, `playground/tutorial-probe/finding-out-why-a-test-failed.md`. Its measurements are in `playground/tutorial-probe/messwerte.md`. The findings on the current pages are in `playground/ai-agents-guide-befunde.md`.
 
 What the current state means for this design:
 
@@ -41,7 +41,7 @@ The fixed sections "What you learn", "How to ask the agent", "What the agent doe
 
 The maintainer decided this on 2026-11-05, after the probe had worked without them. The alternatives were to keep them collapsed and recorded anew, or to add a line per exchange with the commands the agent ran.
 
-As a result, `<details>` blocks and the `session` and `excerpt` markers leave the pages, and so do the overview's sections on recordings and on how the example differs from them. The reader sees commands where the agent names them, and otherwise tries the prompts. The word "session" then means only `robotcode session` in the tutorial, and a talk with the agent is a "conversation", which settles finding W1 for these pages.
+As a result, `<details>` blocks and the `session` and `excerpt` markers leave the pages, and so do the overview's sections on recordings and on how the example differs from them. What the reader sees of the agent's work instead is in D11. The word "session" then means only `robotcode session` in the tutorial, and a talk with the agent is a "conversation", which settles finding W1 for these pages.
 
 ### D4: Each step starts from a fresh example project
 
@@ -61,7 +61,7 @@ Candidate prompts come from `playground/robotcode-demo/agent-sessions/prompts.md
 |---|---|---|
 | 1 | "What does this project test?", "Which tests cover the cart requirements SHOP-201 to SHOP-203?", "Which tests don't name a requirement?", "What arguments does our `Create Order` keyword take?", "Try it out: what happens with a product that is sold out?" | F6, F28 |
 | 2 | "How do I open a page, type into a field and check a text with the Browser library?", "Write a test for `requirements/SHOP-110.md`.", "What else did you change?", the REPL prompts on ordering, "Write a task that orders every product in `data/restock.csv` and logs the order ids, then run it." | D5, F19, F20, F21 |
-| 3 | "Which tests are in our smoke test?", "Run them against staging.", "What does the `ci` profile change?", "Did they reach the staging shop?", "Run the web tests in Firefox." | D2, F9 |
+| 3 | "Which tests are in our smoke test?", "Run them against staging.", "Did those tests really talk to the staging shop? What does the `ci` profile change?", "Run only `Login Works`.", "Run all tests, then rerun just the ones that failed.", "Run the cart tests, and keep the results of the last run." The prompt on web tests in Firefox went, because a fresh example has no web tests (D4). | D2, F9 |
 | 4 | the probe | D6, D7 |
 | 5 | see D7 | D3, D10 |
 | 6 | "Check the project for problems before I push.", "Check it with the profile our CI uses too.", an instruction on what to fix, and one to mark an intended finding | F17, S5 |
@@ -79,7 +79,7 @@ Whether that carries is tried first. If it doesn't, the maintainer decides befor
 
 ### D8: The answers of a step come from one run
 
-The probe mixes runs: its first answer has one failure, and the table later says that `Express Order` also failed in that first run. The final page uses one run through the step, and for step 4 one in which the first run shows only `Login Works`, since the second failure is what the later prompt discovers. The text says that the reader's first run may show both.
+The probe mixes runs: its first answer has one failure, and the table later says that `Express Order` also failed in that first run. The final page uses one run through the step. For step 4, that is one whose first run shows both failures, whose agent reads them with `robotcode results`, and whose answers show no `grep` or `cat`. It also has the agent correct an assumption from its first answer, which is what the page teaches. The text says that the reader's first run may show only `Login Works`.
 
 ### D9: Links as in the probe
 
@@ -89,13 +89,19 @@ The links stand in a sentence right after the answer. A code block can't hold a 
 
 The findings on the seven steps and on the tutorial's overview are settled by the new text, or fall away with the text they were about. This includes the facts F5, F6, F9, F17, F19 to F23 and F28, the repetitions within the tutorial, and all of section F of the list. The findings on the other pages stay in the list for a change of their own.
 
+### D11: The commands stand between prompt and answer
+
+After reading the pages, the maintainer found that the answers looked like magic, since nothing showed what the agent had done. So an exchange shows the `robotcode` commands the agent ran for that prompt, between the prompt and the answer, as a chat with an agent does too. They come from the transcript of the run the answer comes from (`playground/tutorial-probe/harness/calls.py`, which also inserts them), so the list can't drift from the run.
+
+Commands are links, so they aren't a code block, and they carry no output: the output is what made the recordings so long. Only `robotcode` commands are listed, and the shell around them goes, such as `2>&1 | tail -60`. Where a run tried something that went wrong because of the shell, or sent inputs in a loop, the list is curated in that script and marked with "…".
+
 ## Risks / Trade-offs
 
-- **The reader no longer sees the commands and their output unless the agent names them** → Step 4 teaches asking for them, and every named command links to its documentation. This is the maintainer's choice over the alternatives in D3.
+- **The reader doesn't see the output of the commands** → This is the maintainer's choice over the alternatives in D3. Each command links to its documentation, and step 4 teaches asking for them and running them.
 - **A random failure makes runs differ in every step, not only in step 4** → The text of the other steps doesn't depend on whether `Express Order` failed in that run, and answers that mention it are chosen or shortened accordingly.
 - **Answers from one run read as if the agent always answers that way** → The overview says that they differ, and the text only claims what holds across the four agents.
 - **Only Claude Code and GitHub Copilot CLI are tried** → Copilot in VS Code and Codex are not, and neither is a real reader. The text speaks of the agent in general only as far as these runs support it.
-- **Step 2 needs the Browser library, `rfbrowser init` and the shop's page** → The example's README covers that. Whether the agent can start the page itself is part of the trial.
+- **Step 2 needs the Browser library, `rfbrowser init` and the shop's page** → The example's README covers the first two, and the agent can start the page when asked.
 - **Three display problems of the probe would repeat** → Long code lines run under the copy button, the diff view strips indentation, and inline code collapses the spaces in `Wait Until Keyword Succeeds    5x …`. The check in the dev server covers the first two, and the third is avoided by shortening such passages.
 - **The site can be deployed by hand before the next release** → It would then describe the example with the flaky test only if the repository was pushed, and `robotcode session` isn't in 2.8.0. The docs deploy on a `v*` tag, so this only matters for a manual deployment.
 

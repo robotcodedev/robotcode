@@ -100,6 +100,23 @@ A prompt with its answer SHALL be in a frame that sets it apart from the guide's
 - **WHEN** an answer contains a code block or a diff
 - **THEN** its indentation is as the agent wrote it, and no line is hidden by the block's controls
 
+### Requirement: The commands the agent ran
+
+Between a prompt and its answer, a step SHALL show the `robotcode` commands the agent ran for that prompt in the run the answer comes from, in that order, each linked to its documentation and without its output. What the shell does around a command and repeats SHALL be left out, and other left-out parts SHALL be marked with "…". The overview SHALL say that other commands the agent runs aren't shown.
+
+#### Scenario: A prompt that runs commands
+- **WHEN** the agent ran `robotcode` commands for a prompt
+- **THEN** they stand between the prompt and its answer
+- **AND** each links to the documentation of that command, a section of a CLI guide where there is one, the CLI reference otherwise
+
+#### Scenario: A prompt without commands
+- **WHEN** the agent ran no `robotcode` command for a prompt
+- **THEN** nothing stands between the prompt and its answer
+
+#### Scenario: Other commands of the agent
+- **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
+- **THEN** the page says that the agent also reads files and runs other commands, which aren't shown
+
 ### Requirement: Links to the commands an answer names
 
 When an answer a step shows names a `robotcode` command, the guide's text right after the answer SHALL link to that command's documentation: a section of a CLI guide where there is one, the CLI reference otherwise. The answer itself SHALL stay as the agent wrote it.

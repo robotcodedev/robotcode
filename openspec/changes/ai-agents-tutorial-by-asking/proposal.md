@@ -9,7 +9,7 @@ A probe of step 4 (`playground/tutorial-probe/finding-out-why-a-test-failed.md`)
 ## What Changes
 
 - **The seven steps are written anew, in the way of the probe.** Each one starts from what the reader wants to find out or get done and reaches everything through prompts to the agent. Between the prompts, the text says what to look for and what to do next. Each step ends with what to take to the reader's own project. The order, the titles and the URLs of the steps stay.
-- **Commands come from the agent.** A step never starts with a `robotcode` command, and it doesn't explain each command. When an answer names a command, the text right after it links to its documentation.
+- **Commands come from the agent.** A step never starts with a `robotcode` command, and it doesn't explain each command. When an answer names a command, the text right after it links to its documentation. Between a prompt and its answer, a step shows the `robotcode` commands the agent ran for it, each linked to its documentation, so that the answer doesn't look like magic.
 - **The recordings go.** The collapsed sessions, their excerpts and the section about them on the overview are removed. A step shows short answers of real runs instead, as the agent wrote them and rendered as Markdown, in the frames the sessions use today.
 - **Prompts are tried before they are written down.** Every prompt runs in the example project first, and the text says only what these runs support. It describes what applies and reports no test statistics.
 - **The example project gets a flaky test.** Step 4 teaches how to find out whether a failure happens every time, so `Express Order` in `robotcodedev/webshop-ai-example` now fails only sometimes. The README no longer speaks of the guide's sessions.
@@ -31,7 +31,7 @@ None.
 
 ### Modified Capabilities
 
-- `ai-agents-guide`: the tutorial's requirement changes, requirements on prompts, answers, links and what each step teaches are added, the five requirements on recorded sessions are removed, and the requirement on the example project is replaced because it speaks of the recordings and of a single failing test.
+- `ai-agents-guide`: the tutorial's requirement changes, requirements on prompts, answers, the commands the agent ran, links and what each step teaches are added, the five requirements on recorded sessions are removed, and the requirement on the example project is replaced because it speaks of the recordings and of a single failing test.
 
 ## Impact
 
