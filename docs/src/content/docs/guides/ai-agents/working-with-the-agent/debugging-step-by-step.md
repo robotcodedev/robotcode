@@ -1,79 +1,226 @@
 ---
 title: Debugging Step by Step
-description: "Step 5 of the tutorial: let the agent run a real test in the debugger, stop at a line, show the call stack and the variables, and continue prompt by prompt."
+description: "Step 5 of the tutorial: have an AI agent stop a real test in the debugger where it fails or at a line you name, ask what you want to know at the stop, and steer the paused run prompt by prompt."
 sidebar:
   label: 5. Debugging Step by Step
   order: 150.45
 ---
 
-When the results of a run don't explain a failure, the agent runs the real test in the debugger and stops where you say. You steer the paused run prompt by prompt: look at the call stack and the variables, set another breakpoint, continue.
+The results of a run show what happened, but you can't ask them anything new. In the debugger, the test waits at a place you name, in its real context, and you can look around and try things there. You steer it prompt by prompt, and between your prompts the run stays where it stopped.
 
-## What you learn
+To follow along, use the [example project](/guides/ai-agents/working-with-the-agent/#following-along).
 
-- why the agent debugs a real test with `robotcode robot-debug` and not in the REPL;
-- how to stop at a line and look around;
-- how to steer the paused run from one prompt to the next;
-- how agents differ in driving the debugger.
+## Stop where it fails
 
-## How to ask the agent
+`Express Order` fails only sometimes, with `placed != express`. The results can't tell you whether the shop would say something else a moment later, because in this example the shop only exists while the run lasts. So stop the test while it's still there:
 
-- *"Run `<test or suite>` in the debugger and stop at line `<n>` of `<file>`."*
-- *"Where are we?"*, *"Show me all variables I set myself."* or *"What is `${<name>}` there?"*
-- *"Set a breakpoint at line `<n>` of `<file>` and continue."*
-- *"Continue to the next breakpoint."* or *"Let it run to the end."*
+<div class="rc-session">
 
-The session below starts with *"Run the order tests in the debugger and stop at line 19 of `tests/orders.robot`."*
+<div class="rc-session-prompt">
 
-## What the agent does
+**You:** `Express Order` fails only sometimes. Run it in the debugger until it fails, and stop where it fails.
 
-### It debugs the real test
+</div>
 
-The REPL runs only the keywords you type, without the suite's setup, its variables and its `__init__.robot`. The debugger runs the real test in its real context and pauses it. So as soon as a test is in play, the skill sends the agent to `robotcode robot-debug` and not to the REPL; see [How the Skill Works](/guides/ai-agents/how-the-skill-works/#from-request-to-command).
+<div class="rc-session-calls">
 
-In the session, the agent started the order suite by its long name with a breakpoint, and the run stopped there:
+- [`robotcode discover tests --search "Express Order"`](/guides/cli/discovering-tests/#tests--flat-list-of-tests)
+- [`robotcode session list`](/guides/cli/sessions/)
+- [`robotcode session start debug -bl "Tests.Orders.Express Order"`](/guides/cli/sessions/#starting-a-session)
+- [`robotcode session restart debug-da913a68`](/guides/cli/sessions/#restarting-a-session)
+- [`robotcode session status debug-da913a68`](/guides/cli/sessions/)
+- [`robotcode session send debug-da913a68 '.where'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-da913a68 '.list'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-da913a68 '.vars --user'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-da913a68 '.print ${status}'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-da913a68 '.print ${expected}'`](/guides/cli/sessions/#sending-an-input)
 
-<!-- excerpt: debugging-step-by-step -->
-```console
-$ robotcode session start debug --break tests/orders.robot:19 -bl "Tests.Orders"
-Started session debug-499a3ee8.
-…
-Order Coffee :: An order for a product in stock is placed.
-* breakpoint  orders.Order Status Should Be  (tests/orders.robot:19)
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** `Express Order` failed on the third run, and the debugger is paused right at the failure. Session `debug-da913a68` is still open and waiting, and I haven't changed anything.
+
+**Where it stopped:** `resources/orders.resource:21`, before the failure unwinds:
+
+```text wrap
+* exception  BuiltIn.Should Be Equal — Keyword failed: placed != express
+
+#0  BuiltIn.Should Be Equal        resources/orders.resource:21
+#1  orders.Order Status Should Be  tests/orders.robot:25
+#2  Express Order                  tests/orders.robot:21
 ```
 
-### It answers with debugger commands
-
-At a stop, `.where` shows the call stack, `.vars --user` the variables without those Robot Framework sets itself, and `.print` a variable or an expression. `.break` adds a breakpoint, and `.continue` runs on to the next one. Keywords can be called there too, in the context of the paused test. From the session, after *"Show me all variables I set myself."*:
-
-<!-- excerpt: debugging-step-by-step -->
-```console
-$ robotcode session send debug-499a3ee8 '.vars --user'
-Local:
-    (none)
-Test:
-    ${order} = 'order-4711'
 …
+
+**Likely cause:** this comes from reading the code, not from a test at this stop. …
+
+The first status check on an express order returns `placed` about half the time, and every later check returns the true status. …
+
+</div>
+
+</div>
+
+You don't need a breakpoint for this. A run in the debugger stops by itself at a failure that nothing catches, and "until it fails" tells the agent to start it again if it passes.
+
+Look at two things in the answer. First, is the run still paused? That's what you want here. If your agent ended it after looking around, say at the start that you want it left paused. Second, where does the explanation come from? Here, it comes from reading the code, and the answer says so. A paused run can test it.
+
+## Ask what you want to know
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Where are we? What does the variable with the status hold?
+
+</div>
+
+<div class="rc-session-calls">
+
+- [`robotcode session status debug-da913a68`](/guides/cli/sessions/)
+- [`robotcode session send debug-da913a68 '.where'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-da913a68 '.print ${status}'`](/guides/cli/sessions/#sending-an-input)
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** We're still paused at the failure, at `resources/orders.resource:21`. That line is the `Should Be Equal    ${status}    ${expected}` call inside `Order Status Should Be`, which `Express Order` calls from `tests/orders.robot:25`.
+
+`${status}` holds `'placed'`, but the test expected `'express'`, which is why this check failed.
+
+</div>
+
+</div>
+
+Now ask the question that only a paused run can answer:
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Ask the shop for the status of this order again. Is the answer the same?
+
+</div>
+
+<div class="rc-session-calls">
+
+- [`robotcode session send debug-da913a68 'Order Status    ${order}'`](/guides/cli/sessions/#sending-an-input)
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** No, the answer changed. The shop now returns `'express'` for `order-4711`, while the first check returned `'placed'`.
+
+This confirms the cause: the order really is an express order, and only the first status check can return `placed`. The test fails because it checks once, too early, so the problem is the test's timing and not the order itself.
+
+The run is still paused at the same spot, and `${status}` still holds `'placed'` because I didn't assign this new answer to it.
+
+</div>
+
+</div>
+
+At the stop, the agent can call keywords in the context of the test. So a theory from reading the code becomes something you have seen happen. What to do about it is the same as in [step 4](/guides/ai-agents/working-with-the-agent/finding-out-why-a-test-failed/#decide-what-is-right): decide what is right, then ask for the fix.
+
+## Let it finish
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Let it run to the end.
+
+</div>
+
+<div class="rc-session-calls">
+
+- [`robotcode session send debug-da913a68 '.continue'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session status debug-da913a68`](/guides/cli/sessions/)
+- [`robotcode session result debug-da913a68`](/guides/cli/sessions/)
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** The run has ended and `Express Order` is recorded as **FAIL** with `placed != express` (1 test, 0 passed, 1 failed, exit code 1). The extra status check at the prompt didn't rescue it, because the failed check had already happened and resuming doesn't re-run it.
+
+The results are in `results/`, including `log.html` and `report.html`.
+
+Session `debug-da913a68` is still open, so it can run the test again with `robotcode session restart debug-da913a68`. If you're finished with it, `robotcode session stop debug-da913a68` closes it.
+
+…
+
+</div>
+
+</div>
+
+A paused run stays open until you say otherwise, so say when you're done.
+
+## See how it did that
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Which `robotcode` commands did you use? I want to try this myself.
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** Here are the commands in the order I ran them, using your session ID as an example. `session start` prints a new ID each time, so use yours in the later commands.
+
+**1. Find the test's full name**
+```bash wrap
+robotcode discover tests --search "Express Order"
 ```
+This gives you `Tests.Orders.Express Order`.
 
-The debugger waits at its stop between your prompts, so each prompt goes on where the last one stopped.
+**2. Start the test in the debugger**
+```bash wrap
+robotcode session start debug -bl "Tests.Orders.Express Order"
+```
+It stops at the first uncaught failure by default, so no breakpoint is needed. My first run passed and went straight to the end.
 
-:::note[Driving the debugger]
-GitHub Copilot in VS Code can type into a terminal and read it back, and Codex can write to a running command, so they can work at the debugger's `(rdb)` prompt. Claude Code and GitHub Copilot CLI have no tool for that, so they run the debugger with [`robotcode session`](/guides/cli/sessions/), as in this session: `session start debug` runs to the first stop and prints an ID, each `session send` sends one debugger command and returns with its answer, and `session stop` ends it. A session has to keep running after the command that started it, which not every sandbox allows; see [Where sessions can't run](/guides/cli/sessions/#where-sessions-cant-run).
-:::
+…
 
-More on the debugger: [robot-debug](/guides/cli/robot-debug/).
+**4. Look around at the stop**
+```bash wrap
+robotcode session status debug-da913a68                   # "waits" means paused at a stop
+robotcode session send debug-da913a68 '.where'            # call stack
+robotcode session send debug-da913a68 '.list'             # source around the stop
+robotcode session send debug-da913a68 '.vars --user'      # variables, without Robot's internal ones
+robotcode session send debug-da913a68 '.print ${status}'
+robotcode session send debug-da913a68 '.print ${expected}'
+```
+…
 
-## What to watch out for
+**5. Run a keyword inside the paused test**
+```bash wrap
+robotcode session send debug-da913a68 'Order Status    ${order}'
+```
+Use single quotes so your shell doesn't expand `${order}`.
 
-- **Name the test or the suite.** The agent selects it by its long name, so the `__init__.robot` files of the folders above it run as in a real run.
-- **A debug run writes results too.** It replaces the output files of the last run, as in this session. If you still need them, say so, and the agent adds `--output NONE --log NONE --report NONE`, as in [*A failing test*](/guides/ai-agents/working-with-the-agent/finding-out-why-a-test-failed/).
-- **End the debugger.** Say *"let it run to the end"* or *"stop the debugger"*. The agent ends the run with `.continue`, `.detach` or `.abort`, and a session with `robotcode session stop`.
+…
 
-## The sessions
+**Interactive version:** in your own terminal you don't need `session` at all. This command gives you an `(rdb)` prompt where you type the same inputs directly:
+```bash wrap
+robotcode robot-debug -bl "Tests.Orders.Express Order"
+```
+It runs the test once, so if it passes, just start it again.
 
-<!-- session: debugging-step-by-step -->
-<details class="rc-session-details">
-<summary>Debugging step by step <span>“Run the order tests in the debugger and stop at line 19 of <code>tests/orders.robot</code>.”</span></summary>
+Each debug run overwrites the files in `results/`. To keep the last run's results, add `--output NONE --log NONE --report NONE` to the start command.
+
+</div>
+
+</div>
+
+Try [`robotcode robot-debug`](/guides/cli/robot-debug/) in your own terminal. It takes the same inputs that the agent sends one by one with [`robotcode session`](/guides/cli/sessions/). Your agent may name others, such as [`robotcode session restart`](/guides/cli/sessions/#restarting-a-session). The answer's last sentence also matters when you work with the agent: a run in the debugger replaces the results of the last run, so if you still need them, say so when you start it.
+
+## Stop where you say
+
+You can also name the place, and go on from one stop to the next:
 
 <div class="rc-session">
 
@@ -83,66 +230,38 @@ More on the debugger: [robot-debug](/guides/cli/robot-debug/).
 
 </div>
 
-*Loaded the skill `robotcode:robotcode`*
+<div class="rc-session-calls">
 
-*…*
+- [`robotcode discover suites`](/guides/cli/discovering-tests/#suites--flat-list-of-suites)
+- [`robotcode discover tests`](/guides/cli/discovering-tests/#tests--flat-list-of-tests)
+- [`robotcode session list`](/guides/cli/sessions/)
+- [`robotcode discover info`](/guides/cli/discovering-tests/#info--environment-and-version)
+- [`robotcode session start debug --break tests/orders.robot:19 --output NONE --log NONE --report NONE -bl "Tests.Orders"`](/guides/cli/sessions/#starting-a-session)
+- [`robotcode session send debug-f5c8b2df '.where'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-f5c8b2df '.vars --user'`](/guides/cli/sessions/#sending-an-input)
 
-```console
-$ robotcode session start debug --break tests/orders.robot:19 -bl "Tests.Orders"
-Started session debug-499a3ee8.
-==============================================================================
-Tests :: Web shop acceptance tests                                            
-==============================================================================
-Tests.Orders :: Placing orders.                                               
-==============================================================================
-Order Coffee :: An order for a product in stock is placed.            
-* breakpoint  orders.Order Status Should Be  (tests/orders.robot:19)
-```
-
-```console
-$ robotcode session send debug-499a3ee8 '.where'; robotcode session send debug-499a3ee8 '.vars --user'; robotcode session send debug-499a3ee8 '.print ${order}'
-> #0  orders.Order Status Should Be  tests/orders.robot:19
-  #1  Order Coffee                   tests/orders.robot:14
-  #2  Orders                         tests/orders.robot
-  #3  Tests                          tests
-Local:
-    (none)
-Test:
-    ${order} = 'order-4711'
-Suite:
-    (none)
-Global:
-    ${BASE_URL} = 'http://localhost:8080'
-    ${BROWSER} = 'chromium'
-${order} = 'order-4711'
-```
+</div>
 
 <div class="rc-session-answer">
 
-**Agent:** The debugger is stopped at line 19 of `tests/orders.robot`, in the test `Order Coffee`, and the session is still open. Line 19 hasn't run yet.
+**Agent:** The debugger is stopped at line 19 of `tests/orders.robot`, in the first order test, **Order Coffee**. Line 19 hasn't run yet:
 
-```
-> #0  orders.Order Status Should Be  tests/orders.robot:19
-  #1  Order Coffee                   tests/orders.robot:14
-  #2  Orders                         tests/orders.robot
-  #3  Tests                          tests
+```robot wrap
+Order Status Should Be    ${order}    placed
 ```
 
-**Variables at the stop:**
-- `${order}` = `'order-4711'`, set by `Create Order` on line 18
-- `${BASE_URL}` = `'http://localhost:8080'`
-- `${BROWSER}` = `'chromium'`
+…
 
-I selected the whole suite with `-bl "Tests.Orders"`, so `Express Order` and `Sold Out Product Cannot Be Ordered` will run after this test. The breakpoint only applies to line 19, so they won't pause there, though the debugger still stops on any uncaught failure.
+- **What runs:** I selected the whole suite (`-bl "Tests.Orders"`), so `Express Order` and `Sold Out Product Cannot Be Ordered` run after this test if you continue. The debugger will also stop at any uncaught failure.
+- **Results:** I turned off output files for this run, so your last results in `results/` are still there. Nothing from this debug run will be saved.
 
-You can tell me what to do next, or send commands yourself with `robotcode session send debug-499a3ee8 '<command>'`:
-- **Step over line 19:** `.next`
-- **Check the live status:** run a keyword at the stop, such as `Order Status Should Be    ${order}    placed`
-- **Run the remaining tests:** `.continue`
-- **Finish without further stops:** `.detach`
-- **End the run:** `.abort`, then `robotcode session stop debug-499a3ee8` to close the session
+…
 
 </div>
+
+</div>
+
+<div class="rc-session">
 
 <div class="rc-session-prompt">
 
@@ -150,32 +269,29 @@ You can tell me what to do next, or send commands yourself with `robotcode sessi
 
 </div>
 
-```console
-$ robotcode session send debug-499a3ee8 '.vars --user'
-Local:
-    (none)
-Test:
-    ${order} = 'order-4711'
-Suite:
-    (none)
-Global:
-    ${BASE_URL} = 'http://localhost:8080'
-    ${BROWSER} = 'chromium'
-```
+<div class="rc-session-calls">
+
+- [`robotcode session send debug-f5c8b2df '.vars --user'`](/guides/cli/sessions/#sending-an-input)
+
+</div>
 
 <div class="rc-session-answer">
 
-**Agent:** These are the three variables you set yourself, as of the current stop at line 19:
+**Agent:** These are the variables set by you or your project, with Robot Framework's built-in ones left out, at the current stop (`tests/orders.robot:19`):
 
-| Variable | Value | Scope | Set by |
+| Scope | Variable | Value | Set by |
 | --- | --- | --- | --- |
-| `${order}` | `'order-4711'` | Test | `tests/orders.robot:18`, from `Create Order` |
-| `${BASE_URL}` | `'http://localhost:8080'` | Global | `[variables]` in `robot.toml` |
-| `${BROWSER}` | `'chromium'` | Global | `[variables]` in `robot.toml` |
+| Test | `${order}` | `'order-4711'` | `Create Order` on line 18 of `tests/orders.robot` |
+| Global | `${BASE_URL}` | `'http://localhost:8080'` | `[variables]` in `robot.toml` |
+| Global | `${BROWSER}` | `'chromium'` | `[variables]` in `robot.toml` |
 
-There are no local or suite variables at this point. The output above excludes Robot Framework's built-in variables, such as `${TEST_NAME}` and `${OUTPUT_DIR}`.
+There are no local or suite variables at this stop.
 
 </div>
+
+</div>
+
+<div class="rc-session">
 
 <div class="rc-session-prompt">
 
@@ -183,190 +299,72 @@ There are no local or suite variables at this point. The output above excludes R
 
 </div>
 
-```console
-$ sed -n 1,40p resources/orders.resource | cat -n; robotcode session send debug-499a3ee8 '.break resources/orders.resource:21'; robotcode session send debug-499a3ee8 '.breakpoints'; robotcode session send debug-499a3ee8 '.continue'
-…
-breakpoint 2 at resources/orders.resource:21
-  #1  line    tests/orders.robot:19
-  #2  line    resources/orders.resource:21
-  catch    uncaught_failed_keyword
-* breakpoint  BuiltIn.Should Be Equal  (resources/orders.resource:21)
-```
+<div class="rc-session-calls">
 
-```console
-$ robotcode session send debug-499a3ee8 '.where'; robotcode session send debug-499a3ee8 '.vars --user'
-> #0  BuiltIn.Should Be Equal        resources/orders.resource:21
-  #1  orders.Order Status Should Be  tests/orders.robot:19
-  #2  Order Coffee                   tests/orders.robot:14
-  #3  Orders                         tests/orders.robot
-  #4  Tests                          tests
-Local:
-    (none)
-Test:
-    ${order} = 'order-4711'
-Suite:
-    (none)
-Global:
-    ${BASE_URL} = 'http://localhost:8080'
-    ${BROWSER} = 'chromium'
-```
+- [`robotcode session send debug-f5c8b2df '.break resources/orders.resource:21'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-f5c8b2df '.continue'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-f5c8b2df '.where'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-f5c8b2df '.print ${status}'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session send debug-f5c8b2df '.print ${expected}'`](/guides/cli/sessions/#sending-an-input)
 
-*…*
+</div>
 
 <div class="rc-session-answer">
 
-**Agent:** The second breakpoint is set, and the run has stopped on it at line 21 of `resources/orders.resource`, still in the test `Order Coffee`. Line 21 hasn't run yet.
+**Agent:** I added breakpoint 2, and the run is now stopped at line 21 of `resources/orders.resource`, still in **Order Coffee**. Line 21 hasn't run yet:
 
-```
-> #0  BuiltIn.Should Be Equal        resources/orders.resource:21
-  #1  orders.Order Status Should Be  tests/orders.robot:19
-  #2  Order Coffee                   tests/orders.robot:14
-  #3  Orders                         tests/orders.robot
-  #4  Tests                          tests
+```robot wrap
+Should Be Equal    ${status}    ${expected}
 ```
 
-**Values line 21 will compare:**
-- `${status}` = `'placed'`, set on line 20 by `Order Status`
-- `${expected}` = `'placed'`, passed in from `tests/orders.robot:19`
+- **Call stack:** `Should Be Equal` ← `Order Status Should Be` (called from `tests/orders.robot:19`) ← `Order Coffee` ← `Orders` ← `Tests`
+- **Values:** `${status}` and `${expected}` are both `'placed'`, so this check should pass.
 
-Both values match, so `Should Be Equal` should pass.
-
-**Breakpoints:**
-1. `tests/orders.robot:19`
-2. `resources/orders.resource:21`
-
-The debugger also still stops on uncaught failures.
-
-Breakpoint 2 is inside `Order Status Should Be`, which `Express Order` also calls (`tests/orders.robot:25`). The next `.continue` should therefore stop here again in that test. Line 19 won't stop again, because no other test reaches it.
-
-`.vars --user` shows `Local: (none)` here because frame `#0` is the library keyword. To see the keyword's locals in that list, run `.up` first; `.print` finds them from any frame.
+Both breakpoints stay active. Line 21 is inside `Order Status Should Be`, and `Express Order` calls that keyword too. If you continue, the next stops are therefore lines 19 and 21 again in that test, unless something fails first.
 
 </div>
+
+</div>
+
+<div class="rc-session">
 
 <div class="rc-session-prompt">
 
-**You:** Continue to the next breakpoint.
+**You:** Let it run to the end, and close the debugger.
 
 </div>
 
-```console
-$ robotcode session send debug-499a3ee8 '.continue'
-| PASS |
-------------------------------------------------------------------------------
-Express Order :: An express order is marked as such.                  
-* breakpoint  BuiltIn.Should Be Equal  (resources/orders.resource:21)
-```
+<div class="rc-session-calls">
 
-```console
-$ robotcode session send debug-499a3ee8 '.where'; robotcode session send debug-499a3ee8 '.print ${status}'; robotcode session send debug-499a3ee8 '.print ${expected}'; robotcode session send debug-499a3ee8 '.print ${order}'
-> #0  BuiltIn.Should Be Equal        resources/orders.resource:21
-  #1  orders.Order Status Should Be  tests/orders.robot:25
-  #2  Express Order                  tests/orders.robot:21
-  #3  Orders                         tests/orders.robot
-  #4  Tests                          tests
-${status} = 'express'
-${expected} = 'express'
-${order} = 'order-4712'
-```
+- [`robotcode session send debug-f5c8b2df '.detach'`](/guides/cli/sessions/#sending-an-input)
+- [`robotcode session stop debug-f5c8b2df`](/guides/cli/sessions/#ending-a-session)
+- [`robotcode session list`](/guides/cli/sessions/)
+
+</div>
 
 <div class="rc-session-answer">
 
-**Agent:** `Order Coffee` passed, and the run has stopped at breakpoint 2 again, this time in `Express Order`. Line 21 of `resources/orders.resource` hasn't run yet.
-
-```
-> #0  BuiltIn.Should Be Equal        resources/orders.resource:21
-  #1  orders.Order Status Should Be  tests/orders.robot:25
-  #2  Express Order                  tests/orders.robot:21
-  #3  Orders                         tests/orders.robot
-  #4  Tests                          tests
-```
-
-**Values at this stop:**
-- `${status}` = `'express'`
-- `${expected}` = `'express'`
-- `${order}` = `'order-4712'`
-
-Both compared values match here too, so this check should pass.
-
-`Sold Out Product Cannot Be Ordered` is the only test left. It doesn't call `Order Status Should Be`, so the next `.continue` shouldn't hit breakpoint 2 again. Its expected error is caught by `Run Keyword And Expect Error`, so the debugger's stop on uncaught failures shouldn't trigger either, and the run should finish.
-
-</div>
-
-<div class="rc-session-prompt">
-
-**You:** Let it run to the end.
-
-</div>
-
-```console
-$ robotcode session send debug-499a3ee8 '.detach'; echo "exit: $?"; robotcode session list; robotcode results summary; git status --short
-debugger: detached
-| PASS |
-------------------------------------------------------------------------------
-Sold Out Product Cannot Be Ordered :: The shop refuses an order fo... | PASS |
-------------------------------------------------------------------------------
-Tests.Orders :: Placing orders.                                       | PASS |
-3 tests, 3 passed, 0 failed
-==============================================================================
-Tests :: Web shop acceptance tests                                    | PASS |
-3 tests, 3 passed, 0 failed
-==============================================================================
-Output:  ~/webshop/results/output.xml
-Log:     ~/webshop/results/log.html
-Report:  ~/webshop/results/report.html
-The run has ended with exit code 0.
-exit: 0
-ID              PROJECT                                                                                                                   STATE  IDLE TIME LEFT
-debug-499a3ee8  ~/webshop  ended  15:00
-# Summary — results/output.xml
-
-- _Status:_ ✅ **PASS**
-- _Total:_ 3
-- _Passed:_ 3
-- _Failed:_ 0
-- _Skipped:_ 0
-- _Started:_ 2026-11-03 22:39:31
-- _Ended:_ 2026-11-03 22:40:29
-- _Elapsed:_ 57.19 s
-- _Messages:_ 1 FAIL
-```
-
-*…*
-
-```console
-$ robotcode results log --level FAIL -bl "Tests.Orders.Sold Out Product Cannot Be Ordered" 2>&1 | head -30; robotcode session stop debug-499a3ee8; git status --short; git check-ignore results
-# Log
-
-### Test: Tests.Orders.Sold Out Product Cannot Be Ordered (`tests/orders.robot:27`) ✅ **PASS** _(22:40:29 · 2 ms)_
-…
-
-results
-```
-
-<div class="rc-session-answer">
-
-**Agent:** The run finished with exit code 0: all 3 order tests passed, with no further stops.
+**Agent:** The run finished and the debugger is closed, but **one of the 3 order tests failed**.
 
 | Test | Result |
 | --- | --- |
-| `Order Coffee` | PASS |
-| `Express Order` | PASS |
-| `Sold Out Product Cannot Be Ordered` | PASS |
+| Order Coffee | Passed |
+| Express Order | **Failed:** `placed != express` |
+| Sold Out Product Cannot Be Ordered | Passed |
 
-The summary lists `Messages: 1 FAIL`, but this isn't a problem. It's the `mug is out of stock` error from `Sold Out Product Cannot Be Ordered`, which that test expects and catches with `Run Keyword And Expect Error`.
-
-The 57 seconds of elapsed time mostly comes from pausing at the breakpoints, so it doesn't reflect how fast the tests run.
-
-I've closed the debug session. The `results/` folder is ignored by git, so the working tree is still clean.
-
-**Files are in `results/`:**
-- `log.html`
-- `report.html`
-- `output.xml`
+…
 
 </div>
 
 </div>
 
-</details>
-<!-- /session -->
+Each prompt goes on where the last one stopped. Because the agent selected the suite by its name and not by its file, the `__init__.robot` of the folder above it runs too, as in a real run. In your run, `Express Order` may pass.
+
+## In your own project
+
+- Say what you want to find out, and where to stop: at a failure, at a line, or at a keyword.
+- Ask at the stop what a variable holds, and have the agent call a keyword there to try something.
+- Check where an explanation comes from: from what the paused run showed, or from reading the code.
+- Say when a run should stay paused and when you're done with it.
+- If you still need the results of the last run, say so when you start.
+- Ask for the commands, and try `robotcode robot-debug` in your own terminal.

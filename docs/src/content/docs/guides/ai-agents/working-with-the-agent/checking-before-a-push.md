@@ -1,75 +1,16 @@
 ---
 title: Checking Before a Push
-description: "Step 6 of the tutorial: let the agent check the code without running it, with and without the CI profile, find unused code, run the tests and sort what it finds before you push."
+description: "Step 6 of the tutorial: ask an AI agent to check a Robot Framework project before a push, also with the CI profile, decide what gets fixed, and have an intended finding marked as such."
 sidebar:
   label: 6. Checking Before a Push
   order: 150.46
 ---
 
-Before you push, the agent checks the code without running it, then runs the tests. Unknown keywords, wrong arguments, unresolved variables and unused code show up before a CI run does.
+Before you push, you want to know what is wrong with what you have. A test run doesn't tell you all of it, because it only reaches the keywords a test calls. So ask the agent for a check, and then decide what gets fixed, what stays, and what is intended.
 
-## What you learn
+To follow along, use the [example project](/guides/ai-agents/working-with-the-agent/#following-along).
 
-- what `robotcode analyze code` finds without running anything;
-- why the profile matters for the check;
-- how the agent reports what it found and leaves the fixes to you.
-
-## How to ask the agent
-
-- *"Check the project for problems before I push."*
-- *"Lint only the files I changed today."*
-- *"Are there unused keywords or variables?"*
-- *"Check it with the `<profile>` profile too."*
-
-The session below starts with *"Check the project for problems before I push."*
-
-## What the agent does
-
-### It analyzes the code
-
-`robotcode analyze code` checks the project statically, without running a test: undefined keywords, unresolved variables, wrong argument counts, failing imports and, with `--collect-unused`, unused keywords and variables. Each finding is one line with the file, the line and the column. From the session *Before a push*:
-
-<!-- excerpt: before-a-push -->
-```console
-…
-resources/orders.resource:23:1: [WARNING] KeywordNotUsed: Keyword 'Submit Order' is not used.
-resources/orders.resource:28:1: [WARNING] KeywordNotUsed: Keyword 'Checkout' is not used.
-resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 2, Infos: 0, Hints: 0 (in 0.03s)
-exit=3
-…
-```
-
-The exit code is a bitmask: 1 for errors, 2 for warnings, 4 for infos and 8 for hints, so `3` means errors and warnings. The exit code of a test run means something else, the number of failed tests.
-
-### It checks with the CI profile too
-
-A profile can set other variables or paths, and so change what a keyword or a variable resolves to. The agent ran the analysis once more with `-p ci`. Then it ran the tests and read the result with `robotcode results`.
-
-### It sorts what it found and asks
-
-The agent changed nothing. It sorted what it found by what blocks the push:
-
-<!-- excerpt: before-a-push -->
-> **I wouldn't push yet.** The CI would go red because `Login Works` fails, and two other problems also need fixing first. I didn't change any files; the only thing overwritten is the ignored `results/` folder.
-> …
-> **Fix before pushing**
-> …
-> **Worth fixing soon**
-
-More on the analysis: [Analyzing Code](/guides/cli/analyzing-code/).
-
-## What to watch out for
-
-- **Errors first.** A keyword that doesn't exist, like `Submit Ordr`, fails the test that reaches it. An unused keyword is a warning to look at, not necessarily a mistake.
-- **Suppress on purpose.** If a finding is intended, mark it with `# robotcode: ignore[<code>]` in the file, so that every later check knows.
-- **Check with the profile CI uses.** Say which profile that is, and the agent checks with it too.
-
-## The sessions
-
-<!-- session: before-a-push -->
-<details class="rc-session-details">
-<summary>Before a push <span>“Check the project for problems before I push.”</span></summary>
+## Ask for a check
 
 <div class="rc-session">
 
@@ -79,93 +20,197 @@ More on the analysis: [Analyzing Code](/guides/cli/analyzing-code/).
 
 </div>
 
-*Loaded the skill `robotcode:robotcode`*
+<div class="rc-session-calls">
 
-*…*
+- [`robotcode analyze code`](/guides/cli/analyzing-code/)
+- [`robotcode analyze code --collect-unused`](/guides/cli/analyzing-code/)
 
-```console
-$ robotcode analyze code; echo "exit=$?"; robotcode -p ci analyze code; echo "ci exit=$?"; robotcode profiles list; robotcode discover all; robotcode discover tags --tests; robotcode discover metadata --values --tests;robotcode discover metadata --values --suites; find . -path ./.venv -prune -o -path ./.git -prune -o -type f -print
-resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0 (in 1.96s)
-exit=1
-resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0 (in 0.03s)
-ci exit=1
-…
-```
-
-*…*
-
-```console
-$ robotcode analyze code --collect-unused; echo "exit=$?"; robotcode robot; echo "robot exit=$?"; robotcode results summary --failed; robotcode results show --failed; git status --short
-resources/orders.resource:23:1: [WARNING] KeywordNotUsed: Keyword 'Submit Order' is not used.
-resources/orders.resource:28:1: [WARNING] KeywordNotUsed: Keyword 'Checkout' is not used.
-resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.
-Files: 8, Errors: 1, Warnings: 2, Infos: 0, Hints: 0 (in 0.03s)
-exit=3
-…
-# Show — results/output.xml
-
-- ❌ **FAIL** Tests.Login.Login Works (`tests/login.robot:11`) _(22:41:12 · 1 ms)_
-  > Welcome back, alice! != Welcome back, Alice!
-
-## Statistics
-
-- _Total:_ 1
-- _Passed:_ 0
-- _Failed:_ 1
-- _Skipped:_ 0
-- _Started:_ 2026-11-03 22:41:12
-- _Ended:_ 2026-11-03 22:41:12
-- _Elapsed:_ 38 ms
-
-_Filters: status=fail_
-```
-
-*…*
+</div>
 
 <div class="rc-session-answer">
 
-**Agent:** **I wouldn't push yet.** The CI would go red because `Login Works` fails, and two other problems also need fixing first. I didn't change any files; the only thing overwritten is the ignored `results/` folder.
+**Agent:** The static analysis found one error, and it will break at runtime if `Checkout` is ever called.
 
-**Fix before pushing**
-1. **Failing test:** `Tests.Login.Login Works` fails with `Welcome back, alice! != Welcome back, Alice!`. `greeting` uses the raw username (`libraries/ShopLibrary.py:39`), while the test expects it capitalized (`tests/login.robot:16`). The fix probably belongs in the library, but SHOP-101 isn't in `requirements/`, so I can't confirm which side is right.
-…
-3. **Keyword typo:** `resources/orders.resource:31` calls `Submit Ordr` instead of `Submit Order`. This is the only error from static analysis. No test calls `Checkout`, so the test runs miss it, and the CI doesn't run `analyze`.
+- **Error:** `resources/orders.resource:31:5` has `KeywordNotFound: No keyword with name 'Submit Ordr' found`. It's a typo in the `Checkout` keyword. The fix is to change `Submit Ordr` to `Submit Order`, which is defined at line 23 of the same file.
 
-**Worth fixing soon**
-- **Search ignores the requirement:** SHOP-110 says search ignores case, but `search_products` doesn't: `COFF` finds nothing, while `coff` finds `coffee` (`ShopLibrary.py:90`). The web page handles case correctly, but no test covers case-insensitive search.
-- **Web page is untested:** no suite imports the Browser library, so nothing tests `webshop/index.html`, including SHOP-110's "No products found" message.
-- **Missing requirements:** all 9 requirements the tests name (SHOP-101–103, 201–203, 301–303) have no file in `requirements/`. The only file there is SHOP-110, and no test names it.
-- **CI never touches staging:** `-p ci` only changes `BASE_URL`, which is just logged and shown as metadata, so a green run says nothing about staging. Likewise, `-p dev` doesn't actually run anything in Firefox. The README promises both.
-- **CI setup:** it installs unpinned packages with `pip`, ignoring `uv.lock`, and doesn't run `robotcode analyze code`. Adding that step would have caught the typo.
+I also ran the opt-in unused-keyword check. It gave two warnings, and the error above is the likely cause of both:
+- `Submit Order` and `Checkout` are not used anywhere.
+- `Submit Order` looks unused because the typo stops `Checkout` from referencing it.
+- `Checkout` isn't called by any test or other keyword. If it's meant to be a shared resource keyword, you can ignore the warning.
 
-**Minor**
-- **Unused code:** the keywords `Submit Order` and `Checkout` are unused, and so is the library keyword `Price Of`.
-- **Login state:** `greeting` returns `Welcome back, None!` when nobody is logged in. From reading the code, a failed login also leaves the previous user logged in.
-- **Sold-out items:** `put_in_cart` doesn't check stock, so a sold-out `mug` can be added to the cart. `Cart Total Adds Up` relies on this.
+I haven't changed anything. … I only ran static analysis, not the tests themselves. Want me to fix the typo and run the tests?
 
-**What checked out**
-| Check | Result |
-|---|---|
-| Default profile | 12 of 13 passed |
-| `ci` profile | 12 of 13 passed |
-| Clean install using the CI's `pip` packages (Python 3.13) | 12 of 13 passed |
-| Random test order, 3 seeds | 12 of 13 passed each time |
-| `analyze code`, default and `ci` profiles | only the typo above |
-| Project conventions (`Owner`, area tags, `Requirement` and `Risk` metadata) | followed |
-| Git | working tree clean, no generated files tracked |
+</div>
 
-Only the default run showed by name that `Login Works` was the failure; the other runs matched on counts.
+</div>
 
-**Next step**
-I can fix the three blockers and add the `analyze` step to the CI. For that, I need two decisions from you:
-- **Greeting:** should it say `Alice`? I'd assume yes and change the library.
+"Check the project" leaves it to the agent what that means. So look for what it checked and what it left out: this agent checked the code and didn't run the tests, and another may run them too, or read every file. If you want the tests to run as well, say so.
+
+The typo is what a test run can't show you, because no test calls `Checkout`.
+
+## Check it the way CI does
+
+The check depends on the configuration, so ask for the one that counts:
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Check it with the profile our CI uses too.
+
+</div>
+
+<div class="rc-session-calls">
+
+- [`robotcode profiles list`](/reference/cli/#profiles)
+- [`robotcode -p ci analyze code`](/guides/cli/analyzing-code/)
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** I checked with the `ci` profile, which is the one `.github/workflows/tests.yml` runs (`uv run robotcode -p ci robot`). The result is the same as before: one error, no warnings.
+
+- **Error:** `resources/orders.resource:31:5` has `KeywordNotFound: No keyword with name 'Submit Ordr' found`. This is the same typo as before. It should be `Submit Order`.
+
+The `ci` profile only changes `BASE_URL`, to `https://staging.shop.example`. It doesn't change which files or keywords get analyzed, so the profile makes no difference to the analysis.
+
 …
 
 </div>
 
 </div>
 
-</details>
-<!-- /session -->
+Here, it makes no difference. With a profile that sets other variables or another Python path, a keyword or an import can resolve differently, and then the same check finds something else. Notice that you didn't have to name the profile. The agent looked up which one CI uses.
+
+## Ask what nothing uses
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Are there keywords or variables that nothing uses?
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** Yes, I ran `robotcode analyze code --collect-unused` on the whole project earlier. It found two unused keywords and no unused variables.
+
+- **`Submit Order`** (`resources/orders.resource:23`) looks unused only because of the typo. `Checkout` calls `Submit Ordr`, so the reference doesn't resolve. Fixing the typo should clear this warning.
+- **`Checkout`** (`resources/orders.resource:28`) really is unused. No test or keyword calls it. Either a test is missing, it's dead code, or it's meant as a shared keyword. …
+
+…
+
+</div>
+
+</div>
+
+[`robotcode analyze code`](/guides/cli/analyzing-code/) is the command behind the check. An unused keyword is a question for you, not necessarily a mistake, and only you know the answer.
+
+## Decide what gets fixed
+
+Say what you want changed, and say what you don't:
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Fix the typo in `Checkout`. Leave everything else as it is.
+
+</div>
+
+<div class="rc-session-calls">
+
+- [`robotcode analyze code --collect-unused`](/guides/cli/analyzing-code/)
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** I fixed the typo in `Checkout` at `resources/orders.resource:31`. It now calls `Submit Order`, and I changed nothing else.
+
+I re-ran the analysis with `--collect-unused`. The error is gone and `Submit Order` no longer shows as unused, as expected. One warning is left: `Checkout` isn't called anywhere. I left that alone, as you asked.
+
+I haven't run the tests.
+
+</div>
+
+</div>
+
+## Mark what is intended
+
+If a finding is intended, say why, and have it marked. Otherwise every later check reports it again, and you stop reading the reports:
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** `Checkout` is for the next sprint, so nothing uses it yet, and that's intended. Mark it so that the check doesn't report it again, and run the check again.
+
+</div>
+
+<div class="rc-session-calls">
+
+- [`robotcode analyze code --collect-unused`](/guides/cli/analyzing-code/)
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** I marked `Checkout` as intentionally unused. The check now reports 0 errors, 0 warnings, 0 infos and 0 hints across all 8 files.
+
+I added `# robotcode: ignore[KeywordNotUsed]` to the end of the `Checkout` line in `resources/orders.resource`. That is the narrowest scope: it covers only this keyword and only this one diagnostic. Everything else in the file is still checked.
+
+…
+
+</div>
+
+</div>
+
+Look at where the comment went, because that decides what it covers. At the end of a line, it covers that line. At the start of a line, it covers the rest of the file, and that can be more than you asked for. [Diagnostics Modifiers](/reference/diagnostics-modifiers/#scope-of-a-modifier) has the details.
+
+## See how it checked
+
+<div class="rc-session">
+
+<div class="rc-session-prompt">
+
+**You:** Which `robotcode` commands did you use for the check? I want to run them myself.
+
+</div>
+
+<div class="rc-session-answer">
+
+**Agent:** Run these from the project root …
+
+```bash wrap
+# Static check of the whole project, no tests run
+robotcode analyze code
+
+# Same check with the CI profile (the one in .github/workflows/tests.yml)
+robotcode -p ci analyze code
+
+# Also report unused keywords and variables (off by default)
+robotcode analyze code --collect-unused
+```
+
+The last command is the one that now ends with `Errors: 0, Warnings: 0`. Run it on the whole project, not on single paths. With paths, only references inside the selection count, so keywords used elsewhere would show up as unused.
+
+I also used `robotcode profiles list` to find the `ci` profile. I didn't run the tests. CI would run them with `robotcode -p ci robot`.
+
+…
+
+</div>
+
+</div>
+
+Run them. [Analyzing Code](/guides/cli/analyzing-code/) shows what else `robotcode analyze code` finds and how to use it in CI, and [`robotcode profiles list`](/reference/cli/#profiles) and [`robotcode robot`](/reference/cli/#robot) are in the reference. Your agent may name other commands, such as [`robotcode config show`](/reference/cli/#config).
+
+## In your own project
+
+- Say what the check should cover, or look at what the agent covered.
+- Ask for the check with the profile your CI uses.
+- Decide what gets fixed, and say what stays as it is.
+- Have what is intended marked in the file, and look at where the mark went.
+- Ask for the commands, and run them yourself.

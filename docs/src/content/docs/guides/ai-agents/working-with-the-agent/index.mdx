@@ -1,6 +1,6 @@
 ---
 title: Working with the Agent
-description: "A tutorial in seven steps: get to know a Robot Framework project, write and run tests, find out why a test failed, debug it, check the code before a push and set up a CI profile, with an AI agent and the RobotCode skill."
+description: "A tutorial in seven steps: learn to ask and instruct an AI agent on a Robot Framework project, from getting to know the project and writing a test to finding out why a test failed, debugging, checking before a push and a profile for CI."
 sidebar:
   label: Overview
   order: 150.4
@@ -8,23 +8,27 @@ sidebar:
 
 import AreaOverview from "../../../../../components/AreaOverview.astro";
 
-This tutorial shows how to work with an AI agent on a Robot Framework project, step by step. The steps follow the order in which you get to know a project and work on it: first find out what it contains, then write and run tests, find out why a test failed and debug it, check your changes before a push, and set up the configuration for CI.
+An agent does what you ask, the way you ask it. A question gets you an answer, and an instruction gets you a change, including every decision you left open. This tutorial shows how to ask and instruct an agent on a Robot Framework project, in the order in which you get to know a project and work on it.
 
-Each step explains what you learn, how to ask the agent, what the agent does and why, and what to watch out for. You work with your own project or the [example project](#the-example-project), and with the agent you set up on [Setting Up](/guides/ai-agents/setting-up/). What happens behind a request is on [How the Skill Works](/guides/ai-agents/how-the-skill-works/).
+Each step starts from something you want to find out or get done. You send the agent a prompt, read its answer, and learn what to look for and what to do next. The commands come from the agent: when you want to know how it found something out, you ask, and so you get to know RobotCode's command line along the way. What happens behind a request is on [How the Skill Works](/guides/ai-agents/how-the-skill-works/).
 
-## The recorded sessions
+## Following along
 
-At the end of each step, sessions that Claude Code recorded with the RobotCode skill show the step in an example project: the prompts, the commands the agent ran with their output, the files it read or changed, and its answers. They are collapsed; open one to read it. The explanations of the steps quote short excerpts from them.
+Use your own project, or the example project in [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example): a small web shop whose tests use an in-memory Python library, `libraries/ShopLibrary.py`, through the keywords in `resources/`. Its README says how to set it up. Then start the agent you set up on [Setting Up](/guides/ai-agents/setting-up/) in that folder.
 
-The sessions were recorded on 2026-11-03 with Claude Code 2.1.316, the model Claude Opus 5.5 (`claude-opus-5-5`) and RobotCode. **You:** marks a prompt and **Agent:** an answer of the agent. `…` marks a part that was left out, *…* a step that was left out, often one in which the agent read the skill's reference files. Paths such as `~/webshop` take the place of the folders on the machine the sessions were recorded on. Nothing else is changed. Another agent, or the same agent on another day, words its answers differently and may take other steps.
+Some things in the example are wrong on purpose, because the steps find them.
 
-## The example project
-
-The sessions run in a small example project: a web shop whose tests use an in-memory Python library, `libraries/ShopLibrary.py`, through the keywords in `resources/`. The Browser library is installed for the shop's web page. The suites cover logging in, the cart, orders and the product search. The tests carry their requirement (`[Metadata]    Requirement    SHOP-…`) and, for some, their risk. `robot.toml` defines the profiles `dev` (Firefox) and `ci` (the staging shop). The instruction file the agent reads is on [Briefing the Agent](/guides/ai-agents/briefing/).
-
-Its code is in [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), in the state the sessions start from, so you can try the prompts there. Its README says how to set it up. Some things in it are wrong on purpose, because the sessions find them. Two things differ from the sessions: the tests import their resources by name through `python-path` instead of with relative paths, and the CI workflow installs the project with `uv` instead of `pip` and only starts by hand, because a test fails on purpose.
+Each step starts from the project as it is in the repository, not from what an earlier step changed. The agent changes files along the way, so to start over, reset the repository.
 
 {/* TODO: with the next release, raise robotcode to the released version in pyproject.toml of robotcodedev/webshop-ai-example and refresh its uv.lock. */}
+
+## The answers on these pages
+
+The answers shown are from real runs in the example project, as the agent wrote them. Between a prompt and its answer, you see the `robotcode` commands the agent ran for it, each linked to its documentation, without their output and without what the shell does around them. The agent also reads files and runs other commands, which aren't shown. `…` marks a part that was left out. Your agent words its answers differently, and it may take other steps, even the same agent on another day. What a step says to look for applies either way.
+
+Agents differ in how they keep a REPL or a debugger running between your prompts: some type into the running command, others use [`robotcode session`](/guides/cli/sessions/). You don't have to do anything about that.
+
+With a smaller, faster model such as Haiku, start your first prompt with *Use the robotcode skill.* Such a model doesn't always load the skill by itself.
 
 ## The steps
 

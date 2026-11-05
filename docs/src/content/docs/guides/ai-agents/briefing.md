@@ -29,7 +29,7 @@ Keep it short and factual; this is standing context the agent reads on every req
 
 ## An example
 
-The sessions on [Working with the Agent](/guides/ai-agents/working-with-the-agent/) were recorded in a small web shop project, [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), with this `AGENTS.md`:
+The tutorial on [Working with the Agent](/guides/ai-agents/working-with-the-agent/) uses a small web shop project, [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), with this `AGENTS.md`:
 
 ```markdown title="AGENTS.md"
 # Web shop acceptance tests
