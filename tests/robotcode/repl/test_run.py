@@ -578,6 +578,23 @@ def test_keyword_evaluated_at_a_debugger_stop_does_not_fail_the_session(
     assert interpreter.failures == []
 
 
+def test_unknown_variable_at_a_debugger_stop_does_not_fail_the_session(
+    project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    interpreter = ConsoleInterpreter(app=None)
+    interpreter.record_failures = True
+    # `Log    hi` stops at the keyword breakpoint; `${nope}` is read at `(rdb)`.
+    interpreter.read_line = _Reader(["Log    hi", "${nope}", ".continue"])  # type: ignore[method-assign]
+    _attach_debugger(interpreter, break_at=("Log",))
+    app = Application()
+    app.config.root = project
+
+    run_repl(interpreter=interpreter, app=app, outputdir=str(project / "results"), output="output.xml")
+
+    assert _session_test(project).status == "PASS"
+    assert interpreter.failures == []
+
+
 # ---------------------------------------------------------------------------
 # `run_repl`'s result — Robot's return code and the code given to `.exit`.
 # ---------------------------------------------------------------------------

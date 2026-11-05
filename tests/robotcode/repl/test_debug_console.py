@@ -415,6 +415,104 @@ def test_condition_of_one_variable_is_not_evaluated_again() -> None:
     assert "condition error" not in stops[0]
 
 
+@pytest.mark.parametrize(
+    ("line", "result"),
+    [
+        ("${x}", "=> 'hello'"),
+        ("   ${x}   ", "=> 'hello'"),
+        ("${${inner}}", "=> 'hello'"),
+        ('${{"ich" + "bin" * 5}}', "=> 'ichbinbinbinbinbin'"),
+        ("${{1  +  1}}", "=> 2"),
+        ("${None}", "=> None"),
+    ],
+)
+def test_one_variable_at_the_prompt_shows_its_value(line: str, result: str) -> None:
+    messages = _run_debug(ONE_VARIABLE_SUITE, [line, ".continue"], keyword_breakpoints=["Log"])
+    assert result in messages
+
+
+FRAMES_SUITE = """\
+*** Keywords ***
+Inner
+    ${own}=    Set Variable    of inner
+    Log    done
+
+*** Test Cases ***
+T
+    ${own}=    Set Variable    of test
+    Inner
+"""
+
+
+def test_one_variable_at_the_prompt_reads_the_selected_frame() -> None:
+    messages = _run_debug(FRAMES_SUITE, [".up", "${own}", ".up", "${own}", ".continue"], keyword_breakpoints=["Log"])
+    results = [m for m in messages if m.startswith("=>")]
+    assert results == ["=> 'of inner'", "=> 'of test'"]
+
+
+FAILING_SUITE_WITH_VARIABLE = """\
+*** Variables ***
+${V}    hello
+
+*** Test Cases ***
+T
+    Fail    boom
+"""
+
+
+def test_one_variable_at_the_prompt_is_read_at_a_failed_suite_stop() -> None:
+    messages = _run_debug(
+        FAILING_SUITE_WITH_VARIABLE, ["${V}", "Set Variable    x", ".continue"], exception_filters=["failed_suite"]
+    )
+    assert "=> 'hello'" in messages
+    # Keywords stay refused there.
+    assert "! Keywords can't run at the end of a suite: its output is already closed." in messages
+
+
+def test_one_variable_in_the_commands_of_a_breakpoint_shows_its_value() -> None:
+    messages = _run_debug(
+        ONE_VARIABLE_SUITE,
+        [".break Log", ".commands 1", "${x}", "end", ".continue", ".continue"],
+        stop_on_entry=True,
+    )
+    assert "=> 'hello'" in messages
+
+
+EMBEDDED_SUITE = """\
+*** Keywords ***
+${who} logs in to ${where}
+    RETURN    ${who} at ${where}
+
+*** Test Cases ***
+T
+    ${user}=    Set Variable    alice
+    ${page}=    Set Variable    home
+    Log    done
+"""
+
+
+def test_keyword_with_embedded_arguments_at_the_prompt_stays_a_keyword_call() -> None:
+    messages = _run_debug(EMBEDDED_SUITE, ["${user} logs in to ${page}", ".continue"], keyword_breakpoints=["Log"])
+    assert "=> 'alice at home'" in messages
+
+
+def test_unknown_variable_at_the_prompt_is_reported() -> None:
+    messages = _run_debug(ONE_VARIABLE_SUITE, ["${nope}", ".continue"], keyword_breakpoints=["Log"])
+    assert any(m.startswith("! Variable '${nope}' not found.") for m in messages), messages
+    assert not any(m.startswith("=>") for m in messages), messages
+
+
+def test_ctrl_c_stops_a_running_expression_at_the_prompt() -> None:
+    # The expression raises the signal itself: what follows it only runs if the signal has no effect.
+    expression = '${{signal.raise_signal(signal.SIGINT) or time.sleep(1) or "slept"}}'
+    messages = _run_debug(ONE_VARIABLE_SUITE, [expression, "${x}", ".continue"], keyword_breakpoints=["Log"])
+    assert any(m.startswith("! ") and "Execution interrupted" in m for m in messages), messages
+    assert "=> 'slept'" not in messages
+    # The run stays paused: the next input is still read at the same stop.
+    assert "=> 'hello'" in messages
+    assert len(_stop_lines(messages)) == 1
+
+
 def test_set_changes_variable() -> None:
     messages = _run_debug(
         VAR_SUITE, [".up", ".set ${a} world", ".print ${a}", ".continue"], keyword_breakpoints=["Log"]

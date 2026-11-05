@@ -489,6 +489,15 @@ def test_save_leaves_out_inputs_whose_run_failed(project: Path) -> None:
     assert "Wrote session.robot (2 entries; 2 failed inputs left out, see --keep-failed)" in echoed
 
 
+def test_save_leaves_out_an_input_that_shows_a_variable(project: Path) -> None:
+    echoed = _run_and_save(project, ["${x}=    Set Variable    hello", "${x}", "Log    one", ".save session.robot"])
+
+    lines = [line.strip() for line in (project / "session.robot").read_text(encoding="utf-8").splitlines()]
+    assert "Log    one" in lines
+    assert "${x}" not in lines
+    assert not any("left out" in line for line in echoed), echoed
+
+
 def test_save_keep_failed_exports_failed_inputs(project: Path) -> None:
     echoed = _run_and_save(project, ["Log    one", "No Such Keyword Here", ".save --keep-failed session.robot"])
 

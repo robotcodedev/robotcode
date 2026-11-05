@@ -10,7 +10,8 @@ import io
 import signal
 import sys
 import threading
-from typing import Any, Callable, Iterator, Tuple
+from pathlib import Path
+from typing import IO, Any, AnyStr, Callable, Iterator, List, Optional, Tuple, Union
 
 import pytest
 from prompt_toolkit.application import create_app_session
@@ -26,6 +27,7 @@ from robotcode.repl._debug.types import StackFrame, StopEvent, StopReason
 from robotcode.repl.base_interpreter import ExecutionInterrupted
 from robotcode.repl.console_interpreter import ConsoleInterpreter
 from robotcode.repl.prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
+from robotcode.repl.run import run_repl
 from robotcode.repl_server.interpreter import Interpreter as ReplServerInterpreter
 
 
@@ -208,6 +210,47 @@ def test_sigint_in_repl_server_interrupts_the_running_keyword() -> None:
 
     with pytest.raises(ExecutionInterrupted, match="Execution interrupted"):
         _monitor(running_keyword=True)(signal.SIGINT, None)
+
+
+class _EchoApp(Application):
+    """Real `Application` whose echo channel captures into a list."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.echoed: List[str] = []
+
+    def echo(
+        self,
+        message: Union[str, Callable[[], Any], None],
+        file: Optional[IO[AnyStr]] = None,
+        nl: bool = True,
+        err: bool = False,
+    ) -> None:
+        self.echoed.append(message() if callable(message) else str(message))
+
+
+def test_sigint_stops_a_running_expression_at_the_prompt(tmp_path: Path) -> None:
+    # The expression raises the signal itself: what follows it only runs if the signal has no effect.
+    lines = ['${{signal.raise_signal(signal.SIGINT) or time.sleep(1) or "slept"}}', "Evaluate    1 + 1"]
+
+    def read_line(prompt: str, **kwargs: Any) -> str:
+        if not lines:
+            raise EOFError
+        return lines.pop(0)
+
+    app = _EchoApp()
+    interpreter = ConsoleInterpreter(app=app)
+    interpreter.read_line = read_line  # type: ignore[method-assign]
+    run_app = Application()
+    run_app.config.root = tmp_path
+
+    run_repl(interpreter=interpreter, app=run_app, outputdir=str(tmp_path / "results"))
+
+    assert any("Execution interrupted" in line for line in app.echoed), app.echoed
+    assert "=> 'slept'" not in app.echoed
+    # The session goes on: the next input runs.
+    assert "=> 2" in app.echoed
+    assert not interpreter._termination_requested
 
 
 def test_sigterm_interrupts_the_keyword_and_ends_the_session() -> None:

@@ -1200,6 +1200,8 @@ class SessionInterpreter(ConsoleInterpreter):
             return
         if text.lstrip().startswith(".") and self._dispatch_dot_command(text):
             return
+        if self._show_variable(text):
+            return
         # The input runs as a whole, as a script file does; a block it leaves unfinished fails with what Robot
         # Framework says it lacks.
         parsed = self.parse_input(text)

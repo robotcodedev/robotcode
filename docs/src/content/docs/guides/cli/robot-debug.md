@@ -239,6 +239,8 @@ ${name} = 'world'
 
 Typing a keyword at the prompt runs it in the paused context: its log output appears (`[ INFO ] …`), and a `=> <value>` line echoes the keyword's return value. `Log` returns `None`, which shows no such line.
 
+Typing just a variable shows its value in the selected frame, as `=> <value>`, also `=> None`: `${name}` prints `=> 'world'`. As at the [shell prompt](/guides/cli/repl/#how-the-prompt-works), that includes item access, nested variables and inline Python, and it only counts when the variable is the whole input. It also works at the stop at the end of a suite, where keywords can't run any more. A variable that can't be resolved shows `! <message>` and doesn't change the status of the test. `Ctrl-C` stops an expression that runs too long, and the run stays paused.
+
 ## Recipes
 
 ```bash

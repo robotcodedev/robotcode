@@ -542,6 +542,35 @@ def test_interrupt_fails_the_statement_that_runs(repl_session: str) -> None:
     assert "Execution interrupted" in result.stdout
 
 
+def test_send_of_one_variable_shows_its_value(repl_session: str) -> None:
+    assert _robotcode("session", "send", repl_session, "${shown}=    Set Variable    hello").exit_code == 0
+
+    result = _robotcode("session", "send", repl_session, "${shown}")
+
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "=> 'hello'"
+
+
+def test_send_of_an_unknown_variable_fails(repl_session: str) -> None:
+    result = _robotcode("session", "send", repl_session, "${nope}")
+
+    assert result.exit_code == 1
+    assert "Variable '${nope}' not found." in result.stdout
+    assert "=>" not in result.stdout
+
+
+def test_interrupt_stops_a_running_expression(repl_session: str) -> None:
+    assert _robotcode("session", "send", "--timeout", "0.5", repl_session, "${{time.sleep(30)}}").exit_code == 124
+
+    assert _robotcode("session", "interrupt", repl_session).exit_code == 0
+    result = _robotcode("session", "wait", repl_session)
+
+    assert result.exit_code == 1
+    assert "Execution interrupted" in result.stdout
+    # The session goes on.
+    assert _robotcode("session", "send", repl_session, "Evaluate    1 + 1").exit_code == 0
+
+
 def test_json_carries_the_output_and_the_status(repl_session: str) -> None:
     result = _robotcode("--format", "json", "session", "send", repl_session, "Evaluate    1 + 1")
     assert json.loads(result.stdout) == {"output": "=> 2\n", "status": "passed"}
@@ -883,6 +912,20 @@ def test_restart_at_a_stop_ends_the_run_and_starts_a_new_one(started: List[str],
 
     assert _robotcode("session", "stop", session_id).exit_code == 0
     assert _results_can_be_read(session_project)
+
+
+def test_send_of_a_variable_at_a_stop(started: List[str], session_project: Path) -> None:
+    session_id = _debug_at_stop(started, session_project)
+
+    known = _robotcode("session", "send", session_id, "${True}")
+    assert known.exit_code == 0
+    assert known.stdout.startswith("=> True")
+
+    unknown = _robotcode("session", "send", session_id, "${nope}")
+    assert unknown.exit_code == 1
+    assert "Variable '${nope}' not found." in unknown.stdout
+
+    assert _robotcode("session", "stop", session_id).exit_code == 0
 
 
 def test_interrupt_pauses_a_debug_run_and_stop_aborts_it(started: List[str], session_project: Path) -> None:

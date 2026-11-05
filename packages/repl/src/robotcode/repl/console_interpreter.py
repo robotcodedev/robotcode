@@ -15,6 +15,7 @@ the session commands (`.kw`, `.doc`, `.vars`, …) and the debugger commands
 """
 
 import argparse
+import contextlib
 import inspect
 import os
 import pprint
@@ -49,6 +50,7 @@ from robotcode.robot.diagnostics.library_doc import (
 from robotcode.robot.utils import RF_VERSION, get_robot_version_str
 from robotcode.robot.utils.markdown_docs import LinkResolver, anchor_link_resolver, normalize_markdown_doc
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
+from robotcode.robot.utils.variables import is_variable
 
 from .__version__ import __version__
 from ._debug.types import Breakpoint, ResumeAction, StackFrame, StopEvent, StopReason
@@ -120,6 +122,16 @@ _repr.maxstring = 200
 _repr.maxother = 200
 _repr.maxlist = _repr.maxtuple = _repr.maxset = _repr.maxdeque = 20
 _repr.maxdict = 50
+
+
+@contextlib.contextmanager
+def _interruptible() -> Iterator[None]:
+    """Ctrl-C only interrupts a running keyword, and an expression can run for as long as one."""
+    try:
+        STOP_SIGNAL_MONITOR.start_running_keyword(False)
+        yield
+    finally:
+        STOP_SIGNAL_MONITOR.stop_running_keyword()
 
 
 def dot_command(name: str, *aliases: str, group: str = "Session") -> Callable[[F], F]:
@@ -865,6 +877,16 @@ class ConsoleInterpreter(BaseInterpreter):
         don't re-trigger a stop, and in `forward_events(echo_messages=True)` so
         its log output surfaces at the prompt (suite output is muted otherwise).
         """
+        # One variable is no statement, and reading it writes nothing: it also works at the end of a suite.
+        if is_variable(line.strip()):
+            try:
+                with _interruptible():
+                    value = self._controller.evaluate_expression(self._selected_frame(), line)  # type: ignore[union-attr]
+            except Exception as e:  # surface lookup/eval failures to the prompt
+                self._echo(f"! {e}")
+                return False
+            self._echo(f"=> {_repr.repr(value)}")
+            return True
         # At the end of a suite Robot Framework has already closed the suite in
         # output.xml when we stop; a keyword written after it makes the file unreadable.
         if self._stop is not None and self._stop.reason == StopReason.EXCEPTION and self._stop.frame.type == "SUITE":
@@ -951,6 +973,21 @@ class ConsoleInterpreter(BaseInterpreter):
                 self.log_message(error, "FAIL")
             yield item
 
+    def _show_variable(self, text: str) -> bool:
+        """Show the value of an input that is one variable, which is no statement; returns whether `text` is one."""
+        variable = text.strip()
+        if not is_variable(variable):
+            return False
+        try:
+            with _interruptible():
+                value = EXECUTION_CONTEXTS.current.variables.replace_scalar(variable)
+        except Exception as e:
+            message = str(e)
+            self.log_message(message, "FAIL")
+            raise ExecutionFailed(message) from e
+        self._echo(f"=> {_repr.repr(value)}")
+        return True
+
     def get_input(self) -> Iterator[Optional[Keyword]]:
         if self.executed_files and not self.files and not self.inspect:
             raise EOFError
@@ -992,6 +1029,8 @@ class ConsoleInterpreter(BaseInterpreter):
                     if not lines and text.lstrip().startswith(".") and self.app is not None:
                         if self._dispatch_dot_command(text):
                             return
+                    if not lines and self._show_variable(text):
+                        return
                 except KeyboardInterrupt:
                     # Ctrl-C drops what was typed, as in Python's REPL; the session goes on.
                     self._report_interrupt(prompt)

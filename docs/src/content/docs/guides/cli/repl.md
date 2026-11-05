@@ -98,6 +98,23 @@ After a statement has run, the REPL prints its result on a line of its own, as `
 
 A keyword that returns `None`, such as `Log`, shows no result, and neither does an assignment: the message that sets the variable already names the value. A failing statement shows its failure instead. Long values are shortened, as at the debugger's `(rdb)` prompt, and the result stays available as `${_}` (see [Interactive shortcuts](#interactive-shortcuts)). Statements of a script file passed as an argument run like the body of a test and show no results.
 
+To see the value of a variable, type just the variable. That works for everything Robot Framework calls one variable: list and dictionary variables, item access, nested variables and inline Python.
+
+```
+>>> ${order}
+=> 'order-4711'
+>>> @{items}=    Create List    coffee    tea
+[ INFO ] @{items} = [ coffee | tea ]
+>>> ${items}[0]
+=> 'coffee'
+>>> ${{len($items)}}
+=> 2
+```
+
+Here `None` does show, as `=> None`, because you asked for the value. This is no keyword call: `${_}` keeps the last result, the [output files](#capturing-the-session-as-a-robot-run) get no keyword for it, and `.save` doesn't export it. A variable that can't be resolved, or an expression that fails, shows Robot Framework's message and counts as a failure, like a failing statement. `Ctrl-C` stops an expression that runs too long.
+
+It only counts when the variable, without the whitespace around it, is the whole input. Anything else is a statement: `${x}    ${y}`, a variable as one line among several, and a line with only a variable in a script file or a block fail with Robot Framework's `Keyword name cannot be empty.`, as they do in a test. Robot Framework 5.0 ignores such a line instead.
+
 A line that starts with the `...` continuation marker continues the line before it only inside an unfinished block. As the first line of a new input it has nothing to continue: the REPL reports a failure and doesn't run it.
 
 To **exit**, press `Ctrl-D` at the `>>> ` prompt or type `.exit` (or `.quit`). An empty line at `>>> ` does nothing but show the prompt again. `Ctrl-C` drops the line or the unfinished block you have typed so far, prints `KeyboardInterrupt` and shows the `>>> ` prompt again, as Python's REPL does; the session goes on.
