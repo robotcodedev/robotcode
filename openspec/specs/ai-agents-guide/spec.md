@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The AI agents guide of the documentation site: its pages, setting up and briefing an agent, how the skill works, a tutorial that teaches working with an agent with sessions of a real agent as evidence, how these sessions are recorded and shown, and troubleshooting.
+The AI agents guide of the documentation site: its pages, setting up and briefing an agent, how the skill works, a tutorial that teaches working with an agent through prompts, with answers of real runs and the commands the agent ran, its example project, and troubleshooting.
 
 ## Requirements
 
@@ -60,7 +60,7 @@ How the Skill Works SHALL explain when an agent loads the skill and how to make 
 
 ### Requirement: A tutorial for working with the agent
 
-Working with the Agent SHALL be a tutorial with an overview and seven steps in this order: getting to know the project, writing a test from a requirement, running what you need, finding out why a test failed, debugging step by step, checking before a push, and a profile for the CI server. Each step SHALL say what the reader learns, how to ask the agent, what the agent does and why, and what to watch out for, for the reader's own project and any agent.
+Working with the Agent SHALL be a tutorial with an overview and seven steps in this order: getting to know the project, writing a test from a requirement, running what you need, finding out why a test failed, debugging step by step, checking before a push, and a profile for the CI server. Each step SHALL teach the reader to ask and instruct an agent, for the reader's own project and any agent.
 
 #### Scenario: Steps of the tutorial
 - **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
@@ -69,82 +69,163 @@ Working with the Agent SHALL be a tutorial with an overview and seven steps in t
 
 #### Scenario: A step
 - **WHEN** a reader opens a step of the tutorial
-- **THEN** it says what the reader learns, how to ask the agent, what the agent does and why, and what to watch out for
-- **AND** the recorded sessions of the step follow its explanation
+- **THEN** it leads through prompts to the agent in the order of the work, and between them says what to look for in the answer and what to do next
+- **AND** it ends with what to take to the reader's own project
 
-### Requirement: Sessions as evidence
+### Requirement: Everything goes through prompts
 
-Each step SHALL show at least one recorded session of Claude Code with the RobotCode skill below its explanation, and the explanation SHALL quote short excerpts from these sessions, marked as excerpts. A session SHALL show the prompts, the commands with their output, the files the agent read or changed, and its answers.
+A step SHALL start from what the reader wants to find out or get done, and SHALL reach it through prompts to the agent. It SHALL NOT have the reader run a `robotcode` command before the agent has named it, and SHALL NOT explain commands one by one.
 
-#### Scenario: Excerpt
-- **WHEN** a step explains what the agent does
-- **THEN** it quotes a short excerpt of one of its sessions, marked as an excerpt
+#### Scenario: Start of a step
+- **WHEN** a reader follows a step from its beginning
+- **THEN** the first thing the reader does in the project is to send the agent a prompt
 
-#### Scenario: Failing test
-- **WHEN** a reader opens the step on finding out why a test failed
-- **THEN** a session shows how the agent finds out from the results of the last run why a test failed, with the commands it ran and their output
+#### Scenario: Commands in a step
+- **WHEN** a step's own text mentions a `robotcode` command
+- **THEN** an answer shown before it has named that command
 
-#### Scenario: Comparing runs
-- **WHEN** a reader opens the step on finding out why a test failed
-- **THEN** a session shows the agent comparing two runs of the project
+### Requirement: Steps stand on their own
 
-#### Scenario: Tasks
-- **WHEN** a reader opens the step on writing a test from a requirement
-- **THEN** a session shows the agent writing a task and running it
+Each step SHALL start from the example project as it is in the repository, not from what an earlier step changed. A step SHALL NOT need git commands; to start over, the tutorial SHALL say to reset the repository.
 
-#### Scenario: Large project
-- **WHEN** a reader opens the step on getting to know the project
-- **THEN** a session recorded in a project with thousands of tests shows how the agent answers questions about it
+#### Scenario: Opening a step directly
+- **WHEN** a reader opens a step without having done the steps before it
+- **THEN** its prompts work in a freshly set up example project
+- **AND** the step links to how to set the project up
 
-### Requirement: Interactive sessions
+#### Scenario: Starting over
+- **WHEN** a reader wants to undo what the agent changed
+- **THEN** the tutorial says to reset the repository, without showing git commands
 
-Working with the Agent SHALL show a debugging session in which the user steers the paused run turn by turn, and a REPL session in which the agent runs keywords one after another, shows the current state when asked and reacts to their output and failures. In both, the debugger or the REPL SHALL keep running between the user's prompts.
+### Requirement: Following along
 
-#### Scenario: Debugging step by step
-- **WHEN** a reader opens the step on debugging step by step
-- **THEN** a session shows the agent stopping a run at a line the user names, showing the variables and the call stack when the user asks, and continuing to the next breakpoint when the user says so
+The overview of Working with the Agent SHALL say how to set up the example project and how to start over, that the answers shown are from real runs and differ from one run and one agent to the next, and that a prompt to a smaller model should name the skill. The steps SHALL NOT repeat this beyond a link to it.
 
-#### Scenario: Keywords in the REPL
-- **WHEN** a reader opens the step on writing a test from a requirement
-- **THEN** a session shows the agent running keywords one after another in one REPL, showing its variables when the user asks, and reacting to a keyword that fails
-
-### Requirement: Recording of the sessions
-
-The sessions SHALL be recorded in the example project of a web shop that the home page's demos use, and the session on a large project in a generated project with thousands of tests. Claude Code SHALL run in a configuration of its own with only the RobotCode plugin installed, without further instructions, memory or MCP servers. The overview of Working with the Agent SHALL name the version of Claude Code and the model.
-
-#### Scenario: Versions
+#### Scenario: On the overview
 - **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
-- **THEN** the page names the version of Claude Code and the model the sessions were recorded with
+- **THEN** the page says how to follow along with the example project, why answers differ, and when to name the skill in a prompt
 
-### Requirement: Sessions shown as recorded
+### Requirement: Prompts are tried first
 
-A session, and an excerpt of it in a step's explanation, SHALL show what the agent did and answered without rewording; only the local paths of the machine it was recorded on SHALL be replaced by neutral ones, such as `~/webshop`. Parts MAY be left out and SHALL then be marked with "…".
+Every prompt a step shows SHALL have been run with several agents that use the skill before it is written down, in the example project or, for a large project, in a generated one. What the text says about the agent's behavior SHALL hold for these runs.
 
-#### Scenario: Shortened output
-- **WHEN** a command printed more lines than its session shows
-- **THEN** the left-out lines are marked with "…"
+#### Scenario: A prompt in a step
+- **WHEN** a step shows a prompt
+- **THEN** the prompt was run turn by turn with several agents, in the order of the step
 
-#### Scenario: Local paths
-- **WHEN** a command or its output named a folder of the recording machine, such as the session project's folder
-- **THEN** the session shows a neutral path in its place, such as `~/webshop`
+#### Scenario: Agents behave differently
+- **WHEN** the agents differ in something the text would claim
+- **THEN** the text doesn't claim it, or says what differs
 
-#### Scenario: Excerpt as recorded
-- **WHEN** a step quotes a session in its explanation
-- **THEN** the lines of the excerpt appear in that session as recorded, in the same order
+### Requirement: The text describes what applies
 
-### Requirement: How a session is shown
+The text of the tutorial SHALL describe what applies, in the present tense. It SHALL NOT retell a run, or report how runs went.
 
-A session SHALL be collapsed below its step's explanation until the reader opens it. Open, it SHALL be set apart from the guide's text by a frame, and in it each prompt and each answer by a frame of its own; a command with its output SHALL be a code block and a changed file a diff.
+#### Scenario: What a prompt leads to
+- **WHEN** the text says what a kind of prompt leads to
+- **THEN** it says so without counts of runs, and without saying who tried it
 
-#### Scenario: Collapsed
+### Requirement: Answers of the agent
+
+A step SHALL show the agent's answer to a prompt as the agent wrote it, rendered as Markdown; only local paths SHALL be replaced by neutral ones, and parts MAY be left out if they are marked with "…". The answers of one step SHALL come from one run through it. A prompt MAY stand without an answer.
+
+#### Scenario: Shortened answer
+- **WHEN** a step leaves out part of an answer
+- **THEN** the left-out part is marked with "…"
+
+#### Scenario: Local paths in an answer
+- **WHEN** an answer named a folder of the machine it ran on
+- **THEN** the step shows a neutral path in its place, such as `~/webshop`
+
+#### Scenario: Answers that fit together
+- **WHEN** an answer in a step refers to an earlier result
+- **THEN** that result is the one the step's earlier answer shows
+
+### Requirement: Prompts and answers set apart
+
+A prompt with its answer SHALL be in a frame that sets it apart from the guide's text, and the prompt and the answer SHALL look different from each other, in the dark and the light theme.
+
+#### Scenario: Set apart from the guide's text
 - **WHEN** a reader opens a step
-- **THEN** its sessions are collapsed, each with a summary that names the session and its first prompt
-- **AND** opening one shows the whole session
+- **THEN** each prompt and answer is in a frame, and the guide's text is outside of it
+- **AND** this shows in the dark and the light theme
 
-#### Scenario: Set apart from the guide
-- **WHEN** a reader opens a session
-- **THEN** the session is in a frame, and each of its prompts and answers in a frame of its own
-- **AND** the frames show in the dark and the light theme
+#### Scenario: Code in an answer
+- **WHEN** an answer contains a code block or a diff
+- **THEN** its indentation is as the agent wrote it, and no line is hidden by the block's controls
+
+### Requirement: The commands the agent ran
+
+Between a prompt and its answer, a step SHALL show the `robotcode` commands the agent ran for that prompt in the run the answer comes from, in that order, each linked to its documentation and without its output. What the shell does around a command and repeats SHALL be left out, and other left-out parts SHALL be marked with "…". The overview SHALL say that other commands the agent runs aren't shown.
+
+#### Scenario: A prompt that runs commands
+- **WHEN** the agent ran `robotcode` commands for a prompt
+- **THEN** they stand between the prompt and its answer
+- **AND** each links to the documentation of that command, a section of a CLI guide where there is one, the CLI reference otherwise
+
+#### Scenario: A prompt without commands
+- **WHEN** the agent ran no `robotcode` command for a prompt
+- **THEN** nothing stands between the prompt and its answer
+
+#### Scenario: Other commands of the agent
+- **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
+- **THEN** the page says that the agent also reads files and runs other commands, which aren't shown
+
+### Requirement: Links to the commands an answer names
+
+When an answer a step shows names a `robotcode` command, the guide's text right after the answer SHALL link to that command's documentation: a section of a CLI guide where there is one, the CLI reference otherwise. The answer itself SHALL stay as the agent wrote it.
+
+#### Scenario: A command in an answer
+- **WHEN** an answer names `robotcode results summary`
+- **THEN** the text right after it links to the section on `summary` of the guide on analyzing results
+
+#### Scenario: A command without a guide
+- **WHEN** an answer names `robotcode robot`
+- **THEN** the text right after it links to `robot` in the CLI reference
+
+#### Scenario: Commands differ between runs
+- **WHEN** the agents named different commands for the same prompt
+- **THEN** the text says that the reader's agent may name others, and links to one of them as an example
+
+### Requirement: What the steps teach
+
+Each step SHALL teach what to ask or tell an agent for its kind of work, on a real question in the example project.
+
+#### Scenario: Getting to know the project
+- **WHEN** a reader opens the step on getting to know the project
+- **THEN** prompts ask which tests there are, which tests cover a requirement and what a keyword takes, and have the agent try a keyword
+- **AND** the step says to name the scope and, in a large project, to ask for counts before lists
+
+#### Scenario: Writing a test
+- **WHEN** a reader opens the step on writing a test from a requirement
+- **THEN** prompts have the agent learn the library, try keywords in a REPL that keeps running between the prompts, write the test from the requirement, check it and run it
+- **AND** the step says how to check what the agent wrote, also what else it changed
+- **AND** a prompt asks for a task
+
+#### Scenario: Running what you need
+- **WHEN** a reader opens the step on running what you need
+- **THEN** prompts name what to run: a tag, a suite, one test or a profile
+- **AND** the reader asks what a profile changes before relying on it, and the step's own text says why that matters
+
+#### Scenario: Finding out why a test failed
+- **WHEN** a reader opens the step on finding out why a test failed
+- **THEN** the reader first asks what happened, gets the commands from the agent, checks whether the failure happens every time, decides what is right, and only then asks for the fix with its proof and looks at the change
+- **AND** the step says that deciding what is right is up to the reader
+
+#### Scenario: Debugging
+- **WHEN** a reader opens the step on debugging step by step
+- **THEN** the reader starts from a real question that the results of a run don't answer
+- **AND** prompts stop the run where the reader says, show what the reader asks for, and continue when the reader says so, with the run paused between the prompts
+- **AND** a prompt ends the debugger
+
+#### Scenario: Checking before a push
+- **WHEN** a reader opens the step on checking before a push
+- **THEN** the reader asks for a check without running the tests, also with the profile CI uses, decides what gets fixed, and has a finding that is intended marked as such
+
+#### Scenario: A CI profile
+- **WHEN** a reader opens the step on a profile for the CI server
+- **THEN** the reader says what the CI needs, sees the resulting profile on the page, and has the agent show what a run with it gets without running the tests
+- **AND** the page says which settings of a profile replace those of `robot.toml` and which add to them
 
 ### Requirement: Troubleshooting AI agents
 
@@ -160,28 +241,28 @@ Troubleshooting SHALL describe, by symptom, what helps when the agent answers wi
 - **AND** the page says what helps: naming the skill in the request, removing or turning off skills that aren't needed and, where the agent allows it, raising the limit
 - **AND** the page describes this for agents in general, with Claude Code only as an example
 
-### Requirement: The example project is public
+### Requirement: The example project of the tutorial
 
-The example project of the sessions SHALL be public in the repository `robotcodedev/webshop-ai-example`, in the state the sessions start from, and the overview of Working with the Agent and Briefing the Agent SHALL link to it.
+The example project of the tutorial SHALL be public in the repository `robotcodedev/webshop-ai-example`, and the overview of Working with the Agent and Briefing the Agent SHALL link to it.
 
-#### Scenario: Finding the code
+#### Scenario: Finding the example project
 - **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/` or `/guides/ai-agents/briefing/`
 - **THEN** the page links to `robotcodedev/webshop-ai-example`
 
-#### Scenario: Differences from the recordings
+#### Scenario: Wrong on purpose
 - **WHEN** a reader opens `/guides/ai-agents/working-with-the-agent/`
-- **THEN** the page says that some things in the example project are wrong on purpose, and that its tests import their resources by name and its CI workflow installs the project with `uv` and only starts by hand there, unlike in the sessions
+- **THEN** the page says that some things in the example project are wrong on purpose
 
-#### Scenario: Running it from a clean clone
+#### Scenario: A clean clone
 - **WHEN** a reader clones the repository and follows its README
-- **THEN** `robotcode robot` runs 13 tests, of which only `Login Works` fails
+- **THEN** `robotcode robot` runs 13 tests, of which `Login Works` fails every time, `Express Order` fails only sometimes and the others pass
 - **AND** `robotcode analyze code` reports the unknown keyword `Submit Ordr`
 - **AND** `robotcode session` is available
 
-#### Scenario: The README doesn't give the answers
+#### Scenario: The README keeps the answers back
 - **WHEN** an agent working in the repository reads its README
 - **THEN** the README says that some things are wrong on purpose, without naming them
 
-#### Scenario: A push runs no tests
+#### Scenario: Pushing to the repository
 - **WHEN** someone pushes to the repository
 - **THEN** no workflow starts, and the workflow in `.github/workflows/tests.yml` can be started by hand

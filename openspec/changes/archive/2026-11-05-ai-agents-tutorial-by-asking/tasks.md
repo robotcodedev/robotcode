@@ -54,8 +54,8 @@
 - [x] 10.1 Read the seven pages one after another for repetition, tense, statistics and retelling, against the spec's requirements. Verify with a search that none of them has `<details`, a `session` or `excerpt` marker, or a count of runs.
 - [x] 10.2 Run `npm run docs:build`. Verify that it passes, which also checks the internal links.
 - [x] 10.3 Have the maintainer read the pages in the dev server, and apply what comes of it.
-- [ ] 10.4 Ask the maintainer to confirm, then push the clone of 1.1 to `robotcodedev/webshop-ai-example`. Verify from a clean clone, following the README, that the scenario "A clean clone" holds, and that the push started no workflow.
-- [ ] 10.5 Stop the dev server this session started, and check with `npx astro dev status` in `docs/` that none of mine is left.
+- [x] 10.4 Ask the maintainer to confirm, then push the clone of 1.1 to `robotcodedev/webshop-ai-example`. Verify from a clean clone, following the README, that the scenario "A clean clone" holds, and that the push started no workflow.
+- [x] 10.5 Stop the dev server this session started, and check with `npx astro dev status` in `docs/` that none of mine is left.
 
 ## Workflow follow-up
 
