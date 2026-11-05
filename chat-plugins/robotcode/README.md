@@ -52,7 +52,7 @@ git clone --depth 1 https://github.com/robotcodedev/robotframework-agent-plugins
 cp -r robotframework-agent-plugins/plugins/robotcode/skills/robotcode ~/.claude/skills/
 ```
 
-Other agents have analogous skill directories — consult their docs. The trade-off is that updates won't flow through `plugin marketplace update`; you re-pull manually. To get the skill for a specific `robotcode` release, add `--branch robotcode--v<version>` to the clone.
+Other agents have analogous skill directories — consult their docs. The trade-off is that your agent's plugin updates don't reach this copy; you re-pull manually. To get the skill for a specific `robotcode` release, add `--branch robotcode--v<version>` to the clone.
 
 ## Match your robotcode version
 
@@ -70,7 +70,15 @@ See [Versions and pinning](../../README.md#versions-and-pinning) for the command
 ## Updating
 
 ```sh
-claude plugin marketplace update   # or your agent's equivalent
+# Claude Code: refresh the marketplace, then update the plugin
+claude plugin marketplace update robotframework-agent-plugins
+claude plugin update robotcode@robotframework-agent-plugins
+
+# GitHub Copilot CLI
+copilot plugin update robotcode@robotframework-agent-plugins
+
+# Codex: refreshing the marketplace also updates the installed plugin
+codex plugin marketplace upgrade robotframework-agent-plugins
 ```
 
 A marketplace pinned to a tag doesn't update. To move to another `robotcode` version, switch the tag as described in [Match your robotcode version](#match-your-robotcode-version).
