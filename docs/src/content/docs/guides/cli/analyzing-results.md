@@ -442,6 +442,8 @@ Tests that have the same status in both runs are **not** reported — `diff` sho
 | `--only new-failures\|new-passes\|status-changes\|added\|removed` | Restrict output to these categories. Repeatable. |
 | `--message-chars N` | Truncate the per-entry messages to `N` chars. Default: `120`. |
 | `--full-paths` | Absolute source paths. |
+| `--exit-code` | Exit with a code that tells which categories have entries. See [Exit codes](#exit-codes). |
+| `--exit-code-mask CATEGORY` | Keep these categories in the output but out of the exit code. Repeatable and comma-separated; `all` for every category. Turns on `--exit-code`. |
 
 The standard `--status / -i / -e / -s / -t / -bl / -ebl / --search / --search-regex` filters apply to **both** baseline and current before matching. This lets you scope the comparison to a tag, sub-suite, or pattern without re-running anything:
 
@@ -451,9 +453,42 @@ robotcode results diff baseline.xml --suite "*.Checkout"
 robotcode results diff baseline.xml --search Timeout
 ```
 
-### Why `diff` always exits 0
+### Exit codes
 
-`diff` exits 0 even when there are new failures, so it composes cleanly with other tools. For a regression gate, drive the exit code from the structured output — see [CI recipes](#ci-recipes) in the JSON reference.
+Without `--exit-code`, `diff` exits 0 whatever it found, so a script that only shows the diff isn't stopped by it. With `--exit-code`, the exit code is `0` for an empty diff and otherwise the sum of the categories that have entries:
+
+| Value | Category |
+|---|---|
+| `0` | the diff is empty |
+| `1` | new failures |
+| `2` | new passes |
+| `4` | status changes |
+| `8` | added tests |
+| `16` | removed tests |
+
+New failures and removed tests, for example, give `1 + 16 = 17`. An error that stops the command exits with `128`, with or without `--exit-code`, so it can't be mistaken for a diff.
+
+What the diff shows is what counts: `--only` and the filters narrow both the output and the exit code. For a regression gate that only fails on new failures:
+
+```bash
+robotcode results diff baseline.xml --only new-failures --exit-code
+```
+
+To see the whole diff but keep some categories out of the exit code, use `--exit-code-mask`. It turns on `--exit-code` by itself:
+
+```bash
+# Show everything, fail only on new failures, status changes and removed tests
+robotcode results diff baseline.xml --exit-code-mask new-passes,added
+```
+
+To branch on a single category in bash, test its bit:
+
+```bash
+robotcode results diff baseline.xml --exit-code
+rc=$?
+if [ "$rc" -ge 128 ]; then echo "diff failed"; exit "$rc"; fi
+if [ $((rc & 16)) -ne 0 ]; then echo "tests were removed"; fi
+```
 
 ### When tests have been renamed
 
@@ -587,7 +622,7 @@ An unparseable regex (e.g. `[unclosed`) yields a usage error pinpointing where t
 - **Filters apply before aggregation.** `stats`, `summary` and `diff` all run the filter pipeline first, so `--search Login` followed by `--by tag` gives you tag stats over the Login subset, not all tags whose name happens to contain "Login".
 - **`-bl` is for exact names, `-t` is for patterns.** When you copy a failing-test name out of the failure list, `-bl` is usually what you want — no need to escape glob characters.
 - **Save your baselines.** Archive `output.xml` from your green main branch (or main-CI run) and feed it to `diff` from feature branches — that's the fastest way to catch regressions before review.
-- **`diff` doesn't fail the build.** It always exits 0. If you want a regression gate, see the [CI recipes](#ci-recipes) in the JSON reference.
+- **`diff` doesn't fail the build by default.** It exits 0 unless you pass `--exit-code`. For a regression gate, see [Exit codes](#exit-codes).
 
 ---
 
@@ -858,8 +893,7 @@ A grab-bag of jq-based recipes. Pin `-f json` between `robotcode` and the subcom
 robotcode --format json results summary | jq -e '.counts.failed == 0'
 
 # Fail only on new failures vs a checked-in baseline
-robotcode --format json results diff baseline/output.xml \
-  | jq -e '(.newFailures // []) | length == 0'
+robotcode results diff baseline/output.xml --only new-failures --exit-code
 
 # Allow a fixed budget of failures
 FAILED=$(robotcode --format json results summary | jq '.counts.failed')

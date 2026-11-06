@@ -195,6 +195,13 @@ def test_unknown_command_of_results_exits_with_128(project: Path) -> None:
     assert "No such command" in result.stderr
 
 
+def test_missing_file_for_the_exit_code_of_a_diff_exits_with_128(result_file: Path) -> None:
+    result = _run_robotcode(result_file.parent, ["results", "diff", "output.xml", "missing.xml", "--exit-code"])
+
+    assert result.returncode == 128, result.stderr
+    assert "missing.xml" in result.stderr
+
+
 def test_invalid_option_of_robotcode_before_results_keeps_its_2(project: Path) -> None:
     result = _run_robotcode(project, ["--nonsense", "results", "summary"])
 

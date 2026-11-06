@@ -12,10 +12,12 @@ Expected diff: baseline → current
 
 import json as _json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Protocol
+
+import pytest
 
 from ._helpers import strip_ansi
-from .conftest import CliRunner
+from .conftest import CliResult, CliRunner, _run_robot
 
 
 def _diff_via_cli(robotcode_cli: CliRunner, baseline: Path, current: Path, *extra: str) -> Dict[str, Any]:
@@ -242,3 +244,167 @@ def test_diff_default_includes_rel_source(
     data = _diff_via_cli(robotcode_cli, diff_baseline_output, diff_current_output)
     new_failure = data["newFailures"][0]
     assert new_failure.get("relSource") is not None
+
+
+# ---------------------------------------------------------------------------
+# --exit-code and --exit-code-mask
+# ---------------------------------------------------------------------------
+
+_BODIES = {"PASS": "Log    ok", "FAIL": "Fail    boom", "SKIP": "Skip    later"}
+
+# Each current run differs from the baseline in the categories its name says.
+_BASELINE = {"A": "PASS", "B": "PASS", "C": "FAIL", "D": "SKIP", "E": "PASS"}
+_CURRENT_RUNS = {
+    "same": _BASELINE,
+    "new_failure": {**_BASELINE, "B": "FAIL"},
+    "new_pass": {**_BASELINE, "C": "PASS"},
+    "status_change": {**_BASELINE, "D": "FAIL"},
+    "added": {**_BASELINE, "F": "PASS"},
+    "removed": {k: v for k, v in _BASELINE.items() if k != "E"},
+    "failure_and_removed": {k: v for k, v in {**_BASELINE, "B": "FAIL"}.items() if k != "E"},
+    "failure_and_added": {**_BASELINE, "B": "FAIL", "F": "PASS"},
+    "pass_added_removed": {k: v for k, v in {**_BASELINE, "C": "PASS", "F": "PASS"}.items() if k != "E"},
+}
+
+
+class ExitCodeRun(Protocol):
+    def __call__(self, current: str, extra: List[str], *, json_output: bool = False) -> CliResult: ...
+
+
+def _write_suite(path: Path, tests: Dict[str, str]) -> Path:
+    lines = ["*** Test Cases ***"]
+    for name, status in tests.items():
+        lines.append(f"Test {name}")
+        if name == "A":
+            lines.append("    [Tags]    smoke")
+        lines.append(f"    {_BODIES[status]}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+@pytest.fixture(scope="module")
+def exit_code_outputs(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Path]:
+    """The baseline and every current run, each run with `--name Pair` so the tests share names."""
+    root = tmp_path_factory.mktemp("diff_exit_codes")
+    outputs = {
+        "baseline": _run_robot(_write_suite(root / "baseline.robot", _BASELINE), root, "baseline", suite_name="Pair")
+    }
+    for name, tests in _CURRENT_RUNS.items():
+        outputs[name] = _run_robot(_write_suite(root / f"{name}.robot", tests), root, name, suite_name="Pair")
+    return outputs
+
+
+@pytest.fixture
+def diff_exit(robotcode_cli: CliRunner, exit_code_outputs: Dict[str, Path]) -> ExitCodeRun:
+    """Run `results diff <baseline> <current run> [extra...]` and return the result."""
+
+    def run(current: str, extra: List[str], *, json_output: bool = False) -> CliResult:
+        args = ["--format", "json"] if json_output else []
+        args += ["results", "diff", str(exit_code_outputs["baseline"]), str(exit_code_outputs[current]), *extra]
+        return robotcode_cli(args, expect_ok=False)
+
+    return run
+
+
+def test_diff_exits_with_0_without_the_option(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("new_failure", [])
+
+    assert result.returncode == 0
+    assert "Pair.Test B" in strip_ansi(result.stdout)
+
+
+@pytest.mark.parametrize(
+    ("current", "code"),
+    [
+        ("same", 0),
+        ("new_failure", 1),
+        ("new_pass", 2),
+        ("status_change", 4),
+        ("added", 8),
+        ("removed", 16),
+        ("failure_and_removed", 17),
+    ],
+)
+def test_exit_code_of_the_categories(diff_exit: ExitCodeRun, current: str, code: int) -> None:
+    result = diff_exit(current, ["--exit-code"])
+
+    assert result.returncode == code, result.stderr
+
+
+def test_exit_code_counts_only_the_categories_of_only(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("failure_and_added", ["--only", "new-failures", "--exit-code"], json_output=True)
+
+    assert result.returncode == 1, result.stderr
+    data = _json.loads(result.stdout)
+    assert [c["fullName"] for c in data["newFailures"]] == ["Pair.Test B"]
+    assert "added" not in data
+
+
+def test_exit_code_of_a_category_without_entries_is_0(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("new_failure", ["--only", "added", "--exit-code"])
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_exit_code_counts_only_the_tests_of_the_filters(diff_exit: ExitCodeRun) -> None:
+    # the new failure is Test B, which has no tag `smoke`
+    result = diff_exit("new_failure", ["--include", "smoke", "--exit-code"])
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_masked_category_stays_in_the_output(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("failure_and_added", ["--exit-code", "--exit-code-mask", "added"], json_output=True)
+
+    assert result.returncode == 1, result.stderr
+    data = _json.loads(result.stdout)
+    assert [c["fullName"] for c in data["newFailures"]] == ["Pair.Test B"]
+    assert [c["fullName"] for c in data["added"]] == ["Pair.Test F"]
+
+
+def test_several_masked_categories(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("pass_added_removed", ["--exit-code-mask", "new-passes,added", "--exit-code-mask", "removed"])
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_mask_turns_on_the_exit_code(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("failure_and_added", ["--exit-code-mask", "added"])
+
+    assert result.returncode == 1, result.stderr
+
+
+def test_everything_masked(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("new_failure", ["--exit-code-mask", "all"], json_output=True)
+
+    assert result.returncode == 0, result.stderr
+    assert [c["fullName"] for c in _json.loads(result.stdout)["newFailures"]] == ["Pair.Test B"]
+
+
+def test_unknown_mask_name_is_an_error(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("new_failure", ["--exit-code-mask", "nope"])
+
+    assert result.returncode == 128
+    assert "Invalid value for '--exit-code-mask': 'nope' is not one of" in result.stderr
+
+
+def test_exit_code_with_json_output(diff_exit: ExitCodeRun) -> None:
+    result = diff_exit("new_failure", ["--exit-code"], json_output=True)
+
+    assert result.returncode == 1, result.stderr
+    assert [c["fullName"] for c in _json.loads(result.stdout)["newFailures"]] == ["Pair.Test B"]
+
+
+def test_help_names_the_exit_codes(robotcode_cli: CliRunner) -> None:
+    text = strip_ansi(robotcode_cli(["results", "diff", "--help"]).stdout)
+
+    for line in (
+        "0    the diff is empty",
+        "1    new failures",
+        "2    new passes",
+        "4    status changes",
+        "8    added tests",
+        "16   removed tests",
+        "128  an error stopped the command",
+    ):
+        assert line in text

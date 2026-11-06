@@ -15,6 +15,7 @@ All subcommands respect the global `-f/--format` option:
 
 import re
 import shutil
+from enum import IntFlag
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
@@ -1051,6 +1052,59 @@ def _build_stats_section(dimension: str, tests: List[TestCase], group_sort: str,
 _DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "removed")
 
 
+class DiffExitCode(IntFlag):
+    """Exit code of `results diff --exit-code`: one bit per category that has entries.
+
+    128 is the code of an error, so later categories can take 32 and 64 only.
+    """
+
+    NONE = 0
+    NEW_FAILURES = 1
+    NEW_PASSES = 2
+    STATUS_CHANGES = 4
+    ADDED = 8
+    REMOVED = 16
+    ALL = NEW_FAILURES | NEW_PASSES | STATUS_CHANGES | ADDED | REMOVED
+
+
+def _parse_diff_exit_code_mask(
+    ctx: click.Context, param: click.Parameter, value: Tuple[str, ...]
+) -> Optional[DiffExitCode]:
+    """Parse `--exit-code-mask`: `None` when it isn't given, which keeps the exit code off."""
+    if not value:
+        return None
+    mask = DiffExitCode.NONE
+    for entry in value:
+        for part in entry.split(","):
+            name = part.strip().lower()
+            if not name:
+                continue
+            if name != "all" and name not in _DIFF_CATEGORIES:
+                raise click.BadParameter(
+                    f"{part.strip()!r} is not one of " + ", ".join(repr(c) for c in (*_DIFF_CATEGORIES, "all")) + "."
+                )
+            mask |= DiffExitCode[name.replace("-", "_").upper()]
+    return mask
+
+
+def _diff_exit_code(data: DiffResult, mask: DiffExitCode) -> DiffExitCode:
+    """The categories of `data` that have entries, without those in `mask`.
+
+    A category that `--only` left out is `None` in `data`, so it never counts.
+    """
+    code = DiffExitCode.NONE
+    for entries, flag in (
+        (data.new_failures, DiffExitCode.NEW_FAILURES),
+        (data.new_passes, DiffExitCode.NEW_PASSES),
+        (data.status_changes, DiffExitCode.STATUS_CHANGES),
+        (data.added, DiffExitCode.ADDED),
+        (data.removed, DiffExitCode.REMOVED),
+    ):
+        if entries:
+            code |= flag
+    return DiffExitCode(int(code) & ~int(mask))
+
+
 @results.command()
 @click.argument(
     "baseline",
@@ -1078,6 +1132,19 @@ _DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "re
     default=(),
     help="Restrict output to these categories. Default: all.",
 )
+@click.option(
+    "--exit-code",
+    is_flag=True,
+    default=False,
+    help="Exit with a code that tells which categories have entries, 0 when the diff is empty. See Exit codes.",
+)
+@click.option(
+    "--exit-code-mask",
+    multiple=True,
+    callback=_parse_diff_exit_code_mask,
+    metavar="[" + "|".join(_DIFF_CATEGORIES) + "|all]",
+    help="Categories that don't change the exit code, though they are still shown. Turns on `--exit-code`.",
+)
 @pass_application
 def diff(
     app: Application,
@@ -1097,6 +1164,8 @@ def diff(
     full_paths: bool,
     message_chars: int,
     only_categories: Tuple[str, ...],
+    exit_code: bool,
+    exit_code_mask: Optional[DiffExitCode],
 ) -> None:
     """\
     Compare two output files: status changes plus added/removed tests.
@@ -1104,12 +1173,32 @@ def diff(
     If `CURRENT` is omitted, it is auto-discovered from the active profile
     so you can diff a saved baseline against the latest run.
 
+    Without `--exit-code`, the exit code is 0 whatever the diff found. With
+    it, the exit code is the sum of the categories that have entries.
+
+    \b
+    Exit codes:
+    ```
+    0    the diff is empty
+    1    new failures
+    2    new passes
+    4    status changes
+    8    added tests
+    16   removed tests
+    128  an error stopped the command, also without --exit-code
+    ```
+
+    New failures and removed tests, for example, give 17. `--only` and the
+    filters decide what counts, and `--exit-code-mask` leaves categories
+    out of the exit code but not out of the output.
+
     \b
     Examples:
     ```
     robotcode results diff baseline.xml
     robotcode results diff prev/output.xml curr/output.xml
     robotcode results diff baseline.xml --only new-failures
+    robotcode results diff baseline.xml --only new-failures --exit-code
     robotcode results diff baseline.xml -i smoke
     robotcode results diff baseline.xml --search TimeoutError
     robotcode --format json results diff baseline.xml
@@ -1215,6 +1304,9 @@ def diff(
             app.echo_as_markdown(_render.render_diff(data, full_paths=full_paths))
         else:
             app.print_data(data, remove_defaults=True)
+
+    if exit_code or exit_code_mask is not None:
+        app.exit(int(_diff_exit_code(data, exit_code_mask or DiffExitCode.NONE)))
 
 
 def _make_diff_change(

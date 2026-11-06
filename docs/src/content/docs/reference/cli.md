@@ -2365,11 +2365,30 @@ Compare two output files: status changes plus added/removed tests.
 If `CURRENT` is omitted, it is auto-discovered from the active profile so
 you can diff a saved baseline against the latest run.
 
+Without `--exit-code`, the exit code is 0 whatever the diff found. With it,
+the exit code is the sum of the categories that have entries.
+
+Exit codes:
+```
+0    the diff is empty
+1    new failures
+2    new passes
+4    status changes
+8    added tests
+16   removed tests
+128  an error stopped the command, also without --exit-code
+```
+
+New failures and removed tests, for example, give 17. `--only` and the
+filters decide what counts, and `--exit-code-mask` leaves categories out of
+the exit code but not out of the output.
+
 Examples:
 ```
 robotcode results diff baseline.xml
 robotcode results diff prev/output.xml curr/output.xml
 robotcode results diff baseline.xml --only new-failures
+robotcode results diff baseline.xml --only new-failures --exit-code
 robotcode results diff baseline.xml -i smoke
 robotcode results diff baseline.xml --search TimeoutError
 robotcode --format json results diff baseline.xml
@@ -2451,6 +2470,16 @@ robotcode results diff [OPTIONS] BASELINE [CURRENT]
 - `--only [new-failures|new-passes|status-changes|added|removed] *`
 
    Restrict output to these categories. Default: all.
+
+
+- `--exit-code`
+
+   Exit with a code that tells which categories have entries, 0 when the diff is empty. See Exit codes.
+
+
+- `--exit-code-mask [new-failures|new-passes|status-changes|added|removed|all] *`
+
+   Categories that don't change the exit code, though they are still shown. Turns on `--exit-code`.
 
 
 - `--help`
