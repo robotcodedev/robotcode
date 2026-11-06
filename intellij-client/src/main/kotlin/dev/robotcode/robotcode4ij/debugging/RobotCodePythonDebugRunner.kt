@@ -1,9 +1,12 @@
 package dev.robotcode.robotcode4ij.debugging
 
 import com.intellij.execution.ExecutionResult
+import com.intellij.execution.configurations.RunProfile
+import com.intellij.execution.configurations.RunnerSettings
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ExecutionUtil
+import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.openapi.util.Key
 import com.intellij.xdebugger.XDebugSession
@@ -40,15 +43,22 @@ internal fun pythonSessionConfiguration(configuration: RobotCodeRunConfiguration
 }
 
 /**
- * PyCharm's Python debug runner for a Debug run with "Attach Python". [PyDebugRunner] starts the run under pydevd,
- * whatever PyCharm's Python debugger mode says, and creates the Python session; this subclass gives that session a
- * [RobotCodePythonSessionHandler] instead of the run's process handler, and hands the run's handler to [onRun] for the
- * Robot Framework session. It is not registered as a program runner; RobotCode's Debug runner makes it the runner of
- * the run's Python environment and starts that environment with [execute], which goes through the ExecutionManager.
+ * The runner of the Python environment of a Debug run with "Attach Python". It is not registered as a program runner;
+ * RobotCode's Debug runner makes it the runner of the run's Python environment and starts that environment with
+ * [execute]. Every start goes to a [PyDebugRunner], which starts the run under pydevd, whatever PyCharm's Python
+ * debugger mode says, and creates the Python session; that runner gives the session a [RobotCodePythonSessionHandler]
+ * instead of the run's process handler, and hands the run's handler to [onRun] for the Robot Framework session.
+ *
+ * It holds the [PyDebugRunner] instead of extending it, because `execute(ExecutionEnvironment)`, which a rerun from
+ * the Python tab calls, is final in PyCharm 2026.3's [PyDebugRunner].
  */
-internal class RobotCodePythonDebugRunner(private val onRun: (ProcessHandler) -> Unit) : PyDebugRunner() {
+internal class RobotCodePythonDebugRunner(onRun: (ProcessHandler) -> Unit) : ProgramRunner<RunnerSettings> {
+
+    private val debugRunner = PythonSessionDebugRunner(onRun)
 
     override fun getRunnerId(): String = "dev.robotcode.robotcode4ij.debugging.RobotCodePythonDebugRunner"
+
+    override fun canRun(executorId: String, profile: RunProfile): Boolean = false
 
     // a rerun from the Python tab: the run's state has run once it has its test tree console, so the run's environment
     // starts again, with both sessions
@@ -58,18 +68,26 @@ internal class RobotCodePythonDebugRunner(private val onRun: (ProcessHandler) ->
             ExecutionUtil.restart(runEnvironment)
             return
         }
-        super.execute(environment)
+        debugRunner.execute(environment)
     }
 
-    override fun createDebugProcess(
-        session: XDebugSession, serverSocket: ServerSocket, result: ExecutionResult, pyState: PythonCommandLineState
-    ): PyDebugProcess = PyDebugProcess(
-        session, serverSocket, result.executionConsole, pythonSessionHandler(result, onRun), pyState.isMultiprocessDebug
-    )
+    private class PythonSessionDebugRunner(private val onRun: (ProcessHandler) -> Unit) : PyDebugRunner() {
 
-    // the debugger in server mode, which PyCharm uses when its Python debugger settings ask for a fixed port
-    override fun createDebugProcess(session: XDebugSession, serverPort: Int, result: ExecutionResult): PyDebugProcess =
-        PyDebugProcess(session, result.executionConsole, pythonSessionHandler(result, onRun), "localhost", serverPort)
+        override fun createDebugProcess(
+            session: XDebugSession, serverSocket: ServerSocket, result: ExecutionResult, pyState: PythonCommandLineState
+        ): PyDebugProcess = PyDebugProcess(
+            session, serverSocket, result.executionConsole, pythonSessionHandler(result, onRun),
+            pyState.isMultiprocessDebug
+        )
+
+        // the debugger in server mode, which PyCharm 2026.1 and 2026.2 use when their Python debugger settings ask for
+        // a fixed port; PyCharm 2026.3 has no server mode and does not call it
+        override fun createDebugProcess(
+            session: XDebugSession, serverPort: Int, result: ExecutionResult
+        ): PyDebugProcess = PyDebugProcess(
+            session, result.executionConsole, pythonSessionHandler(result, onRun), "localhost", serverPort
+        )
+    }
 }
 
 /**
