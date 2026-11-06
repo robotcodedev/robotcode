@@ -2,7 +2,7 @@
 
 ## Why
 
-PyCharm 2026.3, released on 2026-11-05, rewrote PyCharm's Python debug runner (JetBrains commit "PY-89567 [debugpy] move launch work off the EDT"). Since then the plugin verifier reports a compatibility problem with "Attach Python" ([#679](https://github.com/robotcodedev/robotcode/issues/679)): our runner overrides a method that is final in 2026.3, which can end in a `VerifyError` at runtime. The CI on `main` fails, so no dev builds come out until this is fixed. The released 2.8.0 does not contain "Attach Python", but the dev builds since 2026-10-31 do.
+PyCharm 2026.3, released on 2026-11-05, rewrote PyCharm's Python debug runner (JetBrains commit "PY-89567 [debugpy] move launch work off the EDT"). Since then the plugin verifier reports a compatibility problem with "Attach Python" ([#679](https://github.com/robotcodedev/robotcode/issues/679)): our runner overrides a method that is final in 2026.3. In 2026.3, Debug with "Attach Python" therefore does not start: PyCharm cannot load the runner class and shows "Error running …" with an `IncompatibleClassChangeError`. Debug without the option is not affected. The CI on `main` fails, so no dev builds come out until this is fixed. The released 2.8.0 does not contain "Attach Python", but the dev builds since 2026-10-31 do.
 
 ## What Changes
 
