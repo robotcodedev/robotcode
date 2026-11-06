@@ -47,6 +47,7 @@ from robot.utils import normalize
 from robotcode.modifiers import ByLongName, ByTestMetadata, ExcludedByLongName, ExcludedByTestMetadata
 from robotcode.modifiers.metadata_modifiers import MetadataPattern
 from robotcode.plugin import Application, OutputFormat, pass_application
+from robotcode.plugin.click_helper.exit_codes import errors_exit_with_128
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
@@ -276,6 +277,7 @@ FULL_PATHS_OPTION = click.option(
 )
 
 
+@errors_exit_with_128
 @click.group(invoke_without_command=False)
 def results() -> None:
     """\

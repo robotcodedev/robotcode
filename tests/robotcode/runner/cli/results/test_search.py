@@ -173,7 +173,7 @@ def test_search_invalid_regex_fails_before_the_result_file_is_read(
         ["results", subcommand, "--search-regex", "[unclosed", "--output", str(tmp_path / "missing.xml")],
         expect_ok=False,
     )
-    assert result.returncode == 2
+    assert result.returncode == 128
     assert "invalid pattern" in result.stderr
     assert "not found" not in result.stderr
 

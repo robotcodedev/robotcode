@@ -84,6 +84,8 @@ In order, `robotcode results` looks for:
 
 If none of those produce a file, the command exits with an error that lists every path it tried (`No result file found. Searched: …`); an explicit `PATH` that doesn't exist gives `Result file not found: …`. If the file exists but cannot be parsed (corrupted XML, premature termination of the run), you get `failed to parse <path>: …` with the underlying parser error.
 
+Every error that stops a `robotcode results` command exits with code `128`: these, a usage error such as an invalid option value, an invalid `robot.toml`, and an unexpected crash. So a script can tell an error apart from what a command found.
+
 Both `output.xml` and `output.json` are supported; `robotcode results` picks the right parser automatically based on the file. (`output.json` is the RF 7.0+ opt-in format: Robot Framework writes JSON when the output file name ends in `.json`, so you get it by passing `--output output.json` to `robotcode robot` or setting `output = "output.json"` in your profile.)
 
 :::caution[Result files with test metadata need Robot Framework 7.5 to read]

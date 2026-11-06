@@ -5,6 +5,7 @@ regex, wrong format) is reported as a non-zero exit code with a useful
 message on stderr — not a stack trace and not a silent zero.
 """
 
+import importlib
 import json
 from pathlib import Path
 
@@ -177,3 +178,20 @@ def test_static_files_with_test_metadata_parse(output_path: Path, json_result: J
         ("With Metadata", {"Issue": "4409"}),
         ("Without Metadata", None),
     ]
+
+
+def test_unexpected_error_writes_its_traceback_and_exits_with_128(
+    robotcode_cli: CliRunner, basic_output: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(path: Path) -> None:
+        raise RuntimeError("boom inside results")
+
+    # the package exports the `results` group under the name of the module
+    module = importlib.import_module("robotcode.runner.cli.results.results")
+    monkeypatch.setattr(module, "_load_execution_result", broken)
+
+    result = robotcode_cli(["results", "summary", "--output", str(basic_output)], expect_ok=False)
+
+    assert result.returncode == 128
+    assert "Traceback (most recent call last)" in result.stderr
+    assert "RuntimeError: boom inside results" in result.stderr

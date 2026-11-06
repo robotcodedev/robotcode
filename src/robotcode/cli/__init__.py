@@ -2,6 +2,7 @@ import json
 import logging
 import logging.config
 import os
+import traceback
 from pathlib import Path
 from typing import IO, Any, List, Literal, Mapping, Optional
 
@@ -18,7 +19,7 @@ from robotcode.plugin import (
 )
 from robotcode.plugin._agent_detection import is_running_in_ai_agent
 from robotcode.plugin.click_helper.aliases import AliasedGroup
-from robotcode.plugin.click_helper.exit_codes import has_robot_exit_codes
+from robotcode.plugin.click_helper.exit_codes import has_errors_exit_with_128, has_robot_exit_codes
 from robotcode.plugin.click_helper.types import EnumChoice
 from robotcode.plugin.click_helper.wrappable import WRAPPER_APPLIED_ENV, invoked_command_is_wrappable, is_wrappable
 from robotcode.plugin.manager import PluginManager
@@ -122,6 +123,17 @@ class RobotDataError(RobotCodeError):
         self.exit_code = 252  # type: ignore[misc]
 
 
+class FindingsCommandError(RobotCodeError):
+    """An error robotcode reports itself for a command marked `errors_exit_with_128`.
+
+    Exits with 128 instead of Click's 1 or 2, which such a command uses for what it found.
+    """
+
+    def __init__(self, error: click.ClickException, app: Application) -> None:
+        super().__init__(error, app)
+        self.exit_code = 128  # type: ignore[misc]
+
+
 class RobotCodeGroup(AliasedGroup):
     """The root command group.
 
@@ -131,7 +143,9 @@ class RobotCodeGroup(AliasedGroup):
     exit code 1 or 2, such as a broken configuration, a wrapper that doesn't start or an
     invalid option - exits with Robot Framework's 252 instead. Robot Framework's own exit
     codes never arrive as Click errors, so they pass through unchanged, and so does any
-    other code.
+    other code. Every Click error and every unexpected exception of a command marked
+    `errors_exit_with_128` exits with 128, because the command uses its lower exit codes
+    for what it found; the exception's traceback is written as before.
 
     Every Click error of a command or of the group's own options is written as
     `[ ERROR ] <message>`, with the `Application` of the command. An error that comes
@@ -163,14 +177,25 @@ class RobotCodeGroup(AliasedGroup):
             return super().invoke(ctx)
         except click.ClickException as e:
             app = ctx.find_object(Application) or _application_for(ctx.params)
-            if e.exit_code in (1, 2) and self._passes_on_robot_exit_codes(ctx):
+            cmd = self._invoked_command(ctx)
+            if cmd is not None and has_errors_exit_with_128(cmd):
+                raise FindingsCommandError(e, app) from e
+            if e.exit_code in (1, 2) and cmd is not None and (is_wrappable(cmd) or has_robot_exit_codes(cmd)):
                 raise RobotDataError(e, app) from e
             raise RobotCodeError(e, app) from e
+        except (click.exceptions.Exit, click.Abort):
+            raise
+        except Exception:
+            cmd = self._invoked_command(ctx)
+            if cmd is None or not has_errors_exit_with_128(cmd):
+                raise
+            # written as Python writes an exception that nobody catches
+            traceback.print_exc()
+            ctx.exit(128)
 
-    def _passes_on_robot_exit_codes(self, ctx: click.Context) -> bool:
+    def _invoked_command(self, ctx: click.Context) -> Optional[click.Command]:
         name = ctx.invoked_subcommand
-        cmd = self.get_command(ctx, name) if name else None
-        return cmd is not None and (is_wrappable(cmd) or has_robot_exit_codes(cmd))
+        return self.get_command(ctx, name) if name else None
 
 
 @click.group(

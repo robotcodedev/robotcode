@@ -4,6 +4,9 @@ These commands answer with Robot Framework's exit codes, where 1-250 counts the
 failed tests. An error robotcode reports itself for them exits with 252, Robot
 Framework's code for invalid data or command line options. The tests drive
 `robotcode` in a real subprocess, since the process exit code is the subject.
+
+The `results` commands use their lower exit codes for what they found, so every
+error that stops them exits with 128.
 """
 
 import subprocess
@@ -145,3 +148,55 @@ def test_other_commands_keep_their_exit_code(broken_project: Path, args: List[st
 
     assert result.returncode == 1, result.stderr
     assert "Invalid TOML file" in result.stderr
+
+
+@pytest.fixture
+def result_file(project: Path) -> Path:
+    _run_robotcode(project, ["robot", "-d", "out", "suite.robot"])
+    output = project / "out" / "output.xml"
+    assert output.is_file()
+    return output
+
+
+def test_missing_result_file_for_results_exits_with_128(project: Path) -> None:
+    result = _run_robotcode(project, ["results", "summary", "-o", "missing.xml"])
+
+    assert result.returncode == 128, result.stderr
+    assert "Result file not found" in result.stderr
+
+
+def test_invalid_option_value_for_results_exits_with_128(result_file: Path) -> None:
+    result = _run_robotcode(result_file.parent, ["results", "diff", "output.xml", "output.xml", "--only", "nope"])
+
+    assert result.returncode == 128, result.stderr
+    assert "Invalid value for '--only'" in result.stderr
+
+
+def test_file_that_is_no_result_file_exits_with_128(result_file: Path) -> None:
+    (result_file.parent / "new.xml").write_text("hello\n", encoding="utf-8")
+
+    result = _run_robotcode(result_file.parent, ["results", "diff", "output.xml", "new.xml"])
+
+    assert result.returncode == 128, result.stderr
+    assert "failed to parse" in result.stderr
+
+
+def test_invalid_robot_toml_for_results_exits_with_128(broken_project: Path) -> None:
+    result = _run_robotcode(broken_project, ["results", "summary"])
+
+    assert result.returncode == 128, result.stderr
+    assert "Invalid TOML file" in result.stderr
+
+
+def test_unknown_command_of_results_exits_with_128(project: Path) -> None:
+    result = _run_robotcode(project, ["results", "nope"])
+
+    assert result.returncode == 128, result.stderr
+    assert "No such command" in result.stderr
+
+
+def test_invalid_option_of_robotcode_before_results_keeps_its_2(project: Path) -> None:
+    result = _run_robotcode(project, ["--nonsense", "results", "summary"])
+
+    assert result.returncode == 2, result.stderr
+    assert "No such option" in result.stderr
