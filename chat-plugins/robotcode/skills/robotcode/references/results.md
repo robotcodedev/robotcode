@@ -99,9 +99,12 @@ robotcode results diff prev/output.xml curr/output.xml         # two explicit fi
 robotcode results diff baseline.xml --only new-failures        # restrict to regressions
 robotcode results diff baseline.xml --only new-passes --only added  # combine categories
 robotcode --format json results diff baseline.xml              # structured diff
+robotcode results diff baseline.xml --only new-failures --exit-code  # regression gate: fails on new failures
 ```
 
 `BASELINE` is required; `CURRENT` defaults to auto-discovery. Categories the `--only` filter takes: `new-failures` (regressions), `new-passes` (fixes), `status-changes` (any), `added` (test exists in current but not baseline), `removed`. The plain output is a structured table — perfect for "what changed since the last green run".
+
+`diff` exits with 0 whatever it finds. For a gate in a script or CI, add `--exit-code`: the exit code is then a **bitmask** of the categories that have entries — `1` new failures, `2` new passes, `4` status changes, `8` added, `16` removed — and `0` for an empty diff. `--only` and the filters decide what counts, so no `jq` is needed; `--exit-code-mask CATEGORY` (repeatable, comma-separated) keeps categories in the output but out of the code and turns `--exit-code` on by itself. `128` means the command itself failed, such as a missing result file.
 
 ## 7. `robotcode results compare` — several runs side by side
 
@@ -127,7 +130,7 @@ Every run is an argument — no auto-discovery — and `NAME=PATH` gives it a na
 - `messages`: what `log.html` shows under "Test Execution Errors", per run, with new and gone ones.
 - `environment`: what each file records — `Robot`/`Rebot` and its version, Python, OS, top-suite metadata. Nothing else is recorded; a file written by `rebot` shows rebot's version.
 
-`--group-by-metadata NAME` groups the runs by a top-suite metadata value set with `--metadata` at run time. Everything that depends on the order of the runs is then computed per group and shown as `value · value` in group order; `--last N` keeps the last N runs of each group. `compare` exits with 0 whatever the runs show.
+`--group-by-metadata NAME` groups the runs by a top-suite metadata value set with `--metadata` at run time. Everything that depends on the order of the runs is then computed per group and shown as `value, value` in group order; `--last N` keeps the last N runs of each group. `compare` exits with 0 whatever the runs show.
 
 ## 8. Auto-discovery and `-o` overrides
 
