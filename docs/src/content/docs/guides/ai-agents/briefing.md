@@ -6,28 +6,29 @@ sidebar:
   order: 150.2
 ---
 
-The skill teaches the agent *how* to drive `robotcode`, and `robotcode` resolves everything in your configuration at runtime — paths, profiles, tags, suites, installed library versions — so you never have to repeat that for the agent.
+The skill teaches the agent how to drive `robotcode`, and `robotcode` reads your configuration when it runs: the paths, the profiles, the tags, the suites and the installed versions of the libraries. You don't have to write these down for the agent.
 
-What it **can't** infer is the surrounding setup and intent. Capturing those once in your agent's instructions file — `AGENTS.md` (an emerging cross-agent convention), `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, or whatever your agent reads — saves it from rediscovering them on every task and keeps it from guessing wrong. Worth recording:
+The agent can't find out from `robotcode` how the project is set up around the tests and what you want from them. Write that down once in your agent's instruction file ([which file](#which-file-the-agent-reads)), so that it doesn't have to find it out again on every task, or guess. Worth writing down:
 
-- **Environment & package manager** — which tool manages dependencies (`uv`, `hatch`, `poetry`, `pip`, …) and where the project's virtual environment lives, so the agent runs `robotcode` from the right interpreter (see [Prerequisites](/guides/ai-agents/setting-up/#prerequisites)).
-- **Installed libraries and their setup steps** — especially any one-off initialization needed after an install or update. For example, Browser Library needs `rfbrowser init` to download its Playwright browsers before its keywords work; an agent that doesn't know this runs into confusing failures.
-- **The system under test** — what the application is, how to reach it (base URLs per environment, which profile points where), and any test data or accounts. Keep secrets out — describe *how* credentials are provided (env vars, a vault), not the values themselves.
-- **Project conventions** — naming, tags, suite layout, and where new keywords belong, so generated tests match what you already have.
+- **Environment and package manager:** which tool manages the dependencies (`uv`, `hatch`, `poetry`, `pip`, …) and where the project's virtual environment is, so that the agent runs `robotcode` with the right interpreter (see [Prerequisites](/guides/ai-agents/setting-up/#prerequisites)).
+- **Installed libraries and their setup steps:** above all a step that is needed once after an install or update. For example, the Browser library needs `rfbrowser init` to download its Playwright browsers before its keywords work, and an agent that doesn't know this runs into confusing failures.
+- **The system under test:** what the application is, how to reach it (base URLs per environment, which profile points where), and any test data or accounts. Keep secrets out: describe how credentials are provided, such as environment variables or a vault, not the values themselves.
+- **Project conventions:** naming, tags, the layout of the suites and where new keywords belong, so that new tests match what you already have.
 
-Name the RobotCode skill there instead of saying how to run the tests, as in *"Use the RobotCode skill for all work on the tests."* A rule such as "run tests with `robotcode robot`" repeats what the skill says, and as a standing rule it names only one of the ways the skill chooses from, such as the debugger or the results of a finished run.
+In that file, name the RobotCode skill, as in *"Use the RobotCode skill for all work on the tests."* Don't say how to run the tests. A rule such as "run tests with `robotcode robot`" repeats what the skill says, and it names only one of the ways the skill chooses from: the others include the debugger and the results of a finished run.
 
-Keep it short and factual; this is standing context the agent reads on every request, not a place to duplicate `robot.toml`.
+Keep it short and factual: the agent reads it on every request.
 
 ## Which file the agent reads
 
-`AGENTS.md` in the project's root folder is the file that all three agents of this guide read, so one file serves a team that uses several of them:
+GitHub Copilot Chat, GitHub Copilot CLI, Codex and Claude Code all read `AGENTS.md` in the project's root folder, so one file serves a team that uses several of them:
 
-- **GitHub Copilot** in VS Code reads `.github/copilot-instructions.md` and `AGENTS.md`. The setting `chat.useAgentsMdFile`, on by default, controls `AGENTS.md`.
+- **GitHub Copilot Chat** in VS Code reads `.github/copilot-instructions.md` and `AGENTS.md`. In its local agent sessions, the setting `chat.useAgentsMdFile`, on by default, controls `AGENTS.md`.
+- **GitHub Copilot CLI** reads `AGENTS.md`, `.github/copilot-instructions.md` and `CLAUDE.md`, in the repository's root folder, in the folder it works in and in the folders between them.
 - **Codex** reads the `AGENTS.md` files from the project's root folder down to the folder it works in.
 - **Claude Code** reads `CLAUDE.md`. From version 2.1.277 it reads `AGENTS.md` too, but only when there is no `CLAUDE.md` or `CLAUDE.local.md` in the folder it works in or above it. If your project has a `CLAUDE.md`, import `AGENTS.md` into it with a line `@AGENTS.md`.
 
-## An example
+## The instruction file of the example project
 
 The tutorial on [Working with the Agent](/guides/ai-agents/working-with-the-agent/) uses a small web shop project, [`robotcodedev/webshop-ai-example`](https://github.com/robotcodedev/webshop-ai-example), with this `AGENTS.md`:
 
@@ -57,5 +58,5 @@ Robot Framework tests for our web shop, run with RobotCode.
 - Runs write their results to `results/`.
 ```
 
-It names the environment, the RobotCode skill and how to set up the Browser library, says where the shop comes from and what the profiles point to, and lists the conventions a new test should follow. Everything else, such as the paths, the variables and the profiles' settings, the agent reads from `robot.toml` through `robotcode`.
+Everything else, such as the paths, the variables and the settings of the profiles, the agent reads from `robot.toml` through `robotcode`.
 

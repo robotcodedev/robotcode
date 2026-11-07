@@ -1,36 +1,34 @@
 ---
 title: Setting Up Your Agent
-description: Install the RobotCode plugin for GitHub Copilot Chat in VS Code and for Claude Code, GitHub Copilot CLI, Codex and other agents, in PyCharm too, match it to your RobotCode version, and check that the agent works through robotcode.
+description: Set up the RobotCode plugin and robotcode for GitHub Copilot Chat in VS Code, for Claude Code, GitHub Copilot CLI and Codex, and in PyCharm, and check that the agent works through robotcode.
 sidebar:
   label: Setting Up
   order: 150.1
 ---
 
-An agent needs two things to work with RobotCode: the RobotCode plugin, which teaches it to use `robotcode`, and RobotCode's command line tools in the project's Python environment. This page sets up both, in VS Code, for agents on the command line and in PyCharm, and shows how to check that the agent works through `robotcode`.
+An agent needs two things to work with RobotCode: the RobotCode plugin, which teaches it to use `robotcode`, and `robotcode` itself, running in the project's Python environment. In VS Code, the extension brings both. This page sets them up in VS Code, for agents on the command line and in PyCharm, and shows how to check that the agent works through `robotcode`.
 
 ## Prerequisites
 
-The chat plugin guides the agent in using `robotcode`; it does not bundle or replace the CLI. The [`robotcode` CLI tools](/reference/cli/#installation) must be installed in the **project's** Python environment — not an isolated runner like `uvx` or `pipx`, which cannot see the project's libraries, resources, and local modules. If the CLI is missing, the agent is instructed to walk you through installing it (choosing scope and extras) before running anything.
+The plugin tells the agent how to use `robotcode`, but it doesn't contain it. `robotcode` has to run in the project's Python environment, because Robot Framework and your libraries are installed there. A tool runner such as `uvx` or `pipx` runs it in an environment of its own, which doesn't have them. In VS Code, the extension brings its own `robotcode` for this (see below). Everywhere else, [install RobotCode's command line tools](/getting-started/command-line/) into the project's environment. If they are missing, the agent asks you before it installs anything; see [When robotcode is missing](/guides/ai-agents/how-the-skill-works/#when-robotcode-is-missing).
 
 ## In VS Code (GitHub Copilot Chat)
 
-The VS Code extension bundles the RobotCode chat plugin for GitHub Copilot Chat. It is **enabled by default** — no installation step, no marketplace. The agent picks it up automatically and starts using `robotcode` whenever a request is about Robot Framework.
+The VS Code extension brings the RobotCode plugin for GitHub Copilot Chat. It is on by default, and you install nothing. Copilot Chat loads the plugin's skill when a request reads as Robot Framework work; see [When the agent loads the skill](/guides/ai-agents/how-the-skill-works/#when-the-agent-loads-the-skill).
 
-You also don't need to install the `robotcode` CLI separately for this. The extension ships a bundled CLI — every subcommand included — and adds it to the integrated terminal's `PATH`; because Copilot Chat's agent runs its commands in that terminal, `robotcode` is available there out of the box. The bundle is only the *tool*, though: it runs against the terminal's active Python interpreter, so Robot Framework and your project's libraries still have to be installed in that environment for the CLI to inspect and run your project correctly.
+You don't install `robotcode` here either. The extension brings its own copy, with every command, and adds it to the `PATH` of the integrated terminal, where Copilot Chat's agent runs its commands. That copy runs with the terminal's active Python interpreter, so Robot Framework and your project's libraries must be installed there.
 
-Toggle it with the setting:
+The setting `robotcode.ai.enableChatPlugins` turns the plugin on and off:
 
 ```json
 "robotcode.ai.enableChatPlugins": true
 ```
 
-Set it to `false` to turn the bundled plugin off — for example if you prefer to install the plugin from the marketplace instead (see the [duplication note](#avoiding-duplicates) below).
+Set it to `false` if you install the plugin from the marketplace instead; see [Avoiding duplicates](#avoiding-duplicates). VS Code's own setting `chat.plugins.enabled` turns off all plugins, this one included.
 
-## Other agents — the marketplace
+## Other agents
 
-The same plugin is published as an [Open Plugins](https://open-plugins.com/) marketplace, [`robotcodedev/robotframework-agent-plugins`](https://github.com/robotcodedev/robotframework-agent-plugins), so agents outside VS Code can install it once and reuse it. Supported agents include Claude Code, GitHub Copilot (CLI and Chat), and Codex; check [open-plugins.com/supported-agents](https://open-plugins.com/supported-agents) for the current list.
-
-Each agent uses its own commands to register a marketplace and install a plugin. For example:
+Agents outside VS Code install the same plugin from the marketplace [`robotcodedev/robotframework-agent-plugins`](https://github.com/robotcodedev/robotframework-agent-plugins). Each agent has its own commands to add the marketplace and to install the plugin from it:
 
 ```sh
 # Claude Code
@@ -46,11 +44,43 @@ codex plugin marketplace add robotcodedev/robotframework-agent-plugins
 codex plugin add robotcode@robotframework-agent-plugins
 ```
 
-See the [marketplace README](https://github.com/robotcodedev/robotframework-agent-plugins#install-per-agent) for the exact commands per agent, and for agents that load skill folders directly without a marketplace.
+The [marketplace README](https://github.com/robotcodedev/robotframework-agent-plugins#install-per-agent) has the commands for other agents. For agents that load skill folders without a marketplace, the [plugin's README](https://github.com/robotcodedev/robotframework-agent-plugins/blob/main/plugins/robotcode/README.md#install) says how to copy the skill.
+
+### Updating the plugin
+
+The plugin from the marketplace is the one for the latest RobotCode release at the time you install or update it. To update it:
+
+```sh
+# Claude Code: refresh the marketplace, then update the plugin
+claude plugin marketplace update robotframework-agent-plugins
+claude plugin update robotcode@robotframework-agent-plugins
+
+# GitHub Copilot CLI
+copilot plugin update robotcode@robotframework-agent-plugins
+
+# Codex: refreshing the marketplace also updates the plugin
+codex plugin marketplace upgrade robotframework-agent-plugins
+```
+
+In VS Code, **Chat: Update Plugins** in the Command Palette updates the plugins from a marketplace.
+
+## In PyCharm
+
+Claude Code, GitHub Copilot CLI and Codex work in PyCharm's terminal as well. RobotCode's PyCharm plugin doesn't include the plugin for agents yet (see [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/)), so install it from the [marketplace](#other-agents). GitHub Copilot's plugin for PyCharm can't use it, because GitHub offers plugins only in VS Code, GitHub Copilot CLI, the GitHub Copilot app and Copilot in the cloud.
+
+Start the agent with the project's Python environment active and install RobotCode's command line tools there, as [Get Started on the Command Line](/getting-started/command-line/) shows, so that the agent's commands find `robotcode`.
+
+## Checking that it works
+
+Ask the agent something about the project, for example *"Which tests are tagged smoke?"*. It should run a `robotcode discover` command, such as `robotcode discover tests -i smoke`, and not search the `.robot` files. If it searches the files, see [The agent answers without robotcode](/guides/ai-agents/troubleshooting/#the-agent-answers-without-robotcode).
+
+To see which environment the agent's `robotcode` uses, ask it to run `robotcode discover info`. It shows the versions of Robot Framework, RobotCode and Python and the Python executable.
+
+## Special cases
 
 ### Matching your RobotCode version
 
-Installed this way, the plugin matches the latest **RobotCode** release. Every release is also tagged `robotcode--v<version>`, so a project that stays on an older version can pin the plugin to the matching tag. Check the version with `robotcode --version`, then add the marketplace with that tag:
+A project that stays on an older RobotCode can pin the plugin to that version. Every release from 2.6.0 on, the first with the plugin, is tagged `robotcode--v<version>`. Check the version with `robotcode --version`, then add the marketplace with that tag:
 
 ```sh
 # Claude Code
@@ -69,31 +99,19 @@ A pinned marketplace receives no updates. To move to another version, remove the
 
 ### Adding the marketplace from VS Code
 
-To use the marketplace version in VS Code's Copilot Chat (instead of, or alongside, the bundled plugin), the extension provides two Command Palette commands that edit the user-level `chat.plugins.marketplaces` setting for you:
+To use the plugin from the marketplace in GitHub Copilot Chat instead of the one in the extension, the extension has two commands in the Command Palette. They edit the user setting `chat.plugins.marketplaces` for you:
 
 - **RobotCode: Add Chat Plugins Marketplace**
 - **RobotCode: Remove Chat Plugins Marketplace**
 
-Only the applicable one is shown at a time — *Add* until the marketplace is registered, *Remove* afterwards. (Removing also clears the entry if it was added by hand as a GitHub URL rather than the `owner/repo` shorthand, or pinned to a tag.)
-
-The `chat.plugins.marketplaces` setting is owned by GitHub Copilot Chat, not by RobotCode, so these commands require Copilot Chat (or another agent that provides that setting) to be installed — without it, updating it fails with an error.
+Only one of them shows at a time: *Add* until the marketplace is registered, *Remove* afterwards. *Remove* also clears an entry that was added by hand as a GitHub URL instead of `owner/repo`, or that is pinned to a tag.
 
 ### Avoiding duplicates
 
-The bundled plugin and the marketplace plugin are the *same* plugin. If you install it from the marketplace, turn the bundled copy off so the agent doesn't load two identical plugins:
+The plugin in the extension and the plugin from the marketplace are the same plugin. If you install it from the marketplace, turn the one in the extension off, so that the agent doesn't load it twice:
 
 ```json
 "robotcode.ai.enableChatPlugins": false
 ```
 
-The *Add Chat Plugins Marketplace* command offers to do this for you when the bundled plugin is still enabled.
-
-## In PyCharm
-
-The usual agents work in PyCharm as well. RobotCode's PyCharm plugin does not bring the plugin for them yet (see [PyCharm and VS Code](/guides/pycharm/compared-with-vscode/)), so install it from the [marketplace](#other-agents--the-marketplace) as described above. Start the agent with the project's Python environment active and install RobotCode's command line tools there, as [Get Started on the Command Line](/getting-started/command-line/) shows, so that the agent's commands find `robotcode`.
-
-## Checking that it works
-
-Ask the agent a question that only the project's configuration can answer, for example *"Which tests are tagged smoke?"*. It should answer with a `robotcode discover` command, such as `robotcode discover tests -i smoke`, and not by searching the `.robot` files. If it searches the files, see [Troubleshooting](/guides/ai-agents/troubleshooting/).
-
-To see which environment the agent's `robotcode` uses, ask it to run `robotcode discover info`. It shows the versions of Robot Framework, RobotCode and Python and the Python executable.
+*Add Chat Plugins Marketplace* offers to do this when the plugin in the extension is still on.

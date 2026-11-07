@@ -8,19 +8,19 @@ sidebar:
 
 import AreaOverview from "../../../../components/AreaOverview.astro";
 
-AI coding agents are good at writing code and bad at guessing how *your* Robot Framework project is actually wired. Which files become suites, which tags a test really ends up with, where a keyword comes from, what a finished run contained — none of that is reliably visible by reading `.robot` files. It is decided at runtime by `robot.toml`, profiles, variables, the installed library versions, and pre-run modifiers.
+AI coding agents are good at writing code and bad at guessing how *your* Robot Framework project is actually wired. Reading the `.robot` files doesn't reliably tell which files become suites, which tags a test really ends up with, where a keyword comes from or what a finished run contained. All of this is decided at runtime by `robot.toml`, profiles, variables, the installed library versions, and pre-run modifiers.
 
-**RobotCode** closes that gap with a plugin for AI agents. Its skill teaches the agent to work through the project's own [`robotcode`](/reference/cli/) command line instead of guessing, so that the agent sees your tests, keywords and results the way Robot Framework resolves them, with the profiles of your project's `robot.toml`. This works for tests and RPA tasks alike.
+**RobotCode** closes that gap with a plugin for AI agents. The plugin contains a skill, a set of instructions that the agent loads when a request looks like Robot Framework work. The skill teaches the agent to work through the project's own [`robotcode`](/reference/cli/) command line instead of guessing, so that the agent sees your tests, keywords and results the way Robot Framework resolves them, with the profiles of your project's `robot.toml`. This works for tests and RPA tasks alike.
 
 ## Agents
 
-The plugin comes with the VS Code extension for **GitHub Copilot Chat** and is on by default. **Claude Code**, **GitHub Copilot CLI**, **Codex** and other [Open Plugins](https://open-plugins.com/) agents install it from a marketplace. The usual agents work in PyCharm as well; RobotCode's PyCharm plugin does not bring the plugin for them yet, so you install it from the marketplace there too.
+The plugin comes with the VS Code extension for **GitHub Copilot Chat** and is on by default. **Claude Code**, **GitHub Copilot CLI** and **Codex** install it from a marketplace. In PyCharm, they install it from the marketplace too, because RobotCode's PyCharm plugin doesn't include it yet.
 
 ## Getting started
 
-1. **[Set up the agent](/guides/ai-agents/setting-up/):** turn the plugin on in VS Code or install it from the marketplace, and install RobotCode's command line tools in the project's Python environment.
+1. **[Set up the agent](/guides/ai-agents/setting-up/):** in VS Code, the extension brings the plugin and `robotcode`. For other agents, install the plugin from the marketplace and RobotCode's command line tools in the project's Python environment.
 2. **[Brief the agent](/guides/ai-agents/briefing/):** write down once what the agent cannot find out from the project itself, such as the system under test and your conventions.
-3. **[Ask](/guides/ai-agents/working-with-the-agent/):** describe your task. The agent picks the `robotcode` command for it.
+3. **Ask:** describe your task. The agent picks the `robotcode` command for it, and [the tutorial](#the-tutorial) shows how to ask.
 
 ## The tutorial
 
