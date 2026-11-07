@@ -521,7 +521,8 @@ def test_new_warning(robotcode_cli: CliRunner, runs: Dict[str, Path]) -> None:
 
 def test_gone_error(robotcode_cli: CliRunner, runs: Dict[str, Path]) -> None:
     no_library = runs["no_library"]
-    data = _json(robotcode_cli, no_library, no_library, runs["old"], "--show", "messages")
+    # the message starts with the suite's path, which is long in the temp directories of macOS and Windows
+    data = _json(robotcode_cli, no_library, no_library, runs["old"], "--show", "messages", "--message-chars", "0")
 
     errors = [m for m in data["messages"]["messages"] if m["level"] == "ERROR"]
     assert len(errors) == 1
