@@ -149,7 +149,7 @@ def dump_model(
         workspace_root=analyzer.root_folder,
         source=str(document.uri.to_path()),
     )
-    text = json.dumps(dump, indent=2, ensure_ascii=False)
+    text = json.dumps(dump, indent=2, ensure_ascii=True)
 
     if output is not None:
         output.write_text(text + "\n", encoding="utf-8")

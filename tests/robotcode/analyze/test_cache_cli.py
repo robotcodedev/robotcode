@@ -29,7 +29,7 @@ class TestEntryMatches:
 
 
 def test_display_name_keeps_entry_single_line() -> None:
-    assert _display_name("/project/suite.robot\nrobot") == "/project/suite.robot · robot"
+    assert _display_name("/project/suite.robot\nrobot") == "/project/suite.robot, robot"
     assert _display_name("/project/common.resource") == "/project/common.resource"
 
 

@@ -261,8 +261,8 @@ class RobotCodeGroup(AliasedGroup):
     default=None,
     help=(
         "Enable or disable colored output. Color codes are written only to a terminal; set `FORCE_COLOR` to get"
-        " them in a pipe. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR`"
-        " is set, forced if `FORCE_COLOR` is set."
+        " them in a pipe. Default (no flag): auto-detect (colors only when stdout is a TTY, disabled if `NO_COLOR`"
+        " is set, forced if `FORCE_COLOR` is set)."
     ),
     show_envvar=True,
 )

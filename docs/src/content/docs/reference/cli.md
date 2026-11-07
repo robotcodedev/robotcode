@@ -130,7 +130,7 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 - `--color / --no-color`
 
-   Enable or disable colored output. Color codes are written only to a terminal; set `FORCE_COLOR` to get them in a pipe. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set.  [env var: ROBOTCODE_COLOR]
+   Enable or disable colored output. Color codes are written only to a terminal; set `FORCE_COLOR` to get them in a pipe. Default (no flag): auto-detect (colors only when stdout is a TTY, disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set).  [env var: ROBOTCODE_COLOR]
 
 
 - `--pager / --no-pager`
@@ -246,7 +246,7 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 - [`results`](#results)
 
-   Inspect a finished run's `output.xml` / `output.json` — counts, failures, and per-test execution tree, without re-running.
+   Inspect a finished run's `output.xml` / `output.json`: counts, failures, and per-test execution tree, without re-running.
 
 - [`robot`](#robot)
 
@@ -576,7 +576,7 @@ robotcode analyze code [OPTIONS] [PATHS]...
 
 - `--severity [error|warn|warning|info|information|hint] *`
 
-   Only report diagnostics of these severities. Repeatable and comma-separated. Filtered-out severities are ignored entirely — they don't appear in the output, the summary or the exit code. When omitted, all severities are reported.
+   Only report diagnostics of these severities. Repeatable and comma-separated. Filtered-out severities are ignored entirely: they don't appear in the output, the summary or the exit code. When omitted, all severities are reported.
 
 
 - `--code CODE *`
@@ -1073,12 +1073,12 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--full-paths / --no-full-paths`
@@ -1117,12 +1117,12 @@ robotcode discover files [OPTIONS] [PATHS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--help`
@@ -1230,12 +1230,12 @@ robotcode discover metadata [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--help`
@@ -1297,12 +1297,12 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--full-paths / --no-full-paths`
@@ -1389,12 +1389,12 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--help`
@@ -1471,12 +1471,12 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--help`
@@ -1553,12 +1553,12 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body (keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names). Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
 
-   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+   Only include items where PATTERN (Python regex, case-sensitive; prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
 
 
 - `--help`
@@ -2078,12 +2078,12 @@ robotcode repl [OPTIONS] [FILES]...
 
 - `--backend [auto|prompt-toolkit|plain]`
 
-   Force a specific input backend instead of auto-picking. `auto` and `prompt-toolkit` both pick the prompt-toolkit-driven interpreter (completion, syntax highlighting, history, doc viewer). `plain` drops to a bare `input()` prompt — useful when ANSI escapes or popups would interfere with the surrounding capture.  [default: auto]
+   Force a specific input backend instead of auto-picking. `auto` and `prompt-toolkit` both pick the prompt-toolkit-driven interpreter (completion, syntax highlighting, history, doc viewer). `plain` drops to a bare `input()` prompt, useful when ANSI escapes or popups would interfere with the surrounding capture.  [default: auto]
 
 
 - `--plain`
 
-   Shorthand for `--backend=plain`. Disables all prompt enhancements — completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
+   Shorthand for `--backend=plain`. Disables all prompt enhancements: completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
 
 
 - `-v, --variable name:value *`
@@ -2153,22 +2153,22 @@ robotcode repl [OPTIONS] [FILES]...
 
 - `--debugger-attached / --no-debugger-attached`
 
-   Whether the debugger is active. While detached nothing pauses — a failing keyword just prints its error and you stay at the prompt — but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.
+   Whether the debugger is active. While detached nothing pauses (a failing keyword just prints its error and you stay at the prompt), but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.
 
 
 - `--break LOCATION *`
 
-   Break at LOCATION — a `file:line`, where the end of the path is enough, or a keyword name or glob pattern matched like Robot Framework. Repeatable.
+   Break at LOCATION: a `file:line`, where the end of the path is enough, or a keyword name or glob pattern matched like Robot Framework. Repeatable.
 
 
 - `--break-on-exception / --no-break-on-exception`
 
-   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. Armed by default; it only pauses while the debugger is attached (see `--debugger-attached`).
+   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And ...`), before the failure unwinds. Armed by default; it only pauses while the debugger is attached (see `--debugger-attached`).
 
 
 - `--break-on-all-exceptions / --no-break-on-all-exceptions`
 
-   Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And …`.  [default: no-break-on-all-exceptions]
+   Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And ...`.  [default: no-break-on-all-exceptions]
 
 
 - `--break-on-failed-test / --no-break-on-failed-test`
@@ -2306,8 +2306,8 @@ robotcode repl-server [OPTIONS] [FILES]...
 
 #### results
 
-Inspect a finished run's `output.xml` / `output.json` — counts, failures,
-and per-test execution tree, without re-running.
+Inspect a finished run's `output.xml` / `output.json`: counts, failures, and
+per-test execution tree, without re-running.
 
 The result file is auto-discovered from the active profile's `output_dir` /
 `output` settings; override with `-o/--output PATH`. Use `-f json` (or
@@ -2456,7 +2456,7 @@ robotcode results compare [OPTIONS] RUN RUN [RUN]...
 
 - `--search-regex PATTERN`
 
-   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive; prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
 
 
 - `--full-paths / --no-full-paths`
@@ -2605,7 +2605,7 @@ robotcode results diff [OPTIONS] BASELINE [CURRENT]
 
 - `--search-regex PATTERN`
 
-   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive; prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
 
 
 - `--full-paths / --no-full-paths`
@@ -2642,7 +2642,7 @@ robotcode results diff [OPTIONS] BASELINE [CURRENT]
 
 Show the execution log of each test: keywords, control flow and messages.
 
-Filter the same way as `show` — by status, tag, suite, or test name. Without
+Filter the same way as `show`: by status, tag, suite, or test name. Without
 filters, all tests are included. Use `--max-depth` to collapse deeply nested
 keyword calls.
 
@@ -2733,12 +2733,12 @@ robotcode results log [OPTIONS]
 
 - `--search-regex PATTERN`
 
-   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive; prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
 
 
 - `-o, --output PATH`
 
-   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed; auto-discovery then happens inside it.
 
 
 - `--level [trace|debug|info|warn|error|fail]`
@@ -2889,12 +2889,12 @@ robotcode results show [OPTIONS]
 
 - `--search-regex PATTERN`
 
-   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive; prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
 
 
 - `-o, --output PATH`
 
-   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed; auto-discovery then happens inside it.
 
 
 - `--top INTEGER RANGE`
@@ -2929,7 +2929,7 @@ robotcode results show [OPTIONS]
 
 - `--sort FIELD`
 
-   Sort tests before display. `name`/`suite` = lexicographic full-name/suite. `status` = FAIL → SKIP → PASS → NOT RUN. `elapsed` = duration (longest first). `start` = start time. Default: execution order from the output file.
+   Sort tests before display. `name`/`suite` = lexicographic full-name/suite. `status` = FAIL -> SKIP -> PASS -> NOT RUN. `elapsed` = duration (longest first). `start` = start time. Default: execution order from the output file.
 
 
 - `--reverse / --no-reverse`
@@ -3034,12 +3034,12 @@ robotcode results stats [OPTIONS]
 
 - `--search-regex PATTERN`
 
-   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive; prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
 
 
 - `-o, --output PATH`
 
-   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed; auto-discovery then happens inside it.
 
 
 - `--by [tag|suite|status] *`
@@ -3138,12 +3138,12 @@ robotcode results summary [OPTIONS]
 
 - `--search-regex PATTERN`
 
-   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive; prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
 
 
 - `-o, --output PATH`
 
-   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed; auto-discovery then happens inside it.
 
 
 - `--failed / --no-failed`
@@ -3244,12 +3244,12 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--backend [auto|prompt-toolkit|plain]`
 
-   Force a specific input backend instead of auto-picking. `auto` and `prompt-toolkit` both pick the prompt-toolkit-driven interpreter (completion, syntax highlighting, history, doc viewer). `plain` drops to a bare `input()` prompt — useful when ANSI escapes or popups would interfere with the surrounding capture.  [default: auto]
+   Force a specific input backend instead of auto-picking. `auto` and `prompt-toolkit` both pick the prompt-toolkit-driven interpreter (completion, syntax highlighting, history, doc viewer). `plain` drops to a bare `input()` prompt, useful when ANSI escapes or popups would interfere with the surrounding capture.  [default: auto]
 
 
 - `--plain`
 
-   Shorthand for `--backend=plain`. Disables all prompt enhancements — completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
+   Shorthand for `--backend=plain`. Disables all prompt enhancements: completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
 
 
 - `-bl, --by-longname TEXT *`
@@ -3274,22 +3274,22 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--debugger-attached / --no-debugger-attached`
 
-   Whether the debugger is active. While detached nothing pauses — a failing keyword just prints its error and you stay at the prompt — but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.
+   Whether the debugger is active. While detached nothing pauses (a failing keyword just prints its error and you stay at the prompt), but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.
 
 
 - `--break LOCATION *`
 
-   Break at LOCATION — a `file:line`, where the end of the path is enough, or a keyword name or glob pattern matched like Robot Framework. Repeatable.
+   Break at LOCATION: a `file:line`, where the end of the path is enough, or a keyword name or glob pattern matched like Robot Framework. Repeatable.
 
 
 - `--break-on-exception / --no-break-on-exception`
 
-   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. Armed by default; it only pauses while the debugger is attached (see `--debugger-attached`).
+   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And ...`), before the failure unwinds. Armed by default; it only pauses while the debugger is attached (see `--debugger-attached`).
 
 
 - `--break-on-all-exceptions / --no-break-on-all-exceptions`
 
-   Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And …`.  [default: no-break-on-all-exceptions]
+   Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And ...`.  [default: no-break-on-all-exceptions]
 
 
 - `--break-on-failed-test / --no-break-on-failed-test`

@@ -84,7 +84,7 @@ def _format_bytes(n: int) -> str:
 def _display_name(entry_name: str) -> str:
     # Namespace entry names contain a newline separating source path and
     # document type; keep the table/line output single-line.
-    return entry_name.replace("\n", " · ")
+    return entry_name.replace("\n", ", ")
 
 
 def _entry_matches(entry_name: str, patterns: Tuple[str, ...]) -> bool:
@@ -169,7 +169,7 @@ def cache_info(app: Application, paths: Tuple[Path, ...]) -> None:
                     "section": section.name.lower(),
                     "entries": stats.entry_count,
                     "size": stats.total_blob_bytes,
-                    "size_formatted": _format_bytes(stats.total_blob_bytes) if stats.entry_count else "—",
+                    "size_formatted": _format_bytes(stats.total_blob_bytes) if stats.entry_count else "-",
                     "created": stats.oldest_created or None,
                     "modified": stats.newest_modified or None,
                 }
@@ -188,7 +188,7 @@ def cache_info(app: Application, paths: Tuple[Path, ...]) -> None:
                 for s in section_data:
                     lines.append(
                         f"| {s['section']} | {s['entries']} | {s['size_formatted']}"
-                        f" | {s['created'] or '—'} | {s['modified'] or '—'} |"
+                        f" | {s['created'] or '-'} | {s['modified'] or '-'} |"
                     )
                 lines.append(f"| **Total** | **{total_entries}** | **{_format_bytes(total_bytes)}** | | |")
                 app.echo_as_markdown("\n".join(lines))
@@ -199,13 +199,13 @@ def cache_info(app: Application, paths: Tuple[Path, ...]) -> None:
                 app.echo("")
                 header = f"  {'Section':<12} {'Entries':>7}  {'Size':>10}  {'Created':19}  {'Modified':19}"
                 app.echo(header)
-                app.echo(f"  {'─' * (len(header) - 2)}")
+                app.echo(f"  {'-' * (len(header) - 2)}")
                 for s in section_data:
                     app.echo(
                         f"  {s['section']:<12} {s['entries']:>7}  {s['size_formatted']:>10}"
-                        f"  {(s['created'] or '—'):19}  {(s['modified'] or '—'):19}"
+                        f"  {(s['created'] or '-'):19}  {(s['modified'] or '-'):19}"
                     )
-                app.echo(f"  {'─' * (len(header) - 2)}")
+                app.echo(f"  {'-' * (len(header) - 2)}")
                 app.echo(f"  {'Total':<12} {total_entries:>7}  {_format_bytes(total_bytes):>10}")
         else:
             app.print_data(
@@ -279,8 +279,8 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
                     lines.append("|---|---:|---|---|")
                     for entry in entries:
                         size = _format_bytes(entry.meta_bytes + entry.data_bytes)
-                        created = entry.created_at or "—"
-                        modified = entry.modified_at or "—"
+                        created = entry.created_at or "-"
+                        modified = entry.modified_at or "-"
                         lines.append(f"| {_display_name(entry.entry_name)} | {size} | {created} | {modified} |")
                     lines.append("")
                 if lines:
@@ -297,8 +297,8 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
                     app.echo(f"[{section.name.lower()}] ({len(entries)} {'entry' if len(entries) == 1 else 'entries'})")
                     for entry in entries:
                         size = _format_bytes(entry.meta_bytes + entry.data_bytes)
-                        created = entry.created_at or "—"
-                        modified = entry.modified_at or "—"
+                        created = entry.created_at or "-"
+                        modified = entry.modified_at or "-"
                         app.echo(
                             f"  {_display_name(entry.entry_name)}  size={size}  created={created}  modified={modified}"
                         )

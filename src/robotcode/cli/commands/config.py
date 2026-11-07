@@ -141,9 +141,9 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
 
         messages = []
         if discovered_by == DiscoverdBy.NOT_FOUND:
-            messages += ["Cannot detect root folder. 😥"]
+            messages += ["Cannot detect root folder."]
         elif not config_files:
-            messages += ["Cannot find any configuration file. 😥"]
+            messages += ["Cannot find any configuration file."]
         if messages:
             result["messages"] = messages
 
@@ -185,7 +185,7 @@ def root(app: Application, paths: Tuple[Path, ...]) -> None:
     )
 
     if root_folder is None and (app.config.output_format is None or app.config.output_format == OutputFormat.TEXT):
-        raise click.ClickException("Cannot detect root folder. 😥")
+        raise click.ClickException("Cannot detect root folder.")
 
     result: Dict[str, Any] = {
         "root": {
@@ -196,7 +196,7 @@ def root(app: Application, paths: Tuple[Path, ...]) -> None:
 
     messages = []
     if discovered_by == DiscoverdBy.NOT_FOUND:
-        messages += ["Cannot detect root folder. 😥"]
+        messages += ["Cannot detect root folder."]
 
     if messages:
         result["messages"] = messages

@@ -127,9 +127,9 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
 
         messages = []
         if discovered_by == DiscoverdBy.NOT_FOUND:
-            messages += ["Cannot detect root folder. 😥"]
+            messages += ["Cannot detect root folder."]
         elif not config_files:
-            messages += ["Cannot find any configuration file. 😥"]
+            messages += ["Cannot find any configuration file."]
         elif not config.profiles:
             messages += ["No profiles defined."]
         if messages:

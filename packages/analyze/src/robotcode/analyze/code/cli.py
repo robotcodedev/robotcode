@@ -374,7 +374,7 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
     callback=_parse_severities,
     metavar="[error|warn|warning|info|information|hint]",
     help="Only report diagnostics of these severities. Repeatable and comma-separated. "
-    "Filtered-out severities are ignored entirely — they don't appear in the output, the summary or the exit code. "
+    "Filtered-out severities are ignored entirely: they don't appear in the output, the summary or the exit code. "
     "When omitted, all severities are reported.",
 )
 @click.option(
@@ -650,18 +650,21 @@ def code(
             app.echo(statistics_str)
         elif resolved_format == "sarif":
             text = as_json(
-                build_sarif_log(folder_entries, sorted_documents, root_folder, full_paths, __version__), indent=True
+                build_sarif_log(folder_entries, sorted_documents, root_folder, full_paths, __version__),
+                indent=True,
+                ensure_ascii=True,
             )
             _write_or_echo(app, text, output_file)
         elif resolved_format == "github":
             _write_or_echo(app, "\n".join(build_github_annotations(folder_entries, sorted_documents)), output_file)
         elif resolved_format == "gitlab":
             report = build_gitlab_report(folder_entries, sorted_documents)
-            _write_or_echo(app, as_json(report, indent=True), output_file)
+            _write_or_echo(app, as_json(report, indent=True, ensure_ascii=True), output_file)
         elif output_file is not None:
             # json / json-indent written to a file (always plain, no color/pager).
             result = _build_analysis_result(folder_entries, sorted_documents, summary)
-            _write_or_echo(app, as_json(result, indent=resolved_format == "json-indent"), output_file)
+            text = as_json(result, indent=resolved_format == "json-indent", ensure_ascii=True)
+            _write_or_echo(app, text, output_file)
         else:
             # json / json-indent / toml on stdout via the shared renderer (keeps color/paging).
             app.print_data(
