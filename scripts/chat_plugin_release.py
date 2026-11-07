@@ -47,7 +47,7 @@ from semantic_version import Version
 from scripts.sync_chat_plugin import DEFAULT_SOURCE, DEST, PLUGIN_SUBPATH, STAMP, equal_trees, git
 
 DEFAULT_REMOTE = "https://github.com/robotcodedev/robotframework-agent-plugins.git"
-PLUGIN_JSON = Path(".plugin") / "plugin.json"
+PLUGIN_JSON = Path("plugin.json")
 SKILL_MD = Path("skills") / "robotcode" / "SKILL.md"
 SKILL_VERSION = re.compile(r"^metadata:[ \t]*\n(?:[ \t]+.*\n)*?[ \t]+version:[ \t]*[\"']?([^\"'\s]+)", re.MULTILINE)
 
