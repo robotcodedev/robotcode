@@ -44,7 +44,7 @@ codex plugin marketplace add robotcodedev/robotframework-agent-plugins
 codex plugin add robotcode@robotframework-agent-plugins
 ```
 
-The [marketplace README](https://github.com/robotcodedev/robotframework-agent-plugins#install-per-agent) has the commands for other agents. For agents that load skill folders without a marketplace, the [plugin's README](https://github.com/robotcodedev/robotframework-agent-plugins/blob/main/plugins/robotcode/README.md#install) says how to copy the skill.
+The plugin follows the [Agent Plugins](https://agent-plugins.org/) standard, so [other agents that support it](https://agent-plugins.org/compatible-clients) can load it too; the [marketplace README](https://github.com/robotcodedev/robotframework-agent-plugins#install-per-agent) says how. For agents that load skill folders without a marketplace, the [plugin's README](https://github.com/robotcodedev/robotframework-agent-plugins/blob/main/plugins/robotcode/README.md#install) says how to copy the skill.
 
 ### Updating the plugin
 
