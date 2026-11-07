@@ -5,7 +5,7 @@
 ### Requirement: Version bump checks that the bundled plugin is ready
 
 Before it commits, `hatch run build:bump` SHALL check the vendored agent plugin for a final release:
-- The `version` in `chat-plugins/robotcode/plugin.json`, the plugin's Agent Plugins manifest, and the `metadata.version` in the vendored `SKILL.md` SHALL equal the new RobotCode version.
+- The `version` in `chat-plugins/robotcode/plugin.json` and the `metadata.version` in the vendored `SKILL.md` SHALL equal the new RobotCode version.
 - `chat-plugins/robotcode/` SHALL be in sync with the plugin in the local plugin repository checkout.
 - The commit recorded in `chat-plugins/.upstream.json` SHALL be contained in that checkout's local `next` branch.
 
