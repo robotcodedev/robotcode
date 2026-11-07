@@ -170,7 +170,7 @@ def test_embedded_file_in_the_message_text(base_dir: Path) -> None:
         '<a href="data:text/plain;base64,SGVsbG8gd29ybGQK" download="hello.txt">hello.txt</a>', base_dir
     )
 
-    assert text == "_(embedded hello.txt — see artefacts)_"
+    assert text == "_(embedded hello.txt - see artefacts)_"
     assert [ref.embedded for ref in refs] == [True]
 
 
@@ -178,7 +178,7 @@ def test_embedded_file_in_the_message_text(base_dir: Path) -> None:
 def test_embedded_file_without_link_text(base_dir: Path, link_text: str) -> None:
     text, refs = _convert(f'<a href="data:text/plain;base64,SGVsbG8gd29ybGQK">{link_text}</a>', base_dir)
 
-    assert text == "_(embedded data — see artefacts)_"
+    assert text == "_(embedded data - see artefacts)_"
     assert [ref.embedded for ref in refs] == [True]
 
 

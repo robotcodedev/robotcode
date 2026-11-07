@@ -112,7 +112,7 @@ def _source_paren(t: _TestLike, *, full_paths: bool) -> str:
 def render_summary(data: SummaryResult, *, full_paths: bool = False) -> str:
     name = data.file.rel_source or data.file.source or "(unknown source)"
     out: List[str] = []
-    out.append(f"# Summary — {md_escape(name)}")
+    out.append(f"# Summary: {md_escape(name)}")
 
     rows: List[List[str]] = [
         ["Status", bold_status(data.status)],
@@ -190,7 +190,7 @@ def render_show(
     name = data.file.rel_source or data.file.source or "(unknown source)"
     highlight = make_md_highlighter(search_substring, search_regex)
     out: List[str] = []
-    out.append(f"# Show — {md_escape(name)}")
+    out.append(f"# Show: {md_escape(name)}")
     out.append("")
 
     if not data.tests:
@@ -210,7 +210,7 @@ def render_show(
 
     if data.truncated:
         out.append("")
-        out.append(f"_… {data.truncated} more not shown (use `--top 0` for all)_")
+        out.append(f"_... {data.truncated} more not shown (use `--top 0` for all)_")
 
     out.append("")
     out.append("## Statistics")
@@ -267,7 +267,7 @@ def render_stats(data: StatsResult) -> str:
         out.append(_render_stats_table_md(section))
         if section.truncated:
             out.append("")
-            out.append(f"_… {section.truncated} more not shown (use `--top 0` for all)_")
+            out.append(f"_... {section.truncated} more not shown (use `--top 0` for all)_")
 
     footer = filters_footer_md(data.filters_applied)
     if footer:
@@ -303,7 +303,7 @@ def render_diff(data: DiffResult, *, full_paths: bool = False) -> str:
     baseline_label = data.baseline.rel_source or data.baseline.source or "(unknown baseline)"
     current_label = data.current.rel_source or data.current.source or "(unknown current)"
     out: List[str] = []
-    out.append(f"# Diff — {md_escape(baseline_label)} → {md_escape(current_label)}")
+    out.append(f"# Diff: {md_escape(baseline_label)} -> {md_escape(current_label)}")
 
     summary_counts: Dict[str, int] = {}
     rendered_any = False
@@ -337,7 +337,7 @@ def render_diff(data: DiffResult, *, full_paths: bool = False) -> str:
 
 
 def _more_not_shown(truncated: int) -> str:
-    return f"_… {truncated} more not shown (use `--top 0` for all)_"
+    return f"_... {truncated} more not shown (use `--top 0` for all)_"
 
 
 def render_compare(data: CompareResult, *, views: Sequence[str] = (), full_paths: bool = False) -> str:
@@ -350,12 +350,12 @@ def render_compare(data: CompareResult, *, views: Sequence[str] = (), full_paths
 
     def per_group(values: List[str]) -> str:
         empty = "-" if grouped else ""
-        return " · ".join(v or empty for v in values) if grouped else (values[0] if values else "")
+        return ", ".join(v or empty for v in values) if grouped else (values[0] if values else "")
 
     def run_label(number: Optional[int]) -> str:
         return label_of.get(number, f"#{number}") if number is not None else ""
 
-    out: List[str] = [f"# Compare — {len(data.runs)} runs"]
+    out: List[str] = [f"# Compare: {len(data.runs)} runs"]
 
     out += ["", "## Runs", "", _compare_runs_table(data, labels, full_paths=full_paths)]
 
@@ -377,7 +377,7 @@ def render_compare(data: CompareResult, *, views: Sequence[str] = (), full_paths
     view_sections: Dict[str, List[str]] = {}
 
     groups_line = (
-        "_Groups: " + " · ".join(md_escape(g.name or "(none)") for g in data.groups) + "_"
+        "_Groups: " + ", ".join(md_escape(g.name or "(none)") for g in data.groups) + "_"
         if data.groups is not None
         else None
     )
@@ -609,11 +609,11 @@ def _render_diff_change_md(change: DiffChange, *, full_paths: bool) -> str:
     head = f"- {name}{paren}"
 
     if change.baseline_status and change.current_status:
-        head += f" — {bold_status(change.baseline_status)} → {bold_status(change.current_status)}"
+        head += f" - {bold_status(change.baseline_status)} -> {bold_status(change.current_status)}"
     elif change.current_status:
-        head += f" — {bold_status(change.current_status)}"
+        head += f" - {bold_status(change.current_status)}"
     elif change.baseline_status:
-        head += f" — {bold_status(change.baseline_status)}"
+        head += f" - {bold_status(change.baseline_status)}"
 
     parts = [head]
     msg = change.current_message or change.baseline_message
@@ -715,7 +715,7 @@ def render_log(
 
     if data.extract_dir and data.extracted_count:
         out.append("")
-        out.append(f"_Extracted:_ {data.extracted_count} artefact(s) → `{data.extract_dir}`")
+        out.append(f"_Extracted:_ {data.extracted_count} artefact(s) -> `{data.extract_dir}`")
 
     if show_timing and (data.start_time or data.end_time or data.elapsed_seconds is not None):
         rows: List[List[str]] = []
@@ -854,7 +854,7 @@ def _emit_entry(
     if is_call and max_depth > 0 and new_kw_depth >= max_depth:
         hidden = _count_hidden(entry.body)
         if hidden:
-            out.append(f"{cont}- _… {hidden} hidden (`--max-depth {max_depth}`)_")
+            out.append(f"{cont}- _... {hidden} hidden (`--max-depth {max_depth}`)_")
         return
 
     _emit_entries(
@@ -1094,7 +1094,7 @@ def _emit_artifacts(
             if ref.embedded:
                 size = f", {fmt_bytes(ref.approx_bytes)}" if ref.approx_bytes is not None else ""
                 mt = f"{ref.media_type or ref.kind}{size}"
-                out.append(f"{indent}- {kind_label}: _embedded {mt} — use `--extract` to save_")
+                out.append(f"{indent}- {kind_label}: _embedded {mt} - use `--extract` to save_")
             else:
                 out.append(f"{indent}- {kind_label}: `{ref.src}` _(unresolved)_")
             continue

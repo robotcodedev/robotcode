@@ -96,9 +96,9 @@ robotcode results summary
 ```
 
 ```text
-# Summary — results/output.xml
+# Summary: results/output.xml
 
-- _Status:_ ✅ **PASS**
+- _Status:_ **PASS**
 - _Total:_ 1
 - _Passed:_ 1
 - _Failed:_ 0

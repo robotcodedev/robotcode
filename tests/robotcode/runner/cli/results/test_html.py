@@ -44,7 +44,7 @@ def test_older_html_to_markdown_uses_builtin_converter(monkeypatch: pytest.Monke
     assert not _html._HAS_EXT
     refs: List[ArtifactRef] = []
     text = _html.html_to_markdown(SCREENSHOT_MESSAGE, base_dir=Path("."), on_artifact=refs.append)
-    assert text == "_(embedded image — see artefacts: screenshot)_"
+    assert text == "_(embedded image - see artefacts: screenshot)_"
     assert [ref.embedded for ref in refs] == [True]
 
 

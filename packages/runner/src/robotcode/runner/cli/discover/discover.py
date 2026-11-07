@@ -81,9 +81,9 @@ DISCOVER_SEARCH_OPTIONS = [
             "timeout, any tag (normalisation-aware), test metadata names and "
             "values, the parent suite's Documentation / Metadata, or anything "
             "inside the test body "
-            "— keyword names, keyword arguments, assigned variables, "
+            "(keyword names, keyword arguments, assigned variables, "
             "FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, "
-            "GROUP names. Mutually exclusive with `--search-regex`."
+            "GROUP names). Mutually exclusive with `--search-regex`."
         ),
     ),
     click.option(
@@ -92,7 +92,7 @@ DISCOVER_SEARCH_OPTIONS = [
         metavar="PATTERN",
         default=None,
         help=(
-            "Only include items where PATTERN (Python regex, case-sensitive — "
+            "Only include items where PATTERN (Python regex, case-sensitive; "
             "prefix with `(?i)` for case-insensitive) matches any of the "
             "same targets as `--search`. Mutually exclusive with `--search`."
         ),

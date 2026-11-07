@@ -135,7 +135,13 @@ robotcode --no-color results show
 robotcode --no-color --no-pager results summary
 ```
 
-The positive forms (`--pager`, `--color`) don't force either feature into a pipe: when stdout isn't a TTY, `--pager` starts no pager, and `--color` renders the TEXT output as formatted text instead of raw markdown but adds no colour codes (JSON and TOML output stays unchanged). To pipe coloured output into `less -R` yourself, set the `FORCE_COLOR=1` environment variable instead — it adds colour codes to TEXT, JSON and TOML output alike, so JSON written that way no longer parses with `jq`.
+The positive forms (`--pager`, `--color`) don't force either feature into a pipe: when stdout isn't a TTY, `--pager` starts no pager, and `--color` renders the TEXT output as formatted text instead of raw markdown but adds no colour codes (JSON and TOML output stays unchanged). To pipe coloured output into `less -R` yourself, set the `FORCE_COLOR=1` environment variable instead — it adds colour codes to TEXT, JSON and TOML output alike, so JSON written that way no longer parses with `jq`. On a stream whose encoding isn't UTF-8, `--color` writes the raw markdown instead.
+
+### Characters and encodings
+
+`robotcode` writes its own text, the headings, tables, status words and help, in plain ASCII, so the output works on any terminal or pipe. That includes a pipe on Windows, where Python writes in the ANSI code page, such as cp1252. Statuses are bold words (`**FAIL**`), arrows are `->` and omissions are `...`.
+
+Names, messages, metadata and documentation from your project are written as they are. When they contain a character that the code page of the stream lacks, Python stops with a `UnicodeEncodeError`. Set `PYTHONUTF8=1` to write UTF-8 instead; from Python 3.15 on, that is the default.
 
 ## `summary` — headline numbers
 
@@ -146,9 +152,9 @@ robotcode results summary
 Output is a short block with the overall status, the test counts, the wall-clock time, and (with `--failed`) the list of failed tests below it.
 
 ```markdown
-# Summary — results/output.xml
+# Summary: results/output.xml
 
-- _Status:_ ❌ **FAIL**
+- _Status:_ **FAIL**
 - _Total:_ 42
 - _Passed:_ 37
 - _Failed:_ 2
@@ -161,9 +167,9 @@ Output is a short block with the overall status, the test counts, the wall-clock
 
 ## Failures (2)
 
-- ❌ **FAIL** MyProject.Login.Bad Password (`tests/login/test_login.robot:42`)
+- **FAIL** MyProject.Login.Bad Password (`tests/login/test_login.robot:42`)
   > AssertionError: Expected 'Login failed' but got 'Internal error'
-- ❌ **FAIL** MyProject.Checkout.Empty Cart (`tests/checkout/test_empty.robot:11`)
+- **FAIL** MyProject.Checkout.Empty Cart (`tests/checkout/test_empty.robot:11`)
   > TimeoutError: keyword 'Open Cart' did not complete in 5s
 ```
 
@@ -301,24 +307,24 @@ Example TEXT output:
 ```markdown
 # Log
 
-## Suite: MyProject (`tests`) ❌ **FAIL**
+## Suite: MyProject (`tests`) **FAIL**
 
 - _Environment:_ staging
 
-## Suite: MyProject.Login (`tests/login/test_login.robot`) ❌ **FAIL**
+## Suite: MyProject.Login (`tests/login/test_login.robot`) **FAIL**
 > Exercises the login flow against the staging environment.
 
 - _OwnerTeam:_ identity-squad
 
 …
 
-### Test: MyProject.Login.Bad Password (`tests/login/test_login.robot:42`) ❌ **FAIL** _(23:51:01 · 1 ms)_
+### Test: MyProject.Login.Bad Password (`tests/login/test_login.robot:42`) **FAIL** _(23:51:01, 1 ms)_
 
 _Metadata:_ Issue: 4409
 
 > AssertionError: Expected 'Login failed' but got 'Internal error'
 
-- **[SETUP]** **Open Browser** ✅ **PASS** _(23:51:01 · 0 ms)_
+- **[SETUP]** **Open Browser** **PASS** _(23:51:01, 0 ms)_
   - _[Documentation]_ Launches a fresh Chromium with our shared profile.
   - _[Tags]_ `browser` `setup`
 …
@@ -525,7 +531,7 @@ Tests are matched by their full name, as in `diff`. The top suite is part of tha
 The output always starts with one row per run. It numbers the runs `#1`, `#2`, …, and the other tables of `compare` use these numbers as their column heads:
 
 ```
-# Compare — 3 runs
+# Compare: 3 runs
 
 ## Runs
 
@@ -746,16 +752,16 @@ robotcode results compare plat/*/output.xml --group-by-metadata Platform --show 
 
 ## Tests
 
-_Groups: linux · windows_
+_Groups: linux, windows_
 
 | Test                      | Status    |    Failed | Flaky   | Failing since |
 | ------------------------- | --------- | --------: | ------- | ------------- |
-| Shop.Checkout.Pay By Card | `PPP FPF` | 0/3 · 2/3 | - · yes | - · #6        |
-| Shop.Login.Bad Password   | `PPP FPF` | 0/3 · 2/3 | - · yes | - · #6        |
+| Shop.Checkout.Pay By Card | `PPP FPF` | 0/3, 2/3 | -, yes | -, #6        |
+| Shop.Login.Bad Password   | `PPP FPF` | 0/3, 2/3 | -, yes | -, #6        |
 ```
 
 - The runs of a group stand together, in their order, and the groups in the order of their first run. The overview adds a sum row per group. Runs without the metadata form a group of their own, shown as `(none)`.
-- Everything that depends on the order of the runs is computed within each group and shown per group, separated by ` · ` in the order of the `_Groups:_` line: the failed count, flaky and failing since in `tests`, the first run in `failures`, the growth in `elapsed` (with a **Group** column), and new and gone in `messages`.
+- Everything that depends on the order of the runs is computed within each group and shown per group, separated by `, ` in the order of the `_Groups:_` line: the failed count, flaky and failing since in `tests`, the first run in `failures`, the growth in `elapsed` (with a **Group** column), and new and gone in `messages`.
 - The status of a test has a space between the groups. The other tables keep one column per run.
 - `--last N` keeps the last N runs of each group.
 - The groups need the metadata in the top suite. A file that `rebot` merged from several outputs has none there (see [Environment of the runs](#environment-of-the-runs)) unless `rebot --metadata Platform:linux …` sets it.
@@ -918,9 +924,10 @@ A few rules hold across every subcommand:
 
 - **camelCase keys.** `fullName`, `elapsedSeconds`, `messagesCount`, etc.
 - **ISO-8601 timestamps** with microsecond resolution.
-- **Optional fields are omitted, not `null`.** A `null` literal never appears in the output. If a field has no value (e.g. `failed` without `--failed`, `tags` on an untagged test), the key is simply absent from the JSON object.
+- **Optional fields are omitted, not `null`.** If a field has no value (e.g. `failed` without `--failed`, `tags` on an untagged test), the key is simply absent from the JSON object. A `null` appears only in the per-run lists of `compare`, for a run that doesn't have the item.
 - **Scalar fields with a meaningful zero are emitted in JSON.** `counts.failed = 0`, `truncated = 0`, `elapsedSeconds = 0.0` all stay in the object; the exception is a `stats` group's `elapsedSeconds`, which is left out when it is `0.0`. Only optional fields disappear when unset. TOML output also leaves out counters that are `0` (`counts.*`, `truncated`, `extractedCount`) and flags that are `false`.
 - **Empty array ≠ missing field.** Sections that "exist but are empty" come through as `[]`; sections that were never requested (e.g. anything excluded by `diff --only`) are absent. The two are different and your queries should handle both, typically via `// []` in jq.
+- **ASCII only.** Characters outside ASCII in names, messages and paths come as `\u` escapes (`"Gr\u00fc\u00dfe"` for `Grüße`), so the JSON works on any terminal or pipe. Every JSON parser, `jq` included, reads them back as the original characters.
 - **Stability.** Fields are appended over time, never renamed or removed in place. New fields are additive; existing consumers keep working.
 
 ### `summary` JSON

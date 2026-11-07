@@ -158,13 +158,14 @@ def _default(o: Any) -> Any:
     raise TypeError(f"Cant' get default value for {type(o)} with value {o!r}")
 
 
-def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
+def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None, ensure_ascii: bool = False) -> str:
+    """`ensure_ascii` writes every character outside ASCII as a `\\u` escape, as the CLI does for its JSON output."""
     return json.dumps(
         obj,
         default=_default,
         indent=4 if indent else None,
         separators=(",", ":") if compact else None,
-        ensure_ascii=False,
+        ensure_ascii=ensure_ascii,
     )
 
 

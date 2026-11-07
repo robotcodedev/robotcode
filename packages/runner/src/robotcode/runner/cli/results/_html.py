@@ -393,7 +393,7 @@ if _HAS_EXT:
                 if src not in already_recorded:
                     _make_embedded_artifact(src, "image", on_artifact)
                     already_recorded.add(src)
-                return f"_(embedded image — see artefacts: {alt or 'no alt text'})_"
+                return f"_(embedded image - see artefacts: {alt or 'no alt text'})_"
             if _is_external_url(src):
                 return m.group(0)
             new = _make_external_artifact(src, "image", base_dir, on_artifact)
@@ -409,7 +409,7 @@ if _HAS_EXT:
                     _make_embedded_artifact(href, "file", on_artifact, download_names.get(href))
                     already_recorded.add(href)
                 # html-to-markdown writes the URI as the text of a link with only spaces in it.
-                return f"_(embedded {text if text and text != href else 'data'} — see artefacts)_"
+                return f"_(embedded {text if text and text != href else 'data'} - see artefacts)_"
             if _is_external_url(href):
                 # The target stays, the images in the text may have been replaced.
                 return f"[{text}]" + m.group(0)[len(m.group("text")) + 2 :]
@@ -561,7 +561,7 @@ else:
                 if embedded:
                     if not "".join(self._out[start + 1 :]).strip():
                         self._emit("data")
-                    self._emit(" — see artefacts)_")
+                    self._emit(" - see artefacts)_")
                 else:
                     self._emit("]")
                     self._emit(f"({_md_url(href)})" if href else "()")
@@ -624,7 +624,7 @@ else:
                 return
             if src.startswith("data:"):
                 _make_embedded_artifact(src, "image", self._on_artifact)
-                self._emit(f"_(embedded image — see artefacts: {alt or 'no alt text'})_")
+                self._emit(f"_(embedded image - see artefacts: {alt or 'no alt text'})_")
                 return
             if _is_external_url(src):
                 self._emit(f"![{alt}]({_md_url(src)})")
@@ -641,7 +641,7 @@ else:
                 return
             if src.startswith("data:"):
                 _make_embedded_artifact(src, "file", self._on_artifact)
-                self._emit(f"_(embedded {kind} — see artefacts)_")
+                self._emit(f"_(embedded {kind} - see artefacts)_")
                 return
             url = self._handle_href(src, kind="file")
             self._emit(f"[{kind}]({_md_url(url)})" if url else f"[{kind}]()")

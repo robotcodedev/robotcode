@@ -465,7 +465,7 @@ def test_failures_sorted_by_their_number_of_tests(robotcode_cli: CliRunner, runs
 def test_message_chars_cuts_the_failure_messages(robotcode_cli: CliRunner, runs: Dict[str, Path]) -> None:
     data = _json(robotcode_cli, runs["old"], runs["server"], "--show", "failures", "--message-chars", "20")
 
-    assert data["failures"]["failures"][0]["message"] == "500 Server Error for…"
+    assert data["failures"]["failures"][0]["message"] == "500 Server Error for..."
 
 
 # ---------------------------------------------------------------------------
@@ -575,7 +575,7 @@ def test_file_written_by_rebot(robotcode_cli: CliRunner, runs: Dict[str, Path]) 
 def test_metadata_values_are_cut(robotcode_cli: CliRunner, runs: Dict[str, Path]) -> None:
     data = _json(robotcode_cli, runs["chrome"], runs["old"], "--show", "environment", "--message-chars", "4")
 
-    assert data["environment"][0]["metadata"] == {"Browser": "chro…", "Env": "stag…"}
+    assert data["environment"][0]["metadata"] == {"Browser": "chro...", "Env": "stag..."}
 
 
 @pytest.mark.skipif(RF_VERSION < (7, 2), reason="robot writes output.json from Robot Framework 7.2 on")
@@ -655,8 +655,8 @@ def test_fails_only_on_one_platform(robotcode_cli: CliRunner, runs: Dict[str, Pa
     assert pay["perGroup"][1]["failingSince"] == 9
 
     text = _compare(robotcode_cli, *files, "--group-by-metadata", "Platform", "--show", "tests").stdout
-    assert "_Groups: linux · windows_" in text
-    assert _row(text, "Shop.Pay")[1:] == ["`PPPPP FFPFF`", "0/5 · 4/5", "- · yes", "- · #9"]
+    assert "_Groups: linux, windows_" in text
+    assert _row(text, "Shop.Pay")[1:] == ["`PPPPP FFPFF`", "0/5, 4/5", "-, yes", "-, #9"]
 
 
 def test_last_runs_per_group(robotcode_cli: CliRunner, runs: Dict[str, Path]) -> None:

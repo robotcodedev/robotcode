@@ -265,7 +265,7 @@ SEARCH_OPTIONS = [
         default=None,
         help=(
             "Only include tests with at least one match against PATTERN "
-            "(Python regular expression, case-sensitive — prefix with `(?i)` "
+            "(Python regular expression, case-sensitive; prefix with `(?i)` "
             "for case-insensitive). Same target fields as `--search`. "
             "Mutually exclusive with `--search`."
         ),
@@ -284,7 +284,7 @@ OUTPUT_OPTION = click.option(
         "Path to output.xml/output.json (Robot's `--output`). If omitted, "
         "auto-discovered from the active profile's `output_dir` + `output` "
         "settings (with timestamp glob fallback and ./output.xml as last "
-        "resort). A directory may also be passed — then auto-discovery "
+        "resort). A directory may also be passed; auto-discovery then "
         "happens inside it."
     ),
 )
@@ -302,7 +302,7 @@ FULL_PATHS_OPTION = click.option(
 @click.group(invoke_without_command=False)
 def results() -> None:
     """\
-    Inspect a finished run's `output.xml` / `output.json` — counts,
+    Inspect a finished run's `output.xml` / `output.json`: counts,
     failures, and per-test execution tree, without re-running.
 
     The result file is auto-discovered from the active profile's
@@ -491,7 +491,7 @@ def summary(
     metavar="FIELD",
     help=(
         "Sort tests before display. `name`/`suite` = lexicographic full-name/suite. "
-        "`status` = FAIL → SKIP → PASS → NOT RUN. `elapsed` = duration (longest first). "
+        "`status` = FAIL -> SKIP -> PASS -> NOT RUN. `elapsed` = duration (longest first). "
         "`start` = start time. Default: execution order from the output file."
     ),
 )
@@ -763,7 +763,7 @@ def log(
     """\
     Show the execution log of each test: keywords, control flow and messages.
 
-    Filter the same way as `show` — by status, tag, suite, or test name.
+    Filter the same way as `show`: by status, tag, suite, or test name.
     Without filters, all tests are included. Use `--max-depth` to collapse
     deeply nested keyword calls.
 
@@ -1361,7 +1361,7 @@ def _truncate(text: Optional[str], limit: int) -> Optional[str]:
         return None
     first_line = text.splitlines()[0]
     if limit and len(first_line) > limit:
-        return first_line[:limit].rstrip() + "…"
+        return first_line[:limit].rstrip() + "..."
     return first_line
 
 
@@ -1887,7 +1887,7 @@ def _auto_discover(app: Application, profile: RobotBaseProfile, search_root: Pat
     raw_output = str(profile.output) if profile.output is not None else None
     if raw_output is not None and raw_output.upper() == "NONE":
         raise click.UsageError(
-            "Profile sets `output = NONE` — no result file to inspect. Pass `--output PATH` explicitly."
+            "Profile sets `output = NONE`, so there is no result file to inspect. Pass `--output PATH` explicitly."
         )
 
     out_dir_raw = str(profile.output_dir) if profile.output_dir is not None else "."

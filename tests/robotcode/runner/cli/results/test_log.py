@@ -301,7 +301,7 @@ def test_log_extract_screenshot_messages(json_result: JsonRunner, artifacts_outp
         assert ref.get("extractedTo")
         assert Path(ref["extractedTo"]).is_file()
     texts = [e.get("text") or "" for e in _entries_of_type(test.get("body") or [], "MESSAGE")]
-    assert any("_(embedded image — see artefacts: screenshot)_" in text for text in texts)
+    assert any("_(embedded image - see artefacts: screenshot)_" in text for text in texts)
 
 
 @pytest.mark.usefixtures("html_converter")

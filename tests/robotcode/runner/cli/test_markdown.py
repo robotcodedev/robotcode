@@ -7,7 +7,6 @@ discover` and `…/results` can stay focused on per-subcommand wiring."""
 
 from robotcode.runner.cli._markdown import (
     bold_status,
-    display_width,
     field_list_md,
     filters_footer_md,
     make_md_highlighter,
@@ -45,39 +44,16 @@ def test_md_pipe_escapes_only_pipe() -> None:
 
 
 # ---------------------------------------------------------------------------
-# display_width — emoji-aware
-# ---------------------------------------------------------------------------
-
-
-def test_display_width_counts_emoji_as_two_cells() -> None:
-    """`len()` says 1, terminal says 2 — `display_width` returns 2 for
-    each status icon. Guards the regression where ⏭ / ⏸ sat outside
-    the earlier regex range and table padding came up short."""
-    assert display_width("✅") == 2  # PASS
-    assert display_width("❌") == 2  # FAIL
-    assert display_width("⏭") == 2  # SKIP
-    assert display_width("⏸") == 2  # NOT RUN
-    assert display_width("⚪") == 2  # NOT SET
-    assert display_width("plain") == 5
-    assert display_width("✅ pass") == 7  # icon (2) + " pass" (5)
-
-
-# ---------------------------------------------------------------------------
 # bold_status
 # ---------------------------------------------------------------------------
 
 
-def test_bold_status_combines_icon_and_word() -> None:
-    assert bold_status("FAIL") == "❌ **FAIL**"
-    assert bold_status("pass") == "✅ **PASS**"  # case-insensitive icon lookup
+def test_bold_status_is_the_bold_name() -> None:
+    assert bold_status("FAIL") == "**FAIL**"
+    assert bold_status("pass") == "**PASS**"
 
 
-def test_bold_status_icon_false_drops_emoji() -> None:
-    assert bold_status("FAIL", icon=False) == "**FAIL**"
-
-
-def test_bold_status_unknown_status_falls_back_to_word() -> None:
-    """No icon, just the bold word — keeps the API total."""
+def test_bold_status_of_an_unknown_status() -> None:
     assert bold_status("MAYBE") == "**MAYBE**"
 
 
@@ -126,16 +102,6 @@ def test_md_table_right_alignment_uses_trailing_colon_in_separator() -> None:
     assert sep_line.rstrip(" |").endswith(":")
 
 
-def test_md_table_display_width_aware_padding_for_emoji_cells() -> None:
-    """A row with an emoji cell must still align with the separator
-    line — caught a real regression where ⏭ / ⏸ in `stats --by status`
-    came out one cell too narrow."""
-    out = md_table(["Status"], [["⏭ **SKIP**"], ["✅ **PASS**"]])
-    lines = out.split("\n")
-    widths = {display_width(line) for line in lines}
-    assert len(widths) == 1, f"row display widths disagree: {widths}"
-
-
 # ---------------------------------------------------------------------------
 # field_list_md
 # ---------------------------------------------------------------------------
@@ -181,7 +147,7 @@ def test_timing_suffix_with_only_elapsed_seconds() -> None:
 
 
 def test_timing_suffix_with_show_timing_includes_start_time() -> None:
-    assert timing_suffix(0.5, "2026-05-15T13:34:23", show_timing=True) == " _(13:34:23 · 500 ms)_"
+    assert timing_suffix(0.5, "2026-05-15T13:34:23", show_timing=True) == " _(13:34:23, 500 ms)_"
 
 
 def test_timing_suffix_empty_when_nothing_to_show() -> None:

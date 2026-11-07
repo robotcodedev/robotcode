@@ -373,6 +373,7 @@ class Application:
                     data,
                     indent=format == OutputFormat.JSON_INDENT,
                     compact=format == OutputFormat.JSON,
+                    ensure_ascii=True,
                 )
             else:
                 text = str(data)
@@ -452,8 +453,14 @@ class Application:
 
         from rich.console import Console
 
-        markdown = _get_deep_markdown_cls()(text, justify="left", code_theme="default")
         console = Console()
+        # rich draws bullets and quote bars that a stream which isn't UTF can't encode,
+        # such as a pipe on Windows, so the raw markdown goes there instead.
+        if not console.encoding.lower().startswith("utf"):
+            self.echo_via_pager(text)
+            return
+
+        markdown = _get_deep_markdown_cls()(text, justify="left", code_theme="default")
 
         def _measure() -> int:
             measure = Console(width=console.size.width, record=False, soft_wrap=True)

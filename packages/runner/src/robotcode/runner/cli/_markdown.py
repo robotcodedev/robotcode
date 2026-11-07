@@ -142,7 +142,7 @@ def timing_suffix(
     *,
     show_timing: bool,
 ) -> str:
-    """Italic `` _(13:34:23 · 12 ms)_ `` suffix or an empty string."""
+    """Italic `` _(13:34:23, 12 ms)_ `` suffix or an empty string."""
     parts: List[str] = []
     if show_timing and start_time:
         parts.append(fmt_time_only(start_time))
@@ -150,56 +150,17 @@ def timing_suffix(
         parts.append(fmt_elapsed(elapsed_seconds))
     if not parts:
         return ""
-    return f" _({' · '.join(parts)})_"
+    return f" _({', '.join(parts)})_"
 
 
 # ---------------------------------------------------------------------------
-# Status icons + bold word
+# Bold status word
 # ---------------------------------------------------------------------------
 
 
-STATUS_ICONS = {
-    "PASS": "✅",
-    "FAIL": "❌",
-    "SKIP": "⏭",
-    "NOT RUN": "⏸",
-    "NOT SET": "⚪",
-}
-
-
-# Display-width adjustment for the (small, fixed) emoji set the renderer
-# emits. Most emoji codepoints render as two terminal cells but `len()`
-# counts them as one — so naive padding under-pads any row containing an
-# emoji. We explicitly track the icons we use rather than a regex range,
-# because the misc-technical block (U+2300..U+23FF) holds both
-# double-width emoji (`⏭`, `⏸`) and single-width geometric shapes —
-# a range-based heuristic would either miss our icons or misclassify
-# unrelated content.
-DOUBLE_WIDTH_ICONS: "frozenset[str]" = frozenset(STATUS_ICONS.values())
-
-
-def status_icon(status: str) -> str:
-    return STATUS_ICONS.get(status.upper(), "")
-
-
-def bold_status(status: str, *, icon: bool = True) -> str:
-    """Icon + bold status word: ``❌ **FAIL**``. The icon gives a scanable
-    visual marker for terminal / Slack / GitHub paste; the bold word keeps
-    the status readable for screen readers and stays meaningful in
-    rendering targets that don't paint emoji. Pass ``icon=False`` to
-    suppress the emoji (e.g. when the cell is followed by a separator or
-    you want to stay strictly ASCII)."""
-    word = f"**{status.upper()}**"
-    if icon:
-        ic = status_icon(status)
-        if ic:
-            return f"{ic} {word}"
-    return word
-
-
-def display_width(text: str) -> int:
-    """Source length plus one extra column per known double-width emoji."""
-    return len(text) + sum(1 for ch in text if ch in DOUBLE_WIDTH_ICONS)
+def bold_status(status: str) -> str:
+    """Bold status word: ``**FAIL**``. Plain ASCII, so the output survives any stream encoding."""
+    return f"**{status.upper()}**"
 
 
 # ---------------------------------------------------------------------------
@@ -243,20 +204,18 @@ def md_table(headers: List[str], rows: List[List[str]], *, aligns: Optional[List
         aligns = ["left"] * len(headers)
 
     escaped_rows = [[md_pipe(cell) for cell in r] for r in rows]
-    # Per-column visual width = max(header, all cells). Display-width-aware
-    # so emoji cells (counted as 2 terminal columns) don't under-pad the
-    # column. Floor at 3 so the `---` separator stays valid for narrow
-    # columns like a one-digit count.
+    # Per-column width = max(header, all cells). Floor at 3 so the `---`
+    # separator stays valid for narrow columns like a one-digit count.
     widths: List[int] = []
     for col, header in enumerate(headers):
-        w = display_width(header)
+        w = len(header)
         for r in escaped_rows:
             if col < len(r):
-                w = max(w, display_width(r[col]))
+                w = max(w, len(r[col]))
         widths.append(max(w, 3))
 
     def _pad(text: str, width: int, align: str) -> str:
-        extra = width - display_width(text)
+        extra = width - len(text)
         if extra <= 0:
             return text
         if align == "right":
