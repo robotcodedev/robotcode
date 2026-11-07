@@ -21,7 +21,7 @@ class IdManager:
             obj_id: int = self.released_ids.popleft()
         else:
             if self.next_id > self.max_id:
-                raise RuntimeError("Keine IDs mehr verfügbar!")
+                raise RuntimeError("No more IDs available.")
             obj_id = self.next_id
             self.next_id += 1
 
