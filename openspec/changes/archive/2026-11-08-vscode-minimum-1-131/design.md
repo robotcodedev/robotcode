@@ -41,10 +41,10 @@ The lower bound equals `engines.vscode`, as in every earlier raise; npm keeps th
 - `README.md`: "Visual Studio Code 1.131.0 or newer".
 - `docs/src/content/docs/getting-started/index.mdx`: "VS Code 1.131 or above".
 
+### D5: Release
+
+The commit is `feat(vscode)` without a BREAKING marker (f91dbf6f5), and the raise is not a breaking change in the release notes either (maintainer decision, 2026-11-08), unlike 1.127.
+
 ## Risks / Trade-offs
 
 - [Users on 1.127 to 1.130 get no new RobotCode version] → VS Code keeps offering the newest version whose minimum they meet; 1.131 is more than three months old.
-
-## Open Questions
-
-- Whether the release notes list the raise as a breaking change, as they did for 1.127. The commit is `feat(vscode)` without a BREAKING marker, as for 1.127 (f91dbf6f5); the news are written in a session of their own.
