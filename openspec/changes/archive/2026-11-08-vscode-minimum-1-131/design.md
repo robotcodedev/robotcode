@@ -47,4 +47,4 @@ The lower bound equals `engines.vscode`, as in every earlier raise; npm keeps th
 
 ## Open Questions
 
-- The commit type and whether the release notes list the raise as a breaking change: for 1.127 it was `feat(vscode)` without a BREAKING marker, listed under "Breaking Changes" in the news (maintainer decision then). For 1.131 the maintainer decides when the change is committed.
+- Whether the release notes list the raise as a breaking change, as they did for 1.127. The commit is `feat(vscode)` without a BREAKING marker, as for 1.127 (f91dbf6f5); the news are written in a session of their own.
