@@ -1162,14 +1162,16 @@ class KeywordDoc(SourceEntity):
         *,
         link_resolver: Optional[LinkResolver] = None,
         reference_targets: Optional[Mapping[str, ReferenceTarget]] = None,
+        ascii_only: bool = False,
     ) -> str:
+        """`ascii_only` marks the kinds of arguments as Libdoc does, for text written to a console."""
         result = ""
 
         # a library that renders all of its keywords builds the targets once
         targets = reference_targets if reference_targets is not None else self.get_reference_targets()
 
         if add_signature:
-            result += self._get_signature(header_level, add_type, link_resolver, targets)
+            result += self._get_signature(header_level, add_type, link_resolver, targets, ascii_only=ascii_only)
 
         if self.doc:
             if result:
@@ -1258,11 +1260,14 @@ class KeywordDoc(SourceEntity):
         return first + "\n".join([lines[0], *(f"  {line}" if line else "" for line in lines[1:])])
 
     @staticmethod
-    def _get_argument_prefix(argument: ArgumentInfo) -> str:
+    def _get_argument_prefix(argument: ArgumentInfo, ascii_only: bool = False) -> str:
         if argument.kind == KeywordArgumentKind.VAR_POSITIONAL:
             return "*"
         if argument.kind == KeywordArgumentKind.VAR_NAMED:
             return "**"
+        if ascii_only:
+            # the `/` and `*` marker entries of the argument list show these kinds
+            return ""
         if argument.kind == KeywordArgumentKind.NAMED_ONLY:
             return "🏷"
         if argument.kind == KeywordArgumentKind.POSITIONAL_ONLY:
@@ -1304,6 +1309,7 @@ class KeywordDoc(SourceEntity):
         link_resolver: Optional[LinkResolver] = None,
         targets: Optional[Mapping[str, ReferenceTarget]] = None,
         with_descriptions: bool = False,
+        ascii_only: bool = False,
     ) -> str:
         """The arguments as a table; with descriptions, they get a fifth column."""
         result = "\n| | | | | |" if with_descriptions else "\n| | | | |"
@@ -1329,9 +1335,16 @@ class KeywordDoc(SourceEntity):
             return f"{cells} {description} |" if with_descriptions else cells
 
         for a in arguments:
+            if a.kind in [KeywordArgumentKind.NAMED_ONLY_MARKER, KeywordArgumentKind.POSITIONAL_ONLY_MARKER]:
+                result += row(a.str_repr, (), None, None, "")
+                continue
             description = self._description_cell(a.doc, link_resolver, targets) if with_descriptions and a.doc else ""
             result += row(
-                f"{self._get_argument_prefix(a)}{a.name!s}", a.types or (), a.type_docs, a.default_value, description
+                f"{self._get_argument_prefix(a, ascii_only)}{a.name!s}",
+                a.types or (),
+                a.type_docs,
+                a.default_value,
+                description,
             )
         if with_descriptions:
             # names the documentation describes without being arguments, like ones taken by `**kwargs`
@@ -1345,6 +1358,8 @@ class KeywordDoc(SourceEntity):
         add_type: bool = True,
         link_resolver: Optional[LinkResolver] = None,
         targets: Optional[Mapping[str, ReferenceTarget]] = None,
+        *,
+        ascii_only: bool = False,
     ) -> str:
         if add_type:
             result = (
@@ -1358,17 +1373,21 @@ class KeywordDoc(SourceEntity):
             else:
                 result = ""
 
+        # on the console, the `/` and `*` markers stand in the table as in Libdoc's signature
         arguments = [
             a
             for a in self.arguments
-            if a.kind not in [KeywordArgumentKind.NAMED_ONLY_MARKER, KeywordArgumentKind.POSITIONAL_ONLY_MARKER]
+            if ascii_only
+            or a.kind not in [KeywordArgumentKind.NAMED_ONLY_MARKER, KeywordArgumentKind.POSITIONAL_ONLY_MARKER]
         ]
         has_descriptions = any(a.doc for a in arguments) or bool(self.extra_argument_docs)
 
         if self.arguments or has_descriptions:
             result += f"\n##{'#' * header_level} Arguments: \n"
 
-            result += self._get_argument_table(arguments, link_resolver, targets, with_descriptions=has_descriptions)
+            result += self._get_argument_table(
+                arguments, link_resolver, targets, with_descriptions=has_descriptions, ascii_only=ascii_only
+            )
 
         if self.return_type:
             if result:
@@ -1378,7 +1397,8 @@ class KeywordDoc(SourceEntity):
                 f"**Return Type**: {_type_markdown(self.return_type, self.return_type_docs, link_resolver, False)}"
             )
             if self.return_doc:
-                result += f" — {self._format_description(self.return_doc, link_resolver, targets)}"
+                dash = " - " if ascii_only else " — "
+                result += f"{dash}{self._format_description(self.return_doc, link_resolver, targets)}"
             result += "\n"
         elif self.return_doc:
             if result:
@@ -1420,7 +1440,10 @@ class KeywordDoc(SourceEntity):
             + ")"
         )
 
-    def parameter_signature(self, full_signatures: Optional[Sequence[int]] = None) -> str:
+    def parameter_signature(self, full_signatures: Optional[Sequence[int]] = None, *, ascii_only: bool = False) -> str:
+        if ascii_only:
+            # Libdoc's signature: `table, /, column, *names, limit: int = 10, **options`
+            return "(" + ", ".join(a.str_repr for a in self.arguments) + ")"
         return (
             "("
             + ", ".join(
@@ -1882,9 +1905,10 @@ class LibraryDoc:
         header_level: int = 2,
         *,
         link_resolver: Optional[LinkResolver] = None,
+        ascii_only: bool = False,
     ) -> str:
         if not only_doc:
-            return self._page_to_markdown(header_level, link_resolver)
+            return self._page_to_markdown(header_level, link_resolver, ascii_only=ascii_only)
 
         with io.StringIO(newline="\n") as result:
 
@@ -1901,7 +1925,10 @@ class LibraryDoc:
             if add_signature and any(v for v in self.inits.values() if v.arguments):
                 for i in self.inits.values():
                     init_markdown = i.to_markdown(
-                        header_level=header_level, link_resolver=link_resolver, reference_targets=targets
+                        header_level=header_level,
+                        link_resolver=link_resolver,
+                        reference_targets=targets,
+                        ascii_only=ascii_only,
                     )
                     write_lines(init_markdown, "", "---")
 
@@ -1978,9 +2005,11 @@ class LibraryDoc:
 
         return keyword_anchors, {t.name: anchor for t, anchor in zip(page_types, type_anchors) if anchor}
 
-    def _page_to_markdown(self, header_level: int, link_resolver: Optional[LinkResolver]) -> str:
+    def _page_to_markdown(
+        self, header_level: int, link_resolver: Optional[LinkResolver], *, ascii_only: bool = False
+    ) -> str:
         """The full page of `robotcode doc lib`, the REPL's `.doc` and the documentation view."""
-        head, keywords, tail = self._get_page_parts(header_level, link_resolver)
+        head, keywords, tail = self._get_page_parts(header_level, link_resolver, ascii_only=ascii_only)
 
         # Only the assembled page knows its headings: an anchor can carry a number, and a
         # private keyword or a section the page leaves out has no heading at all.
@@ -2012,7 +2041,7 @@ class LibraryDoc:
                 anchor = anchors.get(normalize_reference(name))
             return f"#{anchor}" if anchor is not None else None
 
-        head, keywords, tail = self._get_page_parts(header_level, resolver)
+        head, keywords, tail = self._get_page_parts(header_level, resolver, ascii_only=ascii_only)
 
         page = head + keywords + tail
         if keywords:
@@ -2029,7 +2058,9 @@ class LibraryDoc:
 
         return f"{page.rstrip()}\n"
 
-    def _get_page_parts(self, header_level: int, link_resolver: Optional[LinkResolver]) -> Tuple[str, str, str]:
+    def _get_page_parts(
+        self, header_level: int, link_resolver: Optional[LinkResolver], *, ascii_only: bool = False
+    ) -> Tuple[str, str, str]:
         """The page up to the keyword entries, the keyword entries, and the rest of the page."""
         targets = self.get_reference_targets()
         separator = "\n\n---\n\n"
@@ -2046,7 +2077,9 @@ class LibraryDoc:
         if any(v for v in self.inits.values() if v.arguments):
             head = f"{head.rstrip()}{separator}##{'#' * header_level} Importing\n\n"
             head += separator.join(
-                unique_reference_labels(self._get_page_entry(kw, header_level, link_resolver, targets), labels)
+                unique_reference_labels(
+                    self._get_page_entry(kw, header_level, link_resolver, targets, ascii_only), labels
+                )
                 for kw in self.inits.values()
             )
 
@@ -2055,7 +2088,9 @@ class LibraryDoc:
         if page_keywords:
             head = f"{head.rstrip()}{separator}##{'#' * header_level} Keywords\n\n"
             keywords = separator.join(
-                unique_reference_labels(self._get_page_entry(kw, header_level, link_resolver, targets), labels)
+                unique_reference_labels(
+                    self._get_page_entry(kw, header_level, link_resolver, targets, ascii_only), labels
+                )
                 for kw in page_keywords
             )
 
@@ -2104,6 +2139,7 @@ class LibraryDoc:
         header_level: int,
         link_resolver: Optional[LinkResolver],
         targets: Mapping[str, ReferenceTarget],
+        ascii_only: bool = False,
     ) -> str:
         return kw.to_markdown(
             header_level=header_level + 2,
@@ -2112,6 +2148,7 @@ class LibraryDoc:
             modify_doc_handler=_page_heading_shift(kw.doc_format, header_level + 3),
             link_resolver=link_resolver,
             reference_targets=targets,
+            ascii_only=ascii_only,
         ).strip()
 
     @property
@@ -2192,9 +2229,10 @@ class VariablesDoc(LibraryDoc):
         header_level: int = 2,
         *,
         link_resolver: Optional[LinkResolver] = None,
+        ascii_only: bool = False,
     ) -> str:
         result = super(VariablesDoc, self).to_markdown(
-            add_signature, only_doc, header_level, link_resolver=link_resolver
+            add_signature, only_doc, header_level, link_resolver=link_resolver, ascii_only=ascii_only
         )
 
         if self.variables:

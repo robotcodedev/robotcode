@@ -416,7 +416,7 @@ def test_vars_truncates_long_reprs(monkeypatch: pytest.MonkeyPatch) -> None:
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".vars")
     blob = "\n".join(app.messages)
-    assert "…" in blob  # truncation marker present
+    assert "..." in blob  # truncation marker present
     assert big not in blob  # full value should NOT be there
 
 

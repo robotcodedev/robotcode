@@ -353,7 +353,7 @@ def _load(
 
 
 def _page(library: LibraryDoc) -> str:
-    return library.to_markdown(only_doc=False, header_level=0, link_resolver=anchor_link_resolver)
+    return library.to_markdown(only_doc=False, header_level=0, link_resolver=anchor_link_resolver, ascii_only=True)
 
 
 def _check_output(app: Application, output: Optional[Path]) -> Optional[Path]:
@@ -392,7 +392,7 @@ def _keyword_entries(library: LibraryDoc, page: str, keywords: List[KeywordDoc])
         KeywordEntry(
             name=kw.name,
             anchor=anchors.get(id(kw), ""),
-            args=kw.parameter_signature().replace("‍", ""),
+            args=kw.parameter_signature(ascii_only=True),
             short_doc=_one_line(kw.format_text(getshortdoc(kw.doc))),
             tags=list(kw.tags),
             doc=kw.format_text(kw.doc),
@@ -528,8 +528,8 @@ def keywords(
         return
 
     lines = [
-        f"- **{kw.name}** `{kw.parameter_signature().replace(chr(0x200D), '')}`"
-        + (f" — {short_doc}" if (short_doc := _one_line(kw.format_text(getshortdoc(kw.doc)))) else "")
+        f"- **{kw.name}** `{kw.parameter_signature(ascii_only=True)}`"
+        + (f" - {short_doc}" if (short_doc := _one_line(kw.format_text(getshortdoc(kw.doc)))) else "")
         for kw in selected
     ]
     _write_markdown(app, "\n".join([_title(library), "", *(lines or ["_(no keyword matches)_"])]) + "\n", output)
@@ -591,7 +591,7 @@ def keyword(
             for argument in kw.arguments:
                 for type_doc in library.get_types_for_argument(argument):
                     type_docs.setdefault(type_doc.name, type_doc)
-        parts = [kw.to_markdown() for kw in selected]
+        parts = [kw.to_markdown(ascii_only=True) for kw in selected]
         parts.extend(type_docs[t].to_markdown(header_level=1) for t in sorted(type_docs, key=lambda t: (t.lower(), t)))
         # One document: a label that two parts define for other URLs would link both to the first URL.
         labels: Dict[str, str] = {}

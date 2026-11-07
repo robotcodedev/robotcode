@@ -266,7 +266,10 @@ def _ok(*args: str) -> Result:
 
 
 def _page(name: str) -> str:
-    return get_library_doc(name).to_markdown(only_doc=False, header_level=0, link_resolver=anchor_link_resolver)
+    """The page as `doc lib` writes it to the console."""
+    return get_library_doc(name).to_markdown(
+        only_doc=False, header_level=0, link_resolver=anchor_link_resolver, ascii_only=True
+    )
 
 
 def _listed(output: str) -> List[str]:
@@ -597,7 +600,7 @@ class TestKeywordOverview:
         result = _ok("doc", "keywords", doc_project.arg_lib)
 
         assert (
-            result.stdout == f"# Library *{doc_project.arg_lib}*\n\n- **Mode A Keyword** `()` — Available in mode a.\n"
+            result.stdout == f"# Library *{doc_project.arg_lib}*\n\n- **Mode A Keyword** `()` - Available in mode a.\n"
         )
 
     def test_json_with_a_pattern(self, doc_project: Project) -> None:
@@ -945,3 +948,53 @@ class TestLoadingDetails:
 
         monkeypatch.setenv("ROBOTCODE_FORCE_AI_AGENT", "1")
         assert _run_plain("doc", "lib", "Collections").stdout == _page("Collections")
+
+
+KINDS_LIB = '''\
+def pick_rows(table, /, column, *names, limit: int = 10, **options) -> int:
+    """Picks rows.
+
+    Returns:
+        The number of rows.
+    """
+    return 0
+'''
+
+
+class TestAsciiDecoration:
+    """On the console, `doc` marks argument kinds as Libdoc does; the hovers keep their markers."""
+
+    @pytest.fixture
+    def kinds_lib(self, doc_project: Project) -> str:
+        name = _unique("KindsLib")
+        _write(doc_project.root / "lib" / f"{name}.py", KINDS_LIB)
+        return name
+
+    def test_signature_in_the_keyword_list(self, kinds_lib: str) -> None:
+        output = _ok("doc", "keywords", kinds_lib).stdout
+
+        assert "- **Pick Rows** `(table, /, column, *names, limit: int = 10, **options)` - Picks rows." in output
+        assert output.isascii()
+
+    def test_arguments_of_the_keyword_page(self, kinds_lib: str) -> None:
+        output = _ok("doc", "keyword", kinds_lib, "Pick Rows").stdout
+
+        rows = [line.split("|")[1].strip() for line in output.splitlines() if line.startswith("| `")]
+        assert rows == ["`table`", "`/`", "`column`", "`*names`", "`limit`", "`**options`"]
+        assert output.isascii()
+
+    @pytest.mark.skipif(RF_VERSION < (7, 5), reason="Robot Framework reads `Returns:` sections from 7.5 on")
+    def test_return_line_on_the_console(self, kinds_lib: str) -> None:
+        output = _ok("doc", "keyword", kinds_lib, "Pick Rows").stdout
+
+        assert "**Return Type**: `int` - The number of rows." in output
+
+    def test_hover_keeps_its_markers(self, doc_project: Project, kinds_lib: str) -> None:
+        keyword = next(iter(get_library_doc(str(doc_project.root / "lib" / f"{kinds_lib}.py")).keywords.values()))
+
+        markdown = keyword.to_markdown()
+
+        assert "`⟶table`" in markdown
+        assert "`🏷limit`" in markdown
+        if RF_VERSION >= (7, 5):
+            assert "— The number of rows." in markdown

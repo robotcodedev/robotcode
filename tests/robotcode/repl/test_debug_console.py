@@ -1084,7 +1084,7 @@ def test_condition_error_still_stops() -> None:
     stops = [s for s in _stop_lines(messages) if s.startswith("* breakpoint")]
     assert len(stops) == 1
     assert "Outer" in stops[0]
-    assert stops[0].endswith("— condition error: Variable '${nonexistent}' not found.")
+    assert stops[0].endswith("  - condition error: Variable '${nonexistent}' not found.")
 
 
 def test_condition_error_stops_past_ignore_and_keeps_tbreak() -> None:
@@ -1099,7 +1099,7 @@ def test_condition_error_stops_past_ignore_and_keeps_tbreak() -> None:
     messages = _run_debug(COND_SUITE, [], prepare=add_bad)
     stops = [s for s in _stop_lines(messages) if s.startswith("* breakpoint")]
     assert len(stops) == 3
-    assert all(s.endswith("— condition error: Variable '${nonexistent}' not found.") for s in stops)
+    assert all(s.endswith("  - condition error: Variable '${nonexistent}' not found.") for s in stops)
 
 
 def test_condition_error_shows_the_banner_despite_silent() -> None:
@@ -1112,7 +1112,7 @@ def test_condition_error_shows_the_banner_despite_silent() -> None:
     )
     stops = [s for s in _stop_lines(messages) if s.startswith("* breakpoint")]
     assert len(stops) == 3
-    assert all(s.endswith("— condition error: Variable '${nonexistent}' not found.") for s in stops)
+    assert all(s.endswith("  - condition error: Variable '${nonexistent}' not found.") for s in stops)
 
 
 def test_logpoint_reports_a_condition_error_and_continues() -> None:

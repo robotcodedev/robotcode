@@ -470,7 +470,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if len(matches) == 1:
             return long_to_attr[matches[0]], None
         if len(matches) > 1:
-            return None, f"Ambiguous dot-command .{token} — matches: {', '.join('.' + m for m in matches)}"
+            return None, f"Ambiguous dot-command .{token}: it matches {', '.join('.' + m for m in matches)}"
         return None, f"Unknown dot-command: .{token}. Try .help."
 
     def _dispatch_dot_command(self, line: str) -> bool:
@@ -796,7 +796,7 @@ class ConsoleInterpreter(BaseInterpreter):
             parts.append(f"({loc})")
         line = "  ".join(parts)
         if stop.description:
-            line += f"  — {stop.description}"
+            line += f"  - {stop.description}"
         self._echo(line)
         self._show_displays()
 
@@ -1182,11 +1182,11 @@ class ConsoleInterpreter(BaseInterpreter):
             for long in sorted(longs):
                 alias_str = ", ".join(f"`.{a}`" for a in sorted(aliases_of.get(long, [])))
                 head = f"`.{long}`" + (f" ({alias_str})" if alias_str else "")
-                md_lines.append(f"- {head} — {summaries[long] or '(no description)'}")
+                md_lines.append(f"- {head} - {summaries[long] or '(no description)'}")
             md_lines.append("")
         md_lines.append("Type `.help <command>` for usage details.")
         md_lines.append("")
-        md_lines.append("**Shortcuts**: F1=help · Tab=complete · ^R=search · ^L=clear · ^D=exit")
+        md_lines.append("**Shortcuts**: F1=help, Tab=complete, ^R=search, ^L=clear, ^D=exit")
         self.show_doc("Dot-commands", "\n".join(md_lines))
 
     @dot_command("imports")
@@ -1246,7 +1246,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
         Options:
           --user   Hide Robot's built-in variables (`${SUITE_NAME}`,
-                   `${OUTPUT_DIR}`, `${TEMPDIR}`, `${True}`, …) and the
+                   `${OUTPUT_DIR}`, `${TEMPDIR}`, `${True}`, ...) and the
                    result variable `${_}` so the listing focuses on what the
                    session or the suite defined. At a debug stop it filters
                    every scope of the listing.
@@ -1272,7 +1272,7 @@ class ConsoleInterpreter(BaseInterpreter):
             except Exception:
                 rep = "<unprintable>"
             if len(rep) > 60:
-                rep = rep[:59] + "…"
+                rep = rep[:57] + "..."
             rows.append((name, rep))
 
         if not rows:
@@ -1477,7 +1477,7 @@ class ConsoleInterpreter(BaseInterpreter):
     def _cwd(self, arg: str) -> None:
         """Show the current working directory.
 
-        Print the working directory of the REPL process — the project root.
+        Print the working directory of the REPL process, which is the project root.
         Relative file paths passed to keywords such as `File Should Exist`
         resolve against it. `${CURDIR}` and, on Robot Framework 7.4 and newer,
         relative imports use the directory of `--source` instead, or the
@@ -1509,7 +1509,7 @@ class ConsoleInterpreter(BaseInterpreter):
           .exit 3
         """
         if self._stop is not None:
-            self._dot_command_failed("at a debug stop — use .continue or .detach to resume, or .abort to quit the run")
+            self._dot_command_failed("at a debug stop; use .continue or .detach to resume, or .abort to quit the run")
             return
         if arg:
             try:
@@ -1564,11 +1564,11 @@ class ConsoleInterpreter(BaseInterpreter):
 
         recorded: List[str] = list(self._session_lines or [])
         if not recorded:
-            self.app.echo("Nothing to save — the session has no recorded inputs yet.")
+            self.app.echo("Nothing to save: the session has no recorded inputs yet.")
             return
         lines = [line for i, line in enumerate(recorded) if opts.keep_failed or i not in self._failed_session_lines]
         if not lines:
-            self.app.echo("Nothing to save — every recorded input failed; `--keep-failed` exports them anyway.")
+            self.app.echo("Nothing to save: every recorded input failed; `--keep-failed` exports them anyway.")
             return
 
         content = render_robot_file(lines, test_name=opts.test_name)
@@ -1679,7 +1679,7 @@ class ConsoleInterpreter(BaseInterpreter):
         """Show the source at the current stop.
 
         prompt_toolkit: the whole file in the scrollable viewer, scrolled to the
-        current line (marked `->`). Plain backend: a ±5-line inline window."""
+        current line (marked `->`). Plain backend: a +/-5-line inline window."""
         del arg
         if not self._require_stop():
             return
@@ -1692,12 +1692,12 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("source", group="Debugger")
     def _source(self, arg: str) -> None:
-        """Show a keyword's source — `.source Open Browser`.
+        """Show a keyword's source: `.source Open Browser`.
 
         On prompt_toolkit it opens the scrollable doc viewer at the keyword's
         definition (marked with `->`). On the plain backend it prints inline from
         the definition line downward; a trailing count sets how many lines
-        (default 10) — `.source Open Browser 25`.
+        (default 10): `.source Open Browser 25`.
         """
         if not arg:
             self._dot_command_failed("usage: .source <keyword-name> [lines]")
@@ -1744,7 +1744,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("frame", "f", group="Debugger")
     def _frame(self, arg: str) -> None:
-        """Select a frame by number — `.frame 2` (#0 is the innermost)."""
+        """Select a frame by number: `.frame 2` (#0 is the innermost)."""
         if not self._require_stop():
             return
         try:
@@ -1757,7 +1757,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("print", "p", group="Debugger")
     def _print(self, arg: str) -> None:
-        """Evaluate a variable or expression in the selected frame — `.print ${x}`."""
+        """Evaluate a variable or expression in the selected frame: `.print ${x}`."""
         if not self._require_stop():
             return
         if not arg:
@@ -1772,7 +1772,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("pprint", "pp", group="Debugger")
     def _pprint(self, arg: str) -> None:
-        """Pretty-print a variable or expression in the selected frame — `.pprint ${x}`."""
+        """Pretty-print a variable or expression in the selected frame: `.pprint ${x}`."""
         if not self._require_stop():
             return
         if not arg:
@@ -1787,7 +1787,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("whatis", group="Debugger")
     def _whatis(self, arg: str) -> None:
-        """Show the type of a variable or expression in the selected frame — `.whatis ${x}`."""
+        """Show the type of a variable or expression in the selected frame: `.whatis ${x}`."""
         if not self._require_stop():
             return
         if not arg:
@@ -1802,7 +1802,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("display", group="Debugger")
     def _display(self, arg: str) -> None:
-        """Show an expression's value at every stop — `.display ${x}`; bare `.display` lists them."""
+        """Show an expression's value at every stop: `.display ${x}`; bare `.display` lists them."""
         if not arg:
             if not self._display_exprs:
                 self._echo("(no display expressions)")
@@ -1819,7 +1819,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("undisplay", group="Debugger")
     def _undisplay(self, arg: str) -> None:
-        """Stop displaying an expression — `.undisplay ${x}`; bare `.undisplay` clears all."""
+        """Stop displaying an expression: `.undisplay ${x}`; bare `.undisplay` clears all."""
         if not arg:
             self._display_exprs.clear()
             self._echo("display list cleared")
@@ -1832,14 +1832,14 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("set", group="Debugger")
     def _set(self, arg: str) -> None:
-        """Change an existing scalar variable in the selected frame — `.set ${x} <value>`.
+        """Change an existing scalar variable in the selected frame: `.set ${x} <value>`.
 
         Only variables that already exist can be changed; create a new one with
-        `${x}=    Set Variable    …` at the prompt. The value is
+        `${x}=    Set Variable    ...` at the prompt. The value is
         variable-substituted and stored as a string: `.set ${name} hello` sets
         `hello`, and `.set ${count} 7` sets the string `7`. For other types,
         assign at the prompt, e.g. `${items}=    Evaluate    [1, 2]`. Only whole
-        scalar variables (`${...}`) are supported — not list/dict variables
+        scalar variables (`${...}`) are supported, not list/dict variables
         (`@{...}`/`&{...}`) or item access (`${x}[0]`). The value lands in the
         selected frame's local scope.
         """
@@ -1889,12 +1889,12 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("break", "b", group="Debugger")
     def _break(self, arg: str) -> None:
-        """Add a breakpoint — `.break file:line` / `.break Keyword Name or pattern` / `.break <loc>, <condition>`."""
+        """Add a breakpoint: `.break file:line` / `.break Keyword Name or pattern` / `.break <loc>, <condition>`."""
         self._add_breakpoint(arg, temporary=False)
 
     @dot_command("tbreak", group="Debugger")
     def _tbreak(self, arg: str) -> None:
-        """Add a one-shot breakpoint, removed after it first stops — same syntax as `.break`."""
+        """Add a one-shot breakpoint, removed after it first stops; same syntax as `.break`."""
         self._add_breakpoint(arg, temporary=True)
 
     @dot_command("breakpoints", "bp", group="Debugger")
@@ -1944,7 +1944,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("condition", group="Debugger")
     def _condition(self, arg: str) -> None:
-        """Set or clear a breakpoint condition — `.condition <n> <expr>` (bare `.condition <n>` clears it)."""
+        """Set or clear a breakpoint condition: `.condition <n> <expr>` (bare `.condition <n>` clears it)."""
         if not self._require_controller():
             return
         parts = arg.split(None, 1)
@@ -1962,7 +1962,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("ignore", group="Debugger")
     def _ignore(self, arg: str) -> None:
-        """Skip a breakpoint's next N hits — `.ignore <n> <count>`."""
+        """Skip a breakpoint's next N hits: `.ignore <n> <count>`."""
         if not self._require_controller():
             return
         parts = arg.split()
@@ -1986,7 +1986,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("delete", group="Debugger")
     def _delete(self, arg: str) -> None:
-        """Remove a breakpoint — `.delete <n>`; bare `.delete` removes all."""
+        """Remove a breakpoint: `.delete <n>`; bare `.delete` removes all."""
         if not self._require_controller():
             return
         controller = self._controller
@@ -2021,20 +2021,20 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("disable", group="Debugger")
     def _disable(self, arg: str) -> None:
-        """Disable a breakpoint — `.disable <n>`; bare `.disable` disables all."""
+        """Disable a breakpoint: `.disable <n>`; bare `.disable` disables all."""
         self._set_bp_enabled(arg, False)
 
     @dot_command("enable", group="Debugger")
     def _enable(self, arg: str) -> None:
-        """Enable a breakpoint — `.enable <n>`; bare `.enable` enables all."""
+        """Enable a breakpoint: `.enable <n>`; bare `.enable` enables all."""
         self._set_bp_enabled(arg, True)
 
     @dot_command("commands", group="Debugger")
     def _commands(self, arg: str) -> None:
-        """Attach commands to a breakpoint, replayed at each hit — `.commands <n>`, end with `end`.
+        """Attach commands to a breakpoint, replayed at each hit: `.commands <n>`, end with `end`.
 
         Enter one command per line; `end` finishes. A leading `silent` suppresses
-        the stop banner; a resuming command (`.continue`/…) makes the breakpoint
+        the stop banner; a resuming command (`.continue`/...) makes the breakpoint
         run the commands and carry on without prompting. Bare list clears them.
         """
         if not self._require_controller():
@@ -2070,7 +2070,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("catch", group="Debugger")
     def _catch(self, arg: str) -> None:
-        """Set exception breakpoints — `.catch uncaught|all|test|suite|off`, or bare to show."""
+        """Set exception breakpoints: `.catch uncaught|all|test|suite|off`, or bare to show."""
         if not self._require_controller():
             return
         controller = self._controller
@@ -2096,12 +2096,12 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("debug", group="Debugger")
     def _debug(self, arg: str) -> None:
-        """Attach or detach the debugger — `.debug on|off`, or bare to show state.
+        """Attach or detach the debugger: `.debug on|off`, or bare to show state.
 
         When **attached** (`.debug on`) breakpoints, an embedded `Breakpoint`
         keyword, and the armed exception breaks (`.catch`) pause a keyword you
         run into the `(rdb)` prompt. When **detached** (`.debug off`, the default
-        for `robotcode repl`) nothing pauses — a failing keyword just prints its
+        for `robotcode repl`) nothing pauses: a failing keyword just prints its
         error and you stay at the prompt. Detaching keeps your breakpoints and
         `.catch` filters intact, so `.debug on` resumes with the same setup.
         """

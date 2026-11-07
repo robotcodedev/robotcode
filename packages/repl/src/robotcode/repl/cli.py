@@ -259,7 +259,7 @@ REPL_BASE_OPTIONS = [
         help="Force a specific input backend instead of auto-picking. "
         "`auto` and `prompt-toolkit` both pick the prompt-toolkit-driven "
         "interpreter (completion, syntax highlighting, history, doc viewer). "
-        "`plain` drops to a bare `input()` prompt — useful when ANSI escapes "
+        "`plain` drops to a bare `input()` prompt, useful when ANSI escapes "
         "or popups would interfere with the surrounding capture.",
     ),
     click.option(
@@ -267,7 +267,7 @@ REPL_BASE_OPTIONS = [
         is_flag=True,
         default=False,
         envvar="ROBOTCODE_REPL_PLAIN",
-        help="Shorthand for `--backend=plain`. Disables all prompt enhancements — "
+        help="Shorthand for `--backend=plain`. Disables all prompt enhancements: "
         "completion, syntax highlighting, candidate popup, auto-suggest, history "
         "file. The prompt becomes a bare `input()` call. Recommended for "
         "AI-agent invocations, automation pipelines, and any context where ANSI "
@@ -448,8 +448,8 @@ DEBUG_OPTIONS = [
     click.option(
         "--debugger-attached/--no-debugger-attached",
         default=None,
-        help="Whether the debugger is active. While detached nothing pauses — a "
-        "failing keyword just prints its error and you stay at the prompt — but "
+        help="Whether the debugger is active. While detached nothing pauses (a "
+        "failing keyword just prints its error and you stay at the prompt), but "
         "breakpoints and exception filters stay configured. Default: attached "
         "for `robot-debug`; for `repl` detached, unless a pause trigger "
         "(`--break`, a `--break-on-*` flag) is given. Toggle at runtime with "
@@ -460,21 +460,21 @@ DEBUG_OPTIONS = [
         "break_at",
         metavar="LOCATION",
         multiple=True,
-        help="Break at LOCATION — a `file:line`, where the end of the path is enough, or a keyword name "
+        help="Break at LOCATION: a `file:line`, where the end of the path is enough, or a keyword name "
         "or glob pattern matched like Robot Framework. Repeatable.",
     ),
     click.option(
         "--break-on-exception/--no-break-on-exception",
         default=None,
         help="Break at an uncaught failing keyword (not caught by TRY/EXCEPT or "
-        "`Run Keyword And …`), before the failure unwinds. Armed by default; it "
+        "`Run Keyword And ...`), before the failure unwinds. Armed by default; it "
         "only pauses while the debugger is attached (see `--debugger-attached`).",
     ),
     click.option(
         "--break-on-all-exceptions/--no-break-on-all-exceptions",
         default=False,
         show_default=True,
-        help="Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And …`.",
+        help="Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And ...`.",
     ),
     click.option(
         "--break-on-failed-test/--no-break-on-failed-test",
