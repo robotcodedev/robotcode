@@ -271,7 +271,7 @@ Each diagnostic becomes one entry in the JSON array:
   {
     "description": "No keyword with name 'Lgin User' found.",
     "check_name": "KeywordNotFound",
-    "fingerprint": "…",
+    "fingerprint": "...",
     "severity": "major",
     "location": { "path": "tests/login.robot", "lines": { "begin": 4 } }
   }

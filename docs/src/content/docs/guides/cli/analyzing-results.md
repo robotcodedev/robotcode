@@ -689,10 +689,10 @@ robotcode results compare nightly/*/output.xml --show messages
 | ERROR |   1 |   1 |   0 |
 | WARN  |   0 |   0 |   1 |
 
-| Level | Message                                                                                                                   | First | Last | Change |  #1 |  #2 |  #3 |
-| ----- | ------------------------------------------------------------------------------------------------------------------------- | ----- | ---- | ------ | --: | --: | --: |
-| WARN  | Keyword 'Open Old Browser' is deprecated since 7.1.                                                                       | #3    | #3   | new    |   0 |   0 |   1 |
-| ERROR | Error in file '/home/me/shop/msgtests/shop.robot' on line 2: Importing library 'Screenshots' failed: ModuleNotFoundError… | #1    | #2   | gone   |   1 |   1 |   0 |
+| Level | Message                                                                                                                     | First | Last | Change |  #1 |  #2 |  #3 |
+| ----- | --------------------------------------------------------------------------------------------------------------------------- | ----- | ---- | ------ | --: | --: | --: |
+| WARN  | Keyword 'Open Old Browser' is deprecated since 7.1.                                                                         | #3    | #3   | new    |   0 |   0 |   1 |
+| ERROR | Error in file '/home/me/shop/msgtests/shop.robot' on line 2: Importing library 'Screenshots' failed: ModuleNotFoundError... | #1    | #2   | gone   |   1 |   1 |   0 |
 ```
 
 The messages are read before the filters, so a filter narrows the tests of the other views but not the messages.
@@ -983,7 +983,7 @@ Field notes:
       "fullName": "MyProject.Login.Bad Password",
       "suite": "MyProject.Login",
       "status": "FAIL",
-      "message": "AssertionError: Expected 'Login failed' …",
+      "message": "AssertionError: Expected 'Login failed' ...",
       "tags": ["smoke", "regression"],
       "metadata": { "Issue": "4409", "Owner Team": "core" },
       "elapsedSeconds": 0.234,
@@ -1016,7 +1016,7 @@ Field notes:
     {
       "fullName": "MyProject.Login.Bad Password",
       "status": "FAIL",
-      "message": "AssertionError: Expected 'Login failed' …",
+      "message": "AssertionError: Expected 'Login failed' ...",
       "body": [ /* recursive tree of body items, see below */ ],
       "artifacts": [ /* aggregated artifact refs for the whole test */ ],
       "source": "/abs/path/tests/login/test_login.robot",
@@ -1124,7 +1124,7 @@ Field notes:
       "fullName": "MyProject.Login.Bad Password",
       "baselineStatus": "PASS",
       "currentStatus": "FAIL",
-      "currentMessage": "AssertionError: Expected 'Login failed' …",
+      "currentMessage": "AssertionError: Expected 'Login failed' ...",
       "source": "/abs/path/tests/login/test_login.robot",
       "relSource": "tests/login/test_login.robot",
       "lineno": 42

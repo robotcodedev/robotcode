@@ -578,6 +578,7 @@ A few rules hold across every subcommand:
 - **camelCase keys.** `relSource`, `supportsParseInclude`, `robotVersionString`, etc.
 - **Optional fields are omitted, not `null`.** A `null` literal never appears. If a field has no value (a test with no tags), the key is simply absent.
 - **Empty array ≠ missing field.** A field listed in the schema may be `[]` if the section "exists but is empty"; a field absent entirely means the section wasn't computed for this run. `// []` in jq smooths over the difference.
+- **ASCII only.** Characters outside ASCII in names, tags, metadata and paths come as `\u` escapes (`"Hans Müller"` for `Hans Müller`), so the JSON works on any terminal or pipe. Every JSON parser, `jq` included, reads them back as the original characters.
 - **Stability.** Fields are appended over time, never renamed or removed in place. Existing consumers keep working.
 
 ### `TestItem` — the common shape
@@ -595,7 +596,7 @@ Every subcommand that returns tests/tasks/suites uses the same `TestItem` schema
   "relSource": "tests/login/test_login.robot",
   "source": "/abs/path/tests/login/test_login.robot",
   "tags": ["regression", "smoke"],
-  "metadata": { "Author": "Hans Müller", "Issue": "4409" },
+  "metadata": { "Author": "Hans M\u00fcller", "Issue": "4409" },
   "range": {
     "start": { "line": 13, "character": 0 },
     "end":   { "line": 13, "character": 0 }
@@ -710,7 +711,7 @@ Field notes:
   "processor": "x86_64",
   "platform": "linux",
   "system": "Linux",
-  "systemVersion": "#1 SMP …"
+  "systemVersion": "#1 SMP ..."
 }
 ```
 
