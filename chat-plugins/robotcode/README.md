@@ -25,7 +25,7 @@ With this plugin, your AI coding agent uses [`robotcode`](https://robotcode.io) 
 
 - A Robot Framework project.
 - The [`robotcode`](https://robotcode.io) CLI tools, installed in the project's Python environment (the command-line tool — not to be confused with the VS Code extension of the same name). You can set it up yourself following the [installation guide](https://robotcode.io/reference/cli/), or let the skill walk you through scope (dev dependency vs. venv-only) and extras (`runner`, `analyze`, `repl`, …) on first use.
-- An AI agent that supports plugins — see [supported agents](https://open-plugins.com/supported-agents) for the current list. Agents without plugin support can still load the skill directly (see [Install](#install)).
+- An AI agent that supports plugins: Claude Code, GitHub Copilot CLI, GitHub Copilot Chat, Codex, or another agent that supports [Agent Plugins](https://agent-plugins.org/compatible-clients). Agents without plugin support can still load the skill directly (see [Install](#install)).
 
 ## Install
 
@@ -41,7 +41,7 @@ copilot plugin marketplace add robotcodedev/robotframework-agent-plugins
 copilot plugin install robotcode@robotframework-agent-plugins
 ```
 
-For Codex, VS Code Copilot Chat, and other Open-Plugins-compliant agents, see the [marketplace README](../../README.md).
+For Codex, VS Code Copilot Chat, and other agents, see the [marketplace README](../../README.md#install-per-agent).
 
 > Using the [RobotCode VS Code extension](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)? It already bundles this plugin via `contributes.chatPlugins` — no separate install needed for VS Code Copilot Chat.
 
