@@ -18,6 +18,7 @@ import shutil
 from enum import IntFlag
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
+from xml.etree import ElementTree
 
 import click
 from robot.api import SuiteVisitor
@@ -74,9 +75,28 @@ from .._search import (
     make_search_matcher,
     named_metadata,
 )
-from . import _html, _render
+from . import _compare, _html, _render
 from ._models import (
     ArtifactRef,
+    CompareCell,
+    CompareElapsed,
+    CompareEnvironment,
+    CompareFailure,
+    CompareFailureGroup,
+    CompareFailures,
+    CompareGroup,
+    CompareGrowth,
+    CompareLevelCount,
+    CompareMessage,
+    CompareMessageGroup,
+    CompareMessages,
+    CompareResult,
+    CompareRun,
+    CompareStatsGroup,
+    CompareStatsSection,
+    CompareTest,
+    CompareTestGroup,
+    CompareTests,
     Counts,
     DiffChange,
     DiffResult,
@@ -1000,6 +1020,27 @@ def stats(
 
 
 def _build_stats_section(dimension: str, tests: List[TestCase], group_sort: str, top_n: int) -> StatsSection:
+    groups = list(_stats_buckets(dimension, tests).values())
+
+    group_key_map: Dict[str, Tuple[Callable[[StatsGroup], Any], bool]] = {
+        "name": (lambda g: g.name.lower(), False),
+        "total": (lambda g: g.counts.total, True),
+        "elapsed": (lambda g: g.elapsed_seconds or 0.0, True),
+        "failed": (lambda g: g.counts.failed, True),
+    }
+    sort_key, reverse = group_key_map.get(group_sort, group_key_map["failed"])
+    groups.sort(key=sort_key, reverse=reverse)
+
+    truncated = 0
+    if top_n > 0 and len(groups) > top_n:
+        truncated = len(groups) - top_n
+        groups = groups[:top_n]
+
+    return StatsSection(dimension=dimension, groups=groups, truncated=truncated)
+
+
+def _stats_buckets(dimension: str, tests: Iterable[TestCase]) -> Dict[str, StatsGroup]:
+    """Group name -> counts and elapsed time of the tests in it, in the order the groups first appear."""
     buckets: Dict[str, Counts] = {}
     elapsed: Dict[str, float] = {}
 
@@ -1027,26 +1068,10 @@ def _build_stats_section(dimension: str, tests: List[TestCase], group_sort: str,
             for tag in tags:
                 _bump(normalize(str(tag), ignore="_"), t.status, secs)
 
-    groups = [
-        StatsGroup(name=name, counts=counts, elapsed_seconds=elapsed.get(name) or None)
+    return {
+        name: StatsGroup(name=name, counts=counts, elapsed_seconds=elapsed.get(name) or None)
         for name, counts in buckets.items()
-    ]
-
-    group_key_map: Dict[str, Tuple[Callable[[StatsGroup], Any], bool]] = {
-        "name": (lambda g: g.name.lower(), False),
-        "total": (lambda g: g.counts.total, True),
-        "elapsed": (lambda g: g.elapsed_seconds or 0.0, True),
-        "failed": (lambda g: g.counts.failed, True),
     }
-    sort_key, reverse = group_key_map.get(group_sort, group_key_map["failed"])
-    groups.sort(key=sort_key, reverse=reverse)
-
-    truncated = 0
-    if top_n > 0 and len(groups) > top_n:
-        truncated = len(groups) - top_n
-        groups = groups[:top_n]
-
-    return StatsSection(dimension=dimension, groups=groups, truncated=truncated)
 
 
 _DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "removed")
@@ -1340,6 +1365,487 @@ def _truncate(text: Optional[str], limit: int) -> Optional[str]:
     return first_line
 
 
+_COMPARE_VIEWS = ("tests", "failures", "elapsed", "messages", "environment")
+
+
+def _parse_compare_runs(
+    ctx: click.Context, param: click.Parameter, value: Tuple[str, ...]
+) -> List[_compare.RunArgument]:
+    """Turn `PATH` and `NAME=PATH` into runs with absolute paths, resolved against the working directory."""
+    runs = [_compare.split_run_argument(v) for v in value]
+    if len(runs) < 2:
+        raise click.UsageError("compare needs at least two runs.", ctx=ctx)
+    names: Set[str] = set()
+    for text, run in zip(value, runs):
+        if run.name is not None:
+            if not run.name:
+                raise click.BadParameter(f"'{text}' has an empty name.", ctx=ctx, param=param)
+            if run.name in names:
+                raise click.BadParameter(f"the name '{run.name}' is given twice.", ctx=ctx, param=param)
+            names.add(run.name)
+        if not run.path.is_file():
+            raise click.BadParameter(f"File '{run.path}' does not exist.", ctx=ctx, param=param)
+    return [_compare.RunArgument(run.path.resolve(), run.name) for run in runs]
+
+
+def _unique_lower(values: Iterable[str]) -> List[str]:
+    out: List[str] = []
+    for v in values:
+        if v.lower() not in out:
+            out.append(v.lower())
+    return out
+
+
+@results.command()
+@click.argument("runs", nargs=-1, metavar="RUN RUN [RUN]...", callback=_parse_compare_runs)
+@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS)
+@FULL_PATHS_OPTION
+@click.option(
+    "--by",
+    "group_by",
+    type=click.Choice(["tag", "suite"], case_sensitive=False),
+    multiple=True,
+    help="Add the counts per tag or suite, one column per run. Repeatable.",
+)
+@click.option(
+    "--sort",
+    "group_sort",
+    type=click.Choice(["name", "total", "failed", "elapsed"], case_sensitive=False),
+    default="failed",
+    show_default=True,
+    help="Sort the rows of `--by` by this value in the last run.",
+)
+@click.option(
+    "--top",
+    "top_n",
+    type=click.IntRange(min=0),
+    default=0,
+    show_default=True,
+    help="Show at most N rows per table of `--by` and per view (0 = all).",
+)
+@click.option(
+    "--show",
+    "views",
+    type=click.Choice(_COMPARE_VIEWS, case_sensitive=False),
+    multiple=True,
+    help="Add this view after the overview. Repeatable.",
+)
+@click.option(
+    "--run-order",
+    type=click.Choice(["arguments", "start-time"], case_sensitive=False),
+    default="arguments",
+    show_default=True,
+    help="Order the runs as the arguments are, or by the start time of their top suite.",
+)
+@click.option(
+    "--last",
+    "last_n",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Compare only the last N runs, of each group with `--group-by-metadata`.",
+)
+@click.option(
+    "--group-by-metadata",
+    "group_metadata",
+    metavar="NAME",
+    default=None,
+    help="Group the runs by the value of this metadata of their top suite.",
+)
+@click.option(
+    "--message-chars",
+    type=click.IntRange(min=0),
+    default=120,
+    show_default=True,
+    help="Cut messages and metadata values to N characters (0 = no cut).",
+)
+@pass_application
+def compare(
+    app: Application,
+    runs: List[_compare.RunArgument],
+    status_filters: Tuple[str, ...],
+    include_tags: Tuple[str, ...],
+    exclude_tags: Tuple[str, ...],
+    suite_globs: Tuple[str, ...],
+    test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
+    search_substring: Optional[str],
+    search_regex: Optional[str],
+    full_paths: bool,
+    group_by: Tuple[str, ...],
+    group_sort: str,
+    top_n: int,
+    views: Tuple[str, ...],
+    run_order: str,
+    last_n: Optional[int],
+    group_metadata: Optional[str],
+    message_chars: int,
+) -> None:
+    """\
+    Put two or more runs side by side.
+
+    A run is the path of a result file, or `NAME=PATH` to give it a name.
+    The overview, one row per run, always comes first and numbers the runs
+    `#1`, `#2`, ...; `--by` and `--show` add tables and views below it.
+    Tests are matched by their full name, so the runs need the same top
+    suite name (`robot --name`).
+
+    \b
+    Views of `--show`:
+    ```
+    tests        status of each test that failed in a run, flaky tests,
+                 failing since
+    failures     the same failure message over tests and runs
+    elapsed      tests and suites that got slower in the last run
+    messages     errors and warnings of the runs, new and gone ones
+    environment  Robot Framework, Python, platform and metadata
+    ```
+
+    Everything that depends on the order of the runs - failing since,
+    growth, first, new and gone - is computed per group with
+    `--group-by-metadata`. The exit code is 0 whatever the runs show.
+
+    \b
+    Examples:
+    ```
+    robotcode results compare run1/output.xml run2/output.xml run3/output.xml
+    robotcode results compare results/output-*.xml --show tests --last 10
+    robotcode results compare linux=out/linux.xml windows=out/win.xml --by tag
+    robotcode results compare nightly/*.xml --group-by-metadata Platform --show tests
+    robotcode results compare a.xml b.xml c.xml --show failures --show elapsed
+    robotcode --format json results compare a.xml b.xml --show tests
+    ```
+    """
+    # before the result files are read, so an invalid pattern fails at once
+    matcher = make_search_matcher(search_substring, search_regex)
+    dimensions = _unique_lower(group_by)
+    shown = _unique_lower(views)
+
+    def apply_filters(suite: TestSuite) -> None:
+        _apply_tree_filters(
+            suite,
+            include_tags,
+            exclude_tags,
+            suite_globs,
+            test_globs,
+            by_longname,
+            exclude_by_longname,
+            status_filters,
+            matcher,
+            by_test_metadata=by_test_metadata,
+            exclude_by_test_metadata=exclude_by_test_metadata,
+        )
+
+    snapshots = [_compare_snapshot(run, apply_filters, dimensions) for run in runs]
+    groups = _compare.arrange_runs(
+        snapshots,
+        by_start_time=run_order.lower() == "start-time",
+        group_metadata=group_metadata,
+        last=last_n,
+    )
+
+    filters_active = bool(
+        status_filters
+        or include_tags
+        or exclude_tags
+        or suite_globs
+        or test_globs
+        or by_longname
+        or exclude_by_longname
+        or by_test_metadata
+        or exclude_by_test_metadata
+        or search_substring
+        or search_regex
+    )
+    data = _compare_result(
+        groups,
+        grouped=group_metadata is not None,
+        dimensions=dimensions,
+        views=shown,
+        group_sort=group_sort.lower(),
+        top_n=top_n,
+        message_chars=message_chars,
+    )
+    data.group_by_metadata = group_metadata
+    if filters_active:
+        data.filters_applied = _filters_dict(
+            status_filters,
+            include_tags,
+            exclude_tags,
+            suite_globs,
+            test_globs,
+            by_longname,
+            exclude_by_longname,
+            search_substring,
+            search_regex,
+            by_test_metadata=by_test_metadata,
+            exclude_by_test_metadata=exclude_by_test_metadata,
+        )
+
+    if app.config.output_format in (None, OutputFormat.TEXT):
+        app.echo_as_markdown(_render.render_compare(data, views=shown, full_paths=full_paths))
+    else:
+        app.print_data(data, remove_defaults=True)
+
+
+def _iter_all_suites(suite: TestSuite) -> Iterator[TestSuite]:
+    yield suite
+    for child in suite.suites:
+        yield from _iter_all_suites(child)
+
+
+def _start_iso(suite: TestSuite) -> Optional[str]:
+    value = _iso(_start_time(suite))
+    # Robot Framework before 7 writes `N/A` for a time it doesn't know
+    return None if value in (None, "", "N/A") else value
+
+
+def _compare_snapshot(
+    run: _compare.RunArgument,
+    apply_filters: Callable[[TestSuite], None],
+    dimensions: List[str],
+) -> _compare.RunSnapshot:
+    execution = _load_execution_result(run.path)
+    suite = execution.suite
+
+    # Before the filters, which move messages and leave suites out.
+    messages = [
+        _compare.ExecutionMessage(str(m.level), str(m.message))
+        for m in (execution.errors.messages if execution.errors is not None else [])
+    ]
+    start_time = _start_iso(suite)
+    # A file that rebot merged from several outputs has no start of its own; its suites have.
+    order_time = start_time or min(
+        (t for t in (_start_iso(child) for child in suite.suites) if t is not None), default=None
+    )
+
+    generator, generation_time = _file_generator(execution, run.path)
+
+    apply_filters(suite)
+    tests = list(_iter_all_tests(suite))
+    return _compare.RunSnapshot(
+        argument=run,
+        status=suite.status,
+        counts=_collect_counts(suite),
+        elapsed_seconds=_elapsed_seconds(suite),
+        start_time=start_time,
+        order_time=order_time,
+        generator=generator,
+        generation_time=generation_time,
+        metadata={str(k): str(v) for k, v in suite.metadata.items()},
+        tests={
+            _get_full_name(t): _compare.RunTest(
+                full_name=_get_full_name(t),
+                status=t.status,
+                elapsed_seconds=_elapsed_seconds(t),
+                message=t.message or "",
+                source=str(t.source) if t.source else None,
+                lineno=t.lineno or None,
+            )
+            for t in tests
+        },
+        suite_elapsed={_get_full_name(s): _elapsed_seconds(s) for s in _iter_all_suites(suite)},
+        messages=messages,
+        buckets={d: _stats_buckets(d, tests) for d in dimensions},
+    )
+
+
+def _top(items: List[Any], top_n: int) -> Tuple[List[Any], int]:
+    if top_n > 0 and len(items) > top_n:
+        return items[:top_n], len(items) - top_n
+    return items, 0
+
+
+def _compare_result(
+    groups: List[_compare.RunGroup],
+    *,
+    grouped: bool,
+    dimensions: List[str],
+    views: List[str],
+    group_sort: str,
+    top_n: int,
+    message_chars: int,
+) -> CompareResult:
+    runs = _compare.all_runs(groups)
+
+    def file_info(snapshot: _compare.RunSnapshot) -> ResultFileInfo:
+        info = _make_file_info(snapshot.argument.path)
+        info.generator = snapshot.generator
+        info.generation_time = snapshot.generation_time
+        return info
+
+    data = CompareResult(
+        runs=[
+            CompareRun(
+                number=run.number,
+                file=file_info(run.snapshot),
+                status=run.snapshot.status,
+                counts=run.snapshot.counts,
+                name=run.name,
+                group=group.name if grouped else None,
+                start_time=run.snapshot.start_time,
+                elapsed_seconds=run.snapshot.elapsed_seconds,
+            )
+            for group in groups
+            for run in group.runs
+        ]
+    )
+    if grouped:
+        data.groups = [
+            CompareGroup(
+                name=group.name,
+                runs=[run.number for run in group.runs],
+                counts=_compare.sum_counts(run.snapshot.counts for run in group.runs),
+                elapsed_seconds=_compare.sum_elapsed(run.snapshot.elapsed_seconds for run in group.runs),
+            )
+            for group in groups
+        ]
+
+    if dimensions:
+        data.sections = [_compare_stats_section(d, runs, group_sort, top_n) for d in dimensions]
+
+    for view in views:
+        if view == "tests":
+            rows, truncated = _top(_compare.status_rows(groups), top_n)
+            data.tests = CompareTests(
+                tests=[
+                    CompareTest(
+                        full_name=row.full_name,
+                        statuses=row.statuses,
+                        per_group=[
+                            CompareTestGroup(
+                                group=h.group,
+                                failed=h.failed,
+                                runs=h.runs,
+                                flaky=h.flaky,
+                                failing_since=h.failing_since,
+                            )
+                            for h in row.histories
+                        ],
+                        source=row.test.source,
+                        rel_source=_rel_to_cwd(row.test.source),
+                        lineno=row.test.lineno,
+                    )
+                    for row in rows
+                ],
+                truncated=truncated,
+            )
+        elif view == "failures":
+            failures, truncated = _top(_compare.failure_rows(groups), top_n)
+            data.failures = CompareFailures(
+                failures=[
+                    CompareFailure(
+                        message=_truncate(f.message, message_chars) or "",
+                        tests=f.tests,
+                        runs=f.per_run,
+                        per_group=[
+                            CompareFailureGroup(group=group.name, first_run=first)
+                            for group, first in zip(groups, f.first_runs)
+                        ],
+                    )
+                    for f in failures
+                ],
+                truncated=truncated,
+            )
+        elif view == "elapsed":
+            suites, suites_truncated = _top(_compare.suite_growth(groups), top_n)
+            tests, tests_truncated = _top(_compare.tests_growth(groups), top_n)
+            data.elapsed = CompareElapsed(
+                suites=[_compare_growth(g) for g in suites],
+                tests=[_compare_growth(g) for g in tests],
+                suites_truncated=suites_truncated,
+                tests_truncated=tests_truncated,
+            )
+        elif view == "messages":
+            messages, truncated = _top(_compare.message_rows(groups), top_n)
+            data.messages = CompareMessages(
+                counts=[CompareLevelCount(level, counts) for level, counts in _compare.level_counts(groups).items()],
+                messages=[
+                    CompareMessage(
+                        level=m.level,
+                        message=_truncate(m.message, message_chars) or "",
+                        runs=m.per_run,
+                        per_group=[
+                            CompareMessageGroup(
+                                group=i.group, first_run=i.first_run, last_run=i.last_run, new=i.new, gone=i.gone
+                            )
+                            for i in m.per_group
+                        ],
+                    )
+                    for m in messages
+                ],
+                truncated=truncated,
+            )
+        elif view == "environment":
+            data.environment = [_compare_environment(run, message_chars) for run in runs]
+    return data
+
+
+def _compare_stats_section(
+    dimension: str, runs: List[_compare.ComparedRun], group_sort: str, top_n: int
+) -> CompareStatsSection:
+    names: List[str] = []
+    for run in runs:
+        for name in run.snapshot.buckets.get(dimension, {}):
+            if name not in names:
+                names.append(name)
+    groups = [
+        CompareStatsGroup(
+            name=name,
+            runs=[
+                CompareCell(counts=g.counts, elapsed_seconds=g.elapsed_seconds)
+                if (g := run.snapshot.buckets.get(dimension, {}).get(name)) is not None
+                else None
+                for run in runs
+            ],
+        )
+        for name in names
+    ]
+
+    def last(g: CompareStatsGroup) -> Optional[CompareCell]:
+        return g.runs[-1] if g.runs else None
+
+    sort_keys: Dict[str, Tuple[Callable[[CompareStatsGroup], Any], bool]] = {
+        "name": (lambda g: g.name.lower(), False),
+        "total": (lambda g: c.counts.total if (c := last(g)) else 0, True),
+        "failed": (lambda g: c.counts.failed if (c := last(g)) else 0, True),
+        "elapsed": (lambda g: (c.elapsed_seconds or 0.0) if (c := last(g)) else 0.0, True),
+    }
+    key, reverse = sort_keys.get(group_sort, sort_keys["failed"])
+    groups.sort(key=key, reverse=reverse)
+    groups, truncated = _top(groups, top_n)
+    return CompareStatsSection(dimension=dimension, groups=groups, truncated=truncated)
+
+
+def _compare_growth(g: _compare.Growth) -> CompareGrowth:
+    return CompareGrowth(
+        full_name=g.full_name,
+        group=g.group,
+        median_seconds=g.median_seconds,
+        last_seconds=g.last_seconds,
+        growth_seconds=g.growth_seconds,
+        growth_percent=g.growth_percent,
+    )
+
+
+def _compare_environment(run: _compare.ComparedRun, message_chars: int) -> CompareEnvironment:
+    snapshot = run.snapshot
+    env = CompareEnvironment(
+        run=run.number,
+        metadata={k: _truncate(v, message_chars) or "" for k, v in snapshot.metadata.items()} or None,
+    )
+    if snapshot.generator:
+        generator = _compare.parse_generator(snapshot.generator)
+        env.generator = generator.text
+        env.tool = generator.tool
+        env.version = generator.version
+        env.python = generator.python
+        env.platform = generator.platform
+    return env
+
+
 def _resolve_profile(app: Application) -> Tuple[RobotBaseProfile, Optional[Path]]:
     config_files, root_folder, _ = get_config_files(
         None,
@@ -1466,6 +1972,40 @@ def _load_execution_result(path: Path) -> Result:
     except Exception as e:
         raise click.ClickException(f"failed to parse {path}: {e}") from e
 
+
+def _read_root_generator(path: Path) -> Tuple[Optional[str], Optional[str]]:
+    """`(generator, generated)` from the root element of an `output.xml`, without reading the rest of it.
+
+    An `output.json` that Robot Framework before 7.2 can read was written by its `rebot` and holds only the suite,
+    without these fields.
+    """
+    if path.suffix.lower() == ".json":
+        return None, None
+    try:
+        with path.open("rb") as f:
+            for _event, elem in ElementTree.iterparse(f, events=("start",)):
+                return elem.get("generator"), _iso(elem.get("generated"))
+    except (OSError, ElementTree.ParseError):
+        pass
+    return None, None
+
+
+if RF_VERSION >= (7, 2):
+
+    def _file_generator(execution: Result, path: Path) -> Tuple[Optional[str], Optional[str]]:
+        """`(generator, generated)` that the result file records."""
+        generator = execution.generator  # type: ignore[attr-defined,unused-ignore]
+        generated = execution.generation_time  # type: ignore[attr-defined,unused-ignore]
+        return (str(generator) if generator and generator != "unknown" else None), _iso(generated)
+
+else:
+
+    def _file_generator(execution: Result, path: Path) -> Tuple[Optional[str], Optional[str]]:
+        """`(generator, generated)` that the result file records.
+
+        Robot Framework before 7.2 keeps only whether Robot or Rebot wrote the file, so it is read from the file.
+        """
+        return _read_root_generator(path)
 
 # Each helper below is bound to one of two implementations at import time —
 # the differences between Robot Framework versions are confined to this block.

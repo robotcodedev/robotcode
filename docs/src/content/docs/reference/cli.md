@@ -2337,6 +2337,10 @@ robotcode results [OPTIONS] COMMAND [ARGS]...
 
 **Commands:**
 
+- [`compare`](#compare)
+
+   Put two or more runs side by side.
+
 - [`diff`](#diff)
 
    Compare two output files: status changes plus added/removed tests.
@@ -2356,6 +2360,153 @@ robotcode results [OPTIONS] COMMAND [ARGS]...
 - [`summary`](#summary)
 
    Print headline counts and overall status for a finished run.
+
+
+##### compare
+
+Put two or more runs side by side.
+
+A run is the path of a result file, or `NAME=PATH` to give it a name. The
+overview, one row per run, always comes first and numbers the runs `#1`,
+`#2`, ...; `--by` and `--show` add tables and views below it. Tests are
+matched by their full name, so the runs need the same top suite name (`robot
+--name`).
+
+Views of `--show`:
+```
+tests        status of each test that failed in a run, flaky tests,
+             failing since
+failures     the same failure message over tests and runs
+elapsed      tests and suites that got slower in the last run
+messages     errors and warnings of the runs, new and gone ones
+environment  Robot Framework, Python, platform and metadata
+```
+
+Everything that depends on the order of the runs - failing since, growth,
+first, new and gone - is computed per group with `--group-by-metadata`. The
+exit code is 0 whatever the runs show.
+
+Examples:
+```
+robotcode results compare run1/output.xml run2/output.xml run3/output.xml
+robotcode results compare results/output-*.xml --show tests --last 10
+robotcode results compare linux=out/linux.xml windows=out/win.xml --by tag
+robotcode results compare nightly/*.xml --group-by-metadata Platform --show tests
+robotcode results compare a.xml b.xml c.xml --show failures --show elapsed
+robotcode --format json results compare a.xml b.xml --show tests
+```
+
+
+**Usage:**
+```text
+robotcode results compare [OPTIONS] RUN RUN [RUN]...
+```
+
+
+**Options:**
+- `--status [pass|fail|skip|not-run] *`
+
+   Only include tests with one of these statuses.
+
+
+- `-i, --include TAG_PATTERN *`
+
+   Include tests matching the tag pattern. Supports Robot's tag pattern syntax (AND, OR, NOT, *, ?).
+
+
+- `-e, --exclude TAG_PATTERN *`
+
+   Exclude tests matching the tag pattern. Same syntax as --include.
+
+
+- `-s, --suite NAME *`
+
+   Only include tests inside the named suite (glob against full suite name).
+
+
+- `-t, --test, --task NAME *`
+
+   Only include tests whose name matches (glob against full test name). `--task` is an alias for `--test` (Robot's RPA terminology).
+
+
+- `-bl, --by-longname NAME *`
+
+   Select tests/tasks or suites by long name (exact match).
+
+
+- `-ebl, --exclude-by-longname NAME *`
+
+   Exclude tests/tasks or suites by long name (exact match).
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
+- `--search TEXT`
+
+   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, test metadata names and values, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
+
+
+- `--search-regex PATTERN`
+
+   Only include tests with at least one match against PATTERN (Python regular expression, case-sensitive — prefix with `(?i)` for case-insensitive). Same target fields as `--search`. Mutually exclusive with `--search`.
+
+
+- `--full-paths / --no-full-paths`
+
+   Show absolute source paths instead of paths relative to cwd.  [default: no-full-paths]
+
+
+- `--by [tag|suite] *`
+
+   Add the counts per tag or suite, one column per run. Repeatable.
+
+
+- `--sort [name|total|failed|elapsed]`
+
+   Sort the rows of `--by` by this value in the last run.  [default: failed]
+
+
+- `--top INTEGER RANGE`
+
+   Show at most N rows per table of `--by` and per view (0 = all).  [default: 0; x>=0]
+
+
+- `--show [tests|failures|elapsed|messages|environment] *`
+
+   Add this view after the overview. Repeatable.
+
+
+- `--run-order [arguments|start-time]`
+
+   Order the runs as the arguments are, or by the start time of their top suite.  [default: arguments]
+
+
+- `--last INTEGER RANGE`
+
+   Compare only the last N runs, of each group with `--group-by-metadata`.  [x>=1]
+
+
+- `--group-by-metadata NAME`
+
+   Group the runs by the value of this metadata of their top suite.
+
+
+- `--message-chars INTEGER RANGE`
+
+   Cut messages and metadata values to N characters (0 = no cut).  [default: 120; x>=0]
+
+
+- `--help`
+
+   Show this message and exit.
 
 
 ##### diff

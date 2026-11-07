@@ -15,7 +15,7 @@ display target.
 """
 
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from .._markdown import (
     bold_status,
@@ -33,8 +33,13 @@ from .._markdown import (
     path_paren,
     timing_suffix,
 )
+from . import _compare
 from ._models import (
     ArtifactRef,
+    CompareGroup,
+    CompareGrowth,
+    CompareResult,
+    Counts,
     DiffChange,
     DiffResult,
     LogEntry,
@@ -329,6 +334,268 @@ def render_diff(data: DiffResult, *, full_paths: bool = False) -> str:
         out.append(footer)
 
     return "\n".join(out) + "\n"
+
+
+def _more_not_shown(truncated: int) -> str:
+    return f"_… {truncated} more not shown (use `--top 0` for all)_"
+
+
+def render_compare(data: CompareResult, *, views: Sequence[str] = (), full_paths: bool = False) -> str:
+    """`views` gives the order of the `--show` views; the overview and the `--by` tables come first."""
+    labels = [md_escape(r.name) if r.name else f"#{r.number}" for r in data.runs]
+    label_of = {r.number: label for r, label in zip(data.runs, labels)}
+    grouped = data.groups is not None
+    group_sizes = [len(g.runs) for g in data.groups] if data.groups is not None else [len(data.runs)]
+    run_aligns = ["right"] * len(labels)
+
+    def per_group(values: List[str]) -> str:
+        empty = "-" if grouped else ""
+        return " · ".join(v or empty for v in values) if grouped else (values[0] if values else "")
+
+    def run_label(number: Optional[int]) -> str:
+        return label_of.get(number, f"#{number}") if number is not None else ""
+
+    out: List[str] = [f"# Compare — {len(data.runs)} runs"]
+
+    out += ["", "## Runs", "", _compare_runs_table(data, labels, full_paths=full_paths)]
+
+    for section in data.sections or []:
+        heading = _STATS_DIMENSION_HEADING.get(section.dimension, section.dimension.title())
+        out += ["", f"## {heading}", ""]
+        if not section.groups:
+            out.append("_(no groups matched)_")
+            continue
+        rows = [
+            [md_escape(g.name), *[f"{c.counts.failed}/{c.counts.total}" if c is not None else "-" for c in g.runs]]
+            for g in section.groups
+        ]
+        out.append(md_table(["Name", *labels], rows, aligns=["left", *run_aligns]))
+        if section.truncated:
+            out += ["", _more_not_shown(section.truncated)]
+
+    head = out
+    view_sections: Dict[str, List[str]] = {}
+
+    groups_line = (
+        "_Groups: " + " · ".join(md_escape(g.name or "(none)") for g in data.groups) + "_"
+        if data.groups is not None
+        else None
+    )
+
+    if data.tests is not None:
+        out = view_sections["tests"] = []
+        out += ["", "## Tests", ""]
+        if groups_line:
+            out += [groups_line, ""]
+        if not data.tests.tests:
+            out.append("_No test failed in any run._")
+        else:
+            rows = []
+            for test in data.tests.tests:
+                parts, start = [], 0
+                for size in group_sizes:
+                    parts.append(_compare.status_string(test.statuses[start : start + size]))
+                    start += size
+                rows.append(
+                    [
+                        md_escape(test.full_name),
+                        f"`{' '.join(parts)}`",
+                        per_group([f"{g.failed}/{g.runs}" for g in test.per_group]),
+                        per_group(["yes" if g.flaky else "" for g in test.per_group]),
+                        per_group([run_label(g.failing_since) for g in test.per_group]),
+                    ]
+                )
+            out.append(
+                md_table(
+                    ["Test", "Status", "Failed", "Flaky", "Failing since"],
+                    rows,
+                    aligns=["left", "left", "right", "left", "left"],
+                )
+            )
+            if data.tests.truncated:
+                out += ["", _more_not_shown(data.tests.truncated)]
+
+    if data.failures is not None:
+        out = view_sections["failures"] = []
+        out += ["", "## Failures", ""]
+        if groups_line:
+            out += [groups_line, ""]
+        if not data.failures.failures:
+            out.append("_No failed test in any run._")
+        else:
+            rows = [
+                [
+                    md_escape(" ".join(f.message.split())),
+                    str(len(f.tests)),
+                    per_group([run_label(g.first_run) for g in f.per_group]),
+                    *[str(n) for n in f.runs],
+                ]
+                for f in data.failures.failures
+            ]
+            headers = ["Message", "Tests", "First", *labels]
+            out.append(md_table(headers, rows, aligns=["left", "right", "left", *run_aligns]))
+            if data.failures.truncated:
+                out += ["", _more_not_shown(data.failures.truncated)]
+
+    if data.elapsed is not None:
+        out = view_sections["elapsed"] = []
+        out += ["", "## Elapsed"]
+        for title, items, truncated in (
+            ("Suites", data.elapsed.suites, data.elapsed.suites_truncated),
+            ("Tests", data.elapsed.tests, data.elapsed.tests_truncated),
+        ):
+            out += ["", f"### {title}", ""]
+            if not items:
+                out.append("_None got slower in the last run._")
+                continue
+            out.append(_compare_growth_table(items, grouped=grouped))
+            if truncated:
+                out += ["", _more_not_shown(truncated)]
+
+    if data.messages is not None:
+        out = view_sections["messages"] = []
+        out += ["", "## Messages", ""]
+        if groups_line:
+            out += [groups_line, ""]
+        if not data.messages.counts:
+            out.append("_No errors or warnings in any run._")
+        else:
+            out.append(
+                md_table(
+                    ["Level", *labels],
+                    [[c.level, *[str(n) for n in c.runs]] for c in data.messages.counts],
+                    aligns=["left", *run_aligns],
+                )
+            )
+            rows = [
+                [
+                    m.level,
+                    md_escape(" ".join(m.message.split())),
+                    per_group([run_label(g.first_run) for g in m.per_group]),
+                    per_group([run_label(g.last_run) for g in m.per_group]),
+                    per_group(["new" if g.new else "gone" if g.gone else "" for g in m.per_group]),
+                    *[str(n) for n in m.runs],
+                ]
+                for m in data.messages.messages
+            ]
+            out += [
+                "",
+                md_table(
+                    ["Level", "Message", "First", "Last", "Change", *labels],
+                    rows,
+                    aligns=["left", "left", "left", "left", "left", *run_aligns],
+                ),
+            ]
+            if data.messages.truncated:
+                out += ["", _more_not_shown(data.messages.truncated)]
+
+    if data.environment is not None:
+        out = view_sections["environment"] = []
+        out += ["", "## Environment", ""]
+        names: List[str] = []
+        for env in data.environment:
+            for name in env.metadata or {}:
+                if name not in names:
+                    names.append(name)
+        rows = [
+            [
+                label_of.get(env.run, f"#{env.run}"),
+                md_escape(" ".join(v for v in (env.tool, env.version) if v)),
+                env.python or "",
+                md_escape(env.platform or ""),
+                *[md_escape((env.metadata or {}).get(name, "")) for name in names],
+            ]
+            for env in data.environment
+        ]
+        out.append(md_table(["Run", "Written by", "Python", "OS", *[md_escape(n) for n in names]], rows))
+
+    out = head
+    for view in [*views, *(v for v in view_sections if v not in views)]:
+        out += view_sections.get(view, [])
+
+    footer = filters_footer_md(data.filters_applied)
+    if footer:
+        out += ["", footer]
+
+    return "\n".join(out) + "\n"
+
+
+def _compare_runs_table(data: CompareResult, labels: List[str], *, full_paths: bool) -> str:
+    named = any(r.name for r in data.runs)
+    grouped = data.groups is not None
+    headers = ["#", *(["Group"] if grouped else []), *(["Name"] if named else []), "Run", "Started"]
+    headers += ["Tests", "Pass", "Fail", "Skip", "Elapsed"]
+
+    def row(
+        number: str, group: str, name: str, path: str, started: str, counts: Counts, elapsed: Optional[float]
+    ) -> List[str]:
+        return [
+            number,
+            *([group] if grouped else []),
+            *([name] if named else []),
+            path,
+            started,
+            str(counts.total),
+            str(counts.passed),
+            str(counts.failed),
+            str(counts.skipped),
+            fmt_elapsed(elapsed) if elapsed is not None else "",
+        ]
+
+    by_number = {r.number: r for r in data.runs}
+    rows: List[List[str]] = []
+    sections: List[Tuple[List[int], Optional[str], Optional[CompareGroup]]] = (
+        [(g.runs, g.name, g) for g in data.groups]
+        if data.groups is not None
+        else [([r.number for r in data.runs], None, None)]
+    )
+    for group_runs, group_name, total in sections:
+        for number in group_runs:
+            r = by_number[number]
+            path = r.file.source if full_paths else (r.file.rel_source or r.file.source)
+            rows.append(
+                row(
+                    f"#{r.number}",
+                    md_escape(group_name or "(none)"),
+                    md_escape(r.name or ""),
+                    md_escape(path),
+                    fmt_timestamp(r.start_time),
+                    r.counts,
+                    r.elapsed_seconds,
+                )
+            )
+        if total is not None:
+            rows.append(
+                row(
+                    "",
+                    f"**{md_escape(group_name or '(none)')}**",
+                    "",
+                    "_total_",
+                    "",
+                    total.counts,
+                    total.elapsed_seconds,
+                )
+            )
+    aligns = ["right", *(["left"] if grouped else []), *(["left"] if named else []), "left", "left"]
+    aligns += ["right"] * 5
+    return md_table(headers, rows, aligns=aligns)
+
+
+def _compare_growth_table(items: List[CompareGrowth], *, grouped: bool) -> str:
+    rows = [
+        [
+            md_escape(g.full_name),
+            *([md_escape(g.group or "(none)")] if grouped else []),
+            fmt_elapsed(g.median_seconds),
+            fmt_elapsed(g.last_seconds),
+            "+" + fmt_elapsed(g.growth_seconds),
+            f"+{g.growth_percent:.0f} %" if g.growth_percent is not None else "",
+        ]
+        for g in items
+    ]
+    headers = ["Name", *(["Group"] if grouped else []), "Median before", "Last", "Growth", "Growth %"]
+    aligns = ["left", *(["left"] if grouped else []), "right", "right", "right", "right"]
+    return md_table(headers, rows, aligns=aligns)
 
 
 def _render_diff_change_md(change: DiffChange, *, full_paths: bool) -> str:

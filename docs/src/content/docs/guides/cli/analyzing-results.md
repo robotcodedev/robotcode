@@ -1,6 +1,6 @@
 ---
 title: Analyzing Run Results
-description: Summarize, list, walk, aggregate and diff Robot Framework run results with robotcode results in the terminal or CI, using filters, search and JSON output.
+description: Summarize, list, walk, aggregate, diff and compare Robot Framework run results with robotcode results in the terminal or CI, using filters, search and JSON output.
 sidebar:
   label: Analyzing Results
   order: 30
@@ -30,8 +30,9 @@ Typical things you can do with it:
 - walk a single test's execution log, with timestamps and extracted screenshots
 - aggregate results by tag or suite for reporting or dashboards
 - diff two runs and find regressions
+- put a series of runs side by side: flaky tests, shared failures, slower tests
 
-The five subcommands all read the same result file and share the same filter, search, and output-format options — once you've learned one the others follow:
+The six subcommands share the same filter, search, and output-format options — once you've learned one the others follow. `diff` and `compare` read two or more result files, the others one:
 
 | Subcommand | Use it when you want to … |
 |---|---|
@@ -40,6 +41,7 @@ The five subcommands all read the same result file and share the same filter, se
 | [`log`](#log--walk-the-execution-tree) | … inspect the per-test execution tree |
 | [`stats`](#stats--aggregate-by-tag-suite-or-status) | … aggregate by tag, suite, or status |
 | [`diff`](#diff--compare-two-runs) | … compare two runs and find new failures |
+| [`compare`](#compare--runs-side-by-side) | … put two or more runs side by side |
 
 This guide is split in two:
 
@@ -507,6 +509,278 @@ robotcode results diff baseline.xml --include smoke
 robotcode results diff main/output.xml branch/output.xml
 ```
 
+## `compare` — runs side by side
+
+`compare` puts two or more result files side by side. `diff` compares exactly two runs, from a baseline to the current one; `compare` takes any number of runs and treats them alike. So it answers questions about a series of runs: how the counts developed, which tests are flaky, since when a test fails, which failure hits many tests, which tests got slower, and what differs between platforms.
+
+```bash
+robotcode results compare run1/output.xml run2/output.xml run3/output.xml
+robotcode results compare results/output-*.xml          # e.g. the files of --timestampoutputs
+```
+
+Tests are matched by their full name, as in `diff`. The top suite is part of that name, so give every run the same top suite — the same `paths`, or the same `--name` — or no test of one run matches a test of another.
+
+### The overview
+
+The output always starts with one row per run. It numbers the runs `#1`, `#2`, …, and the other tables of `compare` use these numbers as their column heads:
+
+```
+# Compare — 3 runs
+
+## Runs
+
+|   # | Run             | Started             | Tests | Pass | Fail | Skip | Elapsed |
+| --: | --------------- | ------------------- | ----: | ---: | ---: | ---: | ------: |
+|  #1 | run1/output.xml | 2026-11-06 23:14:36 |     4 |    4 |    0 |    0 |  177 ms |
+|  #2 | run2/output.xml | 2026-11-06 23:14:37 |     4 |    2 |    2 |    0 |   71 ms |
+|  #3 | run3/output.xml | 2026-11-06 23:14:38 |     4 |    2 |    2 |    0 |  124 ms |
+```
+
+Without further options the overview is all `compare` shows.
+
+### Naming runs
+
+Give a run a name with `NAME=PATH`. The name then stands in the overview and replaces the number in the column heads:
+
+```bash
+robotcode results compare linux=out/linux/output.xml windows=out/windows/output.xml
+```
+
+An argument that names an existing file is always a path, even if the file name contains `=`.
+
+### Order of the runs
+
+The runs are in the order of the arguments. A shell glob such as `results/output-*.xml` expands sorted by name, which for the timestamped files of `--timestampoutputs` is their order in time. `--run-order start-time` sorts by the start time of each run's top suite instead, with two limits:
+
+- Robot Framework writes local times without a time zone, so runs from machines in different time zones can land in the wrong order.
+- A file that `rebot` merged from several outputs has no start time of its own; `compare` takes the earliest start of the suites in it.
+
+`--last N` keeps only the last N runs. The runs keep their numbers, so `--last 3` of five runs shows `#3`, `#4` and `#5`.
+
+### Counts per tag or suite
+
+`--by tag` and `--by suite` add the counts of [`stats`](#stats--aggregate-by-tag-suite-or-status) with one column per run. Each cell is the number of failed out of all tests of that group in that run, `-` when the run has no such group. Repeat `--by` for both tables:
+
+```bash
+robotcode results compare run1/output.xml run2/output.xml run3/output.xml --by tag --by suite
+```
+
+```
+## By Tag
+
+| Name  |  #1 |  #2 |  #3 |
+| ----- | --: | --: | --: |
+| smoke | 0/2 | 1/2 | 0/2 |
+
+## By Suite
+
+| Name          |  #1 |  #2 |  #3 |
+| ------------- | --: | --: | --: |
+| Shop.Checkout | 0/2 | 1/2 | 1/2 |
+| Shop.Login    | 0/2 | 1/2 | 1/2 |
+```
+
+`--sort name|total|failed|elapsed` sorts the rows by that value in the last run, the most failed first by default. `--top N` keeps the first N rows of each table. Tags are merged as in `stats`.
+
+### Views
+
+`--show` adds a view below the overview and the `--by` tables. Repeat it for several views; they follow in the order given.
+
+| View | Shows … |
+|---|---|
+| [`tests`](#status-of-each-test) | the status of each test that failed in a run, flaky tests, failing since |
+| [`failures`](#the-same-failure-over-tests-and-runs) | the same failure message over tests and runs |
+| [`elapsed`](#growth-of-elapsed-times) | tests and suites that got slower in the last run |
+| [`messages`](#messages-of-the-runs) | the errors and warnings of the runs, new and gone ones |
+| [`environment`](#environment-of-the-runs) | Robot Framework, Python, platform and metadata of each run |
+
+#### Status of each test
+
+`--show tests` lists every test that failed in at least one run, with its status in each run as one character: `P` passed, `F` failed, `S` skipped, `N` not run, and `-` for a run that doesn't have the test, such as one from before the test was written.
+
+```bash
+robotcode results compare run*/output.xml --show tests
+```
+
+```
+## Tests
+
+| Test                         | Status  | Failed | Flaky | Failing since |
+| ---------------------------- | ------- | -----: | ----- | ------------- |
+| Shop.Login.Bad Password      | `PFFFF` |    4/5 |       | #2            |
+| Shop.Checkout.Pay By Card    | `PFPFP` |    2/5 | yes   |               |
+| Shop.Checkout.Pay By Invoice | `PPFPF` |    2/5 | yes   | #5            |
+```
+
+- **Failed** counts only the runs that had the test: a test written before run 5 of ten that failed once shows `1/6`. The tests are sorted by it, the most failed first.
+- **Flaky** means the status changed between passed and failed at least twice. A single change is a new failure (`PPPFF`) or a fix (`FFPPP`) and not flakiness; skipped runs and runs without the test don't count as a change.
+- **Failing since** names the run where the uninterrupted failures up to the last run began, for a test that failed in the last run that had it. A run without the test doesn't interrupt the series.
+
+#### The same failure over tests and runs
+
+`--show failures` groups the failure messages of all runs. The same message in many tests or runs often has one cause, such as a service that was down; the run it first appears in points to the change that caused it.
+
+```bash
+robotcode results compare run*/output.xml --show failures
+```
+
+```
+## Failures
+
+| Message                                          | Tests | First |  #1 |  #2 |  #3 |  #4 |  #5 |
+| ------------------------------------------------ | ----: | ----- | --: | --: | --: | --: | --: |
+| 500 Server Error for url: http://shop/order/4711 |     2 | #2    |   0 |   1 |   2 |   1 |   2 |
+| Timeout after 5000 ms waiting for #pay           |     1 | #2    |   0 |   1 |   0 |   1 |   0 |
+```
+
+Two messages count as the same when they are equal after every number is replaced by `#` and runs of whitespace are collapsed, so IDs, times and counters don't split a group: the first row holds `…/order/4711` of one test and `…/order/4712` of another. The table shows the first message of each group, cut to `--message-chars` (default `120`); **Tests** is the number of different tests with it, and the run columns count the tests per run.
+
+Ignoring numbers has two limits:
+
+- Different assertions that differ only in numbers, such as `Expected 3 but got 5` and `Expected 1 but got 2`, land in one group.
+- Multi-line messages whose lines change, such as the call log of the Browser library, stay apart.
+
+#### Growth of elapsed times
+
+`--show elapsed` lists the suites and tests whose elapsed time in the last run is longer than the median of the runs before it. The median keeps a single slow run, such as one with a cold cache, from hiding or faking a trend. There is no threshold: the lists are sorted by the growth in seconds, so the items that cost the most time come first, and `--top N` keeps the first N of each.
+
+```bash
+robotcode results compare run1/output.xml run4/output.xml slow/output.xml --show elapsed
+```
+
+```
+## Elapsed
+
+### Suites
+
+| Name          | Median before |   Last |  Growth | Growth % |
+| ------------- | ------------: | -----: | ------: | -------: |
+| Shop.Checkout |        104 ms | 654 ms | +550 ms |   +530 % |
+| Shop          |        125 ms | 673 ms | +548 ms |   +439 % |
+
+### Tests
+
+| Name                      | Median before |   Last |  Growth | Growth % |
+| ------------------------- | ------------: | -----: | ------: | -------: |
+| Shop.Checkout.Pay By Card |         51 ms | 601 ms | +550 ms |  +1069 % |
+```
+
+Only the runs that had the test or suite count, and one that is in fewer than two runs isn't listed. A failed test usually ends early, so a test that failed in the runs before can look slower when it passes again.
+
+#### Messages of the runs
+
+`--show messages` compares the errors and warnings of the runs, the messages `log.html` shows under "Test Execution Errors": import errors, invalid settings, deprecation warnings, and the warnings and errors logged in tests. A first table counts them per level and run; the second groups the messages as `--show failures` does, with the first and the last run each one appears in. A message only in the last run is **new**, one that is missing from the last run is **gone**; new ones come first.
+
+```bash
+robotcode results compare nightly/*/output.xml --show messages
+```
+
+```
+## Messages
+
+| Level |  #1 |  #2 |  #3 |
+| ----- | --: | --: | --: |
+| ERROR |   1 |   1 |   0 |
+| WARN  |   0 |   0 |   1 |
+
+| Level | Message                                                                                                                   | First | Last | Change |  #1 |  #2 |  #3 |
+| ----- | ------------------------------------------------------------------------------------------------------------------------- | ----- | ---- | ------ | --: | --: | --: |
+| WARN  | Keyword 'Open Old Browser' is deprecated since 7.1.                                                                       | #3    | #3   | new    |   0 |   0 |   1 |
+| ERROR | Error in file '/home/me/shop/msgtests/shop.robot' on line 2: Importing library 'Screenshots' failed: ModuleNotFoundError… | #1    | #2   | gone   |   1 |   1 |   0 |
+```
+
+The messages are read before the filters, so a filter narrows the tests of the other views but not the messages.
+
+#### Environment of the runs
+
+`--show environment` shows what each result file records about where it was written: the tool and its Robot Framework version, the Python version and the operating system as Python names it (`linux`, `win32`, `darwin`), and one column per metadata name of the top suites.
+
+```bash
+robotcode results compare env/chrome/output.xml env/firefox/output.xml env/merged/output.xml --show environment
+```
+
+```
+## Environment
+
+| Run | Written by | Python | OS    | Browser | Build |
+| --- | ---------- | ------ | ----- | ------- | ----- |
+| #1  | Robot 7.5  | 3.14.9 | linux | chrome  | 1234  |
+| #2  | Robot 7.5  | 3.14.9 | linux | firefox | 1234  |
+| #3  | Rebot 7.5  | 3.14.9 | linux |         |       |
+```
+
+A result file records no more than that: no library versions, host names or environment variables. Add what you need as metadata when the tests run, and `compare` shows it, here with:
+
+```bash
+robotcode robot --metadata Browser:chrome --metadata Build:1234 tests
+```
+
+Three things to know:
+
+- A file written by `rebot` records `Rebot` and the version of `rebot`, not the version the tests ran with.
+- When `rebot` merges several outputs, the metadata stays with the merged suites, so the new top suite has none, as in row `#3`.
+- With Robot Framework 7.0 or 7.1 installed, an `output.json` stays empty here: those versions read only the JSON their `rebot` writes, and it records none of these fields.
+
+### Groups of runs
+
+Runs of several platforms, browsers or environments are compared within their own kind: a test that fails only on Windows matters, and the Linux runs say nothing about whether it got slower on Windows. `--group-by-metadata NAME` groups the runs by the value of that metadata of their top suite, set with `--metadata` when the tests run:
+
+```bash
+robotcode robot --metadata Platform:linux tests
+robotcode results compare plat/*/output.xml --group-by-metadata Platform --show tests
+```
+
+```
+## Runs
+
+|   # | Group       | Run                       | Started             | Tests | Pass | Fail | Skip | Elapsed |
+| --: | ----------- | ------------------------- | ------------------- | ----: | ---: | ---: | ---: | ------: |
+|  #1 | linux       | plat/1-linux/output.xml   | 2026-11-06 23:28:27 |     4 |    4 |    0 |    0 |  173 ms |
+|  #2 | linux       | plat/2-linux/output.xml   | 2026-11-06 23:28:28 |     4 |    4 |    0 |    0 |  173 ms |
+|  #3 | linux       | plat/3-linux/output.xml   | 2026-11-06 23:28:30 |     4 |    4 |    0 |    0 |  176 ms |
+|     | **linux**   | _total_                   |                     |    12 |   12 |    0 |    0 |  522 ms |
+|  #4 | windows     | plat/1-windows/output.xml | 2026-11-06 23:28:27 |     4 |    2 |    2 |    0 |   73 ms |
+|  #5 | windows     | plat/2-windows/output.xml | 2026-11-06 23:28:28 |     4 |    4 |    0 |    0 |  175 ms |
+|  #6 | windows     | plat/3-windows/output.xml | 2026-11-06 23:28:30 |     4 |    2 |    2 |    0 |   83 ms |
+|     | **windows** | _total_                   |                     |    12 |    8 |    4 |    0 |  331 ms |
+
+## Tests
+
+_Groups: linux · windows_
+
+| Test                      | Status    |    Failed | Flaky   | Failing since |
+| ------------------------- | --------- | --------: | ------- | ------------- |
+| Shop.Checkout.Pay By Card | `PPP FPF` | 0/3 · 2/3 | - · yes | - · #6        |
+| Shop.Login.Bad Password   | `PPP FPF` | 0/3 · 2/3 | - · yes | - · #6        |
+```
+
+- The runs of a group stand together, in their order, and the groups in the order of their first run. The overview adds a sum row per group. Runs without the metadata form a group of their own, shown as `(none)`.
+- Everything that depends on the order of the runs is computed within each group and shown per group, separated by ` · ` in the order of the `_Groups:_` line: the failed count, flaky and failing since in `tests`, the first run in `failures`, the growth in `elapsed` (with a **Group** column), and new and gone in `messages`.
+- The status of a test has a space between the groups. The other tables keep one column per run.
+- `--last N` keeps the last N runs of each group.
+- The groups need the metadata in the top suite. A file that `rebot` merged from several outputs has none there (see [Environment of the runs](#environment-of-the-runs)) unless `rebot --metadata Platform:linux …` sets it.
+
+### Flag reference
+
+| Flag | Effect |
+|---|---|
+| `NAME=PATH` | Name a run. |
+| `--message-chars N` | Cut messages and metadata values to N characters (0 = no cut). Default: `120`. |
+| `--show tests\|failures\|elapsed\|messages\|environment` | Add a view; see [Views](#views). Repeatable. |
+| `--by tag\|suite` | Add the counts per tag or suite, one column per run. Repeatable. |
+| `--sort name\|total\|failed\|elapsed` | Sort the rows of `--by` by this value in the last run. Default: `failed`. |
+| `--top N` | At most N rows per table (0 = all). |
+| `--run-order arguments\|start-time` | Order the runs as the arguments are (default) or by the start time of their top suite. |
+| `--last N` | Compare only the last N runs, of each group with `--group-by-metadata`. |
+| `--group-by-metadata NAME` | Group the runs by the value of this metadata of their top suite. |
+| `--full-paths` | Absolute paths in the overview. |
+
+The filters of `diff` (`--status / -i / -e / -s / -t / -bl / -ebl / -btm / -ebtm / --search / --search-regex`) apply to every run before the runs are compared.
+
+### Exit code
+
+`compare` exits with 0 whatever the runs show, as `stats` does, and with 128 for an error that stops it, as every `results` command does. For a build that fails on new failures between two runs, use [`diff --exit-code`](#exit-codes).
+
 ## Filters
 
 Every subcommand accepts the same filter set. Filters combine with **AND** — every test must satisfy every filter to make it through. Within a single repeatable flag (`--status`, `--include`, etc.) the matches combine with **OR** in the way Robot Framework normally treats those options.
@@ -862,6 +1136,135 @@ Field notes:
 - With `--only`, sections you didn't list are **omitted entirely** from the JSON. Use `// []` in jq when accessing fields that may be missing.
 - Each entry carries `fullName`, the relevant status fields, and (when they exist) the relevant messages. `baselineMessage` / `currentMessage` are omitted when the corresponding run had no failure message.
 
+### `compare` JSON
+
+```json
+{
+  "runs": [
+    {
+      "number": 1,
+      "file": {
+        "source": "/abs/path/run1/output.xml",
+        "relSource": "run1/output.xml",
+        "generator": "Robot 7.5 (Python 3.14.9 on linux)",
+        "generationTime": "2026-11-06T23:14:36.133699"
+      },
+      "status": "PASS",
+      "counts": { "total": 4, "passed": 4, "failed": 0, "skipped": 0, "notRun": 0 },
+      "startTime": "2026-11-06T23:14:36.134241",
+      "elapsedSeconds": 0.17724
+    }
+  ]
+}
+```
+
+Field notes:
+
+- `runs` is in the order of the overview, after `--run-order` and `--last`. `name` is present for a run given as `NAME=PATH`; `startTime` is missing for a file that `rebot` merged from several outputs.
+- With `--group-by-metadata`, `groupByMetadata` names the metadata, each run has its `group` (missing for a run without the metadata), and `groups` lists the groups in order with the numbers of their `runs`, their summed `counts` and `elapsedSeconds`. A group of runs without the metadata has no `name`.
+- Every list of per-run values elsewhere in the `compare` JSON follows the order of `runs`, with `null` for a run that doesn't have the item.
+- `sections` holds one entry per `--by` dimension, in the order given. Each group has one entry per run in `runs`: `{ "counts": …, "elapsedSeconds": … }`, or `null` when the run has no test in that group. `truncated` is the number of groups dropped by `--top`.
+
+  ```json
+  "sections": [
+    {
+      "dimension": "tag",
+      "groups": [
+        {
+          "name": "smoke",
+          "runs": [
+            { "counts": { "total": 2, "passed": 2, "failed": 0, "skipped": 0, "notRun": 0 }, "elapsedSeconds": 0.102033 },
+            { "counts": { "total": 2, "passed": 1, "failed": 1, "skipped": 0, "notRun": 0 }, "elapsedSeconds": 0.001616 }
+          ]
+        }
+      ],
+      "truncated": 0
+    }
+  ]
+  ```
+- `tests` is present with `--show tests`. Each test has its `statuses`, one per run in `runs` with Robot Framework's status names and `null` for a run without the test, and `perGroup` with the counts that depend on the order of the runs: `failed` out of `runs`, `flaky`, and `failingSince` as a run number when the test fails in the last run that had it.
+
+  ```json
+  "tests": {
+    "tests": [
+      {
+        "fullName": "Shop.Login.Bad Password",
+        "statuses": ["PASS", "FAIL", "FAIL", "FAIL", "FAIL"],
+        "perGroup": [{ "group": null, "failed": 4, "runs": 5, "flaky": false, "failingSince": 2 }],
+        "source": "/abs/path/tests/login.robot",
+        "relSource": "tests/login.robot",
+        "lineno": 5
+      }
+    ],
+    "truncated": 0
+  }
+  ```
+
+  Without `--group-by-metadata`, `perGroup` has a single entry whose `group` is `null`; with it, one entry per group in the order of `groups`.
+- `failures` is present with `--show failures`: per group of messages the shown `message`, the full names of its `tests`, the number of tests per run in `runs`, and `perGroup` with the `firstRun` it appears in.
+
+  ```json
+  "failures": {
+    "failures": [
+      {
+        "message": "500 Server Error for url: http://shop/order/4711",
+        "tests": ["Shop.Login.Bad Password", "Shop.Checkout.Pay By Invoice"],
+        "runs": [0, 1, 2, 1, 2],
+        "perGroup": [{ "group": null, "firstRun": 2 }]
+      }
+    ],
+    "truncated": 0
+  }
+  ```
+- `elapsed` is present with `--show elapsed`: `suites` and `tests`, each entry with `medianSeconds` of the runs before the last one that had it, `lastSeconds`, `growthSeconds` and `growthPercent` (missing when the median is `0`), and its `group`. `suitesTruncated` and `testsTruncated` count what `--top` dropped.
+
+  ```json
+  "elapsed": {
+    "suites": [
+      { "fullName": "Shop.Checkout", "group": null, "medianSeconds": 0.1037, "lastSeconds": 0.6536, "growthSeconds": 0.5499, "growthPercent": 530.3 }
+    ],
+    "tests": [
+      { "fullName": "Shop.Checkout.Pay By Card", "group": null, "medianSeconds": 0.0514, "lastSeconds": 0.6014, "growthSeconds": 0.55, "growthPercent": 1069.1 }
+    ],
+    "suitesTruncated": 0,
+    "testsTruncated": 0
+  }
+  ```
+- `messages` is present with `--show messages`: `counts` per level with one number per run, and `messages`, each with its `level`, the shown `message`, the number per run in `runs`, and `perGroup` with `firstRun`, `lastRun`, `new` and `gone`.
+
+  ```json
+  "messages": {
+    "counts": [
+      { "level": "ERROR", "runs": [1, 1, 0] },
+      { "level": "WARN", "runs": [0, 0, 1] }
+    ],
+    "messages": [
+      {
+        "level": "WARN",
+        "message": "Keyword 'Open Old Browser' is deprecated since 7.1.",
+        "runs": [0, 0, 1],
+        "perGroup": [{ "group": null, "firstRun": 3, "lastRun": 3, "new": true, "gone": false }]
+      }
+    ],
+    "truncated": 0
+  }
+  ```
+- `environment` is present with `--show environment`: one entry per run with its `run` number, the `generator` text as the file records it, its parts `tool`, `version`, `python` and `platform`, and the `metadata` of the top suite. Fields the file doesn't record are missing.
+
+  ```json
+  "environment": [
+    {
+      "run": 1,
+      "generator": "Robot 7.5 (Python 3.14.9 on linux)",
+      "tool": "Robot",
+      "version": "7.5",
+      "python": "3.14.9",
+      "platform": "linux",
+      "metadata": { "Browser": "chrome", "Build": "1234" }
+    }
+  ]
+  ```
+
 ### `filtersApplied`
 
 Every subcommand's JSON output includes a `filtersApplied` field when **any** filter was passed. It echoes back the filters the command actually saw:
@@ -910,6 +1313,10 @@ robotcode --format json results show --sort elapsed --top 20 \
 # Tag-level elapsed budget (minutes)
 robotcode --format json results stats --by tag --sort elapsed \
   | jq -r '.sections[].groups[] | [.name, (.elapsedSeconds / 60)] | @csv'
+
+# Tests that got slower in the last of ten runs, with the growth in seconds
+robotcode --format json results compare results/output-*.xml --last 10 --show elapsed \
+  | jq -r '.elapsed.tests[] | [.fullName, .growthSeconds] | @csv'
 ```
 
 #### Notification payloads
@@ -937,9 +1344,9 @@ zip -r artefacts.zip ./extracted
 #### Flakiness signal
 
 ```bash
-# Tests that flipped state between two runs (either direction)
-robotcode --format json results diff run-1.xml run-2.xml \
-  | jq '((.newFailures // []) + (.newPasses // [])) | map(.fullName)'
+# Flaky tests over the last ten runs
+robotcode --format json results compare results/output-*.xml --last 10 --show tests \
+  | jq '[.tests.tests[] | select(any(.perGroup[]; .flaky)) | .fullName]'
 ```
 
 ### Tips for scripting

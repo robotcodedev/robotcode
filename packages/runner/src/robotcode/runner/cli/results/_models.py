@@ -237,3 +237,165 @@ class DiffResult(CamelSnakeMixin):
     added: Optional[List[DiffChange]] = None
     removed: Optional[List[DiffChange]] = None
     filters_applied: Optional[Dict[str, List[str]]] = None
+
+
+# `compare`: every list of per-run values follows the order of `CompareResult.runs`, with `null` for a run
+# without the item. Values that depend on the order of the runs are given per group in `per_group`, with a
+# single group named `null` without `--group-by-metadata`.
+
+
+@dataclass
+class CompareRun(CamelSnakeMixin):
+    number: int
+    file: ResultFileInfo
+    status: str
+    counts: Counts
+    name: Optional[str] = None
+    group: Optional[str] = None
+    start_time: Optional[str] = None
+    elapsed_seconds: Optional[float] = None
+
+
+@dataclass
+class CompareGroup(CamelSnakeMixin):
+    name: Optional[str]
+    runs: List[int]
+    counts: Counts
+    elapsed_seconds: Optional[float] = None
+
+
+@dataclass
+class CompareCell(CamelSnakeMixin):
+    counts: Counts
+    elapsed_seconds: Optional[float] = None
+
+
+@dataclass
+class CompareStatsGroup(CamelSnakeMixin):
+    name: str
+    runs: List[Optional[CompareCell]]
+
+
+@dataclass
+class CompareStatsSection(CamelSnakeMixin):
+    dimension: str  # "tag" | "suite"
+    groups: List[CompareStatsGroup]
+    truncated: int = 0
+
+
+@dataclass
+class CompareTestGroup(CamelSnakeMixin):
+    group: Optional[str]
+    failed: int
+    runs: int
+    flaky: bool = False
+    failing_since: Optional[int] = None
+
+
+@dataclass
+class CompareTest(CamelSnakeMixin):
+    full_name: str
+    statuses: List[Optional[str]]
+    per_group: List[CompareTestGroup]
+    source: Optional[str] = None
+    rel_source: Optional[str] = None
+    lineno: Optional[int] = None
+
+
+@dataclass
+class CompareTests(CamelSnakeMixin):
+    tests: List[CompareTest]
+    truncated: int = 0
+
+
+@dataclass
+class CompareFailureGroup(CamelSnakeMixin):
+    group: Optional[str]
+    first_run: Optional[int] = None
+
+
+@dataclass
+class CompareFailure(CamelSnakeMixin):
+    message: str
+    tests: List[str]
+    runs: List[int]
+    per_group: List[CompareFailureGroup]
+
+
+@dataclass
+class CompareFailures(CamelSnakeMixin):
+    failures: List[CompareFailure]
+    truncated: int = 0
+
+
+@dataclass
+class CompareGrowth(CamelSnakeMixin):
+    full_name: str
+    group: Optional[str]
+    median_seconds: float
+    last_seconds: float
+    growth_seconds: float
+    growth_percent: Optional[float] = None
+
+
+@dataclass
+class CompareElapsed(CamelSnakeMixin):
+    suites: List[CompareGrowth]
+    tests: List[CompareGrowth]
+    suites_truncated: int = 0
+    tests_truncated: int = 0
+
+
+@dataclass
+class CompareLevelCount(CamelSnakeMixin):
+    level: str
+    runs: List[int]
+
+
+@dataclass
+class CompareMessageGroup(CamelSnakeMixin):
+    group: Optional[str]
+    first_run: Optional[int] = None
+    last_run: Optional[int] = None
+    new: bool = False
+    gone: bool = False
+
+
+@dataclass
+class CompareMessage(CamelSnakeMixin):
+    level: str
+    message: str
+    runs: List[int]
+    per_group: List[CompareMessageGroup]
+
+
+@dataclass
+class CompareMessages(CamelSnakeMixin):
+    counts: List[CompareLevelCount]
+    messages: List[CompareMessage]
+    truncated: int = 0
+
+
+@dataclass
+class CompareEnvironment(CamelSnakeMixin):
+    run: int
+    generator: Optional[str] = None
+    tool: Optional[str] = None
+    version: Optional[str] = None
+    python: Optional[str] = None
+    platform: Optional[str] = None
+    metadata: Optional[Dict[str, str]] = None
+
+
+@dataclass
+class CompareResult(CamelSnakeMixin):
+    runs: List[CompareRun]
+    group_by_metadata: Optional[str] = None
+    groups: Optional[List[CompareGroup]] = None
+    sections: Optional[List[CompareStatsSection]] = None
+    tests: Optional[CompareTests] = None
+    failures: Optional[CompareFailures] = None
+    elapsed: Optional[CompareElapsed] = None
+    messages: Optional[CompareMessages] = None
+    environment: Optional[List[CompareEnvironment]] = None
+    filters_applied: Optional[Dict[str, List[str]]] = None
