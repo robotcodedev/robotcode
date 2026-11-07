@@ -73,7 +73,7 @@ export class ChatPluginsManager implements vscode.Disposable {
     } catch (error) {
       this.outputChannel.appendLine(`Failed to update ${CHAT_CONFIG_SECTION}.${CHAT_PLUGINS_MARKETPLACES}: ${error}`);
       await vscode.window.showErrorMessage(
-        `Could not update the chat plugin marketplaces setting. This requires GitHub Copilot Chat (or another agent that provides "${CHAT_CONFIG_SECTION}.${CHAT_PLUGINS_MARKETPLACES}") to be installed.`,
+        `Could not update the setting "${CHAT_CONFIG_SECTION}.${CHAT_PLUGINS_MARKETPLACES}": ${error}`,
       );
       return false;
     }
