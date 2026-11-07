@@ -247,7 +247,7 @@ With groups, `robotcode results compare` SHALL compute every value that depends 
 #### Scenario: Fails only on one platform
 - **WHEN** a test passed in all five `linux` runs and failed in four of the five `windows` runs
 - **THEN** its status is `PPPPP FFPFF`
-- **AND** its failed count is shown per group as `0/5 · 4/5`
+- **AND** its failed count is shown per group as `0/5, 4/5`
 
 #### Scenario: Last runs per group
 - **WHEN** `--group-by-metadata Platform --last 2` compares five runs per platform
