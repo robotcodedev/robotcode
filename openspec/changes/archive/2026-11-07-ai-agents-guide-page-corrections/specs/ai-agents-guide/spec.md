@@ -4,7 +4,7 @@
 
 ### Requirement: Setting up an agent
 
-Setting Up SHALL say that `robotcode` must run in the project's Python environment: outside VS Code, RobotCode's command line tools are installed there, and in VS Code the extension brings its own copy, which runs with the terminal's Python interpreter. It SHALL describe the plugin that comes with the VS Code extension, the installation from the marketplace with the commands for Claude Code, GitHub Copilot CLI and Codex, updating the plugin from the marketplace, matching the plugin to the RobotCode version, agents in PyCharm, and how to check that the agent works through `robotcode`.
+Setting Up SHALL say that `robotcode` must run in the project's Python environment, installed there outside VS Code and brought by the extension in VS Code. It SHALL describe the plugin of the VS Code extension, installing and updating the plugin from the marketplace for Claude Code, GitHub Copilot CLI and Codex, matching it to the RobotCode version, agents in PyCharm, and how to check that the agent works through `robotcode`.
 
 #### Scenario: Claude Code
 - **WHEN** a reader sets up Claude Code with the page
