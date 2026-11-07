@@ -243,21 +243,21 @@ class Expandable extends Component<ExpandableProps> {
           event.preventDefault();
           event.stopPropagation();
           if (this.isExpanded && this.childRefs.length > 0) {
-            // Gehe zum ersten Kind, wenn der aktuelle Knoten expandiert ist
+            // Go to the first child if the current node is expanded
             this.childRefs[0].current?.focusHeader();
           } else {
             let current: Expandable | null = this!;
             while (current) {
               const parent: Expandable | null = current?.parent;
-              if (!parent) break; // Wurzel erreicht, nichts mehr zu traversieren
+              if (!parent) break; // Root reached, nothing left to traverse
 
               const index = parent.childRefs.indexOf(current.ref);
               if (index < parent.childRefs.length - 1) {
-                // Gehe zum nächsten Geschwister des Elternknotens
+                // Go to the next sibling within the parent
                 parent.childRefs[index + 1].current?.focusHeader();
                 return;
               }
-              // Traverse zur übergeordneten Ebene
+              // Move up to the parent level
               current = parent;
             }
           }
