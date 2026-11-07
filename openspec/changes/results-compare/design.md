@@ -100,8 +100,9 @@ Alternative: the exact text, or the first line only. Decided by the user: number
 
 A helper bound once at import time, as the other version differences in `results.py`:
 
-- From 7.2 on, it reads `Result.generator`.
-- Before 7.2, it reads the root of the file: for XML, the attributes of the first element via `ElementTree.iterparse` with the `start` event; for JSON (7.0 and 7.1), the `generator` key from the start of the file.
+- From 7.2 on, it reads `Result.generator` and `Result.generation_time`.
+- Before 7.2, it reads the attributes of the first element of an `output.xml` via `ElementTree.iterparse` with the `start` event.
+- An `output.json` gives none before 7.2 (measured): robot writes JSON only from 7.2 on, rebot of 7.0 and 7.1 writes only the suite without these fields, and 7.0 and 7.1 refuse a JSON file of 7.2 or newer when they read it. Its environment stays empty.
 
 A regex splits `Tool Version (Python X on Platform)`. A generator it can't split is shown as the tool, with the other fields empty.
 
@@ -133,5 +134,5 @@ Statuses are Robot Framework's names (`"PASS"`, `"FAIL"`, …), not the characte
 - [Ignoring numbers merges different assertions, such as `Expected 3 but got 5` and `Expected 1 but got 2`] → Accepted by the user. The group shows a real message, and JSON lists the tests.
 - [A file written by `rebot` shows rebot's version] → Shown as `Rebot 7.5`, so it isn't mistaken for the run's version. The guide says so.
 - [Start times have no time zone] → Runs from machines in different time zones may be ordered wrongly by `--run-order start-time`. The guide says so; argument order is the default.
-- [Reading `generator` from the start of a JSON file relies on Robot Framework writing it first] → Verified for 7.5; a task checks 7.0 and 7.1. If it isn't found, the fields stay empty.
+- [An `output.json` read with Robot Framework 7.0 or 7.1 has no environment] → It records none (D8); the row shows the run's number only.
 - [`_build_stats_section` is split for reuse] → `stats` keeps its output; its tests run unchanged.
