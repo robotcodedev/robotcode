@@ -44,7 +44,7 @@ Rejected: that is code at many places, each forgotten one reopens the gap, and u
 
 ### D2: The description
 
-`capabilities.untrustedWorkspaces.description` explains why the extension needs trust. VS Code shows it where it explains that the extension is disabled in Restricted Mode. Text:
+`capabilities.untrustedWorkspaces.description` explains why the extension needs trust. While the folder is untrusted, VS Code 1.145.2 shows it on the extension's page in the Extensions view, under the buttons and after a shield icon; the entry in the extension list carries the same shield icon (checked in the harness, task 2.1). Text:
 
 > RobotCode is not available in untrusted workspaces: to analyze, discover and run tests, it runs code of the workspace, such as its Python libraries and the expressions in robot.toml.
 
