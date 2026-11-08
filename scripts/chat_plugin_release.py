@@ -49,7 +49,7 @@ from scripts.sync_chat_plugin import DEFAULT_SOURCE, DEST, PLUGIN_SUBPATH, STAMP
 DEFAULT_REMOTE = "https://github.com/robotcodedev/robotframework-agent-plugins.git"
 PLUGIN_JSON = Path("plugin.json")
 SKILL_MD = Path("skills") / "robotcode" / "SKILL.md"
-SKILL_VERSION = re.compile(r"^metadata:[ \t]*\n(?:[ \t]+.*\n)*?[ \t]+version:[ \t]*[\"']?([^\"'\s]+)", re.MULTILINE)
+SKILL_VERSION = re.compile(r"^metadata:[ \t]*\n(?:[ \t].*\n)*?[ \t]+version:[ \t]*[\"']?([^\"'\s]+)", re.MULTILINE)
 
 
 def die(msg: str) -> NoReturn:
