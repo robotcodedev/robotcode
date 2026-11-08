@@ -52,8 +52,8 @@
   },
   "capabilities": {
     "untrustedWorkspaces": {
-      "supported": "limited",
-      "description": "Only Partial IntelliSense is supported."
+      "supported": false,
+      "description": "RobotCode is not available in untrusted workspaces: to analyze, discover and run tests, it runs code of the workspace, such as its Python libraries and the expressions in robot.toml."
     },
     "virtualWorkspaces": {
       "supported": "limited",
