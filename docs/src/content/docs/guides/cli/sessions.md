@@ -16,7 +16,7 @@ pip install "robotcode[repl]"   # or: pip install "robotcode[all]"
 
 `robotcode session` runs [`robotcode repl`](/guides/cli/repl/) or [`robotcode robot-debug`](/guides/cli/robot-debug/) in the background and lets separate commands drive it. Each `robotcode session send` gives the session one input, prints what it printed and returns, while the session keeps its variables, its imports and its paused run for the next command.
 
-It is made for AI agents: their tools run one command at a time and can't type into a program that keeps running, so they can't hold a REPL or a debugger open between your prompts on their own. With a session, every agent works the same way on Linux, macOS and Windows. You can drive a session from a script or a terminal just as well.
+It is made for AI agents whose tools run one command at a time and can't type into a program that keeps running: they can't hold a REPL or a debugger open between your prompts on their own. With a session, every agent works the same way on Linux, macOS and Windows. You can drive a session from a script or a terminal just as well.
 
 ## Starting a session
 
