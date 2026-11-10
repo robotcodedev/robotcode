@@ -1,42 +1,38 @@
 # Proposal: markdown-suites
 
-> **Status (2026-09-22): deferred.** Robot Framework reports the positions of tests in embedded suites relative to the code block, not to the file, so the test explorer already lists them with shifted lines; remapping them in RobotCode would only paper over it. Maintainer decision: postponed as a whole — also the editor and `analyze code` part, which could map positions itself — until Robot Framework reports file-accurate positions (model, tokens, listener attributes, `output.xml`); re-implementing the block extraction and a position table in RobotCode is hacking that diverges from Robot Framework's parsing. The requirements are part of the Robot Framework issue. Markdown is the goal; whether reStructuredText (older, docutils-based, more complex) gets supported at all is undecided. No Robot Framework issue exists for this yet (tracker searched 2026-09-22).
-
 ## Why
 
-Robot Framework 7.5 executes tests embedded in Markdown files (`*.robot.md`, and `*.md`/`*.markdown` via `--extension`/`--parseinclude`) and accepts Markdown resources, alongside the reStructuredText support it has had since 3.1. RobotCode only nominally accepts these files: the raw Markdown/reST text is tokenised as Robot syntax, so an imported `keywords.md`/`keywords.rst` resource yields a false "resource is empty" warning and "keyword not found" errors, `.robot.md`/`.robot.rst` suites get no hover, completion, diagnostics or navigation in the editor, `analyze code` silently skips them, `discover files` does not list them, and the test explorer navigates to wrong lines because Robot Framework reports line numbers relative to the concatenated code blocks (an upstream report is planned in `support-rf75`, task 6.1; once filed, its URL is the trigger for switching the remap off).
+Robot Framework 7.5.1 runs tests and loads resources from the `robot`/`robotframework` code blocks of Markdown files, with line and column numbers of the file. RobotCode reads these files as plain Robot syntax or not at all: a `.robot.md` suite gets no editor support and `analyze code` skips it, and a `Resource    keywords.md` import is read together with its prose and fence lines, so its keywords are not what Robot Framework sees.
 
 ## What Changes
 
-- **Extraction with file-accurate positions.** A shared helper in the `robot` package extracts the Robot Framework code blocks of Markdown (fenced ```` ``` ````/`~~~` blocks with info string `robotframework`/`robot`, mirroring RF's `MarkdownParser`) and reStructuredText (`code`/`code-block`/`sourcecode` directives with `robotframework`, via docutils like RF's reader) files, keeping every non-code line as an empty line and dedenting each block like RF does while recording the removed margin, so tokens, statements and blocks carry the file's own line and column positions. It also provides RF's concatenated text (for parity tests) and the extracted-line → file-line table.
-- **Language server.** `.robot.md` (RF ≥ 7.5) and `.robot.rst` are typed as suites, `.md`/`.markdown` (RF ≥ 7.5) and `.rst`/`.rest` as resources, `__init__.md`/`__init__.rst` as init files (RobotCode's decision; RF does so only with a configured extension), `__init__.robot.md` as a suite (RF skips `_`-prefixed files in directory runs); all analysis runs on the extracted text; resource imports of such files resolve their keywords; the extension-detected language id takes precedence over the client-sent one; whole-document edits (formatting, end-of-file quick fixes, text-based refactors) are disabled for embedded documents; Robocop receives the extracted text; missing docutils produces one clear diagnostic instead of an exception; the file watcher covers the new extensions.
-- **VS Code.** `.robot.md`/`.robot.rst` keep their Markdown/reST language (preview, Markdown tooling and the existing fenced-block highlighting stay); the language client adds path-pattern document selectors from a new setting (default `**/*.robot.md`, `**/*.robot.rst`), the test explorer, run/debug commands and tools accept these files by pattern in addition to language id.
-- **CLI.** `discover` reports file-accurate `lineno`/`range`/ids for tests in embedded suites (remapping RF's block-relative numbers behind one version-gated switch); `discover files` lists `*.robot.md` (RF ≥ 7.5) and `*.robot.rst`; `analyze code` scans them in workspaces and accepts any Markdown/reST file passed explicitly.
-- **IntelliJ.** An LSP4IJ file-name-pattern mapping sends `*.robot.md`/`*.robot.rst` to the server as `robotframework`; test-manager refreshes accept them; gutter positions come from the remapped discover output.
-- **Documentation.** A page on Markdown/reST suites and resources: the selector setting, docutils not being bundled, and known limitations (no formatting/EOF quick fixes in embedded documents, `__init__.robot.md` is not an init file, debugger breakpoints and run-time markers in embedded suites still use RF's block-relative lines).
+- **Markdown as an opt-in format.** It is active on Robot Framework ≥ 7.5.1 for the Markdown extensions (`md`, `markdown`, `robot.md`) that the `extensions` option of the robot.toml profile lists. Robot Framework's default extensions do not switch it on.
+- **`robotcode discover info`** reads the configuration with the selected profiles and lists the active document formats with their extensions, so that editors know which files the language server serves.
+- **Language server.** It serves the files of the active Markdown extensions as Robot Framework documents, whatever language the client sends. The analysis runs on the data Robot Framework reads from the code blocks, at the positions in the file. Completion and ranges stay inside the blocks, code that code actions place goes into a block, and Robocop checks and formats these files with its own Markdown support (Robocop ≥ 9.2).
+- **Markdown resources.** A `Resource` import of a `.md`/`.markdown` file is read like Robot Framework reads it, from its code blocks, on Robot Framework ≥ 7.5.1, whether the format is active or not.
+- **`analyze code`** checks the files of the active Markdown extensions in the workspace like `.robot` files.
+- **VS Code.** Before it starts a folder's language server, the extension asks `discover info` and sends the files of the active extensions to the server; they keep their Markdown language in the editor.
+- **Documentation.** A page on Markdown suites and resources: how to switch them on, what works, the limits.
 
-Depends on `support-rf75` (Markdown resource extensions, Libdoc guard, `rf75` env). Left for its own follow-up: debugger breakpoint/stack-frame line mapping for embedded suites (`embedded-suites-debugging`). Plain `.md` files are not treated as suites unless RF is configured to parse them (`--extension`/`parse-include`), the selector setting includes them, or they are passed explicitly.
+Not part of this change: reStructuredText, Gherkin and formats of other packages (and hooks for them), PyCharm (Markdown support there is left out for now), discovery and the debugger (Robot Framework 7.5.1 already reports file lines), and the test explorer's refresh when a Markdown file changes.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `embedded-robot-data`: How RobotCode recognises, extracts and analyses Robot Framework data embedded in Markdown and reStructuredText files — document typing, file-accurate positions, editor features, edit guards, resource imports, `analyze`/`discover` behaviour, and the VS Code and IntelliJ associations.
-- `markdown-resource-imports`: modifies the requirement "Markdown resource imports are accepted on RF 7.5" introduced by `support-rf75` (not yet archived; `support-rf75` must be archived first) so that Markdown resources are loaded from their code blocks and resolve their keywords instead of being loaded as raw text.
+- `document-formats`: which document formats besides Robot Framework files are active in a project, how `discover info` reports them, and how VS Code hands their files to the language server.
+- `markdown-robot-data`: how RobotCode analyses the Markdown files of an active format — which code blocks hold Robot Framework data, positions, where editor features apply, placed code, Robocop and `analyze code`.
 
 ### Modified Capabilities
 
-<!-- markdown-resource-imports is modified, but it exists only as a delta of support-rf75 until that change is archived -->
+- `markdown-resource-imports`: requirement "Markdown resource imports are accepted on RF 7.5" — on Robot Framework ≥ 7.5.1 an imported Markdown resource is loaded from its code blocks, like Robot Framework does, instead of as raw text.
 
 ## Impact
 
-- New `packages/robot/src/robotcode/robot/utils/embedded_code.py`: extraction helper, extension constants, version constants (Markdown on RF ≥ 7.5; remap switch).
-- `packages/robot/src/robotcode/robot/diagnostics/document_cache_helper.py`: compound-suffix document typing, tokenisation of extracted text with column shift, access to the block table; `imports_manager.py` and `library_doc.py`: import the extension constants from `embedded_code.py` (the unused `REST_EXTENSIONS` in `imports_manager` is deleted).
-- `packages/core/src/robotcode/core/documents_manager.py`: compound-suffix language detection.
-- `packages/language_server/.../robotframework/protocol.py` (language definitions, file extensions), `common/parts/documents.py` (language id precedence), `parts/robot_workspace.py` (preload), `parts/formatting.py`, `parts/code_action_quick_fixes.py`, `parts/code_action_refactor.py`, `parts/code_action_helper_mixin.py`, `parts/robocop_diagnostics.py`.
-- `packages/analyze/src/robotcode/analyze/code/robot_framework_language_provider.py`, `code_analyzer.py`.
-- `packages/runner/src/robotcode/runner/cli/discover/discover.py`: line remapping, `files` filter.
-- `vscode-client/extension/languageclientsmanger.ts`, `testcontrollermanager.ts`, `debugmanager.ts`, `languageToolsManager.ts`, `keywordsTreeViewProvider.ts`, `package.json` (setting, activation events, enablement/menus).
-- `intellij-client/src/main/resources/META-INF/plugin.xml`, `src/main/kotlin/.../testing/RobotCodeTestManager.kt` (and optionally `EditorNotificationProvider.kt`).
-- Docs: new page under `docs/src/content/docs/`; `docs/src/content/docs/guides/cli/discovering-tests.md` (`lineno` semantics for embedded suites, `files`); `docs/src/content/docs/reference/cli.md` regenerated for the changed `discover files` help.
-- Tests: extraction unit and RF-parity tests, `test_document_cache_helper.py`, namespace/import tests, new LS regression data files (`embedded_markdown.robot.md`, `embedded_rest.robot.rst`) with baselines, discover and analyze acceptance tests; manual checklist for the clients.
+- `packages/robot`: new `document_formats.py` (active formats from the profile) and `utils/markdown_blocks.py` (block scanner with Robot Framework's rule, Robot Framework's Markdown data); `diagnostics/document_cache_helper.py` (document type by active extension, Markdown tokens, tokens of imported Markdown resources).
+- `packages/language_server/src/robotcode/language_server`: `robotframework/protocol.py` (language definition and file extensions), `common/parts/documents.py` (language id of served Markdown files), and in `robotframework/parts/`: `robot_workspace.py` (preload), `completion.py`, `folding_range.py`, `selection_range.py`, `document_symbols.py`, `code_action_helper_mixin.py`, `code_action_quick_fixes.py`, `code_action_refactor.py`, `formatting.py`, `robocop_diagnostics.py`.
+- `packages/analyze/src/robotcode/analyze/code/robot_framework_language_provider.py` (workspace scan).
+- `packages/runner/src/robotcode/runner/cli/discover/`: `discover.py`, `_models.py`, `_render.py` (`info`); `docs/src/content/docs/reference/cli.md` regenerated.
+- `vscode-client/extension/languageclientsmanger.ts` (document selector from `discover info`).
+- Documentation: a new page; tests for each part.
+- No new dependency. Robot Framework's private `MarkdownParser._read_markdown_data` is used in one helper; Robocop's Markdown support needs Robocop ≥ 9.2.
