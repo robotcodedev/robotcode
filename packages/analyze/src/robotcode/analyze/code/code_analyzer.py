@@ -13,6 +13,7 @@ from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
 
 from .diagnostics_context import DiagnosticHandlers, DiagnosticsContext
+from .markdown_language_provider import MarkdownLanguageProvider
 from .robot_framework_language_provider import RobotFrameworkLanguageProvider
 
 
@@ -50,8 +51,11 @@ class CodeAnalyzer(DiagnosticsContext):
 
         self._dispatcher = DiagnosticHandlers()
 
-        self.language_handler_types = {RobotFrameworkLanguageProvider}
-        self.workspace.documents.languages.extend(RobotFrameworkLanguageProvider.get_language_definitions())
+        self.language_handler_types = [RobotFrameworkLanguageProvider, MarkdownLanguageProvider]
+        for handler_type in self.language_handler_types:
+            self.workspace.documents.languages.extend(
+                handler_type.get_language_definitions(robot_profile, self.root_folder)
+            )
         self.language_handlers = [cls(self) for cls in self.language_handler_types]
         if app.config.verbose:
             app.verbose(

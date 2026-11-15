@@ -7,12 +7,12 @@ from robot.utils import FileReader
 
 from robotcode.analyze.code.diagnostics_context import DiagnosticsContext
 from robotcode.core.filewatcher import FileWatcherManagerDummy
-from robotcode.core.ignore_spec import DEFAULT_SPEC_RULES, GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, IgnoreSpec, iter_files
 from robotcode.core.language import LanguageDefinition, language_id
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.workspace import WorkspaceFolder
+from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.diagnostic_rules import is_variable_name_intentionally_unused
 from robotcode.robot.diagnostics.document_cache_helper import DocumentsCacheHelper
 from robotcode.robot.diagnostics.entities import (
@@ -20,7 +20,7 @@ from robotcode.robot.diagnostics.entities import (
     VariableDefinitionType,
 )
 from robotcode.robot.diagnostics.namespace import DocumentType
-from robotcode.robot.diagnostics.workspace_config import WorkspaceConfig
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 
 from .language_provider import LanguageProvider
 
@@ -38,7 +38,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
     SOURCE_NAME = "robotcode.diagnostics"
 
     @classmethod
-    def get_language_definitions(cls) -> List[LanguageDefinition]:
+    def get_language_definitions(cls, profile: RobotBaseProfile, root: Path) -> List[LanguageDefinition]:
         return [cls.LANGUAGE_DEFINITION]
 
     def __init__(self, diagnostics_context: DiagnosticsContext) -> None:
@@ -84,34 +84,15 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                 if Path(f).is_dir() and f not in sys.path:
                     sys.path.insert(0, f)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     def on_read_document_text(self, sender: Any, uri: Uri) -> str:
         with FileReader(uri.to_path()) as reader:
             return str(reader.read())
 
     def collect_workspace_folder_files(self, folder: WorkspaceFolder) -> Iterable[Path]:
-        config = self.diagnostics_context.workspace.get_configuration(WorkspaceConfig, folder.uri)
-
         extensions = self.LANGUAGE_DEFINITION.extensions
 
-        exclude_patterns = [
-            *self.diagnostics_context.analysis_config.exclude_patterns,
-            *(config.exclude_patterns or []),
-        ]
-        return filter(
-            lambda f: f.suffix.lower() in extensions,
-            iter_files(
-                folder.uri.to_path(),
-                ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
-                include_hidden=False,
-                parent_spec=IgnoreSpec.from_list(
-                    [*DEFAULT_SPEC_RULES, *exclude_patterns],
-                    folder.uri.to_path(),
-                ),
-                verbose_callback=self.verbose_callback,
-                verbose_trace=False,
-            ),
-        )
+        return filter(lambda f: f.suffix.lower() in extensions, self.iter_workspace_folder_files(folder))
 
     def analyze_folder(self, sender: Any, folder: WorkspaceFolder) -> Optional[List[Diagnostic]]:
         imports_manager = self._document_cache.get_imports_manager_for_workspace_folder(folder)
