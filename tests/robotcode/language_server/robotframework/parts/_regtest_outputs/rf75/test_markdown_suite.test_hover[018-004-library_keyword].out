@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 4
+  line: 18
+  name: library keyword
+result:
+  first_line: '### Keyword *Log*'
+  range: !Range
+    end:
+      character: 7
+      line: 18
+    start:
+      character: 4
+      line: 18

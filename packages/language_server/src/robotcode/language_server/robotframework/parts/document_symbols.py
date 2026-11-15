@@ -10,6 +10,7 @@ from robot.parsing.model.statements import Statement
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     DocumentSymbol,
+    Range,
     SymbolInformation,
     SymbolKind,
 )
@@ -69,11 +70,14 @@ class _Visitor(Visitor):
 
         return finder.result if finder.result else None
 
+    def node_range(self, node: ast.AST) -> Range:
+        return range_from_node(node)
+
     def visit_Section(self, node: Section) -> None:  # noqa: N802
         if not node.header or not node.header.name:
             return
 
-        r = range_from_node(node)
+        r = self.node_range(node)
         symbol = DocumentSymbol(
             name=node.header.name,
             kind=SymbolKind.MODULE,
@@ -91,7 +95,7 @@ class _Visitor(Visitor):
             return
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            r = range_from_node(node)
+            r = self.node_range(node)
             symbol = DocumentSymbol(
                 name=node.name,
                 kind=SymbolKind.CLASS,
@@ -108,7 +112,7 @@ class _Visitor(Visitor):
             return
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            r = range_from_node(node)
+            r = self.node_range(node)
             symbol = DocumentSymbol(
                 name=node.name,
                 kind=SymbolKind.FUNCTION,
@@ -270,6 +274,6 @@ class _Visitor(Visitor):
             if node.tokens[:1]:
                 r = range_from_token(node.tokens[0])
             else:
-                r = range_from_node(node)
+                r = self.node_range(node)
             symbol = DocumentSymbol(name=name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
             self.current_symbol.children.append(symbol)

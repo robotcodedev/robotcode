@@ -2,7 +2,7 @@ import asyncio
 import logging
 import threading
 from threading import Event
-from typing import Any, ClassVar, Final, List, Optional, Set, Union
+from typing import Any, Final, List, Optional, Set, Union
 
 from robotcode.core.concurrent import Task
 from robotcode.core.event import event
@@ -132,8 +132,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
     progress_title: Optional[str] = None
     version: Optional[str] = None
 
-    file_extensions: ClassVar[Set[str]] = set()
-    language_definitions: ClassVar[List[LanguageDefinition]] = []
+    file_extensions: Set[str] = set()
+    language_definitions: List[LanguageDefinition] = []
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__()

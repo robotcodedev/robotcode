@@ -26,6 +26,7 @@ from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
 from robotcode.language_server.robotframework.configuration import AnalysisConfig, RobotCodeConfig
 from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 from robotcode.language_server.robotframework.server import RobotLanguageServer
+from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
 from robotcode.robot.diagnostics.workspace_config import RobotConfig
 
@@ -120,16 +121,19 @@ def write_project(root: Path, files: Mapping[str, str]) -> Path:
 
 
 def start_language_server(
-    root: Path, analysis: Optional[AnalysisConfig] = None, python_path: Sequence[str] = ()
+    root: Path,
+    analysis: Optional[AnalysisConfig] = None,
+    python_path: Sequence[str] = (),
+    profile: Optional[RobotBaseProfile] = None,
 ) -> RobotLanguageServerProtocol:
     """A language server for the workspace `root`, after its workspace analysis.
 
     Its client supports no dynamic registration, so the server registers no
     file watchers with it. `analysis` holds the analysis settings of the
     workspace; by default the server reports no diagnostics. `python_path` is
-    the setting `robotcode.robot.pythonPath`.
+    the setting `robotcode.robot.pythonPath`. `profile` is the robot.toml profile the server starts with.
     """
-    protocol = RobotLanguageServerProtocol(RobotLanguageServer())
+    protocol = RobotLanguageServerProtocol(RobotLanguageServer(), profile)
     protocol._initialize(
         ClientCapabilities(),
         root_path=str(root),
@@ -155,10 +159,13 @@ def start_language_server(
 
 @contextmanager
 def language_server(
-    root: Path, analysis: Optional[AnalysisConfig] = None, python_path: Sequence[str] = ()
+    root: Path,
+    analysis: Optional[AnalysisConfig] = None,
+    python_path: Sequence[str] = (),
+    profile: Optional[RobotBaseProfile] = None,
 ) -> Iterator[RobotLanguageServerProtocol]:
     """`start_language_server` for the time of a `with` block, shut down afterwards."""
-    protocol = start_language_server(root, analysis, python_path)
+    protocol = start_language_server(root, analysis, python_path, profile)
     try:
         yield protocol
     finally:

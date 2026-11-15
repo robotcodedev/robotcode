@@ -1,9 +1,10 @@
+import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.model.statements import Statement
 
 from robotcode.core.language import language_id
-from robotcode.core.lsp.types import Position, SelectionRange
+from robotcode.core.lsp.types import Position, Range, SelectionRange
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.model_helper import ModelHelper
@@ -29,6 +30,9 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.selection_range.collect.add(self.collect)
 
+    def node_range(self, document: TextDocument, node: ast.AST, position: Position) -> Optional[Range]:
+        return range_from_node(node)
+
     @language_id("robotframework")
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:
@@ -45,7 +49,9 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart):
 
             current_range: Optional[SelectionRange] = None
             for n in nodes:
-                current_range = SelectionRange(range_from_node(n), current_range)
+                node_range = self.node_range(document, n, position)
+                if node_range is not None:
+                    current_range = SelectionRange(node_range, current_range)
 
             if current_range is not None:
                 node = nodes[-1]

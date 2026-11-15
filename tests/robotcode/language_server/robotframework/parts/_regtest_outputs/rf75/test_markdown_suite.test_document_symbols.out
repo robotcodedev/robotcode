@@ -1,0 +1,71 @@
+result:
+- depth: 0
+  kind: !SymbolKind 'MODULE'
+  name: Variables
+  range: !Range
+    end:
+      character: 15
+      line: 7
+    start:
+      character: 0
+      line: 6
+- depth: 1
+  kind: !SymbolKind 'VARIABLE'
+  name: ${PRICE}
+  range: !Range
+    end:
+      character: 8
+      line: 7
+    start:
+      character: 0
+      line: 7
+- depth: 0
+  kind: !SymbolKind 'MODULE'
+  name: Test Cases
+  range: !Range
+    end:
+      character: 24
+      line: 19
+    start:
+      character: 0
+      line: 13
+- depth: 1
+  kind: !SymbolKind 'CLASS'
+  name: Buy Something
+  range: !Range
+    end:
+      character: 24
+      line: 19
+    start:
+      character: 0
+      line: 14
+- depth: 0
+  kind: !SymbolKind 'MODULE'
+  name: Keywords
+  range: !Range
+    end:
+      character: 35
+      line: 31
+    start:
+      character: 0
+      line: 25
+- depth: 1
+  kind: !SymbolKind 'FUNCTION'
+  name: Pay
+  range: !Range
+    end:
+      character: 35
+      line: 31
+    start:
+      character: 0
+      line: 26
+- depth: 2
+  kind: !SymbolKind 'VARIABLE'
+  name: ${amount}
+  range: !Range
+    end:
+      character: 28
+      line: 28
+    start:
+      character: 19
+      line: 28

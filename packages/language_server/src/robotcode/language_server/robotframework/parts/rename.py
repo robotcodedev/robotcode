@@ -33,6 +33,7 @@ from robotcode.robot.diagnostics.entities import (
     VariableDefinitionType,
 )
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 
 from ...common.parts.rename import CantRenameError
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -56,7 +57,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart):
         parent.rename.collect.add(self.collect)
         parent.rename.collect_prepare.add(self.collect_prepare)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @_logger.call
     def collect(
         self, sender: Any, document: TextDocument, position: Position, new_name: str
@@ -71,7 +72,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart):
 
         return None
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @_logger.call
     def collect_prepare(self, sender: Any, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:
         result = self._prepare_rename_variable(document, position)

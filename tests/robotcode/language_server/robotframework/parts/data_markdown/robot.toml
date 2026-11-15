@@ -1,0 +1,2 @@
+# Robot Framework's default extensions take in `.robot.md` too; the test data name it explicitly
+extensions = "robot:robot.md"

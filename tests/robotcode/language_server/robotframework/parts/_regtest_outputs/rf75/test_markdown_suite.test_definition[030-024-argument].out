@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 24
+  line: 30
+  name: argument
+result:
+- range: !Range
+    end:
+      character: 27
+      line: 28
+    start:
+      character: 21
+      line: 28
+  target: shop.robot.md

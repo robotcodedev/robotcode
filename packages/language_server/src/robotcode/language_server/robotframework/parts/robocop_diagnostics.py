@@ -83,18 +83,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         linter = self.get_linter(workspace_folder)
 
-        source = document.uri.to_path()
-        config = linter.config_manager.get_config_for_source_file(source)
-        model = self.parent.documents_cache.get_model(document)
-
-        if self.parent.robocop_helper.robocop_version >= (8, 0):
-            from robocop.source_file import SourceFile
-
-            # overwrite _model to stop Robocop from loading it
-            source_file = SourceFile(path=source, config=config, _model=model)
-            diagnostics = linter.run_check(source_file)
-        else:
-            diagnostics = linter.run_check(model, source, config)
+        config = linter.config_manager.get_config_for_source_file(document.uri.to_path())
+        diagnostics = self.run_check(linter, document, config)
 
         return [
             Diagnostic(
@@ -128,6 +118,19 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             )
             for diagnostic in diagnostics
         ]
+
+    def run_check(self, linter: "RobocopLinter", document: TextDocument, config: Any) -> Any:
+        source = document.uri.to_path()
+        model = self.parent.documents_cache.get_model(document)
+
+        if self.parent.robocop_helper.robocop_version >= (8, 0):
+            from robocop.source_file import SourceFile
+
+            # overwrite _model to stop Robocop from loading it
+            source_file = SourceFile(path=source, config=config, _model=model)
+            return linter.run_check(source_file)
+
+        return linter.run_check(model, source, config)
 
     @_logger.call
     def collect_old(

@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 5
+  line: 15
+  name: keyword of the file
+result:
+- range: !Range
+    end:
+      character: 3
+      line: 26
+    start:
+      character: 0
+      line: 26
+  target: shop.robot.md

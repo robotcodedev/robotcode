@@ -43,6 +43,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     SemanticStatement,
     SemanticToken,
 )
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.ast import (
     get_node_at_position,
     get_tokens_at_position,
@@ -414,7 +415,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 return method
         return None
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @trigger_characters([" ", "\t"])
     @retrigger_characters([" ", "\t"])
     @_logger.call

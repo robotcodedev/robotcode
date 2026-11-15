@@ -75,6 +75,7 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import DocumentType, Namespace
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -180,7 +181,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
             config,
         ).collect(position, context)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @_logger.call
     def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
         if completion_item.data is not None:

@@ -36,6 +36,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     DefinitionStatement,
     ImportStatement,
 )
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 from robotcode.robot.utils.markdown_docs import (
     REFERENCE_KEYWORD,
@@ -244,7 +245,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         parent.code_action.collect.add(self.collect)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @code_action_kinds([CodeActionKind.SOURCE])
     @_logger.call
     def collect(

@@ -34,6 +34,7 @@ from robotcode.robot.diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
     ROBOT_FILE_EXTENSION,
 )
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 
 from ..configuration import RobotCodeConfig
 
@@ -69,10 +70,9 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     def _on_initialized(self, sender: Any) -> None:
         # the workspace exists only after the initialize request, the parts of the protocol already before it
         self.parent.workspace.did_change_configuration.add(self._on_did_change_configuration)
+        extensions = sorted({e[1:] for d in self.parent.language_definitions for e in d.extensions})
         self.parent.workspace.add_file_watcher(
-            self._on_files_deleted,
-            f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
-            WatchKind.DELETE,
+            self._on_files_deleted, f"**/*.{{{','.join(extensions)}}}", WatchKind.DELETE
         )
 
     def _on_files_deleted(self, sender: Any, changes: List[FileEvent]) -> None:
@@ -86,10 +86,10 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
             path = uri.to_path()
             # the cache keeps the entries of a file that is there again
-            if path.suffix in WORKSPACE_FILE_EXTENSIONS and not path.exists():
+            if self._has_workspace_extension(path) and not path.exists():
                 self.parent.documents_cache.remove_cached_analysis(path)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     def on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
         from robot.utils import FileReader
 
@@ -112,6 +112,9 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         ]
         return IgnoreSpec.from_list([*DEFAULT_SPEC_RULES, *exclude_patterns], folder.uri.to_path())
 
+    def _has_workspace_extension(self, path: Path) -> bool:
+        return path.suffix in WORKSPACE_FILE_EXTENSIONS or self.parent.documents.detect_language_id(path) != "unknown"
+
     def collect_workspace_files(self, folder: WorkspaceFolder) -> List[Path]:
         """The Robot Framework files of a workspace folder, without the excluded and ignored ones."""
         return [
@@ -124,12 +127,12 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 verbose_callback=self._logger.debug,
                 verbose_trace=False,
             )
-            if f.suffix in WORKSPACE_FILE_EXTENSIONS
+            if self._has_workspace_extension(f)
         ]
 
     def is_workspace_file(self, folder: WorkspaceFolder, path: Path) -> bool:
         """Whether `collect_workspace_files` would return `path`."""
-        return path.suffix in WORKSPACE_FILE_EXTENSIONS and iter_files_includes(
+        return self._has_workspace_extension(path) and iter_files_includes(
             path,
             folder.uri.to_path(),
             ignore_files=WORKSPACE_IGNORE_FILES,

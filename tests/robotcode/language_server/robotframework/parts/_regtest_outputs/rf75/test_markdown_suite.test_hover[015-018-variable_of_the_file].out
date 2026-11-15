@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 18
+  line: 15
+  name: variable of the file
+result:
+  first_line: '### Suite Variable `${PRICE}`'
+  range: !Range
+    end:
+      character: 18
+      line: 15
+    start:
+      character: 13
+      line: 15

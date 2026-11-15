@@ -35,6 +35,7 @@ from robotcode.robot.diagnostics.library_doc import (
     LibraryDoc,
 )
 from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -86,15 +87,15 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
         self.clear_cache()
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     def document_did_change(self, sender: Any, document: TextDocument) -> None:
         self.clear_cache()
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         self.clear_cache()
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     def namespace_initialized(self, sender: Any, namespace: Namespace) -> None:
         # the new analysis changed the index, so a result found before it can miss its references
         self.clear_cache()
@@ -122,7 +123,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
                 return method
         return None
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @_logger.call
     def collect(
         self,
@@ -192,7 +193,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     ) -> List[Location]:
         result: List[Location] = []
 
-        for doc in filter(lambda d: d.language_id == "robotframework", self.parent.documents.documents):
+        for doc in filter(
+            lambda d: d.language_id in ("robotframework", MARKDOWN_LANGUAGE_ID), self.parent.documents.documents
+        ):
             check_current_task_canceled()
 
             result.extend(func(doc, *args, **kwargs))

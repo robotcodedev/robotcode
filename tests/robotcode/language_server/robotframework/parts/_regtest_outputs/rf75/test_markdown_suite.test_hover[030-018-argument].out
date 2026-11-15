@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 18
+  line: 30
+  name: argument
+result:
+  first_line: '### Argument `${amount}`'
+  range: !Range
+    end:
+      character: 24
+      line: 30
+    start:
+      character: 18
+      line: 30

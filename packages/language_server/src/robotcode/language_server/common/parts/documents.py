@@ -92,6 +92,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
                         callback_filter=language_id_filter(document),
                     )
 
+    def _served_language_id(self, text_document: TextDocumentItem) -> str:
+        # editors send `.robot.md` files as `markdown`, a language the server does not serve
+        if text_document.language_id in {lang.id for lang in self.languages}:
+            return text_document.language_id
+        return self.detect_language_id(Uri(text_document.uri))
+
     @rpc_method(name="textDocument/didOpen", param_type=DidOpenTextDocumentParams)
     @__logger.call
     def _text_document_did_open(self, text_document: TextDocumentItem, *args: Any, **kwargs: Any) -> None:
@@ -106,11 +112,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
                 document = self._create_document(
                     text_document.uri,
                     normalized_text,
-                    (
-                        text_document.language_id
-                        if text_document.language_id
-                        else self.detect_language_id(text_document.uri)
-                    ),
+                    self._served_language_id(text_document),
                     text_document.version,
                 )
 

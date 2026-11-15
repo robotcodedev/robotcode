@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
+from robotcode.core.language import language_id_filter
 from robotcode.core.lsp.types import CodeActionContext, CodeActionKind, DocumentUri, Position, Range
 from robotcode.core.text_document import TextDocument
 from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import range_from_node
 from robotcode.robot.utils.visitor import Visitor
+
+if TYPE_CHECKING:
+    from ..protocol import RobotLanguageServerProtocol
 
 SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND = "_robotcode.codeActionShowDocumentSelectAndRename"
 
@@ -72,6 +76,21 @@ def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
 
 
 class CodeActionHelperMixin:
+    if TYPE_CHECKING:
+
+        @property
+        def parent(self) -> RobotLanguageServerProtocol: ...
+
+    def place_code(self, document: TextDocument, text: str, range: Range) -> Tuple[str, Range]:
+        """The text and range of code that a code action places, as the language of the document places it."""
+        for result in self.parent.place_code(self, document, text, range, callback_filter=language_id_filter(document)):
+            if isinstance(result, BaseException):
+                raise result
+            if result is not None:
+                return result
+
+        return text, range
+
     def create_insert_keyword_workspace_edit(
         self,
         document: TextDocument,
@@ -117,4 +136,4 @@ class CodeActionHelperMixin:
             and lines[insert_range.start.line + 1].startswith("*")
         ):
             insert_text = insert_text + "\n"
-        return insert_text, insert_range
+        return self.place_code(document, insert_text, insert_range)

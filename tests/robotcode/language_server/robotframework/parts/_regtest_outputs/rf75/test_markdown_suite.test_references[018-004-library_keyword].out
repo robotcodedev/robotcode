@@ -1,0 +1,29 @@
+data: !GeneratedTestData
+  character: 4
+  line: 18
+  name: library keyword
+result:
+- range: !Range
+    end:
+      character: 0
+      line: 3988
+    start:
+      character: 0
+      line: 3987
+  target: BuiltIn.py
+- range: !Range
+    end:
+      character: 7
+      line: 18
+    start:
+      character: 4
+      line: 18
+  target: shop.robot.md
+- range: !Range
+    end:
+      character: 7
+      line: 30
+    start:
+      character: 4
+      line: 30
+  target: shop.robot.md

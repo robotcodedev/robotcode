@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 2
+  line: 26
+  name: keyword definition
+result:
+- range: !Range
+    end:
+      character: 3
+      line: 26
+    start:
+      character: 0
+      line: 26
+  target: shop.robot.md

@@ -1,0 +1,13 @@
+data: !GeneratedTestData
+  character: 6
+  line: 15
+  name: keyword of the file
+result:
+  first_line: '### Keyword *Pay*'
+  range: !Range
+    end:
+      character: 7
+      line: 15
+    start:
+      character: 4
+      line: 15

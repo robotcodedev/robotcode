@@ -6,16 +6,18 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
-    ClassVar,
     Dict,
     Final,
     List,
     Optional,
+    Set,
+    Tuple,
 )
 
 from robotcode.core.event import event
 from robotcode.core.language import LanguageDefinition
-from robotcode.core.lsp.types import InitializeError, MessageType
+from robotcode.core.lsp.types import InitializeError, MessageType, Range
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
@@ -23,6 +25,7 @@ from robotcode.language_server.common.parts.document_symbols import symbol_infor
 from robotcode.language_server.common.protocol import LanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.workspace_config import RobotConfig, WorkspaceAnalysisConfig
+from robotcode.robot.document_formats import markdown_language_definition
 from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
@@ -45,6 +48,14 @@ from .parts.http_server import HttpServerProtocolPart
 from .parts.inlay_hint import RobotInlayHintProtocolPart
 from .parts.inline_value import RobotInlineValueProtocolPart
 from .parts.keywords_treeview import RobotKeywordsTreeViewPart
+from .parts.markdown.completion import MarkdownCompletionProtocolPart
+from .parts.markdown.placement import MarkdownCodePlacementProtocolPart
+from .parts.markdown.ranges import (
+    MarkdownDocumentSymbolsProtocolPart,
+    MarkdownFoldingRangeProtocolPart,
+    MarkdownSelectionRangeProtocolPart,
+)
+from .parts.markdown.robocop import MarkdownFormattingProtocolPart, MarkdownRoboCopDiagnosticsProtocolPart
 from .parts.project_info import ProjectInfoPart
 from .parts.references import RobotReferencesProtocolPart
 from .parts.rename import RobotRenameProtocolPart
@@ -120,6 +131,14 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_code_action_quick_fixes = ProtocolPartDescriptor(RobotCodeActionQuickFixesProtocolPart)
     robot_code_action_refactor = ProtocolPartDescriptor(RobotCodeActionRefactorProtocolPart)
 
+    markdown_completion = ProtocolPartDescriptor(MarkdownCompletionProtocolPart)
+    markdown_folding_ranges = ProtocolPartDescriptor(MarkdownFoldingRangeProtocolPart)
+    markdown_document_symbols = ProtocolPartDescriptor(MarkdownDocumentSymbolsProtocolPart)
+    markdown_selection_range = ProtocolPartDescriptor(MarkdownSelectionRangeProtocolPart)
+    markdown_code_placement = ProtocolPartDescriptor(MarkdownCodePlacementProtocolPart)
+    markdown_robocop_diagnostics = ProtocolPartDescriptor(MarkdownRoboCopDiagnosticsProtocolPart)
+    markdown_formatting = ProtocolPartDescriptor(MarkdownFormattingProtocolPart)
+
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
     robot_keywords_treeview = ProtocolPartDescriptor(RobotKeywordsTreeViewPart)
     robot_documentation_viewer = ProtocolPartDescriptor(RobotDocumentationViewerPart)
@@ -132,7 +151,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     short_name = "RobotCode"
     version = __version__
 
-    file_extensions: ClassVar = {
+    file_extensions: Set[str] = {
         "robot",
         "resource",
         "py",
@@ -141,7 +160,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         "json",
     }
 
-    language_definitions: ClassVar[List[LanguageDefinition]] = [
+    language_definitions: List[LanguageDefinition] = [
         LanguageDefinition(
             id="robotframework",
             extensions=[".robot", ".resource"],
@@ -165,6 +184,12 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     ):
         super().__init__(server)
         self.robot_profile = profile if profile is not None else RobotBaseProfile()
+
+        # the server runs in the project root, see `cli.py`
+        markdown = markdown_language_definition(self.robot_profile, Path.cwd())
+        if markdown is not None:
+            self.language_definitions = [*self.language_definitions, markdown]
+            self.file_extensions = {*self.file_extensions, *(e[1:] for e in markdown.extensions)}
         self.analysis_config = analysis_config if analysis_config is not None else WorkspaceAnalysisConfig()
         self.configuration_errors = configuration_errors if configuration_errors is not None else []
         self.robot_initialization_options = RobotInitializationOptions()
@@ -227,6 +252,10 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     @event
     def on_robot_initialized(sender) -> None: ...
+
+    # where a code action places code in a language that holds Robot Framework data in other text
+    @event
+    def place_code(sender, document: TextDocument, text: str, range: Range) -> Optional[Tuple[str, Range]]: ...
 
     # the errors of the configuration that the start loaded, which the editors otherwise show only in the server's log
     def show_configuration_errors(self, sender: Any) -> None:

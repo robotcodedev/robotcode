@@ -56,6 +56,7 @@ from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
 from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import KeywordCallStatement
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.ast import (
     FirstAndLastRealStatementFinder,
     get_node_at_position,
@@ -134,7 +135,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         self.parent.commands.register_all(self)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @code_action_kinds([CodeActionKind.QUICK_FIX])
     def collect(
         self,
@@ -374,7 +375,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         lines = insert_text.rstrip().splitlines()
         selection_range = insert_range.extend(start_line=len(lines) - 1, end_line=len(lines) - 1)
-        selection_range.start.character = 4
+        selection_range.start.character = len(lines[-1]) - len(lines[-1].lstrip())
         selection_range.end.character = len(lines[-1])
 
         return we, selection_range
@@ -682,7 +683,9 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 insert_range.start.line = len(lines) - 1
                 insert_range.start.character = len(lines[-1])
                 insert_range_prefix = "\n" + insert_range_prefix
-            insert_text = insert_range_prefix + f"${{{text}}}    value\n" + insert_range_suffix
+            insert_text, insert_range = self.place_code(
+                document, insert_range_prefix + f"${{{text}}}    value\n" + insert_range_suffix, insert_range
+            )
 
             code_action.edit = WorkspaceEdit(
                 document_changes=[

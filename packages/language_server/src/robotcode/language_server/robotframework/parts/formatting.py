@@ -16,6 +16,8 @@ from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
+    from robocop.formatter.runner import RobocopFormatter
+
     from ..protocol import RobotLanguageServerProtocol
 
 
@@ -78,7 +80,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
 
         config_manager = self.parent.robocop_helper.get_config_manager(workspace_folder)
 
-        source = document.uri.to_path()
         config = config_manager.get_config_for_source_file(document.uri.to_path())
 
         if range is not None:
@@ -89,17 +90,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
         runner = RobocopFormatter(config_manager)
         runner.config = config
 
-        model = self.parent.documents_cache.get_uncached_model(document)
-        if self.parent.robocop_helper.robocop_version >= (8, 0):
-            from robocop.source_file import SourceFile
-
-            # overwrite _model to stop Robocop from loading it
-            source_file = SourceFile(path=source, config=config, _model=model)
-            _, _, new, _ = runner.format_until_stable(source_file)
-        else:
-            _, _, new, _ = runner.format_until_stable(model)
-
-        if new.text == document.text():
+        new_text = self.formatted_text(runner, document, config)
+        if new_text == document.text():
             return None
 
         return [
@@ -108,9 +100,22 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
                     start=Position(line=0, character=0),
                     end=Position(line=len(document.get_lines()), character=0),
                 ),
-                new_text=new.text,
+                new_text=new_text,
             )
         ]
+
+    def formatted_text(self, runner: "RobocopFormatter", document: TextDocument, config: Any) -> str:
+        model = self.parent.documents_cache.get_uncached_model(document)
+        if self.parent.robocop_helper.robocop_version >= (8, 0):
+            from robocop.source_file import SourceFile
+
+            # overwrite _model to stop Robocop from loading it
+            source_file = SourceFile(path=document.uri.to_path(), config=config, _model=model)
+            _, _, new, _ = runner.format_until_stable(source_file)
+        else:
+            _, _, new, _ = runner.format_until_stable(model)
+
+        return str(new.text)
 
     @language_id("robotframework")
     def format_range(

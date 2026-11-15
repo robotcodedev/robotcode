@@ -50,7 +50,7 @@ class _Visitor(Visitor):
 
         return finder.result if finder.result else None
 
-    def __append(self, start_node: ast.AST, kind: str, end_node: Optional[ast.AST] = None) -> None:
+    def _append(self, start_node: ast.AST, kind: str, end_node: Optional[ast.AST] = None) -> None:
         if end_node is None:
             end_node = start_node
         if not self.line_folding_only:
@@ -73,51 +73,51 @@ class _Visitor(Visitor):
             )
 
     def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="section")
+        self._append(node, kind="section")
 
         self.generic_visit(node)
 
     def visit_CommentSection(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="comment")
+        self._append(node, kind="comment")
         self.generic_visit(node)
 
     def visit_Documentation(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="documentation")
+        self._append(node, kind="documentation")
         self.generic_visit(node)
 
     def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
         if node.name:
-            self.__append(node, kind="testcase")
+            self._append(node, kind="testcase")
             self.generic_visit(node)
 
     def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
         if node.name:
-            self.__append(node, kind="keyword")
+            self._append(node, kind="keyword")
             self.generic_visit(node)
 
     def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="for_loop")
+        self._append(node, kind="for_loop")
         self.generic_visit(node)
 
     def visit_Group(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="group")
+        self._append(node, kind="group")
         self.generic_visit(node)
 
     def visit_For(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="for")
+        self._append(node, kind="for")
         self.generic_visit(node)
 
     def visit_If(self, node: If) -> None:  # noqa: N802
         if node.orelse is not None and node.body[-1]:
-            self.__append(node, kind="if", end_node=node.body[-1])
+            self._append(node, kind="if", end_node=node.body[-1])
         elif node.orelse is None and node.type == "ELSE":
-            self.__append(
+            self._append(
                 node,
                 kind="if",
                 end_node=self.current_if[-1] if self.current_if else None,
             )
         else:
-            self.__append(node, kind="if")
+            self._append(node, kind="if")
 
         if node.type == "IF":
             self.current_if.append(node)
@@ -128,11 +128,11 @@ class _Visitor(Visitor):
             self.current_if.remove(node)
 
     def visit_While(self, node: While) -> None:  # noqa: N802
-        self.__append(node, kind="while")
+        self._append(node, kind="while")
         self.generic_visit(node)
 
     def visit_Try(self, node: Try) -> None:  # noqa: N802
-        self.__append(node, kind="try", end_node=node.body[-1] if node.body else None)
+        self._append(node, kind="try", end_node=node.body[-1] if node.body else None)
         self.generic_visit(node)
 
 

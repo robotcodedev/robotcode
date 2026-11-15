@@ -36,6 +36,7 @@ from robotcode.robot.diagnostics.entities import (
 )
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
 from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     range_from_node,
@@ -87,7 +88,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
 
         return None
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
         model = self.parent.documents_cache.get_model(document)

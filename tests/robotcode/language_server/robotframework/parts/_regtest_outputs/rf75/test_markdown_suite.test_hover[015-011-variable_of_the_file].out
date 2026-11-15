@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 11
+  line: 15
+  name: variable of the file
+result: null
