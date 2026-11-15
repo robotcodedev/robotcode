@@ -93,6 +93,19 @@ Resource    ../resources/keywords.md
 
 In VS Code a Markdown suite stays a Markdown document, with its preview and the other features of Markdown files. Inside the `robot` and `robotframework` code blocks, RobotCode adds what it offers in a `.robot` file, such as diagnostics, hover, completion, go to definition and references. Completion appears only on the lines of a code block, and code that a code action adds, such as a new keyword from **Create Keyword**, goes into a code block, with the block's indentation.
 
+VS Code switches off suggestions while typing for Markdown files, and that holds in the code blocks too: there the completion list opens with **Ctrl+Space**, or after a character that opens it, such as a space after a keyword or `${`. To get it while typing, switch on quick suggestions for Markdown in your project's `.vscode/settings.json`, and switch off the word suggestions, which would otherwise offer the words of the file while you write prose:
+
+```json title=".vscode/settings.json"
+{
+  "[markdown]": {
+    "editor.quickSuggestions": { "other": "on" },
+    "editor.wordBasedSuggestions": "off"
+  }
+}
+```
+
+The setting applies to every Markdown file of the project. RobotCode offers nothing outside the code blocks.
+
 Breakpoints can be set on the lines of the code blocks of a Markdown suite, as in a `.robot` file, and debugging stops there.
 
 VS Code asks `robotcode discover info` for the extensions of the `markdown` format when it starts the language server of a folder. After a change of the robot.toml, the language server restarts and serves the Markdown files of the new configuration.
