@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Defines how RobotCode analyses the Markdown files of an active Markdown format: which code blocks hold Robot Framework data and at which positions, where editor features apply, where code placed by code actions goes, how Robocop treats these files, and how `analyze code` checks them.
+Defines how RobotCode analyses the Markdown files it serves (see `document-formats`): which code blocks hold Robot Framework data and at which positions, where editor features apply, where code placed by code actions goes, how Robocop treats these files, and how `analyze code` checks them.
 
 ## ADDED Requirements
 
 ### Requirement: Only the code blocks Robot Framework reads are analysed
 
-In a file of an active Markdown extension, RobotCode SHALL analyse exactly the code blocks Robot Framework executes. A block opens at a line that starts, after any whitespace, with at least three backticks or tildes followed by `robot` or `robotframework` in any letter case, and closes at a line of only the same character, at least as many; an unclosed block runs to the end of the file. Other lines SHALL produce no diagnostics, tokens or symbols.
+In a Markdown file RobotCode serves, it SHALL analyse exactly the code blocks Robot Framework executes. A block opens at a line that starts, after any whitespace, with at least three backticks or tildes followed by `robot` or `robotframework` in any letter case, and closes at a line of only the same character, at least as many; an unclosed block runs to the end of the file. Other lines SHALL produce no diagnostics, tokens or symbols.
 
 #### Scenario: Prose that looks like Robot syntax
 - **WHEN** a `.robot.md` file has the line `*** Test Cases ***` in its prose, outside any code block
@@ -40,7 +40,7 @@ Every position RobotCode reports for a Markdown file, such as of diagnostics, ho
 
 ### Requirement: File names follow Robot Framework
 
-For an active extension other than `robot.md`, a file named `__init__` with that extension SHALL be an init file. `__init__.robot.md` SHALL be a suite file, because Robot Framework does not read it as an init file. Every other file of an active extension SHALL be a suite file.
+A served Markdown file named `__init__` with an active extension other than `robot.md` SHALL be an init file. `__init__.robot.md` SHALL be a suite file, because Robot Framework does not read it as an init file. Every other served Markdown file SHALL be a suite file.
 
 #### Scenario: Init file
 - **WHEN** the extension `md` is active and a folder contains `__init__.md`
@@ -98,10 +98,10 @@ For a Markdown file, RobotCode SHALL use Robocop's own support for Markdown file
 - **WHEN** Robocop 9.1 is installed and formatting is requested for a `.robot.md` file
 - **THEN** no edit is returned, the user is told that Robocop 9.2 or newer is needed, and no Robocop finding is reported for the file
 
-### Requirement: analyze code checks the files of active Markdown extensions
+### Requirement: analyze code checks the Markdown files RobotCode serves
 
-`robotcode analyze code` SHALL check the files of the active Markdown extensions in the workspace like `.robot` files, and SHALL NOT check Markdown files whose extension is not active.
+`robotcode analyze code` SHALL check the Markdown files RobotCode serves in the workspace like `.robot` files, and SHALL NOT check other Markdown files.
 
 #### Scenario: Markdown suite and README
-- **WHEN** `robotcode analyze code` runs in a project whose robot.toml contains `extensions = "robot:robot.md"`, with `shop.robot.md`, which calls an undefined keyword, and `README.md`
+- **WHEN** `robotcode analyze code` runs in a project whose robot.toml sets no `extensions`, on Robot Framework 7.5.1, with `shop.robot.md`, which calls an undefined keyword, and `README.md`
 - **THEN** a "keyword not found" diagnostic is reported for `shop.robot.md`, and `README.md` is not analysed
