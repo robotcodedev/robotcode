@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 from robotcode.core.lsp.types import Diagnostic, DocumentUri, Range
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
+from robotcode.robot.document_formats import DocumentFormat
 
 
 @dataclass
@@ -76,3 +77,4 @@ class Info(CamelSnakeMixin):
     platform: str
     system: str
     system_version: str
+    document_formats: Optional[List[DocumentFormat]] = None

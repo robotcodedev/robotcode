@@ -49,6 +49,7 @@ from robotcode.plugin import (
     pass_application,
 )
 from robotcode.plugin.click_helper.types import add_options
+from robotcode.robot.document_formats import document_formats
 from robotcode.robot.utils import RF_VERSION
 
 from .._markdown import make_md_highlighter
@@ -1237,6 +1238,8 @@ def info(app: Application) -> None:
 
     from ...__version__ import __version__
 
+    _, profile, _ = handle_robot_options(app, ())
+
     robot_env: Dict[str, str] = {}
     if "ROBOT_OPTIONS" in os.environ:
         robot_env["ROBOT_OPTIONS"] = os.environ["ROBOT_OPTIONS"]
@@ -1264,6 +1267,7 @@ def info(app: Application) -> None:
         sys.platform,
         platform.system(),
         platform.version(),
+        document_formats(profile) or None,
     )
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:

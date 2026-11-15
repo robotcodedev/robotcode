@@ -214,12 +214,19 @@ def render_info(info: Info) -> str:
     rows: List[List[str]] = []
     for f in fields(info):
         value = getattr(info, f.name)
-        if not value:
+        if not value or f.name == "document_formats":
             continue
         label = _INFO_LABELS.get(f.name) or f.name.replace("_", " ").title()
         rows.append([label, str(value)])
 
     parts = ["# Info", "", field_list_md(rows, empty_text="_(no fields)_")]
+    if info.document_formats:
+        parts += [
+            "",
+            "## Document Formats",
+            "",
+            field_list_md([[f.name, ", ".join(f"`{e}`" for e in f.extensions)] for f in info.document_formats]),
+        ]
     return "\n".join(parts) + "\n"
 
 
