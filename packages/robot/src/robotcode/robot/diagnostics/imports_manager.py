@@ -56,6 +56,7 @@ from robotcode.core.utils.path import (
 )
 
 from ..__version__ import __version__
+from ..document_formats import MARKDOWN_LANGUAGE_ID
 from ..utils import RF_VERSION
 from ..utils.robot_path import find_file_ex
 from ..utils.stubs import Languages
@@ -1272,7 +1273,7 @@ class ImportsManager:
         # unresolved imports (file didn't exist yet) get invalidated and re-analyzed.
         self.imports_changed(self, uri)
 
-    @language_id("robotframework")
+    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
     def _on_possible_resource_document_modified(self, sender: Any, document: TextDocument) -> None:
         run_as_task(self.__on_possible_resource_document_modified, sender, document)
 

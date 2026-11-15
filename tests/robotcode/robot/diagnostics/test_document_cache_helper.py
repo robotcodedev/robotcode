@@ -15,12 +15,17 @@ from typing import Optional, cast
 from unittest.mock import MagicMock
 
 import pytest
+from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import File
 
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
+from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.document_cache_helper import DocumentsCacheHelper
+from robotcode.robot.diagnostics.namespace import DocumentType
 from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
+from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID, MARKDOWN_SUPPORTED
+from robotcode.robot.utils.markdown_blocks import RobotBlock
 
 TEXT = '*** Test Cases ***\nTest\n    Embedded "args"\n\n\n*** Keywords ***\nEmbedded "${args}"\n    No Operation\n'
 
@@ -253,3 +258,123 @@ def test_robotcode_cache_dir_wins_over_the_cache_dir(tmp_path: Path, monkeypatch
     monkeypatch.setenv("ROBOTCODE_CACHE_DIR", str(tmp_path / "env"))
 
     assert _cache_helper_with("mycache").calc_cache_path(Uri.from_path(tmp_path)) == tmp_path / "env"
+
+
+requires_markdown = pytest.mark.skipif(not MARKDOWN_SUPPORTED, reason="Markdown needs Robot Framework 7.5.1")
+
+MARKDOWN_SUITE = """\
+# Shop
+*** Test Cases ***
+Some prose that looks like a section.
+
+```robot
+*** Settings ***
+Documentation    The shop.
+```
+
+1. A list item with a test:
+
+    ```robotframework
+    *** Test Cases ***
+    Indented Test
+        Log    one
+    ```
+"""
+
+
+def _markdown_helper() -> DocumentsCacheHelper:
+    workspace = MagicMock()
+    workspace.get_workspace_folder.return_value = None
+    return DocumentsCacheHelper(
+        workspace=workspace,
+        documents_manager=MagicMock(),
+        file_watcher_manager=MagicMock(),
+        robot_profile=RobotBaseProfile(extensions="robot:md"),
+        analysis_config=None,
+    )
+
+
+def _markdown_document(
+    tmp_path: Path, name: str, text: str = MARKDOWN_SUITE, language_id: str = MARKDOWN_LANGUAGE_ID
+) -> TextDocument:
+    return TextDocument(
+        document_uri=str(Uri.from_path(tmp_path / name).normalized()),
+        language_id=language_id,
+        version=1,
+        text=text,
+    )
+
+
+@requires_markdown
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("__init__.md", DocumentType.INIT),
+        ("__init__.markdown", DocumentType.INIT),
+        ("shop.robot.md", DocumentType.GENERAL),
+        ("__init__.robot.md", DocumentType.GENERAL),
+    ],
+)
+def test_markdown_documents_are_typed_by_their_name(tmp_path: Path, name: str, expected: DocumentType) -> None:
+    assert _markdown_helper().get_document_type(_markdown_document(tmp_path, name)) == expected
+
+
+@requires_markdown
+def test_a_markdown_file_of_another_language_is_no_robot_document(tmp_path: Path) -> None:
+    document = _markdown_document(tmp_path, "shop.robot.md", language_id="markdown")
+
+    assert _markdown_helper().get_document_type(document) == DocumentType.UNKNOWN
+
+
+@requires_markdown
+def test_the_tokens_of_a_markdown_suite_have_the_positions_in_the_file(tmp_path: Path) -> None:
+    helper = _markdown_helper()
+    model = cast(File, helper.get_model(_markdown_document(tmp_path, "shop.robot.md")))
+
+    # by name: pytest would take the classes `TestCase` and `TestCaseSection` of Robot Framework for test classes
+    tests = [t for s in model.sections if type(s).__name__ == "TestCaseSection" for t in s.body if t.name]
+
+    assert [(t.name, t.header.get_token(Token.TESTCASE_NAME).lineno, t.header.col_offset) for t in tests] == [
+        ("Indented Test", 14, 4)
+    ]
+    assert [type(s).__name__ for s in model.sections if s.header is not None] == [
+        "SettingSection",
+        "TestCaseSection",
+    ]
+
+
+CONTINUED_TEST = """\
+```robot
+*** Test Cases ***
+First Test
+    Log    first step
+```
+
+The test goes on after this paragraph.
+
+```robot
+    Log    second step
+```
+"""
+
+
+@requires_markdown
+def test_a_block_continues_the_test_of_the_block_before(tmp_path: Path) -> None:
+    model = cast(File, _markdown_helper().get_model(_markdown_document(tmp_path, "shop.robot.md", CONTINUED_TEST)))
+
+    # by name: pytest would take the classes `TestCase` and `TestCaseSection` of Robot Framework for test classes
+    tests = [t for s in model.sections if type(s).__name__ == "TestCaseSection" for t in s.body if t.name]
+
+    assert [(t.name, [(k.args, k.lineno) for k in t.body if type(k).__name__ == "KeywordCall"]) for t in tests] == [
+        ("First Test", [(("first step",), 4), (("second step",), 10)])
+    ]
+
+
+@requires_markdown
+def test_the_blocks_of_a_markdown_document(tmp_path: Path) -> None:
+    helper = _markdown_helper()
+
+    assert helper.get_markdown_blocks(_markdown_document(tmp_path, "shop.robot.md")) == [
+        RobotBlock(4, 7),
+        RobotBlock(11, 15, 4),
+    ]

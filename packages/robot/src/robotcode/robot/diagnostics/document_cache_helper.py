@@ -8,6 +8,7 @@ from logging import CRITICAL
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterable,
     Iterator,
@@ -34,7 +35,9 @@ from robotcode.robot.diagnostics.diagnostics_modifier import (
 )
 
 from ..config.model import RobotBaseProfile
+from ..document_formats import MARKDOWN_LANGUAGE_ID, is_markdown_file
 from ..utils import RF_VERSION
+from ..utils.markdown_blocks import RobotBlock, find_robot_blocks, read_markdown_data
 from ..utils.stubs import Languages
 from .data_cache import CacheSection
 from .imports_manager import ImportsManager, NamespaceMetaData
@@ -58,6 +61,9 @@ from .workspace_config import (
 
 class UnknownFileTypeError(Exception):
     pass
+
+
+DataReader = Callable[[str], Tuple[str, Dict[int, int]]]
 
 
 def _namespace_cache_key(source: str, document_type: Optional[DocumentType]) -> str:
@@ -100,6 +106,8 @@ class DocumentsCacheHelper:
 
         self.robot_profile = robot_profile or RobotBaseProfile()
         self.analysis_config = analysis_config or WorkspaceAnalysisConfig()
+
+        self.data_readers: Dict[str, DataReader] = {MARKDOWN_LANGUAGE_ID: read_markdown_data}
 
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
@@ -242,8 +250,43 @@ class DocumentsCacheHelper:
             return DocumentType.GENERAL
         if suffix == ".resource":
             return DocumentType.RESOURCE
+        if document.language_id == MARKDOWN_LANGUAGE_ID:
+            # like Robot Framework: `__init__.robot.md` is a suite file
+            return DocumentType.INIT if path.stem.lower() == "__init__" else DocumentType.GENERAL
 
         return DocumentType.UNKNOWN
+
+    def get_markdown_blocks(self, document: TextDocument) -> List[RobotBlock]:
+        """The code blocks Robot Framework executes, of a Markdown document."""
+        return document.get_cache(self.__get_markdown_blocks)
+
+    def __get_markdown_blocks(self, document: TextDocument) -> List[RobotBlock]:
+        return find_robot_blocks(document.text())
+
+    def __data_reader(self, document: TextDocument, resource: bool) -> Optional[DataReader]:
+        # Robot Framework picks the parser of a resource file by its suffix, also without an active format
+        if resource and is_markdown_file(document.uri.to_path()):
+            return read_markdown_data
+
+        return self.data_readers.get(document.language_id) if document.language_id is not None else None
+
+    def __tokenize(
+        self, document: TextDocument, tokenizer: Callable[..., Iterable[Token]], resource: bool = False
+    ) -> List[Token]:
+        lang = self.get_languages_for_document(document)
+
+        reader = self.__data_reader(document, resource)
+        if reader is None:
+            with io.StringIO(document.text()) as content:
+                return [e for e in tokenizer(content, lang=lang)]
+
+        data, offsets = reader(document.text())
+        with io.StringIO(data) as content:
+            tokens: List[Token] = [e for e in tokenizer(content, lang=lang)]
+        if offsets:
+            for token in tokens:
+                token.col_offset += offsets.get(token.lineno, 0)
+        return tokens
 
     def get_tokens(self, document: TextDocument) -> List[Token]:
         document_type = self.get_document_type(document)
@@ -311,19 +354,13 @@ class DocumentsCacheHelper:
         return robot.api.get_init_tokens(source, data_only=False, tokenize_variables=tokenize_variables)
 
     def __get_general_tokens(self, document: TextDocument) -> List[Token]:
-        lang = self.get_languages_for_document(document)
-        with io.StringIO(document.text()) as content:
-            return [e for e in self.__internal_get_tokens(content, lang=lang)]
+        return self.__tokenize(document, self.__internal_get_tokens)
 
     def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
-        lang = self.get_languages_for_document(document)
-        with io.StringIO(document.text()) as content:
-            return [e for e in self.__internal_get_resource_tokens(content, lang=lang)]
+        return self.__tokenize(document, self.__internal_get_resource_tokens, resource=True)
 
     def __get_init_tokens(self, document: TextDocument) -> List[Token]:
-        lang = self.get_languages_for_document(document)
-        with io.StringIO(document.text()) as content:
-            return [e for e in self.__internal_get_init_tokens(content, lang=lang)]
+        return self.__tokenize(document, self.__internal_get_init_tokens)
 
     def get_model(self, document: TextDocument) -> ast.AST:
         document_type = self.get_document_type(document)

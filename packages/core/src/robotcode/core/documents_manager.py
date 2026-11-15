@@ -98,14 +98,19 @@ class DocumentsManager:
     def detect_language_id(self, path_or_uri: Union[str, "os.PathLike[Any]", Uri]) -> str:
         path = path_or_uri.to_path() if isinstance(path_or_uri, Uri) else Path(path_or_uri)
 
+        # the longest matching extension wins, so `.robot.md` beats `.md`
+        result = "unknown"
+        matched = 0
         for lang in self.languages:
-            suffix = path.suffix
-            if lang.extensions_ignore_case:
-                suffix = suffix.lower()
-            if suffix in lang.extensions:
-                return lang.id
+            name = path.name.lower() if lang.extensions_ignore_case else path.name
+            for e in lang.extensions:
+                if len(e) > matched and len(name) > len(e) and name.endswith(e):
+                    if lang.file_condition is not None and not lang.file_condition(path):
+                        break
+                    result = lang.id
+                    matched = len(e)
 
-        return "unknown"
+        return result
 
     @_logger.call
     def get_or_open_document(

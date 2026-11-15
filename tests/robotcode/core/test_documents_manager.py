@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 from pytest_mock import MockerFixture
 
 from robotcode.core.documents_manager import DocumentsManager
+from robotcode.core.language import LanguageDefinition
 from robotcode.core.uri import Uri
 from robotcode.core.utils.path import RACY_MTIME_EPSILON_NS
 
@@ -131,3 +132,32 @@ def test_get_or_open_document_attaches_disk_info(tmp_path: Path) -> None:
     assert document.disk_info is not None
     assert document.disk_info.size == len("content")
     assert document.disk_info.trusted is True
+
+
+def test_the_language_with_the_longest_matching_extension_wins() -> None:
+    manager = DocumentsManager(
+        [
+            LanguageDefinition(id="text", extensions=[".md"]),
+            LanguageDefinition(id="suite", extensions=[".robot.md"], extensions_ignore_case=True),
+            LanguageDefinition(id="robotframework", extensions=[".robot"]),
+        ]
+    )
+
+    assert manager.detect_language_id("tests/Shop.ROBOT.md") == "suite"
+    assert manager.detect_language_id("README.md") == "text"
+    assert manager.detect_language_id("shop.robot") == "robotframework"
+    assert manager.detect_language_id(".robot.md") == "text"
+    assert manager.detect_language_id("notes.txt") == "unknown"
+
+
+def test_a_language_whose_file_condition_fails_is_not_detected() -> None:
+    manager = DocumentsManager(
+        [
+            LanguageDefinition(id="suite", extensions=[".md"], file_condition=lambda path: path.parent.name == "docs"),
+            LanguageDefinition(id="robotframework", extensions=[".robot"]),
+        ]
+    )
+
+    assert manager.detect_language_id("docs/guide.md") == "suite"
+    assert manager.detect_language_id("README.md") == "unknown"
+    assert manager.detect_language_id("shop.robot") == "robotframework"

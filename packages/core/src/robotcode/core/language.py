@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, List, Optional, TypeVar, Union
 
 from robotcode.core.text_document import TextDocument
@@ -38,3 +39,4 @@ class LanguageDefinition:
     extensions: List[str]
     extensions_ignore_case: bool = False
     aliases: Optional[List[str]] = None
+    file_condition: Optional[Callable[[Path], bool]] = None
