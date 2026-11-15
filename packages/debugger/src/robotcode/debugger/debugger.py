@@ -679,6 +679,8 @@ class Debugger:
         if path in self.breakpoints and not breakpoints and not lines:
             self.breakpoints.pop(path)
         elif path:
+            # TODO: answer breakpoints on lines that never run (comments, empty lines, Markdown prose and fences) with
+            # `verified=False` and a message, or move them to the next line that runs; for `.robot` and Markdown alike
             self.breakpoints[path] = result = BreakpointsEntry(
                 tuple(breakpoints) if breakpoints else (),
                 tuple(lines) if lines else (),
