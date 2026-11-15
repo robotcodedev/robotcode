@@ -57,6 +57,10 @@ const ENVIRONMENT_NOTIFICATION_DELAY = 2500;
 const STARTUP_PHASE = 15000;
 const ENVIRONMENT_ACTION_COMMAND = "robotcode.environmentAction";
 
+// Set while the active editor shows a Markdown file a language client serves; enables the manifest's breakpoints for
+// Markdown, whose `when` VS Code evaluates for the window, not per file.
+const CONTEXT_MARKDOWN_SUITES = "robotcode.markdownSuites";
+
 type EnvironmentAction = "select" | "create" | "useVenv" | "retry" | "settings";
 
 /** The environment message of a folder: a progress notification whose text is replaced and which code can close. */
@@ -93,6 +97,30 @@ export function isSkippedByRobotFilesSearch(folder: vscode.WorkspaceFolder, uri:
     .filter((name) => name !== "");
   if (!itself) names.pop();
   return names.some((name) => /^[._]/.test(name) || ROBOT_FILES_SKIPPED_FOLDERS.includes(name));
+}
+
+/** A format of documents Robot Framework parses, as `robotcode discover info` reports them. */
+export interface DocumentFormat {
+  name: string;
+  extensions: string[];
+}
+
+// the formats the language server serves besides Robot Framework files, which reach it by their language
+const SERVED_DOCUMENT_FORMATS = ["markdown"];
+
+/**
+ * The document filters that send the files of the served formats in a folder to the folder's language server; the
+ * files keep their own language in the editor.
+ */
+export function documentFormatSelectors(
+  folderPath: string,
+  formats: DocumentFormat[],
+): { scheme: string; pattern: string }[] {
+  return formats
+    .filter((format) => SERVED_DOCUMENT_FORMATS.includes(format.name))
+    .flatMap((format) =>
+      format.extensions.map((extension) => ({ scheme: "file", pattern: `${folderPath}/**/*.${extension}` })),
+    );
 }
 
 /**
@@ -339,6 +367,8 @@ export class LanguageClientsManager {
   public readonly clients: Map<string, LanguageClient> = new Map();
   public readonly outputChannels: Map<string, vscode.LogOutputChannel> = new Map();
 
+  private readonly markdownSelectors = new Map<string, vscode.DocumentFilter[]>();
+
   private _disposables: vscode.Disposable;
 
   // The environment state per workspace folder (key: folder URI), the running check, the Robot Framework polling and
@@ -495,6 +525,7 @@ export class LanguageClientsManager {
       this._onRobotEnvironmentStateChangedEmitter,
       this._onDidChangeRobotProjectEmitter,
       this._onDidTakeUpFolderEmitter,
+      vscode.window.onDidChangeActiveTextEditor(() => this.updateMarkdownSuitesContext()),
 
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const folder of event.removed) this.forgetFolder(folder);
@@ -557,11 +588,27 @@ export class LanguageClientsManager {
     }
   }
 
+  private setMarkdownSelectors(folderUri: string, selectors: vscode.DocumentFilter[]): void {
+    if (selectors.length > 0) this.markdownSelectors.set(folderUri, selectors);
+    else this.markdownSelectors.delete(folderUri);
+    this.updateMarkdownSuitesContext();
+  }
+
+  private updateMarkdownSuitesContext(): void {
+    const document = vscode.window.activeTextEditor?.document;
+    const folder = document !== undefined ? vscode.workspace.getWorkspaceFolder(document.uri) : undefined;
+    const selectors = folder !== undefined ? this.markdownSelectors.get(folder.uri.toString()) : undefined;
+    const served = document !== undefined && selectors !== undefined && vscode.languages.match(selectors, document) > 0;
+    void vscode.commands.executeCommand("setContext", CONTEXT_MARKDOWN_SUITES, served);
+  }
+
   public async stopAllClients(): Promise<boolean> {
     const promises: Promise<void>[] = [];
 
     const clients = [...this.clients.values()];
     this.clients.clear();
+    this.markdownSelectors.clear();
+    this.updateMarkdownSuitesContext();
 
     for (const client of clients) {
       promises.push(client.dispose(CLIENT_DISPOSE_TIMEOUT));
@@ -1222,6 +1269,29 @@ export class LanguageClientsManager {
     };
   }
 
+  // The formats Robot Framework parses with the folder's profiles; without an answer the folder is served as before.
+  private async getDocumentFormats(folder: vscode.WorkspaceFolder): Promise<DocumentFormat[]> {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    try {
+      const info = (await this.pythonManager.executeRobotCode(
+        folder,
+        ["discover", "info"],
+        config.get<string[]>("profiles", []),
+        "json",
+        true,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        this.getRobotEnvironmentState(folder).executable,
+      )) as { documentFormats?: DocumentFormat[] };
+      return info.documentFormats ?? [];
+    } catch (error) {
+      this.logger.warn(`Can't get the document formats of folder '${folder.name}': ${error}`);
+      return [];
+    }
+  }
+
   public async getLanguageClientForDocument(document: vscode.TextDocument): Promise<LanguageClient | undefined> {
     if (!this.supportedLanguages.includes(document.languageId)) return;
 
@@ -1291,9 +1361,14 @@ export class LanguageClientsManager {
 
       let closeHandlerAction = CloseAction.DoNotRestart;
 
+      const formatSelectors = documentFormatSelectors(
+        workspaceFolder.uri.fsPath,
+        await this.getDocumentFormats(workspaceFolder),
+      );
+
       const clientOptions: LanguageClientOptions = {
-        documentSelector:
-          vscode.workspace.workspaceFolders?.length === 1
+        documentSelector: [
+          ...(vscode.workspace.workspaceFolders?.length === 1
             ? this.supportedLanguages.flatMap((lang) => [
                 { scheme: "file", language: lang },
                 { scheme: "untitled", language: lang },
@@ -1301,7 +1376,9 @@ export class LanguageClientsManager {
             : this.supportedLanguages.flatMap((lang) => [
                 { scheme: "file", language: lang, pattern: `${workspaceFolder.uri.fsPath}/**/*` },
                 { scheme: "untitled", language: lang, pattern: `${workspaceFolder.uri.fsPath}/**/*` },
-              ]),
+              ])),
+          ...formatSelectors,
+        ],
         synchronize: {
           configurationSection: [CONFIG_SECTION],
         },
@@ -1453,6 +1530,7 @@ export class LanguageClientsManager {
 
       if (started) {
         this.clients.set(workspaceFolder.uri.toString(), result);
+        this.setMarkdownSelectors(workspaceFolder.uri.toString(), formatSelectors);
         this._onClientStateChangedEmitter.fire({
           uri: uri,
           state: ClientState.Ready,
@@ -1481,6 +1559,7 @@ export class LanguageClientsManager {
 
         const client = this.clients.get(workspaceFolder.uri.toString());
         this.clients.delete(workspaceFolder.uri.toString());
+        this.setMarkdownSelectors(workspaceFolder.uri.toString(), []);
 
         if (client) {
           await client.dispose(CLIENT_DISPOSE_TIMEOUT);

@@ -1806,6 +1806,10 @@
     "breakpoints": [
       {
         "language": "robotframework"
+      },
+      {
+        "language": "markdown",
+        "when": "robotcode.markdownSuites"
       }
     ],
     "debuggers": [
