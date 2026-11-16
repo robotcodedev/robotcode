@@ -30,7 +30,7 @@ Beyond post-mortem analysis, `robot-debug` also makes a tight **inner loop while
 
 ## Start or reuse a debug session
 
-If a debug session you started for this test is still open (`robotcode session list`), `robotcode session restart <ID>` runs it again. For another test, start a new one: a restart runs what the session was started with.
+If a debug session you started is still open (`robotcode session list`), it keeps its state: at a stop you go on there, and after the end of its run `robotcode session result <ID>` gives the exit code. A new run is a new session: `robotcode session stop <ID>`, then `start` again.
 
 The debugger is an **interactive** program: it stops at a breakpoint, prints the `(rdb)` prompt, and waits. Drive it step by step: at each stop you read `.where` / `.vars` / `.print ${x}` and pick the next command from what you just saw, stepping with `.step` / `.next` / `.continue` exactly as the [session loop](#how-a-debug-session-works) describes. You don't decide the commands up front — choosing each step from the live state *is* debugging, and it's the reason you stopped the run instead of reading the recorded log.
 
@@ -50,7 +50,7 @@ robotcode session send debug-7b2d9e04 '.continue'                               
 - **One `send` per command or keyword**, in single quotes, and read its answer before the next step: no two steps in one shell command, no shell loop over inputs. A dot command goes in a `send` of its own, so `.break …` and `.continue` are two `send`s; a keyword block with its `END` is one `send`.
 - **Exit code of `send`:** `0` / `1` the command or keyword passed / failed, `124` the run still goes after `--timeout` (default 60 s), `252` an error of robotcode itself. When the run ends, the answer ends with `The run has ended with exit code N.` N counts the failed tests, unless the run didn't start (`252`) or was aborted (`253`). Then `robotcode session status <ID>` prints `ended`, and `robotcode session result <ID>` prints N.
 - `robotcode session interrupt <ID>` pauses a running run at the next keyword, as `Ctrl-C` does.
-- The session **stays open after the run**, as a debugger does: `robotcode session restart <ID>` runs it again in a new process — with the breakpoints as they are, and with Python libraries you changed since — and `robotcode session stop <ID>` ends it, mid-run too (as `.abort`). Stop it when you are done.
+- The session **stays open after the run**, as a debugger does, until `robotcode session stop <ID>` ends it, mid-run too (as `.abort`). Stop it when you are done. Give the breakpoints of the next run to its `start` with `--break`: those that `.break` set end with the session.
 - **A debug run replaces the output files of the last run.** If that run is still needed, add `--output NONE --log NONE --report NONE` to `start`.
 
 If a `session` command fails in a sandbox, your agent runs each command in a sandbox of its own, and a session can't outlive that command. Don't try to leave the sandbox. See [repl.md](repl.md#start-or-reuse-a-repl) for the messages.
