@@ -72,7 +72,9 @@ class MarkdownFormattingProtocolPart(RobotFormattingProtocolPart):
         options: FormattingOptions,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        # Robocop formats each code block on its own and counts the lines of a range per block
+        # TODO: pass the range on like for `.robot` files once Robocop's `format_embedded` turns `start_line`/`end_line`
+        # into the lines of each block (MarketSquare/robotframework-robocop#1984); up to 9.4.0 it applies them to the
+        # block-local lines of every block
         return None
 
     def formatted_text(self, runner: "RobocopFormatter", document: TextDocument, config: Any) -> str:
