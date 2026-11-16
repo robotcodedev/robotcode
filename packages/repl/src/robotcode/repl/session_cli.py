@@ -1,9 +1,13 @@
+import contextlib
 import dataclasses
 import multiprocessing
 import os
+import signal
 import sys
+import threading
 import time
-from typing import Any, Callable, List, Optional, Tuple, Type, TypeVar
+from types import FrameType
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 import click
 from click.core import ParameterSource
@@ -38,15 +42,13 @@ from ._session import (
     new_session_id,
     open_sessions,
     project_folder,
+    read_available,
     read_entry,
-    read_to_end,
     remove_session_files,
     sessions_dir,
     start_session_process,
+    write_handover,
 )
-
-if sys.platform == "win32":
-    import msvcrt
 
 F = TypeVar("F", bound=Callable[..., Any])
 A = TypeVar("A", bound=SessionAnswer)
@@ -186,17 +188,16 @@ def _start(
     session_id = new_session_id(kind)
     try:
         create_sessions_dir()
+        # The process writes its standard output and standard error to the pipe and reads it at the other end, which
+        # it takes from this process.
+        read_end, write_end = create_output_pipe(session_id)
+        write_handover(session_id, read_end)
     except OSError as e:
         # A sandbox, for example, can keep a command from writing there.
+        remove_session_files(session_id)
         raise click.ClickException(
             f"Can't create the files of the session in {sessions_dir()}: {e.strerror or e}."
         ) from e
-    # The process writes its standard output and standard error to the pipe and reads it at the other end.
-    read_end, write_end = create_output_pipe()
-    if sys.platform == "win32":
-        output = msvcrt.get_osfhandle(read_end)
-    else:
-        output = read_end
     command = [
         sys.executable,
         "-m",
@@ -207,8 +208,6 @@ def _start(
         kind.command,
         "--serve-session",
         session_id,
-        "--serve-output",
-        str(output),
         "--serve-idle-timeout",
         str(idle_timeout),
         *args,
@@ -216,38 +215,50 @@ def _start(
     # Unbuffered, so that an answer has all the output written before it, and in UTF-8, which the session decodes.
     env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
     try:
-        process = start_session_process(command, output, write_end, env)
+        process = start_session_process(command, write_end, env)
+    except BaseException:
+        os.close(read_end)
+        remove_session_files(session_id)
+        raise
     finally:
         os.close(write_end)
 
     try:
-        # `--timeout` is for the first prompt. Until the session takes commands at all, `start` waits longer, so that
-        # the other commands always reach a session whose ID it has printed.
-        deadline = time.monotonic() + timeout
-        limit = max(timeout, _STARTUP_LIMIT)
-        ready_by = time.monotonic() + limit
-        entry = read_entry(session_id)
-        while entry is None:
-            if process.poll() is not None:
-                _ended_before_ready(
-                    app,
-                    session_id,
-                    read_to_end(read_end),
-                    f"The session ended before it was ready, with exit code {process.returncode}.",
-                    process.returncode,
-                )
-            if time.monotonic() >= ready_by:
-                process.kill()
-                process.wait()
-                _ended_before_ready(
-                    app,
-                    session_id,
-                    read_to_end(read_end),
-                    f"The session wasn't ready after {limit:g} seconds and was ended.",
-                    DATA_ERROR,
-                )
-            time.sleep(0.05)
+        with _ending_like_ctrl_c():
+            # `--timeout` is for the first prompt. Until the session takes commands at all, `start` waits longer, so
+            # that the other commands always reach a session whose ID it has printed.
+            deadline = time.monotonic() + timeout
+            limit = max(timeout, _STARTUP_LIMIT)
+            ready_by = time.monotonic() + limit
             entry = read_entry(session_id)
+            while entry is None:
+                if process.popen.poll() is not None:
+                    # What the process has started, such as the session under a `wrapper`, may still run.
+                    process.end()
+                    _ended_before_ready(
+                        app,
+                        session_id,
+                        read_available(read_end),
+                        f"The session ended before it was ready, with exit code {process.popen.returncode}.",
+                        process.popen.returncode,
+                    )
+                if time.monotonic() >= ready_by:
+                    process.end()
+                    _ended_before_ready(
+                        app,
+                        session_id,
+                        read_available(read_end),
+                        f"The session wasn't ready after {limit:g} seconds and was ended.",
+                        DATA_ERROR,
+                    )
+                time.sleep(0.05)
+                entry = read_entry(session_id)
+        process.release()
+    except BaseException:
+        # Such as a Ctrl-C: a session whose ID this process hasn't printed ends with it.
+        process.end()
+        remove_session_files(session_id)
+        raise
     finally:
         # Once the session is ready, it reads the pipe itself.
         os.close(read_end)
@@ -259,6 +270,26 @@ def _start(
         app.echo(f"Started session {session_id}.")
         _echo_answer(app, entry, answer)
     app.exit(_exit_code(answer))
+
+
+def _exit_on_signal(signum: int, frame: Optional[FrameType]) -> None:
+    raise SystemExit(128 + signum)
+
+
+@contextlib.contextmanager
+def _ending_like_ctrl_c() -> Iterator[None]:
+    """Let a SIGTERM or a SIGHUP, as when the terminal closes, end this process the way a Ctrl-C does, so that it ends
+    the session that isn't ready yet too. On Windows the job of the session does that, however this process ends."""
+    previous: Dict[signal.Signals, Union[Callable[[int, Optional[FrameType]], Any], int, None]] = {}
+    # Python takes signal handlers only in its main thread.
+    if sys.platform != "win32" and threading.current_thread() is threading.main_thread():
+        for signum in (signal.SIGTERM, signal.SIGHUP):
+            previous[signum] = signal.signal(signum, _exit_on_signal)
+    try:
+        yield
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, signal.SIG_DFL if handler is None else handler)
 
 
 def _ended_before_ready(app: Application, session_id: str, output: str, message: str, exit_code: int) -> None:

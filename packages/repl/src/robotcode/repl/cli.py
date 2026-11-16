@@ -403,14 +403,6 @@ SESSION_OPTIONS = [
         help="Serve the session ID that `robotcode session start` started. This is an internal option.",
     ),
     click.option(
-        "--serve-output",
-        type=int,
-        metavar="FD",
-        hidden=show_hidden_arguments(),
-        help="Read the output of the session from the pipe FD, a handle on Windows, into memory. "
-        "This is an internal option.",
-    ),
-    click.option(
         "--serve-idle-timeout",
         type=float,
         default=15,
@@ -425,17 +417,14 @@ SESSION_OPTIONS = [
 def _session_server(
     app: Application,
     serve_session: Optional[str],
-    serve_output: Optional[int],
     kind: SessionKind,
     idle_timeout: float,
 ) -> Optional[SessionServer]:
     if serve_session is None:
         return None
-    if serve_output is None:
-        raise click.UsageError("--serve-session needs --serve-output.")
     try:
         # The folder `session start` ran in decides the project, also for a debug run of a suite elsewhere.
-        return SessionServer(serve_session, kind, project_folder(app), idle_timeout * 60, serve_output)
+        return SessionServer(serve_session, kind, project_folder(app), idle_timeout * 60)
     except SessionError as e:
         raise click.ClickException(str(e)) from e
 
@@ -525,7 +514,6 @@ def repl(
     break_on_failed_test: bool,
     break_on_failed_suite: bool,
     serve_session: Optional[str],
-    serve_output: Optional[int],
     serve_idle_timeout: float,
 ) -> None:
     """Run Robot Framework interactively (alias `shell`).
@@ -553,7 +541,7 @@ def repl(
 
     backend = _resolve_backend(plain, backend)
 
-    server = _session_server(app, serve_session, serve_output, SessionKind.REPL, serve_idle_timeout)
+    server = _session_server(app, serve_session, SessionKind.REPL, serve_idle_timeout)
     interpreter = (
         SessionInterpreter(server, app=app, files=list(files), show_keywords=show_keywords, inspect=inspect)
         if server is not None
@@ -649,7 +637,6 @@ def robot_debug(
     break_on_failed_test: bool,
     break_on_failed_suite: bool,
     serve_session: Optional[str],
-    serve_output: Optional[int],
     serve_idle_timeout: float,
 ) -> None:
     """Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
@@ -667,7 +654,7 @@ def robot_debug(
 
     backend = _resolve_backend(plain, backend)
 
-    server = _session_server(app, serve_session, serve_output, SessionKind.DEBUG, serve_idle_timeout)
+    server = _session_server(app, serve_session, SessionKind.DEBUG, serve_idle_timeout)
     # A run stops at `(rdb) `, which always shows; `robot-debug` has no option for `>>> `.
     interpreter = (
         SessionInterpreter(server, app=app, files=[], show_keywords=False, inspect=False)

@@ -23,7 +23,7 @@ import uuid
 from multiprocessing.connection import Client
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, Optional
 
 import click
 import pytest
@@ -317,8 +317,10 @@ def test_the_files_of_a_session_that_no_longer_runs_are_removed(
     # As left when the session ended while it wrote its file.
     (short_folder / "repl-0123abcd.json.tmp").write_text("{", encoding="utf-8")
     # As a restart can leave them: the file for the new process, and the socket of a later process.
-    (short_folder / "repl-0123abcd.restart").write_text("{}", encoding="utf-8")
+    (short_folder / "repl-0123abcd.handover").write_text("{}", encoding="utf-8")
     (short_folder / "repl-0123abcd-1.sock").write_text("", encoding="utf-8")
+    if sys.platform != "win32":
+        os.mkfifo(short_folder / "repl-0123abcd.pipe", 0o600)
 
     assert open_sessions() == []
     assert list(short_folder.iterdir()) == []
@@ -341,10 +343,22 @@ def test_the_files_of_a_session_that_no_longer_runs_are_removed(
 def test_a_file_that_cant_be_read_counts_as_none(text: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(_session, "sessions_dir", lambda: tmp_path)
     (tmp_path / "repl-0123abcd.json").write_text(text, encoding="utf-8")
-    (tmp_path / "repl-0123abcd.restart").write_text(text, encoding="utf-8")
 
     assert read_entry("repl-0123abcd") is None
-    assert _session._take_handover("repl-0123abcd") is None
+
+
+@pytest.mark.parametrize(("text", "reason"), [(None, "No such file"), ("{", "Expecting")])
+def test_a_session_without_a_handover_file_it_can_read_says_why(
+    text: Optional[str], reason: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_session, "sessions_dir", lambda: tmp_path)
+    path = tmp_path / "repl-0123abcd.handover"
+    if text is not None:
+        path.write_text(text, encoding="utf-8")
+
+    expected = f"Can't read the handover file of the session at {path}: {reason}"
+    with pytest.raises(_session.SessionError, match=re.escape(expected)):
+        _session.SessionServer("repl-0123abcd", SessionKind.REPL, tmp_path, 60)
 
 
 @pytest.mark.skipif(sys.platform != "win32" and os.geteuid() == 0, reason="takes the right to read the file")
@@ -635,14 +649,51 @@ def test_a_session_that_cant_write_its_file_says_why(tmp_path: Path, monkeypatch
         raise PermissionError(13, "Permission denied")
 
     monkeypatch.setattr(_session, "_write_entry", refuse)
-    monkeypatch.setattr(_session, "_own_pipe", lambda output: output)
+    monkeypatch.setattr(_session, "_take_handover", lambda session_id: _session._Handover(0, 0.0))
+    monkeypatch.setattr(_session, "_take_pipe", lambda session_id, holder: 0)
     session_id = _session.new_session_id(SessionKind.REPL)
 
     expected = f"Can't create the files of the session in {sessions_dir()}: Permission denied."
     with pytest.raises(_session.SessionError, match=re.escape(expected)):
-        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60, 0)
+        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60)
 
     assert _session._channel_gone(_session._address(session_id))
+
+
+def test_a_session_that_cant_take_its_output_says_why(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(_session, "sessions_dir", lambda: tmp_path)
+    session_id = "repl-0123abcd"
+    # Without the pipe on Linux and macOS; on Windows, the process that held it has ended.
+    if sys.platform == "win32":
+        # Its handle, which this test keeps open, keeps Windows from giving its process ID to another process.
+        ended = subprocess.Popen([sys.executable, "-c", ""])
+        ended.wait()
+        holder = _session._PipeHolder(ended.pid, 4)
+        expected = f"Can't take the output of the session from process {holder.pid}: "
+    else:
+        holder = None
+        expected = f"Can't open the output of the session at {tmp_path / f'{session_id}.pipe'}: No such file"
+    _session._write_json(tmp_path / f"{session_id}.handover", _session._Handover(0, 0.0, holder=holder))
+
+    with pytest.raises(_session.SessionError, match=re.escape(expected)):
+        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_session_process_that_cant_be_started_leaves_no_files(
+    session_project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(command: List[str], stdout: int, env: Dict[str, str]) -> None:
+        raise OSError(7, "Argument list too long")
+
+    monkeypatch.setattr(_session, "sessions_dir", lambda: tmp_path)
+    monkeypatch.setattr("robotcode.repl.session_cli.start_session_process", refuse)
+
+    with pytest.raises(OSError, match="Argument list too long"):
+        _robotcode("session", "start", "repl")
+
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="only Linux takes the folder of the sessions from the environment")
@@ -1492,6 +1543,241 @@ def test_a_channel_the_command_may_not_reach_says_why(monkeypatch: pytest.Monkey
 
     with pytest.raises(click.ClickException, match=r"doesn't answer: .*Operation not permitted"):
         session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
+
+
+# ---------------------------------------------------------------------------
+# Sessions under a wrapper
+# ---------------------------------------------------------------------------
+
+# Starts its command as Python's `subprocess` does by default, which passes on only the standard handles. Writes a line
+# once the file `go` exists, while its command runs.
+_WRAPPER = """\
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+here = Path(__file__).parent
+if (here / "before").exists():
+    sys.stdout.write((here / "before").read_text())
+    sys.stdout.flush()
+process = subprocess.Popen(sys.argv[2:])
+while process.poll() is None:
+    if (here / "go").exists() and not (here / "wrote").exists():
+        print("line from the wrapper", flush=True)
+        (here / "wrote").touch()
+    time.sleep(0.05)
+sys.exit(process.returncode)
+"""
+
+
+@pytest.fixture
+def wrapper_project(session_project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A project whose `robot.toml` runs the sessions under the wrapper `w.py`."""
+    (tmp_path / "w.py").write_text(_WRAPPER, encoding="utf-8")
+    wrapper = [sys.executable, str(tmp_path / "w.py"), "--"]
+    (tmp_path / "robot.toml").write_text(f"wrapper = {json.dumps(wrapper)}\n", encoding="utf-8")
+    (tmp_path / "debug.robot").write_text(_DEBUG_SUITE, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    # Set where robotcode runs under a wrapper already, which it then doesn't start again.
+    monkeypatch.delenv("ROBOTCODE_WRAPPER_APPLIED", raising=False)
+    return tmp_path
+
+
+def test_a_repl_session_starts_under_a_wrapper_that_starts_its_command_with_subprocess(
+    started: List[str], wrapper_project: Path
+) -> None:
+    result = _start(started, "repl")
+
+    assert result.exit_code == 0, result.output
+    assert "hello" in _robotcode("session", "send", _started(result), "Log To Console    hello").stdout
+
+
+@pytest.mark.skipif(sys.platform == "darwin", reason="the size of a FIFO can't be set on macOS")
+def test_a_session_starts_under_a_wrapper_that_writes_much_before_it(started: List[str], wrapper_project: Path) -> None:
+    # More than a pipe holds by default on Linux, before anything reads it.
+    line = "w" * 99
+    (wrapper_project / "before").write_text(1000 * f"{line}\n", encoding="utf-8")
+
+    result = _start(started, "repl")
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout.count(line) == 1000
+
+
+_CHILD_WRAPPER = """\
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+# Doesn't start its command, but a process that can write to the pipe of the session as long as it runs.
+pid_file = Path(sys.argv[1])
+child = subprocess.Popen(
+    [
+        sys.executable,
+        "-c",
+        "import os, pathlib, sys, time; pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); time.sleep(600)",
+        str(pid_file),
+    ]
+)
+if sys.argv[2] == "wait":
+    sys.exit(child.wait())
+while not pid_file.exists():
+    time.sleep(0.05)
+sys.exit(3)
+"""
+
+
+@pytest.mark.parametrize(
+    ("wrapper_ends", "exit_code", "message"),
+    [
+        ("wait", 252, "The session wasn't ready after 5 seconds and was ended."),
+        ("exit", 3, "The session ended before it was ready, with exit code 3."),
+    ],
+)
+def test_a_start_that_fails_under_a_wrapper_ends_what_the_wrapper_started(
+    wrapper_ends: str,
+    exit_code: int,
+    message: str,
+    session_project: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pid_file = tmp_path / "child.pid"
+    (tmp_path / "w.py").write_text(_CHILD_WRAPPER, encoding="utf-8")
+    wrapper = [sys.executable, str(tmp_path / "w.py"), str(pid_file), wrapper_ends]
+    (tmp_path / "robot.toml").write_text(f"wrapper = {json.dumps(wrapper)}\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("ROBOTCODE_WRAPPER_APPLIED", raising=False)
+    monkeypatch.setattr("robotcode.repl.session_cli._STARTUP_LIMIT", 5)
+    results: List[Result] = []
+    # In a thread, so that a `start` that waits for the child fails the test instead of waiting for it.
+    thread = threading.Thread(
+        target=lambda: results.append(_robotcode("session", "start", "repl", "--timeout", "1")), daemon=True
+    )
+    thread.start()
+    thread.join(30)
+    child = int(pid_file.read_text(encoding="utf-8"))
+    try:
+        assert not thread.is_alive(), "`session start` waits for the process that the wrapper started"
+        assert results[0].exit_code == exit_code, results[0].output
+        assert message in results[0].output
+        deadline = time.monotonic() + 10
+        while pid_exists(child) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert not pid_exists(child)
+    finally:
+        if pid_exists(child):
+            os.kill(child, signal.SIGTERM)
+        thread.join(10)
+
+
+def _pid_from(path: Path) -> int:
+    """The process ID in `path`, once a process has written it there."""
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        try:
+            return int(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            time.sleep(0.05)
+    raise AssertionError(f"No process ID in {path}")
+
+
+# Ctrl-C, `kill` and a terminal that closes; on Windows a `session start` that is killed, which it can't catch.
+_ABORTS: List[Optional[signal.Signals]] = (
+    [None] if sys.platform == "win32" else [signal.SIGINT, signal.SIGTERM, signal.SIGHUP]
+)
+
+
+@pytest.mark.parametrize("abort", _ABORTS, ids=lambda abort: "kill" if abort is None else abort.name)
+def test_a_start_that_is_aborted_ends_the_session(
+    abort: Optional[signal.Signals], session_project: Path, tmp_path: Path
+) -> None:
+    pid_file = tmp_path / "child.pid"
+    (tmp_path / "w.py").write_text(_CHILD_WRAPPER, encoding="utf-8")
+    wrapper = [sys.executable, str(tmp_path / "w.py"), str(pid_file), "wait"]
+    (tmp_path / "robot.toml").write_text(f"wrapper = {json.dumps(wrapper)}\n", encoding="utf-8")
+    env = {name: value for name, value in os.environ.items() if name != "ROBOTCODE_WRAPPER_APPLIED"}
+    before = set(sessions_dir().glob("*"))
+    # In a process of its own, which the test ends as a terminal or `kill` does.
+    start = subprocess.Popen(
+        [sys.executable, "-m", "robotcode.cli", "session", "start", "repl"],
+        cwd=tmp_path,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    child: Optional[int] = None
+    try:
+        child = _pid_from(pid_file)
+        if abort is None:
+            start.kill()
+        else:
+            start.send_signal(abort)
+        start.wait(30)
+        deadline = time.monotonic() + 10
+        while pid_exists(child) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert not pid_exists(child)
+        if abort is not None:
+            assert set(sessions_dir().glob("*")) <= before
+    finally:
+        if child is not None and pid_exists(child):
+            os.kill(child, signal.SIGTERM)
+        if start.poll() is None:
+            start.kill()
+            start.wait()
+        for path in set(sessions_dir().glob("*")) - before:
+            path.unlink(missing_ok=True)
+
+
+def test_a_debug_session_starts_under_a_wrapper(started: List[str], wrapper_project: Path) -> None:
+    result = _start(
+        started,
+        "debug",
+        "-d",
+        str(wrapper_project / "results"),
+        "--no-break-on-exception",
+        "--break",
+        "debug.robot:4",
+        "debug.robot",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "* breakpoint  BuiltIn.Log  (debug.robot:4)" in result.stdout
+
+
+def test_what_the_wrapper_writes_comes_with_the_next_answer(started: List[str], wrapper_project: Path) -> None:
+    session_id = _started(_start(started, "repl"))
+    (wrapper_project / "go").touch()
+    _wait_for_file(wrapper_project / "wrote")
+
+    result = _robotcode("session", "send", session_id, "Log To Console    hello")
+
+    assert result.stdout.startswith("line from the wrapper\n"), result.stdout
+    assert "hello" in result.stdout
+
+
+def test_a_session_under_a_wrapper_restarts(started: List[str], wrapper_project: Path) -> None:
+    session_id = _started(_start(started, "repl"))
+    pid = read_entry(session_id).pid  # type: ignore[union-attr]
+
+    result = _robotcode("session", "restart", session_id)
+
+    assert result.exit_code == 0, result.output
+    assert read_entry(session_id).pid != pid  # type: ignore[union-attr]
+    assert "hello" in _robotcode("session", "send", session_id, "Log To Console    hello").stdout
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="`cmd` runs only on Windows")
+def test_a_session_starts_under_a_wrapper_that_passes_its_handles_on(started: List[str], wrapper_project: Path) -> None:
+    (wrapper_project / "robot.toml").write_text('wrapper = ["cmd", "/c"]\n', encoding="utf-8")
+
+    result = _start(started, "repl")
+
+    assert result.exit_code == 0, result.output
+    assert "hello" in _robotcode("session", "send", _started(result), "Log To Console    hello").stdout
 
 
 # ---------------------------------------------------------------------------

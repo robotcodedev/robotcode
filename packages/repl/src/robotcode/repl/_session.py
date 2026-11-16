@@ -54,6 +54,10 @@ if sys.platform == "win32":
     import _winapi
     import msvcrt
 
+    from . import _windows_job
+else:
+    import fcntl
+
 # Without `$XDG_RUNTIME_DIR`, as in a container, platformdirs falls back to another folder, which works for the sessions
 # too, and warns about it at every call. Older versions of platformdirs don't warn.
 if hasattr(platformdirs, "RuntimeDirWarning"):
@@ -255,10 +259,15 @@ def _address(session_id: str, generation: int = 0) -> str:
     return str(sessions_dir() / f"{name}.sock")
 
 
-def _restart_path(session_id: str) -> Path:
-    """The file in which a session process hands its breakpoints, its start time and the next generation to the new
-    process of a restart."""
-    return sessions_dir() / f"{session_id}.restart"
+def _handover_path(session_id: str) -> Path:
+    """The file from which a new session process takes what it starts with: `session start` writes it for the first
+    process, and the process before for the new process of a restart."""
+    return sessions_dir() / f"{session_id}.handover"
+
+
+def _pipe_path(session_id: str) -> Path:
+    """The pipe of the output of a session on Linux and macOS, a FIFO, which the session process opens by its path."""
+    return sessions_dir() / f"{session_id}.pipe"
 
 
 def new_session_id(kind: SessionKind) -> str:
@@ -297,14 +306,25 @@ class SessionEntry:
 
 
 @dataclass
+class _PipeHolder:
+    """The process that holds the read end of the pipe of a session on Windows, from which the new session process
+    takes it."""
+
+    pid: int
+    handle: int
+
+
+@dataclass
 class _Handover:
-    """The file in which a session process hands on to the new process of a restart."""
+    """The file from which a new session process takes what it starts with."""
 
     # The number of the new process, by which it gets a channel of its own.
     generation: int
     # When the session started.
     started: float
     breakpoints: Optional[BreakpointState] = None
+    # Only on Windows.
+    holder: Optional[_PipeHolder] = None
 
 
 def _retried(action: Callable[[], _T]) -> _T:
@@ -340,12 +360,12 @@ def _write_entry(entry: SessionEntry) -> None:
 
 def remove_session_files(session_id: str) -> None:
     """Remove the files of the session `session_id`: its file, the one a session leaves when it ends while it writes
-    its file, the file of a restart, and the sockets of all its processes."""
+    its file, the handover file, the pipe, and the sockets of all its processes."""
     folder = sessions_dir()
     entry = _entry_path(session_id)
-    restart = _restart_path(session_id)
+    handover = _handover_path(session_id)
     sockets = [folder / f"{session_id}.sock", *folder.glob(f"{session_id}-*.sock")]
-    for path in (entry, _temp_path(entry), restart, _temp_path(restart), *sockets):
+    for path in (entry, _temp_path(entry), handover, _temp_path(handover), _pipe_path(session_id), *sockets):
         with contextlib.suppress(OSError):
             path.unlink()
 
@@ -407,93 +427,200 @@ def connect(entry: SessionEntry) -> Connection:
     return Client(entry.address, family=_FAMILY, authkey=bytes.fromhex(entry.key))
 
 
-# By default a pipe on Windows holds only a few kilobytes; this holds what a session writes before it starts reading the
-# pipe.
+# By default a pipe holds only a few kilobytes on Windows and 64 KiB on Linux; this holds what the session and its
+# `wrapper` write before the session starts reading the pipe. As much as a user may set on Linux by default.
 _PIPE_SIZE = 1 << 20
 
 
-def create_output_pipe() -> Tuple[int, int]:
-    """The read end and the write end of a new pipe for the output of a session."""
+def create_output_pipe(session_id: str) -> Tuple[int, int]:
+    """The read end and the write end of a new pipe for the output of the session `session_id`: on Linux and macOS
+    the FIFO of the session, which the session process opens by its path."""
     if sys.platform == "win32":
         read_handle, write_handle = _winapi.CreatePipe(None, _PIPE_SIZE)
         return msvcrt.open_osfhandle(read_handle, 0), msvcrt.open_osfhandle(write_handle, 0)
-    return os.pipe()
+    path = _pipe_path(session_id)
+    os.mkfifo(path, 0o600)
+    # Without blocking, as nothing writes to the FIFO yet.
+    read_end = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    write_end = os.open(path, os.O_WRONLY)
+    if sys.platform == "linux":
+        # Elsewhere the size of a FIFO can't be set. Without it, the FIFO keeps its default size.
+        with contextlib.suppress(OSError):
+            fcntl.fcntl(write_end, fcntl.F_SETPIPE_SZ, _PIPE_SIZE)
+    return read_end, write_end
 
 
-def read_to_end(fd: int) -> str:
-    """What the pipe `fd` holds up to its end, once nothing writes to it any more."""
+def _holder_of(read_end: int) -> Optional[_PipeHolder]:
+    """This process as the holder of the read end `read_end` on Windows; None elsewhere."""
+    if sys.platform == "win32":
+        return _PipeHolder(os.getpid(), msvcrt.get_osfhandle(read_end))
+    return None
+
+
+def write_handover(session_id: str, read_end: int) -> None:
+    """Write the handover file for the first process of the session `session_id`, which takes the read end `read_end`
+    of its pipe from this process."""
+    _write_json(_handover_path(session_id), _Handover(0, time.time(), holder=_holder_of(read_end)))
+
+
+def read_available(fd: int) -> str:
+    """What the pipe `fd` holds now, without waiting for a process that may still write to it, such as one that a
+    `wrapper` has started outside the process group or the job of the session."""
     chunks = []
-    while data := os.read(fd, 65536):
-        chunks.append(data)
+    if sys.platform == "win32":
+        handle = msvcrt.get_osfhandle(fd)
+        while True:
+            try:
+                available = _winapi.PeekNamedPipe(handle)[0]
+            except OSError:
+                # Empty, and nothing writes to it any more.
+                break
+            if not available:
+                break
+            chunks.append(os.read(fd, available))
+    else:
+        os.set_blocking(fd, False)
+        with contextlib.suppress(BlockingIOError):
+            while data := os.read(fd, 65536):
+                chunks.append(data)
     return b"".join(chunks).decode("utf-8", errors="replace").replace("\r\n", "\n")
 
 
+@dataclass
+class SessionProcess:
+    """A session process that this process has started, together with the processes it starts, such as those of a
+    `wrapper`: on Linux and macOS its process group, on Windows a job."""
+
+    popen: "subprocess.Popen[bytes]"
+    # Only on Windows; None when Windows didn't put the process into a job, or once it is released.
+    job: Optional[int] = None
+    ended: bool = False
+
+    def end(self) -> None:
+        """End the process and the processes it has started, unless they have left its process group or job, and wait
+        for the process."""
+        if self.ended:
+            # Once its process group is gone, its ID may belong to another one.
+            return
+        self.ended = True
+        if sys.platform == "win32":
+            if self.job is not None:
+                with contextlib.suppress(OSError):
+                    _windows_job.terminate(self.job)
+                _winapi.CloseHandle(self.job)
+                self.job = None
+            # Also when the job couldn't end it.
+            self.popen.kill()
+        else:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(self.popen.pid, signal.SIGKILL)
+        self.popen.wait()
+
+    def release(self) -> None:
+        """Let the session run on when this process ends, now that it is ready. Until then, Windows ends it and the
+        processes it has started together with this process (`_windows_job.job_with`)."""
+        if sys.platform == "win32" and self.job is not None:
+            try:
+                _windows_job.release(self.job)
+            finally:
+                _winapi.CloseHandle(self.job)
+                self.job = None
+
+
 def start_session_process(
-    command: List[str], output: int, stdout: int, env: Dict[str, str], cwd: Optional[str] = None
-) -> "subprocess.Popen[bytes]":
+    command: List[str], stdout: int, env: Dict[str, str], cwd: Optional[str] = None
+) -> SessionProcess:
     """Start a session process, detached from this one. The process writes its standard output and standard error to
-    `stdout` and reads them back from `output`, the read end of the same pipe, which it inherits: a handle on
-    Windows, and there the only one it inherits beside its standard handles.
+    `stdout`, the write end of its pipe, and takes the read end itself (`_take_pipe`). It inherits only its standard
+    handles, so that it gets its output also under a `wrapper` that passes on no other ones.
 
     The process keeps running after the command that started it has returned: in a new process session on Linux and
     macOS, on Windows in a new process group, which a Ctrl-C at the console of the command doesn't reach, and with a
     console without a window. Console programs that the session starts use that console instead of opening windows of
-    their own."""
+    their own. On Windows it starts suspended and runs once it is in its job, so that no process it starts is outside
+    of it."""
     if sys.platform == "win32":
-        os.set_handle_inheritable(output, True)
-        try:
-            process = subprocess.Popen(
-                command,
-                stdin=subprocess.PIPE,
-                stdout=stdout,
-                stderr=subprocess.STDOUT,
-                env=env,
-                cwd=cwd,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW,
-                startupinfo=subprocess.STARTUPINFO(lpAttributeList={"handle_list": [output]}),
-            )
-        finally:
-            os.set_handle_inheritable(output, False)
-    else:
-        process = subprocess.Popen(
+        popen = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
             stdout=stdout,
             stderr=subprocess.STDOUT,
             env=env,
             cwd=cwd,
-            start_new_session=True,
-            pass_fds=(output,),
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            | subprocess.CREATE_NO_WINDOW
+            | _windows_job.CREATE_SUSPENDED,
+        )
+        job: Optional[int]
+        try:
+            job = _windows_job.job_with(popen.pid)
+        except OSError:
+            # Then ending the session ends only this process.
+            job = None
+        process = SessionProcess(popen, job)
+        try:
+            _windows_job.resume(popen.pid)
+        except BaseException:
+            process.end()
+            raise
+    else:
+        process = SessionProcess(
+            subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=stdout,
+                stderr=subprocess.STDOUT,
+                env=env,
+                cwd=cwd,
+                start_new_session=True,
+            )
         )
     # The session reads its inputs from its channel. A closed pipe as standard input makes it a session without a
     # terminal on every platform, unlike the null device, which Windows takes for a terminal.
-    if process.stdin is not None:
-        process.stdin.close()
+    if process.popen.stdin is not None:
+        process.popen.stdin.close()
     return process
 
 
-def _take_handover(session_id: str) -> Optional[_Handover]:
-    """Read and remove the file that the previous process of the session wrote for this one at a restart; None for
-    the first process of a session."""
-    path = _restart_path(session_id)
+def _take_handover(session_id: str) -> _Handover:
+    """Read and remove the handover file of the session; `SessionError` with the reason when it can't be read."""
+    path = _handover_path(session_id)
     try:
         handover = from_json(_retried(lambda: path.read_text(encoding="utf-8")), _Handover)
-    except (OSError, ValueError, TypeError):
-        return None
+    except OSError as e:
+        raise SessionError(f"Can't read the handover file of the session at {path}: {e.strerror or e}.") from e
+    except (ValueError, TypeError) as e:
+        raise SessionError(f"Can't read the handover file of the session at {path}: {e}.") from e
     with contextlib.suppress(OSError):
         path.unlink()
     return handover
 
 
-def _own_pipe(output: int) -> int:
-    """The file descriptor of the read end `output` that `session start` passed down, a handle on Windows, which the
-    processes that the session starts don't inherit."""
+def _take_pipe(session_id: str, holder: Optional[_PipeHolder]) -> int:
+    """A file descriptor of the read end of the pipe of the session, which the processes that the session starts don't
+    inherit: the FIFO opened by its path on Linux and macOS, the handle duplicated from `holder` on Windows.
+    `SessionError` with the reason when the process can't take it."""
     if sys.platform == "win32":
-        os.set_handle_inheritable(output, False)
-        return msvcrt.open_osfhandle(output, 0)
-    os.set_inheritable(output, False)
-    os.set_blocking(output, False)
-    return output
+        if holder is None:
+            raise SessionError(f"The handover file of the session at {_handover_path(session_id)} names no pipe.")
+        try:
+            process = _winapi.OpenProcess(_winapi.PROCESS_DUP_HANDLE, False, holder.pid)
+            try:
+                handle = _winapi.DuplicateHandle(
+                    process, holder.handle, _winapi.GetCurrentProcess(), 0, False, _winapi.DUPLICATE_SAME_ACCESS
+                )
+            finally:
+                _winapi.CloseHandle(process)
+            return msvcrt.open_osfhandle(handle, 0)
+        except OSError as e:
+            raise SessionError(
+                f"Can't take the output of the session from process {holder.pid}: {e.strerror or e}."
+            ) from e
+    path = _pipe_path(session_id)
+    try:
+        return os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError as e:
+        raise SessionError(f"Can't open the output of the session at {path}: {e.strerror or e}.") from e
 
 
 def _flush_output() -> None:
@@ -535,7 +662,7 @@ class SessionServer:
     session open until it is stopped or has been idle too long, or starts it again in a new process for a restart.
     """
 
-    def __init__(self, session_id: str, kind: SessionKind, project: Path, idle_timeout: float, output: int) -> None:
+    def __init__(self, session_id: str, kind: SessionKind, project: Path, idle_timeout: float) -> None:
         self.session_id = session_id
         self._kind = kind
         self._condition = threading.Condition()
@@ -584,11 +711,11 @@ class SessionServer:
         self._environment = dict(os.environ)
         self._folder = os.getcwd()
         handover = _take_handover(session_id)
-        self._generation = handover.generation if handover is not None else 0
-        self._handed_breakpoints = handover.breakpoints if handover is not None else None
+        self._generation = handover.generation
+        self._handed_breakpoints = handover.breakpoints
         # The pipe the process writes its standard output and standard error to. What the session has read from it
         # stays in memory until an answer carries it.
-        self._pipe = _own_pipe(output)
+        self._pipe = _take_pipe(session_id, handover.holder)
         self._output = bytearray()
         self._output_lock = threading.Lock()
         # Whether this process reads the pipe; at a restart, the new process takes the reading over.
@@ -600,7 +727,6 @@ class SessionServer:
         self._at_line_start = True
         self._decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         key = os.urandom(32)
-        create_sessions_dir()
         address = _address(session_id, self._generation)
         try:
             self._listener = Listener(address, family=_FAMILY, backlog=_BACKLOG, authkey=key)
@@ -614,7 +740,7 @@ class SessionServer:
             address=str(self._listener.address),
             key=key.hex(),
             project=str(project),
-            started=handover.started if handover is not None else now,
+            started=handover.started,
             idle_timeout=idle_timeout,
             last_request=now,
         )
@@ -713,6 +839,7 @@ class SessionServer:
         with self._condition:
             # Before the last answers go out, so that a `session` command right after one doesn't find the session.
             _entry_path(self.session_id).unlink(missing_ok=True)
+            _pipe_path(self.session_id).unlink(missing_ok=True)
             self._close_channel()
 
     def _wait_after_end(self) -> bool:
@@ -742,14 +869,15 @@ class SessionServer:
         with self._condition:
             self._handing_over = True
         breakpoints = self._controller.breakpoint_state() if self._controller is not None else None
-        handover = _Handover(self._generation + 1, self._entry.started, breakpoints)
+        handover = _Handover(self._generation + 1, self._entry.started, breakpoints, _holder_of(self._pipe))
         # Only one process may read the pipe; from now on it is the new one.
         self._stop_reading()
-        process: "Optional[subprocess.Popen[bytes]]" = None
+        process: Optional[SessionProcess] = None
         try:
-            _write_json(_restart_path(self.session_id), handover)
-            process = start_session_process(self._command, self._pipe_handle(), 1, self._environment, self._folder)
+            _write_json(_handover_path(self.session_id), handover)
+            process = start_session_process(self._command, 1, self._environment, self._folder)
             self._wait_for_new_process(process)
+            process.release()
         except SessionError as e:
             failure = str(e)
         except OSError as e:
@@ -760,7 +888,7 @@ class SessionServer:
         self._keep_session(process, failure)
         return False
 
-    def _wait_for_new_process(self, process: "subprocess.Popen[bytes]") -> None:
+    def _wait_for_new_process(self, process: SessionProcess) -> None:
         """Wait until `process` has written the session file, which it does once it accepts requests; `SessionError`
         with the reason when it doesn't get ready."""
         # Known by its channel: on Windows, the `python.exe` of a virtual environment runs the interpreter in a process
@@ -771,13 +899,13 @@ class SessionServer:
             entry = _load_entry(self.session_id)
             if entry is not None and entry.address == address:
                 return
-            if process.poll() is not None:
+            if process.popen.poll() is not None:
                 raise SessionError(
-                    f"The session couldn't start again; its new process ended with exit code {process.returncode}."
+                    "The session couldn't start again; its new process ended with exit code "
+                    f"{process.popen.returncode}."
                 )
             if time.monotonic() >= ready_by:
-                process.kill()
-                process.wait()
+                process.end()
                 raise SessionError(
                     f"The session couldn't start again; its new process wasn't ready after {STARTUP_LIMIT} seconds "
                     "and was ended."
@@ -799,14 +927,13 @@ class SessionServer:
         os.dup2(devnull, 2)
         os.close(devnull)
 
-    def _keep_session(self, process: "Optional[subprocess.Popen[bytes]]", failure: str) -> None:
+    def _keep_session(self, process: Optional[SessionProcess], failure: str) -> None:
         """After a restart that failed: end the new process, take what it wrote, and keep the session with its REPL or
         run ended."""
-        if process is not None and process.poll() is None:
-            process.kill()
-            process.wait()
+        if process is not None:
+            process.end()
         with contextlib.suppress(OSError):
-            _restart_path(self.session_id).unlink()
+            _handover_path(self.session_id).unlink()
         with self._output_lock:
             # What the new process wrote, so that the answer carries it, before the reading goes on.
             self._take_output()
@@ -1080,12 +1207,6 @@ class SessionServer:
             self._take_output()
             self._reading = False
         self._reader.join()
-
-    def _pipe_handle(self) -> int:
-        """The pipe of the output as `session start` passed it down, a handle on Windows."""
-        if sys.platform == "win32":
-            return msvcrt.get_osfhandle(self._pipe)
-        return self._pipe
 
     def _read_pipe(self) -> None:
         """Read the pipe into memory while this process reads it, so that it doesn't fill up and hold up the processes
