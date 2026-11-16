@@ -11,8 +11,7 @@ processes is part of the answers, and none of it is written to a file.
 
 Each open session has a file in a folder of the user, by which the `robotcode session`
 commands find it. A session stays open after its REPL or run has ended, until it is
-stopped or has been idle too long. A restart starts a new process, which takes over the
-ID, the file and the pipe of the session.
+stopped or has been idle too long.
 """
 
 import codecs
@@ -47,7 +46,6 @@ from robotcode.core.utils.dataclasses import from_json
 from robotcode.plugin import Application
 from robotcode.robot.config.utils import get_config_files
 
-from ._debug import BreakpointState, DebugController
 from .console_interpreter import ConsoleInterpreter
 
 if sys.platform == "win32":
@@ -111,7 +109,6 @@ class Request(_Value):
     # Whether the session runs, waits or its REPL or run has ended; takes none of the output.
     STATE = "state"
     RESULT = "result"
-    RESTART = "restart"
 
 
 @unique
@@ -169,38 +166,16 @@ class StoppedAnswer:
 
 
 @dataclass
-class RestartedAnswer:
-    """The answer to `restart` once the new process has taken over, with the output since the last answer."""
-
-    output: str
-
-
-@dataclass
-class RestartFailedAnswer:
-    """The answer to `restart` when the new process didn't get ready, so that the session stays as it is."""
-
-    output: str
-    reason: str
-
-
-@dataclass
 class RefusedAnswer:
     """The session doesn't take the request, for the reason in the message."""
 
     message: str
 
 
-@dataclass
-class MovedAnswer:
-    """The new process of a restart has taken over the session, so that the command has to ask that process."""
-
-
 # What a session answers to the requests it takes.
-SessionAnswer = Union[
-    OutputAnswer, StateAnswer, ResultAnswer, InterruptedAnswer, StoppedAnswer, RestartedAnswer, RestartFailedAnswer
-]
-# What a channel answers, also when its session doesn't take a request or has moved to another process.
-ChannelAnswer = Union[SessionAnswer, RefusedAnswer, MovedAnswer]
+SessionAnswer = Union[OutputAnswer, StateAnswer, ResultAnswer, InterruptedAnswer, StoppedAnswer]
+# What a channel answers, also when its session doesn't take a request.
+ChannelAnswer = Union[SessionAnswer, RefusedAnswer]
 
 
 _ID_PATTERN = re.compile(rf"(?:{'|'.join(kind.value for kind in SessionKind)})-[0-9a-f]{{8}}")
@@ -250,19 +225,11 @@ def _entry_path(session_id: str) -> Path:
     return sessions_dir() / f"{session_id}.json"
 
 
-def _address(session_id: str, generation: int = 0) -> str:
-    """The address of the channel of a session process. After a restart, each new process has a `generation` of its
-    own, and with it an address of its own."""
-    name = f"{session_id}-{generation}" if generation else session_id
+def _address(session_id: str) -> str:
+    """The address of the channel of a session."""
     if sys.platform == "win32":
-        return rf"\\.\pipe\robotcode-{name}"
-    return str(sessions_dir() / f"{name}.sock")
-
-
-def _handover_path(session_id: str) -> Path:
-    """The file from which a new session process takes what it starts with: `session start` writes it for the first
-    process, and the process before for the new process of a restart."""
-    return sessions_dir() / f"{session_id}.handover"
+        return rf"\\.\pipe\robotcode-{session_id}"
+    return str(sessions_dir() / f"{session_id}.sock")
 
 
 def _pipe_path(session_id: str) -> Path:
@@ -306,25 +273,24 @@ class SessionEntry:
 
 
 @dataclass
-class _PipeHolder:
-    """The process that holds the read end of the pipe of a session on Windows, from which the new session process
-    takes it."""
+class PipeHolder:
+    """The process that holds the read end of the pipe of a session on Windows, from which the session process takes
+    it; on its command line as `PID:HANDLE`."""
 
     pid: int
     handle: int
 
+    def __str__(self) -> str:
+        return f"{self.pid}:{self.handle}"
 
-@dataclass
-class _Handover:
-    """The file from which a new session process takes what it starts with."""
-
-    # The number of the new process, by which it gets a channel of its own.
-    generation: int
-    # When the session started.
-    started: float
-    breakpoints: Optional[BreakpointState] = None
-    # Only on Windows.
-    holder: Optional[_PipeHolder] = None
+    @classmethod
+    def parse(cls, text: str) -> "PipeHolder":
+        """The holder that `str` has written as `text`; `SessionError` when `text` isn't one."""
+        try:
+            pid, handle = text.split(":")
+            return cls(int(pid), int(handle))
+        except ValueError as e:
+            raise SessionError(f"'{text}' names no process that holds the output of the session.") from e
 
 
 def _retried(action: Callable[[], _T]) -> _T:
@@ -345,27 +311,21 @@ def _temp_path(path: Path) -> Path:
     return path.with_name(f"{path.name}.tmp")
 
 
-def _write_json(path: Path, data: Union[SessionEntry, _Handover]) -> None:
-    """Write `data` to `path` as a whole, readable only by the user."""
+def _write_entry(entry: SessionEntry) -> None:
+    """Write the file of the session `entry` as a whole, readable only by the user."""
+    path = _entry_path(entry.id)
     temp = _temp_path(path)
     fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(dataclasses.asdict(data), f)
+        json.dump(dataclasses.asdict(entry), f)
     _retried(lambda: os.replace(temp, path))
-
-
-def _write_entry(entry: SessionEntry) -> None:
-    _write_json(_entry_path(entry.id), entry)
 
 
 def remove_session_files(session_id: str) -> None:
     """Remove the files of the session `session_id`: its file, the one a session leaves when it ends while it writes
-    its file, the handover file, the pipe, and the sockets of all its processes."""
-    folder = sessions_dir()
+    its file, the pipe and the socket."""
     entry = _entry_path(session_id)
-    handover = _handover_path(session_id)
-    sockets = [folder / f"{session_id}.sock", *folder.glob(f"{session_id}-*.sock")]
-    for path in (entry, _temp_path(entry), handover, _temp_path(handover), _pipe_path(session_id), *sockets):
+    for path in (entry, _temp_path(entry), _pipe_path(session_id), sessions_dir() / f"{session_id}.sock"):
         with contextlib.suppress(OSError):
             path.unlink()
 
@@ -406,13 +366,9 @@ def read_entry(session_id: str) -> Optional[SessionEntry]:
     if not _ID_PATTERN.fullmatch(session_id):
         return None
     entry = _load_entry(session_id)
-    while entry is not None and _channel_gone(entry.address):
-        # At a restart, the new process names its channel in the file before the old process closes its own.
-        again = _load_entry(session_id)
-        if again is None or again.address == entry.address:
-            remove_session_files(session_id)
-            return None
-        entry = again
+    if entry is not None and _channel_gone(entry.address):
+        remove_session_files(session_id)
+        return None
     return entry
 
 
@@ -450,17 +406,12 @@ def create_output_pipe(session_id: str) -> Tuple[int, int]:
     return read_end, write_end
 
 
-def _holder_of(read_end: int) -> Optional[_PipeHolder]:
-    """This process as the holder of the read end `read_end` on Windows; None elsewhere."""
+def output_holder(read_end: int) -> Optional[PipeHolder]:
+    """This process as the holder of the read end `read_end` on Windows, from which the session process takes it;
+    None elsewhere, where it opens the FIFO by its path."""
     if sys.platform == "win32":
-        return _PipeHolder(os.getpid(), msvcrt.get_osfhandle(read_end))
+        return PipeHolder(os.getpid(), msvcrt.get_osfhandle(read_end))
     return None
-
-
-def write_handover(session_id: str, read_end: int) -> None:
-    """Write the handover file for the first process of the session `session_id`, which takes the read end `read_end`
-    of its pipe from this process."""
-    _write_json(_handover_path(session_id), _Handover(0, time.time(), holder=_holder_of(read_end)))
 
 
 def read_available(fd: int) -> str:
@@ -527,9 +478,7 @@ class SessionProcess:
                 self.job = None
 
 
-def start_session_process(
-    command: List[str], stdout: int, env: Dict[str, str], cwd: Optional[str] = None
-) -> SessionProcess:
+def start_session_process(command: List[str], stdout: int, env: Dict[str, str]) -> SessionProcess:
     """Start a session process, detached from this one. The process writes its standard output and standard error to
     `stdout`, the write end of its pipe, and takes the read end itself (`_take_pipe`). It inherits only its standard
     handles, so that it gets its output also under a `wrapper` that passes on no other ones.
@@ -546,7 +495,6 @@ def start_session_process(
             stdout=stdout,
             stderr=subprocess.STDOUT,
             env=env,
-            cwd=cwd,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
             | subprocess.CREATE_NO_WINDOW
             | _windows_job.CREATE_SUSPENDED,
@@ -571,7 +519,6 @@ def start_session_process(
                 stdout=stdout,
                 stderr=subprocess.STDOUT,
                 env=env,
-                cwd=cwd,
                 start_new_session=True,
             )
         )
@@ -582,27 +529,13 @@ def start_session_process(
     return process
 
 
-def _take_handover(session_id: str) -> _Handover:
-    """Read and remove the handover file of the session; `SessionError` with the reason when it can't be read."""
-    path = _handover_path(session_id)
-    try:
-        handover = from_json(_retried(lambda: path.read_text(encoding="utf-8")), _Handover)
-    except OSError as e:
-        raise SessionError(f"Can't read the handover file of the session at {path}: {e.strerror or e}.") from e
-    except (ValueError, TypeError) as e:
-        raise SessionError(f"Can't read the handover file of the session at {path}: {e}.") from e
-    with contextlib.suppress(OSError):
-        path.unlink()
-    return handover
-
-
-def _take_pipe(session_id: str, holder: Optional[_PipeHolder]) -> int:
+def _take_pipe(session_id: str, holder: Optional[PipeHolder]) -> int:
     """A file descriptor of the read end of the pipe of the session, which the processes that the session starts don't
     inherit: the FIFO opened by its path on Linux and macOS, the handle duplicated from `holder` on Windows.
     `SessionError` with the reason when the process can't take it."""
     if sys.platform == "win32":
         if holder is None:
-            raise SessionError(f"The handover file of the session at {_handover_path(session_id)} names no pipe.")
+            raise SessionError("No process that holds the output of the session was given.")
         try:
             process = _winapi.OpenProcess(_winapi.PROCESS_DUP_HANDLE, False, holder.pid)
             try:
@@ -659,10 +592,12 @@ class SessionServer:
     The interpreter takes its inputs from `next_input`, in the main thread. Each request is answered on a thread of its
     own, so that a request to interrupt or stop the session, or one for the output so far, is answered while a statement
     runs; the inputs of the `send` requests run one after the other. When the REPL or the run has ended, `end` keeps the
-    session open until it is stopped or has been idle too long, or starts it again in a new process for a restart.
+    session open until it is stopped or has been idle too long.
     """
 
-    def __init__(self, session_id: str, kind: SessionKind, project: Path, idle_timeout: float) -> None:
+    def __init__(
+        self, session_id: str, kind: SessionKind, project: Path, idle_timeout: float, holder: Optional[PipeHolder]
+    ) -> None:
         self.session_id = session_id
         self._kind = kind
         self._condition = threading.Condition()
@@ -685,41 +620,20 @@ class SessionServer:
         # The REPL or the run ended because the session was idle too long, which ends the session too.
         self._idle_ended = False
         self._stop_requested = False
-        self._restart_requested = False
         self._interrupted = False
         # The interpreter, which tells whether a signal has ended the REPL or the run.
         self._interpreter: Optional["SessionInterpreter"] = None
-        # The answer to `restart`, once the new process has taken over or failed to.
-        self._restart_answer: Optional[Union[RestartedAnswer, RestartFailedAnswer]] = None
-        # Set while a restart starts the new process, which writes the session file from then on; `_handed_over` once
-        # the new process has taken over and answers the requests.
-        self._handing_over = False
-        self._handed_over = False
         # Set when the channel starts to close, so that the requests that wait send their last answers, and once it has
         # closed.
         self._closing = False
         self._closed = False
         # Requests that are being answered.
         self._serving = 0
-        # The debugger, whose breakpoints a restart hands on.
-        self._controller: Optional[DebugController] = None
-        # A restart starts the new process the way this one was started, with the environment and the current folder
-        # from before the run could change them. With `sys.executable`, not `sys.orig_argv[0]`: on Windows, the
-        # `python.exe` of a virtual environment runs the base interpreter, which `sys.orig_argv[0]` names and which
-        # doesn't find the packages of the environment.
-        self._command = [sys.executable, *sys.orig_argv[1:]]
-        self._environment = dict(os.environ)
-        self._folder = os.getcwd()
-        handover = _take_handover(session_id)
-        self._generation = handover.generation
-        self._handed_breakpoints = handover.breakpoints
         # The pipe the process writes its standard output and standard error to. What the session has read from it
         # stays in memory until an answer carries it.
-        self._pipe = _take_pipe(session_id, handover.holder)
+        self._pipe = _take_pipe(session_id, holder)
         self._output = bytearray()
         self._output_lock = threading.Lock()
-        # Whether this process reads the pipe; at a restart, the new process takes the reading over.
-        self._reading = True
         # How much the session has read from the pipe, and how much of it the answers have carried.
         self._read_size = 0
         self._position = 0
@@ -727,7 +641,7 @@ class SessionServer:
         self._at_line_start = True
         self._decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         key = os.urandom(32)
-        address = _address(session_id, self._generation)
+        address = _address(session_id)
         try:
             self._listener = Listener(address, family=_FAMILY, backlog=_BACKLOG, authkey=key)
         except OSError as e:
@@ -740,7 +654,7 @@ class SessionServer:
             address=str(self._listener.address),
             key=key.hex(),
             project=str(project),
-            started=handover.started,
+            started=now,
             idle_timeout=idle_timeout,
             last_request=now,
         )
@@ -753,7 +667,7 @@ class SessionServer:
         threading.Thread(target=self._accept, name="robotcode-session", daemon=True).start()
         # Only once the file exists: until then, `session start` reads the pipe itself if the process ends before it is
         # ready.
-        self._reader = self._start_reading()
+        threading.Thread(target=self._read_pipe, name="robotcode-session-output", daemon=True).start()
 
     def __enter__(self) -> "SessionServer":
         return self
@@ -772,19 +686,12 @@ class SessionServer:
         its REPL or run."""
         self._interpreter = interpreter
 
-    def keep_breakpoints(self, controller: DebugController) -> None:
-        """Remember `controller`, whose breakpoints a restart hands to the new process, and give it the breakpoints
-        of the process before when a restart has started this one."""
-        self._controller = controller
-        if self._handed_breakpoints is not None:
-            controller.restore_breakpoints(self._handed_breakpoints)
-
     # --- the interpreter, in the main thread ---------------------------------
 
     def next_input(self, prompt: str) -> str:
         """Wait at `prompt` for the next request and return its whole input; the request that ran before gets its
         answer first. While it waits, end the REPL or the run when the session has been idle too long or is asked to
-        stop or restart."""
+        stop."""
         with self._condition:
             self._arrive(_Prompt.STOP if prompt.strip() == ConsoleInterpreter.DEBUG_PROMPT.strip() else _Prompt.INPUT)
             while True:
@@ -795,7 +702,7 @@ class SessionServer:
                     self._update_entry(state=SessionState.RUNS)
                     return queued.text
                 if self._waits_at_stop():
-                    if self._stop_requested or self._restart_requested:
+                    if self._stop_requested:
                         # A debug session ends its run as `.abort` does.
                         return ".abort"
                     if self._idle():
@@ -815,7 +722,7 @@ class SessionServer:
 
     def end(self, exit_code: int) -> None:
         """The REPL or the run has ended with `exit_code`. The session stays open until it is stopped or idle too
-        long, or until a restart has started it again in a new process."""
+        long."""
         _flush_output()
         with self._condition:
             if self._run_ended:
@@ -830,25 +737,21 @@ class SessionServer:
             ended_from_outside = (
                 self._interpreter is not None
                 and self._interpreter.termination_requested
-                and not (self._stop_requested or self._restart_requested or self._interrupted)
+                and not (self._stop_requested or self._interrupted)
             )
         if not (self._idle_ended or ended_from_outside):
-            while self._wait_after_end():
-                if self._start_again():
-                    return
+            self._wait_after_end()
         with self._condition:
             # Before the last answers go out, so that a `session` command right after one doesn't find the session.
             _entry_path(self.session_id).unlink(missing_ok=True)
             _pipe_path(self.session_id).unlink(missing_ok=True)
             self._close_channel()
 
-    def _wait_after_end(self) -> bool:
-        """Wait after the end of the REPL or the run until the session is asked to stop or restart, or has been idle
-        too long; True for a restart."""
+    def _wait_after_end(self) -> None:
+        """Wait after the end of the REPL or the run until the session is asked to stop or has been idle too long."""
         with self._condition:
-            while not (self._stop_requested or self._restart_requested or self._idle()):
+            while not (self._stop_requested or self._idle()):
                 self._condition.wait(0.1)
-            return self._restart_requested and not self._stop_requested
 
     def _close_channel(self) -> None:
         """Give the requests that wait a moment for their last answers, then close the channel. The caller holds
@@ -861,90 +764,6 @@ class SessionServer:
         self._closed = True
         with contextlib.suppress(OSError):
             self._listener.close()
-
-    def _start_again(self) -> bool:
-        """Start the session again in a new process, which takes over the session file and the pipe and opens a
-        channel of its own; True once it has taken over. When the new process doesn't get ready, the session stays as
-        it is."""
-        with self._condition:
-            self._handing_over = True
-        breakpoints = self._controller.breakpoint_state() if self._controller is not None else None
-        handover = _Handover(self._generation + 1, self._entry.started, breakpoints, _holder_of(self._pipe))
-        # Only one process may read the pipe; from now on it is the new one.
-        self._stop_reading()
-        process: Optional[SessionProcess] = None
-        try:
-            _write_json(_handover_path(self.session_id), handover)
-            process = start_session_process(self._command, 1, self._environment, self._folder)
-            self._wait_for_new_process(process)
-            process.release()
-        except SessionError as e:
-            failure = str(e)
-        except OSError as e:
-            failure = f"The session couldn't start again: {e.strerror or e}."
-        else:
-            self._hand_over()
-            return True
-        self._keep_session(process, failure)
-        return False
-
-    def _wait_for_new_process(self, process: SessionProcess) -> None:
-        """Wait until `process` has written the session file, which it does once it accepts requests; `SessionError`
-        with the reason when it doesn't get ready."""
-        # Known by its channel: on Windows, the `python.exe` of a virtual environment runs the interpreter in a process
-        # of its own, whose ID isn't that of `process`.
-        address = _address(self.session_id, self._generation + 1)
-        ready_by = time.monotonic() + STARTUP_LIMIT
-        while True:
-            entry = _load_entry(self.session_id)
-            if entry is not None and entry.address == address:
-                return
-            if process.popen.poll() is not None:
-                raise SessionError(
-                    "The session couldn't start again; its new process ended with exit code "
-                    f"{process.popen.returncode}."
-                )
-            if time.monotonic() >= ready_by:
-                process.end()
-                raise SessionError(
-                    f"The session couldn't start again; its new process wasn't ready after {STARTUP_LIMIT} seconds "
-                    "and was ended."
-                )
-            time.sleep(0.05)
-
-    def _hand_over(self) -> None:
-        """Answer `restart` with the output since the last command, and close the channel, now that the new process
-        has taken over the session file and the pipe."""
-        with self._output_lock:
-            size = self._read_size
-        with self._condition:
-            self._restart_answer = RestartedAnswer(self._read_output(size))
-            self._handed_over = True
-            self._close_channel()
-        # Anything this process still writes would end up in the output of the new process.
-        devnull = os.open(os.devnull, os.O_WRONLY)
-        os.dup2(devnull, 1)
-        os.dup2(devnull, 2)
-        os.close(devnull)
-
-    def _keep_session(self, process: Optional[SessionProcess], failure: str) -> None:
-        """After a restart that failed: end the new process, take what it wrote, and keep the session with its REPL or
-        run ended."""
-        if process is not None:
-            process.end()
-        with contextlib.suppress(OSError):
-            _handover_path(self.session_id).unlink()
-        with self._output_lock:
-            # What the new process wrote, so that the answer carries it, before the reading goes on.
-            self._take_output()
-        self._reader = self._start_reading()
-        with self._condition:
-            self._handing_over = False
-            # The new process may have written the file before it ended.
-            self._update_entry()
-            self._restart_answer = RestartFailedAnswer(self._read_output(self._output_size()), failure)
-            self._restart_requested = False
-            self._condition.notify_all()
 
     def _arrive(self, prompt: _Prompt) -> None:
         """The interpreter has arrived at `prompt`: give the request that ran its answer, and wake the threads that
@@ -1006,9 +825,6 @@ class SessionServer:
     def _answer(self, connection: Connection, request: SessionRequest) -> ChannelAnswer:
         kind = request.kind
         with self._condition:
-            if self._handed_over:
-                # The command then asks the new process, which the session file names now.
-                return MovedAnswer()
             if self._closing:
                 # The session has just ended, as the next command would find.
                 return RefusedAnswer(f"No session '{self.session_id}' is open.")
@@ -1040,15 +856,13 @@ class SessionServer:
             return InterruptedAnswer()
         if kind is Request.STOP:
             return self._stop(connection)
-        if kind is Request.RESTART:
-            return self._restart(connection)
         assert_never(kind)
 
     def _ended_error(self) -> RefusedAnswer:
         session_id = self.session_id
         return RefusedAnswer(
-            f"{self._kind.what} of session '{session_id}' has ended; `robotcode session restart {session_id}` starts "
-            f"it again, and `robotcode session result {session_id}` prints its exit code."
+            f"{self._kind.what} of session '{session_id}' has ended; `robotcode session result {session_id}` prints "
+            f"its exit code, and `robotcode session stop {session_id}` ends the session."
         )
 
     def _send(self, connection: Connection, text: str) -> ChannelAnswer:
@@ -1090,26 +904,12 @@ class SessionServer:
             self._stop_requested = True
             self._condition.notify_all()
         self._end_run()
-        return self._await(connection, lambda: self._stopped_answer() if self._closing else None)
-
-    def _stopped_answer(self) -> Union[MovedAnswer, StoppedAnswer]:
-        if self._handed_over:
-            # A restart has taken over meanwhile: the command stops the new process.
-            return MovedAnswer()
-        return StoppedAnswer(self._read_output(self._output_size()))
-
-    def _restart(self, connection: Connection) -> ChannelAnswer:
-        with self._condition:
-            if self._restart_requested:
-                return RefusedAnswer(f"Session '{self.session_id}' restarts already.")
-            self._restart_requested = True
-            self._restart_answer = None
-            self._condition.notify_all()
-        self._end_run()
-        return self._await(connection, lambda: self._restart_answer)
+        return self._await(
+            connection, lambda: StoppedAnswer(self._read_output(self._output_size())) if self._closing else None
+        )
 
     def _end_run(self) -> None:
-        """End the REPL or the run, unless it has ended, for a `stop` or a `restart` that the caller has noted."""
+        """End the REPL or the run, unless it has ended, for a `stop` that the caller has noted."""
         with self._condition:
             if self._run_ended:
                 return
@@ -1179,49 +979,28 @@ class SessionServer:
         return self._decoder.decode(data).replace("\r\n", "\n")
 
     def _output_size(self) -> int:
-        """How much the process has written so far, with what is still in the pipe; once the new process of a restart
-        reads the pipe, only what this process has read."""
+        """How much the process has written so far, with what is still in the pipe."""
         with self._output_lock:
-            if self._reading:
-                self._take_output()
+            self._take_output()
             return self._read_size
 
     def at_line_start(self) -> bool:
         """Whether what the process has written up to now ends with a line break, or there is nothing yet."""
         _flush_output()
         with self._output_lock:
-            if self._reading:
-                self._take_output()
+            self._take_output()
             return self._at_line_start
 
-    def _start_reading(self) -> threading.Thread:
-        self._reading = True
-        reader = threading.Thread(target=self._read_pipe, name="robotcode-session-output", daemon=True)
-        reader.start()
-        return reader
-
-    def _stop_reading(self) -> None:
-        """Stop reading the pipe, so that the new process of a restart can read it; what the pipe holds now still
-        belongs to this process and is read first."""
-        with self._output_lock:
-            self._take_output()
-            self._reading = False
-        self._reader.join()
-
     def _read_pipe(self) -> None:
-        """Read the pipe into memory while this process reads it, so that it doesn't fill up and hold up the processes
-        that write to it."""
+        """Read the pipe into memory, so that it doesn't fill up and hold up the processes that write to it."""
         delay = 0.001
         while True:
             if sys.platform == "win32":
                 # Windows can't wait until a pipe has something to read.
                 time.sleep(delay)
             else:
-                # With a timeout, so that the thread soon notices when a restart stops the reading.
-                select.select([self._pipe], [], [], 0.1)
+                select.select([self._pipe], [], [])
             with self._output_lock:
-                if not self._reading:
-                    return
                 size = self._read_size
                 if not self._take_output():
                     return
@@ -1258,7 +1037,7 @@ class SessionServer:
         last_request: Optional[float] = None,
     ) -> None:
         """Write the session file, with the values given changed."""
-        if self._closing or self._handing_over:
+        if self._closing:
             return
         if state is not None:
             self._entry.state = state
@@ -1271,8 +1050,8 @@ class SessionServer:
 
     def _signal(self, signum: int) -> None:
         """Let the interpreter, in the main thread, handle `signum` as when the signal arrives. Robot Framework handles
-        signals only during a run; without its handlers, as in the new process of a restart that is still starting, the
-        signal would end the process at once. So it waits for them, unless the REPL or the run has ended already."""
+        signals only during a run; without its handlers, as in a session process that is still starting, the signal
+        would end the process at once. So it waits for them, unless the REPL or the run has ended already."""
         while signal.getsignal(signum) in (signal.SIG_DFL, signal.default_int_handler):
             if self._run_ended:
                 return

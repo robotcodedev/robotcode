@@ -9,7 +9,6 @@ Registered as an execution observer via ``BaseInterpreter.register_observer``.
 """
 
 import contextlib
-import dataclasses
 import re
 import reprlib
 import weakref
@@ -28,7 +27,6 @@ from robotcode.robot.utils.variables import is_variable
 from ..base_interpreter import result_definition_names, result_qualified_name
 from .types import (
     Breakpoint,
-    BreakpointState,
     DebugTerminated,
     Frontend,
     ResumeAction,
@@ -246,17 +244,6 @@ class DebugController:
             return False
         self._breakpoints.remove(bp)
         return True
-
-    def breakpoint_state(self) -> BreakpointState:
-        """The breakpoints and the exception breakpoints as they are, for `restore_breakpoints` in another process."""
-        return BreakpointState(list(self._breakpoints), self._next_bp_id, sorted(self._exception_filters))
-
-    def restore_breakpoints(self, state: BreakpointState) -> None:
-        """Take over the breakpoints of `breakpoint_state`, in place of those set so far. Their hit counts start at 0,
-        as `.ignore` counts the hits of a run."""
-        self._breakpoints = [dataclasses.replace(bp, hits=0, reached=False) for bp in state.breakpoints]
-        self._next_bp_id = state.next_id
-        self._exception_filters = set(state.exception_filters)
 
     def set_exception_breakpoints(self, filters: Iterable[str]) -> None:
         """Arm exception breakpoints. Recognised filters: ``failed_keyword``

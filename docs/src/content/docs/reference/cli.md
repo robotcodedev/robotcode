@@ -3330,8 +3330,7 @@ other.
 commands take. The session keeps running when the command has returned,
 until it is stopped or has waited for the idle timeout without a request.
 When the REPL exits or the debug run ends, the session stays open: `session
-status` tells it, `session result` prints the exit code, and `session
-restart` starts it again.
+status` tells it, and `session result` prints the exit code.
 
 Examples:
 ```
@@ -3364,10 +3363,6 @@ robotcode session [OPTIONS] COMMAND [ARGS]...
 - [`list`](#list)
 
    List the open sessions with their project folder, whether they run, wait or their REPL or run has ended, and the time left until they end for being idle.
-
-- [`restart`](#restart)
-
-   Start the REPL or the run of the session ID again in a new process, and print its output up to its first prompt or its end.
 
 - [`result`](#result)
 
@@ -3433,34 +3428,6 @@ robotcode session list [OPTIONS]
    Show this message and exit.
 
 
-##### restart
-
-Start the REPL or the run of the session ID again in a new process, and
-print its output up to its first prompt or its end.
-
-A REPL or a run that hasn't ended is ended as with `session stop`, and its
-output since the last command comes first. The session keeps its ID, and the
-new process starts with the options of `session start` and the breakpoints
-as they are.
-
-
-**Usage:**
-```text
-robotcode session restart [OPTIONS] ID
-```
-
-
-**Options:**
-- `--timeout SECONDS`
-
-   Wait at most SECONDS for the first prompt. After that, print the output so far and exit with code 124, while the session goes on; `session wait` prints the rest.  [default: 60; x>=0]
-
-
-- `--help`
-
-   Show this message and exit.
-
-
 ##### result
 
 Print the exit code of the REPL or the run of the session ID once it has
@@ -3492,8 +3459,7 @@ loop with its END, or a dot-command such as `.vars`, which works as at the
 prompt, each in a send of its own. A block that INPUT leaves unfinished
 fails. The exit code is 0 when the statement passed, 1 when it failed, and
 124 when it still runs after `--timeout`. When the REPL or the run ends,
-`send` says so with its exit code; a `send` after that fails, and `session
-restart` starts it again.
+`send` says so with its exit code; a `send` after that fails.
 
 
 **Usage:**

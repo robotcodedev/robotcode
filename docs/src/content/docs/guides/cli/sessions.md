@@ -1,6 +1,6 @@
 ---
 title: Sessions in the Background with robotcode session
-description: 'Run the REPL or a debug run in the background with robotcode session and give it one input after the other from separate commands, as an AI agent does: send, wait, interrupt, status, result, restart, list and stop.'
+description: 'Run the REPL or a debug run in the background with robotcode session and give it one input after the other from separate commands, as an AI agent does: send, wait, interrupt, status, result, list and stop.'
 sidebar:
   label: Sessions
   order: 55
@@ -111,7 +111,7 @@ The exit code of `send` says how the input went, so a script or an agent doesn't
 | `124` | It still runs after `--timeout`; `session wait` prints the rest. |
 | `252` | An error of robotcode itself, such as an ID without an open session, or a `send` after the end of the REPL or the run. |
 
-`session wait`, `session start` and `session restart` exit the same way. The exit code of the REPL or the run is never the exit code of a `session` command, as Robot Framework gives exit codes a meaning of its own, the number of failed tests: the commands print it, and `session result` prints it on its own, see [The end of a REPL or a run](#the-end-of-a-repl-or-a-run).
+`session wait` and `session start` exit the same way. The exit code of the REPL or the run is never the exit code of a `session` command, as Robot Framework gives exit codes a meaning of its own, the number of failed tests: the commands print it, and `session result` prints it on its own, see [The end of a REPL or a run](#the-end-of-a-repl-or-a-run).
 
 ## Statements that run long
 
@@ -156,7 +156,7 @@ Whether a command waited at the end doesn't matter: after a `send` that returned
 
 - `robotcode session status ID` prints `ended`. Before, it prints `runs` while the session runs and `waits` while it waits at its prompt. `status` takes none of the output, which `wait` prints, so a script can call `wait` in a loop until `status` says `ended`.
 - `robotcode session result ID` prints the exit code of the REPL or the run, such as `2` for a run in which two tests failed, and exits with `0`. Before the end, it says that the REPL or the run hasn't ended and exits with `252`.
-- `send` and `interrupt` fail with `252` and name `restart`.
+- `send` and `interrupt` fail with `252` and name `result` and `stop`.
 
 ```text
 $ robotcode session status debug-14dc7014
@@ -165,23 +165,7 @@ $ robotcode session result debug-14dc7014
 0
 ```
 
-## Restarting a session
-
-`robotcode session restart ID` starts the REPL or the debug run of a session again, in a new process under the same ID. A REPL or a run that hasn't ended is ended first, as `stop` does. The new process starts with the options of `session start`, so that a debug run starts from its beginning, and it gets the breakpoints as they are: also those that `.break` set during the session, without those that `.delete` removed, also from the command line, and with the conditions of `.condition`. As a new process, it uses Python libraries as they are now, also when you have changed them since the start. `restart` prints the output since the last command, and then the new output as `start` does:
-
-```text
-$ robotcode session restart debug-14dc7014
-Restarted session debug-14dc7014.
-==============================================================================
-Tests :: Web shop acceptance tests
-==============================================================================
-Tests.Orders :: Placing orders.
-==============================================================================
-Order Coffee :: An order for a product in stock is placed.
-* breakpoint  orders.Order Status Should Be  (tests/orders.robot:19)
-```
-
-A restarted REPL session starts without the variables and imports of before. When the new process doesn't get ready, `restart` prints what it wrote and exits with `252`, and the session stays as it was.
+To run the REPL or the debug run again, end the session with `robotcode session stop ID` and start a new one with `session start` and the same options. The new session gets an ID of its own; breakpoints that `.break` set during the session go to the new one with `--break`.
 
 ## Ending a session
 

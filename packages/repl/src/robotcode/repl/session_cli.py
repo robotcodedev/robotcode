@@ -1,5 +1,4 @@
 import contextlib
-import dataclasses
 import multiprocessing
 import os
 import signal
@@ -23,12 +22,9 @@ from ._session import (
     STARTUP_LIMIT,
     AnswerStatus,
     ChannelAnswer,
-    MovedAnswer,
     OutputAnswer,
     RefusedAnswer,
     Request,
-    RestartedAnswer,
-    RestartFailedAnswer,
     ResultAnswer,
     SessionAnswer,
     SessionEntry,
@@ -41,13 +37,13 @@ from ._session import (
     create_sessions_dir,
     new_session_id,
     open_sessions,
+    output_holder,
     project_folder,
     read_available,
     read_entry,
     remove_session_files,
     sessions_dir,
     start_session_process,
-    write_handover,
 )
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -81,8 +77,7 @@ def session() -> None:
     take. The session keeps running when the command has returned, until it is
     stopped or has waited for the idle timeout without a request. When the REPL
     exits or the debug run ends, the session stays open: `session status` tells
-    it, `session result` prints the exit code, and `session restart` starts it
-    again.
+    it, and `session result` prints the exit code.
 
     \b
     Examples:
@@ -191,13 +186,13 @@ def _start(
         # The process writes its standard output and standard error to the pipe and reads it at the other end, which
         # it takes from this process.
         read_end, write_end = create_output_pipe(session_id)
-        write_handover(session_id, read_end)
     except OSError as e:
         # A sandbox, for example, can keep a command from writing there.
         remove_session_files(session_id)
         raise click.ClickException(
             f"Can't create the files of the session in {sessions_dir()}: {e.strerror or e}."
         ) from e
+    holder = output_holder(read_end)
     command = [
         sys.executable,
         "-m",
@@ -210,6 +205,7 @@ def _start(
         session_id,
         "--serve-idle-timeout",
         str(idle_timeout),
+        *(["--serve-output-holder", str(holder)] if holder is not None else []),
         *args,
     ]
     # Unbuffered, so that an answer has all the output written before it, and in UTF-8, which the session decodes.
@@ -314,8 +310,7 @@ def send(app: Application, timeout: float, session_id: str, text: str) -> None:
     prompt, each in a send of its own. A block that INPUT leaves unfinished
     fails. The exit code is 0 when the statement passed, 1 when it failed, and
     124 when it still runs after `--timeout`. When the REPL or the run ends,
-    `send` says so with its exit code; a `send` after that fails, and
-    `session restart` starts it again.
+    `send` says so with its exit code; a `send` after that fails.
     """
     entry = _entry(session_id)
     answer = _expect(OutputAnswer, entry, SessionRequest(Request.SEND, text), timeout)
@@ -372,45 +367,6 @@ def session_result(app: Application, session_id: str) -> None:
         app.print_data(answer)
     else:
         app.echo(str(answer.exit_code))
-
-
-@session.command()
-@_timeout_option("the first prompt")
-@click.argument("session_id", metavar="ID")
-@pass_application
-def restart(app: Application, timeout: float, session_id: str) -> None:
-    """\
-    Start the REPL or the run of the session ID again in a new process, and print its output up to its first prompt
-    or its end.
-
-    A REPL or a run that hasn't ended is ended as with `session stop`, and its
-    output since the last command comes first. The session keeps its ID, and
-    the new process starts with the options of `session start` and the
-    breakpoints as they are.
-    """
-    entry = _entry(session_id)
-    # The old process ends the REPL or the run as `stop` does, then waits for the new process to take commands.
-    restarted = _request(entry, SessionRequest(Request.RESTART), 2 * _STARTUP_LIMIT)
-    if not isinstance(restarted, RestartedAnswer):
-        # After its limit, `restart` gets the output so far, while the restart goes on.
-        if isinstance(restarted, (OutputAnswer, RestartFailedAnswer)) and restarted.output:
-            app.echo(restarted.output, nl=False)
-        if isinstance(restarted, RestartFailedAnswer):
-            raise click.ClickException(restarted.reason)
-        raise click.ClickException(f"Session '{session_id}' hasn't restarted yet; `session status` tells when it has.")
-    before = restarted.output
-    # The file names the new process now.
-    entry = _entry(session_id)
-    answer = _expect(OutputAnswer, entry, SessionRequest(Request.WAIT), timeout)
-    if _structured(app):
-        whole = dataclasses.replace(answer, output=before + answer.output)
-        app.print_data({"id": session_id, **as_dict(whole, remove_defaults=True)})
-    else:
-        if before:
-            app.echo(before, nl=not before.endswith("\n"))
-        app.echo(f"Restarted session {session_id}.")
-        _echo_answer(app, entry, answer)
-    app.exit(_exit_code(answer))
 
 
 @session.command()
@@ -514,13 +470,6 @@ def _entry(session_id: str) -> SessionEntry:
 def _request(entry: SessionEntry, request: SessionRequest, timeout: Optional[float] = None) -> SessionAnswer:
     """The answer of the session `entry` to `request`; after `timeout` seconds, the output so far."""
     answer = _ask(entry, request, timeout)
-    while isinstance(answer, MovedAnswer):
-        # The session has just restarted in a new process, which its file names now.
-        moved_to = read_entry(entry.id)
-        if moved_to is None or moved_to.address == entry.address:
-            raise click.ClickException(f"No session '{entry.id}' is open.")
-        entry = moved_to
-        answer = _ask(entry, request, timeout)
     if isinstance(answer, RefusedAnswer):
         raise click.ClickException(answer.message)
     return answer
@@ -547,9 +496,9 @@ def _ask(entry: SessionEntry, request: SessionRequest, timeout: Optional[float])
                     # The answer came just now, and the session has closed the connection.
                     pass
             answer: ChannelAnswer = connection.recv()
-    except (EOFError, ConnectionError, FileNotFoundError):
-        # The process has ended before it answered, as the old process of a restart does; its file tells what follows.
-        return MovedAnswer()
+    except (EOFError, ConnectionError, FileNotFoundError) as e:
+        # The session has ended since the command read its file.
+        raise click.ClickException(f"No session '{entry.id}' is open.") from e
     except (OSError, multiprocessing.AuthenticationError) as e:
         raise click.ClickException(f"Session '{entry.id}' doesn't answer: {e}") from e
     return answer

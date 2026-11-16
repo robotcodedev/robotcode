@@ -99,15 +99,6 @@ class Breakpoint:
 
 
 @dataclass
-class BreakpointState:
-    """The breakpoints and the exception breakpoints of a `DebugController` as they are, for one in another process."""
-
-    breakpoints: List[Breakpoint]
-    next_id: int
-    exception_filters: List[str]
-
-
-@dataclass
 class StopEvent:
     reason: StopReason
     frame: StackFrame

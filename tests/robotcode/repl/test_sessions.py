@@ -34,8 +34,6 @@ from robotcode.core.utils.process import pid_exists
 from robotcode.repl import _session, session_cli
 from robotcode.repl._session import (
     AnswerStatus,
-    ChannelAnswer,
-    MovedAnswer,
     OutputAnswer,
     Request,
     SessionEntry,
@@ -175,21 +173,6 @@ def _process_ends(pid: int) -> bool:
     return False
 
 
-def _session_commands() -> List[List[str]]:
-    """The command lines of the session processes that run, listed a moment after a session has ended."""
-    time.sleep(1)
-    if sys.platform == "win32":
-        listed = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_Process).CommandLine"],
-            capture_output=True,
-            encoding="oem",
-            errors="replace",
-        ).stdout
-    else:
-        listed = subprocess.run(["ps", "-eo", "args"], capture_output=True, text=True).stdout
-    return [line.split() for line in listed.splitlines() if "--serve-session" in line]
-
-
 def _start(started: List[str], *args: str) -> Result:
     result = _robotcode("session", "start", *args)
     started.append(_started(result))
@@ -316,9 +299,6 @@ def test_the_files_of_a_session_that_no_longer_runs_are_removed(
     (short_folder / "repl-0123abcd.json").write_text(json.dumps(dataclasses.asdict(entry)), encoding="utf-8")
     # As left when the session ended while it wrote its file.
     (short_folder / "repl-0123abcd.json.tmp").write_text("{", encoding="utf-8")
-    # As a restart can leave them: the file for the new process, and the socket of a later process.
-    (short_folder / "repl-0123abcd.handover").write_text("{}", encoding="utf-8")
-    (short_folder / "repl-0123abcd-1.sock").write_text("", encoding="utf-8")
     if sys.platform != "win32":
         os.mkfifo(short_folder / "repl-0123abcd.pipe", 0o600)
 
@@ -345,20 +325,6 @@ def test_a_file_that_cant_be_read_counts_as_none(text: str, tmp_path: Path, monk
     (tmp_path / "repl-0123abcd.json").write_text(text, encoding="utf-8")
 
     assert read_entry("repl-0123abcd") is None
-
-
-@pytest.mark.parametrize(("text", "reason"), [(None, "No such file"), ("{", "Expecting")])
-def test_a_session_without_a_handover_file_it_can_read_says_why(
-    text: Optional[str], reason: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(_session, "sessions_dir", lambda: tmp_path)
-    path = tmp_path / "repl-0123abcd.handover"
-    if text is not None:
-        path.write_text(text, encoding="utf-8")
-
-    expected = f"Can't read the handover file of the session at {path}: {reason}"
-    with pytest.raises(_session.SessionError, match=re.escape(expected)):
-        _session.SessionServer("repl-0123abcd", SessionKind.REPL, tmp_path, 60)
 
 
 @pytest.mark.skipif(sys.platform != "win32" and os.geteuid() == 0, reason="takes the right to read the file")
@@ -649,13 +615,12 @@ def test_a_session_that_cant_write_its_file_says_why(tmp_path: Path, monkeypatch
         raise PermissionError(13, "Permission denied")
 
     monkeypatch.setattr(_session, "_write_entry", refuse)
-    monkeypatch.setattr(_session, "_take_handover", lambda session_id: _session._Handover(0, 0.0))
     monkeypatch.setattr(_session, "_take_pipe", lambda session_id, holder: 0)
     session_id = _session.new_session_id(SessionKind.REPL)
 
     expected = f"Can't create the files of the session in {sessions_dir()}: Permission denied."
     with pytest.raises(_session.SessionError, match=re.escape(expected)):
-        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60)
+        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60, None)
 
     assert _session._channel_gone(_session._address(session_id))
 
@@ -668,15 +633,14 @@ def test_a_session_that_cant_take_its_output_says_why(tmp_path: Path, monkeypatc
         # Its handle, which this test keeps open, keeps Windows from giving its process ID to another process.
         ended = subprocess.Popen([sys.executable, "-c", ""])
         ended.wait()
-        holder = _session._PipeHolder(ended.pid, 4)
-        expected = f"Can't take the output of the session from process {holder.pid}: "
+        holder: Optional[_session.PipeHolder] = _session.PipeHolder(ended.pid, 4)
+        expected = f"Can't take the output of the session from process {ended.pid}: "
     else:
         holder = None
         expected = f"Can't open the output of the session at {tmp_path / f'{session_id}.pipe'}: No such file"
-    _session._write_json(tmp_path / f"{session_id}.handover", _session._Handover(0, 0.0, holder=holder))
 
     with pytest.raises(_session.SessionError, match=re.escape(expected)):
-        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60)
+        _session.SessionServer(session_id, SessionKind.REPL, tmp_path, 60, holder)
 
     assert list(tmp_path.iterdir()) == []
 
@@ -956,15 +920,6 @@ def test_abort_in_a_session_ends_the_run_with_exit_code_253(started: List[str], 
     assert _results_can_be_read(session_project)
 
 
-def test_restart_at_a_stop_ends_the_run_and_starts_a_new_one(started: List[str], session_project: Path) -> None:
-    session_id = _debug_at_stop(started, session_project)
-
-    assert "debug.robot:4)" in _robotcode("session", "restart", session_id).stdout
-
-    assert _robotcode("session", "stop", session_id).exit_code == 0
-    assert _results_can_be_read(session_project)
-
-
 def test_send_of_a_variable_at_a_stop(started: List[str], session_project: Path) -> None:
     session_id = _debug_at_stop(started, session_project)
 
@@ -1054,9 +1009,10 @@ def test_a_send_after_the_end_fails(started: List[str]) -> None:
         result = _robotcode("session", *args)
 
         assert result.exit_code == 252, result.output
-        assert f"The REPL of session '{session_id}' has ended; `robotcode session restart {session_id}` starts it" in (
-            result.output
-        )
+        assert (
+            f"The REPL of session '{session_id}' has ended; `robotcode session result {session_id}` prints its exit "
+            f"code, and `robotcode session stop {session_id}` ends the session."
+        ) in result.output
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows has no SIGTERM that another process can send")
@@ -1157,40 +1113,6 @@ def test_result_prints_the_exit_code_once_the_run_has_ended(started: List[str], 
     assert json.loads(_robotcode("--format", "json", "session", "result", session_id).stdout) == {"exit_code": 2}
 
 
-def test_restart_starts_the_run_again_in_a_new_process(started: List[str], session_project: Path) -> None:
-    session_id = _debug_at_stop(started, session_project)
-    pid = read_entry(session_id).pid  # type: ignore[union-attr]
-
-    result = _robotcode("session", "restart", session_id)
-
-    assert result.exit_code == 0, result.output
-    # The output of the run before comes first.
-    before, after = result.stdout.split(f"Restarted session {session_id}.\n")
-    assert "aborting the run" in before
-    assert "* breakpoint  BuiltIn.Log  (debug.robot:4)" in after
-    entry = read_entry(session_id)
-    assert entry is not None
-    assert entry.pid != pid
-    assert _process_ends(pid)
-    assert "${x} = '42'" in _robotcode("session", "send", session_id, ".vars --user").stdout
-
-
-def test_restart_hands_over_the_breakpoints_as_they_are(started: List[str], session_project: Path) -> None:
-    session_id = _debug_at_stop(started, session_project)
-    for command in (".break debug.robot:7", ".break debug.robot:10", ".condition 3 False", ".delete 1"):
-        assert _robotcode("session", "send", session_id, command).exit_code == 0, command
-
-    result = _robotcode("session", "restart", session_id)
-
-    # Not at the breakpoint of `--break` that `.delete` removed, but at the one `.break` added.
-    _, after = result.stdout.split(f"Restarted session {session_id}.\n")
-    assert "(debug.robot:4)" not in after
-    assert "* breakpoint  BuiltIn.Fail  (debug.robot:7)" in after
-    # The condition holds: the run doesn't stop at line 10.
-    result = _robotcode("session", "send", session_id, ".continue")
-    assert "The run has ended with exit code 2." in result.stderr, result.output
-
-
 def test_line_breakpoint_by_file_name_stops_in_every_file_of_that_name(started: List[str], tmp_path: Path) -> None:
     for folder in ("first", "second"):
         (tmp_path / "suites" / folder).mkdir(parents=True)
@@ -1230,176 +1152,18 @@ def test_a_run_warns_about_a_breakpoint_it_never_reached(started: List[str], tmp
     assert _robotcode("session", "result", session_id).stdout == "0\n"
 
 
-def test_restart_uses_a_python_library_changed_since_the_start(started: List[str], tmp_path: Path) -> None:
-    (tmp_path / "Lib.py").write_text("def value():\n    return 'first'\n", encoding="utf-8")
-    (tmp_path / "lib.robot").write_text(
-        "*** Settings ***\nLibrary    Lib.py\n\n"
-        "*** Test Cases ***\nT\n    ${v}=    Value\n    Log To Console    value=${v}\n",
-        encoding="utf-8",
-    )
-    result = _start(started, "debug", "-d", str(tmp_path / "results"), str(tmp_path / "lib.robot"))
-    session_id = _started(result)
-    assert "value=first" in result.stdout
-    # A run that ends before it stops anywhere leaves its session open.
-    assert result.exit_code == 0, result.output
-    assert "The run has ended with exit code 0." in result.stderr
-    assert read_entry(session_id).state == "ended"  # type: ignore[union-attr]
-
-    (tmp_path / "Lib.py").write_text("def value():\n    return 'changed'\n", encoding="utf-8")
-    result = _robotcode("session", "restart", session_id)
-
-    assert result.exit_code == 0, result.output
-    assert "value=changed" in result.stdout
-
-
-def test_a_restarted_repl_session_has_no_variables_of_before(started: List[str]) -> None:
-    session_id = _started(_start(started, "repl"))
-    assert _robotcode("session", "send", session_id, "${order}=    Set Variable    coffee").exit_code == 0
-
-    assert _robotcode("session", "restart", session_id).exit_code == 0
-    # A second restart, from the process that the first one started.
-    result = _robotcode("--format", "json", "session", "restart", session_id)
-
-    assert json.loads(result.stdout) == {"id": session_id, "output": "", "status": "passed"}
-    assert re.search(r"-2(\.sock)?$", read_entry(session_id).address)  # type: ignore[union-attr]
-    result = _robotcode("session", "send", session_id, "Log    ${order}")
-    assert result.exit_code == 1
-    assert "Variable '${order}' not found." in result.stdout
-
-
-def test_a_restart_whose_new_process_fails_keeps_the_session(
-    started: List[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # Each Python process started from now on ends at once while the marker exists.
-    marker = tmp_path / "fail"
-    (tmp_path / "sitecustomize.py").write_text(
-        f"import os, sys\nif os.path.exists({str(marker)!r}):\n"
-        "    sys.stderr.write('not this time\\n')\n    sys.stderr.flush()\n    os._exit(3)\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setenv("PYTHONPATH", os.pathsep.join(filter(None, [str(tmp_path), os.environ.get("PYTHONPATH")])))
-    session_id = _started(_start(started, "repl"))
-    marker.write_text("", encoding="utf-8")
-
-    result = _robotcode("session", "restart", session_id)
-
-    assert result.exit_code == 252, result.output
-    assert "not this time" in result.output
-    assert "The session couldn't start again; its new process ended with exit code 3." in result.output
-    assert _robotcode("session", "status", session_id).stdout == "ended\n"
-
-
-def test_a_command_reads_the_file_of_a_session_again_while_it_restarts(
-    started: List[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    session_id = _started(_start(started, "repl"))
-    path = sessions_dir() / f"{session_id}.json"
-    live = path.read_text(encoding="utf-8")
-    # The file still names the channel of the process before the restart, which has just closed it.
-    before = {**json.loads(live), "address": _session._address(session_id, 7)}
-    path.write_text(json.dumps(before), encoding="utf-8")
-    channel_gone = _session._channel_gone
-
-    def gone(address: str) -> bool:
-        if address == before["address"]:
-            # Meanwhile the new process has written the file.
-            path.write_text(live, encoding="utf-8")
-            return True
-        return channel_gone(address)
-
-    monkeypatch.setattr(_session, "_channel_gone", gone)
-    try:
-        entry = read_entry(session_id)
-    finally:
-        path.write_text(live, encoding="utf-8")
-
-    assert entry is not None
-    assert entry.address == json.loads(live)["address"]
-
-
-@pytest.mark.parametrize("command", ["stop", "restart"])
-def test_stop_and_restart_end_a_debug_run_that_runs(command: str, started: List[str], session_project: Path) -> None:
+def test_stop_ends_a_debug_run_that_runs(started: List[str], session_project: Path) -> None:
     session_id = _started(
         _start(started, "debug", "-d", str(session_project / "results"), "--stop-on-entry", "loop.robot")
     )
     assert _robotcode("session", "send", "--timeout", "0.5", session_id, ".continue").exit_code == 124
 
     # The run pauses at the next keyword, where it is aborted.
-    result = _robotcode("session", command, session_id)
-
-    assert result.exit_code == 0, result.output
-    assert "aborting the run" in result.stdout
-    if command == "stop":
-        assert read_entry(session_id) is None
-    else:
-        assert result.stdout.rstrip().splitlines()[-1].startswith("* entry"), result.stdout
-
-
-def test_restart_prints_the_output_it_got_when_it_gives_up(
-    started: List[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    session_id = _started(_start(started, "repl"))
-    written = tmp_path / "written"
-    go_on = tmp_path / "go-on"
-    statement = f"{_waiting_for(go_on)}\nLog    meanwhile\n{_touch(written)}\nSleep    3s"
-    assert _robotcode("session", "send", "--timeout", "0.1", session_id, statement).exit_code == 124
-    # Only now, so that the statement writes to the console after the answer of `send`, however long that took.
-    go_on.touch()
-    _wait_for_file(written)
-    # Shorter than the start of a new process.
-    monkeypatch.setattr(session_cli, "_STARTUP_LIMIT", 0.05)
-
-    result = _robotcode("session", "restart", session_id)
-
-    assert result.exit_code == 252, result.output
-    assert "meanwhile" in result.stdout
-    assert f"Session '{session_id}' hasn't restarted yet" in result.output
-    # The restart goes on.
-    deadline = time.monotonic() + 20
-    while _robotcode("session", "status", session_id).stdout != "waits\n" and time.monotonic() < deadline:
-        time.sleep(0.2)
-    assert _robotcode("session", "status", session_id).stdout == "waits\n"
-
-
-def test_stop_during_a_restart_ends_the_new_process(started: List[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    session_id = _started(_start(started, "repl"))
-    # `restart` returns before the new process takes over, so that `stop` comes during the restart.
-    monkeypatch.setattr(session_cli, "_STARTUP_LIMIT", 0.05)
-    assert _robotcode("session", "restart", session_id).exit_code == 252
-
     result = _robotcode("session", "stop", session_id)
 
     assert result.exit_code == 0, result.output
+    assert "aborting the run" in result.stdout
     assert read_entry(session_id) is None
-    assert not any(f"--serve-session {session_id}" in " ".join(p) for p in _session_commands())
-
-
-def test_a_request_that_reaches_the_process_before_a_restart_goes_to_the_new_one(
-    started: List[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    session_id = _started(_start(started, "repl"))
-    entry = read_entry(session_id)
-    assert entry is not None
-    # The command read the file of the session before the restart.
-    before = dataclasses.replace(entry, address=_session._address(session_id, 7))
-    asked: List[str] = []
-    ask = session_cli._ask
-
-    def answer(to: SessionEntry, request: SessionRequest, timeout: Any) -> ChannelAnswer:
-        asked.append(to.address)
-        if to.address == before.address:
-            # As the process before the restart answers once the new one has taken over.
-            return MovedAnswer()
-        return ask(to, request, timeout)
-
-    monkeypatch.setattr(session_cli, "_ask", answer)
-    monkeypatch.setattr(session_cli, "_entry", lambda session_id: before)
-
-    result = _robotcode("session", "send", session_id, "Evaluate    1 + 1")
-
-    assert result.exit_code == 0, result.output
-    assert "=> 2" in result.stdout
-    assert asked == [before.address, entry.address]
 
 
 def _entry_at(address: str) -> SessionEntry:
@@ -1427,34 +1191,6 @@ def test_a_command_reports_an_answer_it_doesnt_expect(monkeypatch: pytest.Monkey
     assert "Session 'repl-0123abcd' gave an unexpected answer." in result.output
 
 
-def test_a_request_follows_a_session_that_restarts_twice(monkeypatch: pytest.MonkeyPatch) -> None:
-    # The new process of the first restart hands over to the next one before it gets to answer.
-    files = iter([_entry_at("second"), _entry_at("third")])
-    asked: List[str] = []
-
-    def answer(to: SessionEntry, request: SessionRequest, timeout: Any) -> ChannelAnswer:
-        asked.append(to.address)
-        return OutputAnswer("done\n", AnswerStatus.PASSED) if to.address == "third" else MovedAnswer()
-
-    monkeypatch.setattr(session_cli, "_ask", answer)
-    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: next(files))
-
-    result = session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
-
-    assert result == OutputAnswer("done\n", AnswerStatus.PASSED)
-    assert asked == ["first", "second", "third"]
-
-
-# None: the file of the session has gone. "first": it names the channel that answered already.
-@pytest.mark.parametrize("address", [None, "first"])
-def test_a_session_that_moved_to_no_other_channel_isnt_open(address: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(session_cli, "_ask", lambda to, request, timeout: MovedAnswer())
-    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: address and _entry_at(address))
-
-    with pytest.raises(click.ClickException, match=r"No session 'repl-0123abcd' is open\."):
-        session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
-
-
 def _sent_signals(monkeypatch: pytest.MonkeyPatch) -> List[int]:
     """The signals that a session process sends to its main thread, which they then don't reach."""
     sent: List[int] = []
@@ -1466,7 +1202,7 @@ def _sent_signals(monkeypatch: pytest.MonkeyPatch) -> List[int]:
 
 
 def test_a_signal_waits_until_robot_framework_handles_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    # As for a `stop` that reaches the new process of a restart while it starts: the signal would end it at once.
+    # As for a `stop` that reaches a session process while it starts: the signal would end it at once.
     sent = _sent_signals(monkeypatch)
     handlers = iter([signal.SIG_DFL, signal.SIG_DFL, print])
     monkeypatch.setattr(signal, "getsignal", lambda signum: next(handlers))
@@ -1517,20 +1253,10 @@ class _Connection:
 @pytest.mark.parametrize(
     "error", [EOFError(), ConnectionResetError(), BrokenPipeError(), ConnectionRefusedError(), FileNotFoundError()]
 )
-def test_a_request_goes_to_the_new_process_when_the_old_one_ends_before_it_answers(
+def test_a_session_whose_process_ends_before_it_answers_isnt_open(
     error: Exception, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    answer = OutputAnswer("done\n", AnswerStatus.PASSED)
-    connections = {"old": _Connection(error), "new": _Connection(answer)}
-    monkeypatch.setattr(session_cli, "connect", lambda entry: connections[entry.address])
-    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: _entry_at("new"))
-
-    assert session_cli._request(_entry_at("old"), SessionRequest(Request.STOP)) == answer
-
-
-def test_a_session_whose_process_ends_before_it_answers_isnt_open(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(session_cli, "connect", lambda entry: _Connection(EOFError()))
-    monkeypatch.setattr(session_cli, "read_entry", lambda session_id: None)
+    monkeypatch.setattr(session_cli, "connect", lambda entry: _Connection(error))
 
     with pytest.raises(click.ClickException, match=r"No session 'repl-0123abcd' is open\."):
         session_cli._request(_entry_at("first"), SessionRequest(Request.WAIT))
@@ -1757,17 +1483,6 @@ def test_what_the_wrapper_writes_comes_with_the_next_answer(started: List[str], 
 
     assert result.stdout.startswith("line from the wrapper\n"), result.stdout
     assert "hello" in result.stdout
-
-
-def test_a_session_under_a_wrapper_restarts(started: List[str], wrapper_project: Path) -> None:
-    session_id = _started(_start(started, "repl"))
-    pid = read_entry(session_id).pid  # type: ignore[union-attr]
-
-    result = _robotcode("session", "restart", session_id)
-
-    assert result.exit_code == 0, result.output
-    assert read_entry(session_id).pid != pid  # type: ignore[union-attr]
-    assert "hello" in _robotcode("session", "send", session_id, "Log To Console    hello").stdout
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="`cmd` runs only on Windows")

@@ -17,7 +17,7 @@ from robotcode.runner.cli.robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, loa
 from .__version__ import __version__
 from ._backends import BACKEND_CHOICES
 from ._debug import DebugController, DebugTerminated
-from ._session import SessionError, SessionInterpreter, SessionKind, SessionServer, project_folder
+from ._session import PipeHolder, SessionError, SessionInterpreter, SessionKind, SessionServer, project_folder
 from .console_interpreter import _LINE_BREAK_RE, ConsoleInterpreter
 from .prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
 from .run import ReplResult, run_repl
@@ -411,6 +411,13 @@ SESSION_OPTIONS = [
         help="End the session after it has waited at its prompt for MINUTES without a request. "
         "This is an internal option.",
     ),
+    click.option(
+        "--serve-output-holder",
+        metavar="PID:HANDLE",
+        hidden=show_hidden_arguments(),
+        help="Take the output of the session from the handle HANDLE of the process PID, on Windows. "
+        "This is an internal option.",
+    ),
 ]
 
 
@@ -419,12 +426,14 @@ def _session_server(
     serve_session: Optional[str],
     kind: SessionKind,
     idle_timeout: float,
+    output_holder: Optional[str],
 ) -> Optional[SessionServer]:
     if serve_session is None:
         return None
     try:
+        holder = PipeHolder.parse(output_holder) if output_holder is not None else None
         # The folder `session start` ran in decides the project, also for a debug run of a suite elsewhere.
-        return SessionServer(serve_session, kind, project_folder(app), idle_timeout * 60)
+        return SessionServer(serve_session, kind, project_folder(app), idle_timeout * 60, holder)
     except SessionError as e:
         raise click.ClickException(str(e)) from e
 
@@ -515,6 +524,7 @@ def repl(
     break_on_failed_suite: bool,
     serve_session: Optional[str],
     serve_idle_timeout: float,
+    serve_output_holder: Optional[str],
 ) -> None:
     """Run Robot Framework interactively (alias `shell`).
 
@@ -541,7 +551,7 @@ def repl(
 
     backend = _resolve_backend(plain, backend)
 
-    server = _session_server(app, serve_session, SessionKind.REPL, serve_idle_timeout)
+    server = _session_server(app, serve_session, SessionKind.REPL, serve_idle_timeout, serve_output_holder)
     interpreter = (
         SessionInterpreter(server, app=app, files=list(files), show_keywords=show_keywords, inspect=inspect)
         if server is not None
@@ -561,7 +571,7 @@ def repl(
     # The debugger stays wired for the whole interactive session and is torn down
     # with the interpreter when the session ends — so, unlike `robot`, there is no
     # per-run unregister here. `attached` decides whether it actually pauses.
-    controller = _attach_debugger(
+    _attach_debugger(
         interpreter,
         break_at=break_at,
         attached=attached,
@@ -570,8 +580,6 @@ def repl(
         break_on_failed_test=break_on_failed_test,
         break_on_failed_suite=break_on_failed_suite,
     )
-    if server is not None:
-        server.keep_breakpoints(controller)
 
     # A session records the exit code of the command when the REPL exits, and stays open.
     session: ContextManager[object] = server if server is not None else contextlib.nullcontext()
@@ -638,6 +646,7 @@ def robot_debug(
     break_on_failed_suite: bool,
     serve_session: Optional[str],
     serve_idle_timeout: float,
+    serve_output_holder: Optional[str],
 ) -> None:
     """Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
 
@@ -654,7 +663,7 @@ def robot_debug(
 
     backend = _resolve_backend(plain, backend)
 
-    server = _session_server(app, serve_session, SessionKind.DEBUG, serve_idle_timeout)
+    server = _session_server(app, serve_session, SessionKind.DEBUG, serve_idle_timeout, serve_output_holder)
     # A run stops at `(rdb) `, which always shows; `robot-debug` has no option for `>>> `.
     interpreter = (
         SessionInterpreter(server, app=app, files=[], show_keywords=False, inspect=False)
@@ -679,8 +688,6 @@ def robot_debug(
         break_on_failed_test=break_on_failed_test,
         break_on_failed_suite=break_on_failed_suite,
     )
-    if server is not None:
-        server.keep_breakpoints(controller)
     controller.warn_about_unreached_breakpoints()
 
     # `robot-debug` produces the same console output as `robotcode robot` — the run
