@@ -1,40 +1,15 @@
 # Spec Delta: cli-sessions
 
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: Starting a session
+### Requirement: Aborting a start
 
-`robotcode session start repl` and `robotcode session start debug` SHALL start a REPL or a debug run in the background, with the options of `robotcode repl` or `robotcode robot-debug`, wait until it is ready and print the session's ID and its output so far. A debug session is ready at its first stop or at the end of its run. `start` SHALL return only once the session can take commands, and SHALL end a session that isn't ready within 60 seconds, or within `--timeout` when that is longer. A `start` that is aborted before the session can take commands, by Ctrl-C, by SIGTERM or SIGHUP, or on Windows in any way, SHALL end the session.
-
-#### Scenario: Start a REPL
-- **WHEN** `robotcode session start repl` runs
-- **THEN** it prints the ID of a new session, such as `repl-3f9a2c1e`
-- **AND** it returns while the session keeps running
-
-#### Scenario: Start a debug run
-- **WHEN** `robotcode session start debug --break tests/orders.robot:19 -bl "Tests.Orders"` runs
-- **THEN** it prints the run's output up to the stop at line 19 and the session's ID
-
-#### Scenario: A debug run that ends before a stop
-- **WHEN** `robotcode session start debug -bl "Tests.Orders"` runs a suite in which nothing stops the run
-- **THEN** it prints the session's ID, the run's output and that the run has ended with its exit code, and exits with 0
-- **AND** the session stays open
-
-#### Scenario: A session that is slow to start
-- **WHEN** the process of a session takes longer to start than the `--timeout` of `session start`
-- **THEN** `start` returns once the session can take commands, with the ID and exit code 124
-- **AND** `robotcode session wait` with that ID reaches the session
-
-#### Scenario: A session that doesn't get ready
-- **WHEN** a session isn't ready within 60 seconds, or within `--timeout` when that is longer
-- **THEN** `start` ends its process, prints what it wrote and exits with code 252
+`robotcode session start` SHALL end the session when it is aborted before the session can take commands: by Ctrl-C, by SIGTERM or SIGHUP, or on Windows in any way.
 
 #### Scenario: A start that is aborted
 - **WHEN** `robotcode session start repl` gets Ctrl-C, SIGTERM or SIGHUP, or is killed on Windows, before the session can take commands
 - **THEN** the process of the session ends, together with the processes it has started
 - **AND** after Ctrl-C, SIGTERM or SIGHUP no file of the session stays behind
-
-## ADDED Requirements
 
 ### Requirement: Sessions under a wrapper
 

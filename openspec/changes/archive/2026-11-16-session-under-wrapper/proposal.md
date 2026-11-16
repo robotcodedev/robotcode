@@ -19,7 +19,7 @@
 ### New Capabilities
 
 ### Modified Capabilities
-- `cli-sessions`: a new requirement says that sessions start and keep their output under a `wrapper`; "Starting a session" says that an aborted `start` ends the session.
+- `cli-sessions`: a new requirement says that sessions start and keep their output under a `wrapper`, another that an aborted `start` ends the session.
 
 ## Impact
 
