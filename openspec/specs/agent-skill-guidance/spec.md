@@ -36,7 +36,7 @@ The mode list of `SKILL.md` SHALL name both ways to start the REPL and the debug
 
 ### Requirement: Driving a session
 
-A session SHALL be driven one input at a time, reading each answer before choosing the next. The skill SHALL give the meaning of the exit codes of `session send` (0, 1, 124, 252), name `status`, `result`, `wait`, `interrupt` and `restart`, and tell the agent to end the session with `session stop`. It SHALL NOT name a fixed list of inputs through a pipe as a fallback.
+A session SHALL be driven one input at a time, reading each answer before choosing the next. The skill SHALL give the meaning of the exit codes of `session send` (0, 1, 124, 252), name `status`, `result`, `wait` and `interrupt`, and tell the agent to end the session with `session stop`. It SHALL NOT name a fixed list of inputs through a pipe as a fallback.
 
 #### Scenario: Trying keywords
 - **WHEN** an agent tries keywords in a session
@@ -56,8 +56,8 @@ A session SHALL be driven one input at a time, reading each answer before choosi
 - **THEN** it reads the answer of each step before the next, with no two steps in one shell command and no shell loop over inputs
 
 #### Scenario: A session that was started earlier
-- **WHEN** an agent is asked about a debug session that is open already, whose run has ended
-- **THEN** it finds it with `session list`, gets the exit code of the run with `session result` and runs it again with `session restart`
+- **WHEN** an agent is asked to take over a debug session that is open already and waits at a stop
+- **THEN** it finds it with `session list` instead of starting a new one, looks around at the stop in that session, and lets the run go on there
 
 ### Requirement: Sessions in a sandbox
 

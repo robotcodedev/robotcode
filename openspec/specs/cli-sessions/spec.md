@@ -2,7 +2,7 @@
 
 ## Purpose
 
-REPL and debug sessions that run in the background and that separate `robotcode session` commands start, send inputs to, wait for, interrupt, restart, list and end, so that an AI agent without a tool for running processes can work turn by turn on Linux, macOS and Windows.
+REPL and debug sessions that run in the background and that separate `robotcode session` commands start, send inputs to, wait for, interrupt, list and end, so that an AI agent without a tool for running processes can work turn by turn on Linux, macOS and Windows.
 
 ## Requirements
 
@@ -161,7 +161,7 @@ When the REPL of a session exits or its run ends, the session SHALL stay open. T
 
 #### Scenario: A send after the end
 - **WHEN** `send` gives `Log    hello` to a session whose run has ended
-- **THEN** it says that the run has ended and that `robotcode session restart` starts it again, and exits with 252
+- **THEN** it says that the run has ended, that `robotcode session result` prints its exit code and that `robotcode session stop` ends the session, and exits with 252
 
 ### Requirement: The state of a session
 
@@ -190,31 +190,6 @@ When the REPL of a session exits or its run ends, the session SHALL stay open. T
 #### Scenario: Before the end
 - **WHEN** the run of a debug session waits at a stop
 - **THEN** `result` says that the run hasn't ended and exits with code 252
-
-### Requirement: Restarting a session
-
-`robotcode session restart <id>` SHALL end the REPL or the run of the session as `stop` does, but not the session, and start it again in a new process under the same ID, with the options of `session start` and the breakpoints as they are at the restart. It SHALL print the output since the last command and then answer as `session start` does. When the new process doesn't get ready, the session SHALL stay open, and `restart` SHALL exit with code 252.
-
-#### Scenario: A restart at a stop
-- **WHEN** `robotcode session restart debug-7b2d9e04` runs while the run waits at a stop
-- **THEN** the run starts again from its beginning in a new process under the ID `debug-7b2d9e04`, and `restart` prints its output up to its first stop
-
-#### Scenario: Breakpoints as they are
-- **WHEN** at a stop `.break` has added a breakpoint, `.delete` has removed one given with `--break`, and `restart` runs
-- **THEN** the new run stops at the added breakpoint and not at the removed one
-
-#### Scenario: A changed Python library
-- **WHEN** a Python library of the suite has been changed since the start and `restart` runs
-- **THEN** the new run uses the changed library
-
-#### Scenario: A REPL session
-- **WHEN** `restart` runs for a REPL session in which `${order}` was set
-- **THEN** `${order}` isn't set in the new REPL
-
-#### Scenario: A restart that fails
-- **WHEN** the new process ends before it is ready
-- **THEN** `restart` prints what it wrote and exits with code 252
-- **AND** the session stays open, and `status` prints `ended`
 
 ### Requirement: Stopping several sessions
 
@@ -305,13 +280,9 @@ A session SHALL keep its output, the standard output and standard error of its p
 - **WHEN** the session that `robotcode session start repl` starts can't open its channel
 - **THEN** `start` prints the address of the channel and the reason, without a traceback, and exits with code 252
 
-### Requirement: Ended sessions
+### Requirement: Sessions that have ended
 
-A session SHALL count as ended when nothing listens on its channel any more, also when another process has its process ID, and the next `session` command that finds its file SHALL remove its files. A session whose channel a command can't reach for another reason, such as a sandbox that forbids it, SHALL keep its files, and so SHALL a session that restarts.
-
-#### Scenario: A command during a restart
-- **WHEN** a `session` command finds the channel of a session gone because the session has just restarted in a new process
-- **THEN** it reaches the new process and doesn't remove the files of the session
+A session SHALL count as ended when nothing listens on its channel any more, also when another process has its process ID, and the next `session` command that finds its file SHALL remove its files. A session whose channel a command can't reach for another reason, such as a sandbox that forbids it, SHALL keep its files.
 
 #### Scenario: The process of a session has gone
 - **WHEN** the process of a session has ended without removing its file, after a crash for example

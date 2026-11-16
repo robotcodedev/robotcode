@@ -76,7 +76,7 @@ At a stop of `robotcode robot-debug`, `.abort` SHALL end the run as SIGTERM does
 
 ### Requirement: A session ends a debug run at a stop the same way
 
-When a debug session ends its run at a stop, through `robotcode session stop`, `robotcode session restart` or the idle timeout, it SHALL end the run as `.abort` does, so that the output files of that run can be read.
+When a debug session ends its run at a stop, through `robotcode session stop` or the idle timeout, it SHALL end the run as `.abort` does, so that the output files of that run can be read.
 
 #### Scenario: `session stop` at a stop
 - **WHEN** a debug session waits at a stop and `robotcode session stop <id>` runs
