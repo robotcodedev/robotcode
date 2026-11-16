@@ -21,7 +21,7 @@
 ## 4. The skill (D4)
 
 - [x] 4.1 In `robotframework-agent-plugins` (branch `next`), rewrite the section "Start or reuse a debug session" and the bullet on the end of the run in `plugins/robotcode/skills/robotcode/references/debugging.md`, and change eval case 15 (`evals/robotcode/cases/15-debug-session-started-earlier.json`) to taking over a session that waits at a stop, as D4 says, and its row in `evals/robotcode/README.md`. Verify that `grep -rn "session restart"` finds nothing in the repository and that case 15 passes once with the eval harness.
-- [ ] 4.2 After the commit in `robotframework-agent-plugins`, which needs the maintainer's word, sync the copy in `chat-plugins/` with `hatch run build:sync-chat-plugin` and verify that `grep -rn "session restart" chat-plugins/` finds nothing.
+- [x] 4.2 After the commit in `robotframework-agent-plugins`, which needs the maintainer's word, sync the copy in `chat-plugins/` with `hatch run build:sync-chat-plugin` and verify that `grep -rn "session restart" chat-plugins/` finds nothing.
 
 ## 5. The tutorial page (D5)
 
