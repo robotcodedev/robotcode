@@ -76,7 +76,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     SemanticToken,
 )
 from robotcode.robot.diagnostics.semantic_analyzer.variable_tokenizer import VariableSite, build_variable_sub_tokens
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     cached_isinstance,
@@ -2076,7 +2076,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     def _on_initialized(self, sender: Any) -> None:
         self.parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         if namespace.document is not None and namespace.document.opened_in_editor:
             self.parent.semantic_tokens.refresh()
@@ -2127,19 +2127,19 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             self.parent.semantic_tokens.token_modifiers,
         )
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return self._collect(document, None)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return self._collect(document, range)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def collect_full_delta(
         self,
         sender: Any,

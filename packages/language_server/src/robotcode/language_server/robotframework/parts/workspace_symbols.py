@@ -8,7 +8,7 @@ from robotcode.core.lsp.types import (
     WorkspaceSymbol,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -33,7 +33,7 @@ class RobotWorkspaceSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     def collect(self, sender: Any, query: str) -> Optional[Union[List[WorkspaceSymbol], List[SymbolInformation], None]]:
         result: List[WorkspaceSymbol] = []
         for document in self.parent.documents.documents:
-            if document.language_id in ("robotframework", MARKDOWN_LANGUAGE_ID):
+            if document.language_id in ROBOT_LANGUAGE_IDS:
                 namespace = self.parent.documents_cache.get_only_initialized_namespace(document)
                 if namespace is not None:
                     container_name = namespace.library_doc.name

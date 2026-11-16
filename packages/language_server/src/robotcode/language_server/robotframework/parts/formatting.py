@@ -11,6 +11,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.language_definitions import ROBOTFRAMEWORK_LANGUAGE_ID
 
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -46,7 +47,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
 
         return self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @_logger.call
     def format(
         self,
@@ -117,7 +118,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
 
         return str(new.text)
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     def format_range(
         self,
         sender: Any,

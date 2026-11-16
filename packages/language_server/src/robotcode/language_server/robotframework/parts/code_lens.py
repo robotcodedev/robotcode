@@ -8,7 +8,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 from robotcode.robot.utils.ast import range_from_token
 from robotcode.robot.utils.visitor import Visitor
 
@@ -47,13 +47,13 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
         if self.enabled:
             self.parent.code_lens.refresh()
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
         if self.enabled and self.parent.workspace.get_configuration(AnalysisConfig, document.uri).references_code_lens:
             return _Visitor.find_from(self.parent.documents_cache.get_model(document), self, document)
         return None
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
         if not self.enabled:
             return None

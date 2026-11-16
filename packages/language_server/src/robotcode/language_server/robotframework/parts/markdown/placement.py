@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import Position, Range
 from robotcode.core.text_document import TextDocument
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.markdown_blocks import find_block, indent_for_block
 
 from ..protocol_part import RobotLanguageServerProtocolPart

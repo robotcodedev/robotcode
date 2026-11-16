@@ -19,7 +19,7 @@ from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind
 from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import SemanticToken
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 from robotcode.robot.utils.ast import (
     iter_nodes,
     range_from_node,
@@ -45,7 +45,7 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.inline_value.collect.add(self.collect)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect(
         self,

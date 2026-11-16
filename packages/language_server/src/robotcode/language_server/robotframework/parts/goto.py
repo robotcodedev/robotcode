@@ -8,7 +8,7 @@ from robotcode.core.lsp.types import Location, LocationLink, Position
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 from robotcode.robot.utils.ast import range_from_token
 
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -26,14 +26,14 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
         parent.definition.collect.add(self.collect_definition)
         parent.implementation.collect.add(self.collect_implementation)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect_definition(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         return self.collect(document, position)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect_implementation(
         self, sender: Any, document: TextDocument, position: Position

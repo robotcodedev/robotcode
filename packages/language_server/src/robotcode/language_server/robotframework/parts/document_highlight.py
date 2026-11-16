@@ -10,7 +10,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -26,7 +26,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.document_highlight.collect.add(self.collect)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:
         namespace = self.parent.documents_cache.get_namespace(document)

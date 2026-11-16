@@ -24,7 +24,8 @@ from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.document_cache_helper import DocumentsCacheHelper
 from robotcode.robot.diagnostics.namespace import DocumentType
 from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID, MARKDOWN_SUPPORTED
+from robotcode.robot.document_formats import MARKDOWN_SUPPORTED
+from robotcode.robot.language_definitions import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.markdown_blocks import RobotBlock
 
 TEXT = '*** Test Cases ***\nTest\n    Embedded "args"\n\n\n*** Keywords ***\nEmbedded "${args}"\n    No Operation\n'

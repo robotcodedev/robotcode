@@ -8,6 +8,7 @@ from robotcode.core.lsp.types import Position, Range, SelectionRange
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.language_definitions import ROBOTFRAMEWORK_LANGUAGE_ID
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
@@ -33,7 +34,7 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart):
     def node_range(self, document: TextDocument, node: ast.AST, position: Position) -> Optional[Range]:
         return range_from_node(node)
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:
         namespace = self.parent.documents_cache.get_namespace(document)

@@ -22,7 +22,7 @@ from robotcode.robot.diagnostics.entities import (
 )
 from robotcode.robot.diagnostics.library_doc import LibraryDoc
 from robotcode.robot.diagnostics.namespace import Namespace
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 
@@ -81,11 +81,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 if any(lib_doc in lib_docs for lib_doc in variables):
                     self.parent.diagnostics.force_refresh_document(doc)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def analyze(self, sender: Any, document: TextDocument) -> None:
         self.parent.documents_cache.get_namespace(document).analyze()
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def _on_namespace_initialized(self, sender: Any, namespace: Namespace) -> None:
         # only a document open in the editor: a closed one gets its diagnostics renewed through the invalidation
         # that started the rebuild or through its own changes, marking it again would analyze it once more
@@ -94,14 +94,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             # loop holds the diagnostics lock when it waits for a task that may wait for that entry
             run_as_task(self.parent.diagnostics.force_refresh_document, namespace.document)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def _on_namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         if namespace.document is not None:
             # also a closed document: the workspace diagnostics loop renews its analysis, which refreshes its
             # references and diagnostics
             run_as_task(self.parent.diagnostics.force_refresh_document, namespace.document)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def _on_get_related_documents(self, sender: Any, document: TextDocument) -> Optional[List[TextDocument]]:
         namespace = self.parent.documents_cache.get_only_initialized_namespace(document)
         if namespace is None:
@@ -111,7 +111,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         lib_doc = namespace.library_doc
         for doc in self.parent.documents.documents:
-            if doc.language_id not in ("robotframework", MARKDOWN_LANGUAGE_ID):
+            if doc.language_id not in ROBOT_LANGUAGE_IDS:
                 continue
 
             doc_namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
@@ -128,7 +128,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     def modify_diagnostics(self, document: TextDocument, diagnostics: List[Diagnostic]) -> List[Diagnostic]:
         return self.parent.documents_cache.get_diagnostic_modifier(document).modify_diagnostics(diagnostics)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def collect_namespace_diagnostics(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
     ) -> DiagnosticsResult:
@@ -161,7 +161,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ],
             )
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect_unused_keyword_references(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
@@ -220,7 +220,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ],
             )
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect_unused_variable_references(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType

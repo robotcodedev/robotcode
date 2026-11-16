@@ -10,6 +10,7 @@ from robotcode.core.language import language_id
 from robotcode.core.lsp.types import FoldingRange
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.language_definitions import ROBOTFRAMEWORK_LANGUAGE_ID
 from robotcode.robot.utils.visitor import Visitor
 
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -144,7 +145,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.folding_ranges.collect.add(self.collect)
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @_logger.call
     def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
         return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)

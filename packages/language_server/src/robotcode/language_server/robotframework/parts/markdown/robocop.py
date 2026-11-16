@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import FormattingOptions, MessageType, Range, TextEdit
 from robotcode.core.text_document import TextDocument
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import MARKDOWN_LANGUAGE_ID
 
 from ....common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 from ..formatting import RobotFormattingProtocolPart

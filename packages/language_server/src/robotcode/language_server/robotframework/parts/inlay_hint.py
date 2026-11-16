@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 from robotcode.robot.diagnostics.model_helper import ModelHelper
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -73,7 +73,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         return None
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:
         config = self.get_config(document)

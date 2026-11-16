@@ -75,7 +75,7 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import DocumentType, Namespace
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS, ROBOTFRAMEWORK_LANGUAGE_ID
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -143,7 +143,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
         return DEFAULT_HEADER_STYLE if RF_VERSION < (6, 0) else DEFAULT_HEADER_STYLE_51
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @trigger_characters(
         [
             " ",
@@ -158,7 +158,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         ]
     )
     # @all_commit_characters(['\n'])
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @_logger.call
     def collect(
         self,
@@ -181,7 +181,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
             config,
         ).collect(position, context)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @_logger.call
     def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
         if completion_item.data is not None:

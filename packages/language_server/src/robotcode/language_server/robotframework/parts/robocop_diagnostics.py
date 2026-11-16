@@ -14,6 +14,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.version import Version, create_version_from_str
 from robotcode.core.workspace import WorkspaceFolder
+from robotcode.robot.language_definitions import ROBOTFRAMEWORK_LANGUAGE_ID
 
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 from ..configuration import RoboCopConfig
@@ -55,7 +56,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             self._robocop_linters[workspace_folder] = linter
         return linter
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @_logger.call
     def collect_diagnostics(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType

@@ -34,7 +34,7 @@ from robotcode.robot.diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
     ROBOT_FILE_EXTENSION,
 )
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 
 from ..configuration import RobotCodeConfig
 
@@ -89,7 +89,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             if self._has_workspace_extension(path) and not path.exists():
                 self.parent.documents_cache.remove_cached_analysis(path)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
         from robot.utils import FileReader
 

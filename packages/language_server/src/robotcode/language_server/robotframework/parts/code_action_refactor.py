@@ -29,7 +29,7 @@ from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind, TokenKind
 from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import KeywordCallStatement
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     iter_nodes,
@@ -108,7 +108,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, CodeA
 
         self.parent.commands.register_all(self)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     @code_action_kinds(
         [
             CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION,

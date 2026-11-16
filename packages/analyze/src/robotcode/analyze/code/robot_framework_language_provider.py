@@ -20,26 +20,17 @@ from robotcode.robot.diagnostics.entities import (
     VariableDefinitionType,
 )
 from robotcode.robot.diagnostics.namespace import DocumentType
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import ROBOT_LANGUAGE_IDS, ROBOTFRAMEWORK_LANGUAGE
 
 from .language_provider import LanguageProvider
 
-ROBOTFRAMEWORK_LANGUAGE_ID = "robotframework"
-
 
 class RobotFrameworkLanguageProvider(LanguageProvider):
-    LANGUAGE_DEFINITION = LanguageDefinition(
-        id=ROBOTFRAMEWORK_LANGUAGE_ID,
-        extensions=[".robot", ".resource"],
-        extensions_ignore_case=True,
-        aliases=["Robot Framework", "robotframework"],
-    )
-
     SOURCE_NAME = "robotcode.diagnostics"
 
     @classmethod
     def get_language_definitions(cls, profile: RobotBaseProfile, root: Path) -> List[LanguageDefinition]:
-        return [cls.LANGUAGE_DEFINITION]
+        return [ROBOTFRAMEWORK_LANGUAGE]
 
     def __init__(self, diagnostics_context: DiagnosticsContext) -> None:
         super().__init__(diagnostics_context)
@@ -84,13 +75,13 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                 if Path(f).is_dir() and f not in sys.path:
                     sys.path.insert(0, f)
 
-    @language_id("robotframework", MARKDOWN_LANGUAGE_ID)
+    @language_id(*ROBOT_LANGUAGE_IDS)
     def on_read_document_text(self, sender: Any, uri: Uri) -> str:
         with FileReader(uri.to_path()) as reader:
             return str(reader.read())
 
     def collect_workspace_folder_files(self, folder: WorkspaceFolder) -> Iterable[Path]:
-        extensions = self.LANGUAGE_DEFINITION.extensions
+        extensions = ROBOTFRAMEWORK_LANGUAGE.extensions
 
         return filter(lambda f: f.suffix.lower() in extensions, self.iter_workspace_folder_files(folder))
 

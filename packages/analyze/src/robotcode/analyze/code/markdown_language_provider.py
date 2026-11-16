@@ -4,7 +4,8 @@ from typing import Iterable, List
 from robotcode.core.language import LanguageDefinition
 from robotcode.core.workspace import WorkspaceFolder
 from robotcode.robot.config.model import RobotBaseProfile
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID, markdown_extensions, markdown_language_definition
+from robotcode.robot.document_formats import markdown_extensions
+from robotcode.robot.language_definitions import MARKDOWN_LANGUAGE_ID, markdown_language_definition
 
 from .language_provider import LanguageProvider
 

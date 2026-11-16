@@ -25,7 +25,7 @@ from robotcode.language_server.common.parts.document_symbols import symbol_infor
 from robotcode.language_server.common.protocol import LanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.workspace_config import RobotConfig, WorkspaceAnalysisConfig
-from robotcode.robot.document_formats import markdown_language_definition
+from robotcode.robot.language_definitions import ROBOTFRAMEWORK_LANGUAGE, markdown_language_definition
 from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
@@ -160,20 +160,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         "json",
     }
 
-    language_definitions: List[LanguageDefinition] = [
-        LanguageDefinition(
-            id="robotframework",
-            extensions=[".robot", ".resource"],
-            extensions_ignore_case=True,
-            aliases=["Robot Framework", "robotframework"],
-        ),
-        # LanguageDefinition(
-        #     id="feature",
-        #     extensions=[".feature", ".md"],
-        #     aliases=["feature", "gherkin", "Gherkin", "cucumber"],
-        # ),
-        # LanguageDefinition(id="markdown", extensions=[".md"]),
-    ]
+    language_definitions: List[LanguageDefinition] = [ROBOTFRAMEWORK_LANGUAGE]
 
     def __init__(
         self,

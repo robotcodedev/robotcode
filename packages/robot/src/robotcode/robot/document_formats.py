@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from robot.running.builder import TestSuiteBuilder
-from robotcode.core.language import LanguageDefinition
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 
 from .config.model import RobotBaseProfile, StringExpression
@@ -32,9 +31,6 @@ def _robot_framework_formats() -> Tuple[Tuple[str, ...], Dict[str, str]]:
 
 
 DEFAULT_EXTENSIONS, _FORMAT_OF_EXTENSION = _robot_framework_formats()
-
-# the language of the Markdown files Robot Framework parses; no editor sends it, the server detects it by file name
-MARKDOWN_LANGUAGE_ID = "robotframework-markdown"
 
 
 @dataclass(frozen=True)
@@ -104,21 +100,6 @@ def parse_include_condition(profile: RobotBaseProfile, root: Path) -> Optional[C
         return path.stem.lower() == "__init__" or bool(included.match(path))
 
     return condition
-
-
-def markdown_language_definition(profile: RobotBaseProfile, root: Path) -> Optional[LanguageDefinition]:
-    """The language of the Markdown files Robot Framework parses with the profile in the project `root`; `None` when
-    no Markdown extension is active."""
-    extensions = [f".{e}" for e in markdown_extensions(profile)]
-    if not extensions:
-        return None
-
-    return LanguageDefinition(
-        id=MARKDOWN_LANGUAGE_ID,
-        extensions=extensions,
-        extensions_ignore_case=True,
-        file_condition=parse_include_condition(profile, root),
-    )
 
 
 def is_markdown_file(path: Path) -> bool:

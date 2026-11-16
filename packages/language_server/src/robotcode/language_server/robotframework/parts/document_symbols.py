@@ -16,6 +16,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.language_definitions import ROBOTFRAMEWORK_LANGUAGE_ID
 from robotcode.robot.utils.ast import (
     range_from_node,
     range_from_token,
@@ -38,7 +39,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.document_symbols.collect.add(self.collect)
 
-    @language_id("robotframework")
+    @language_id(ROBOTFRAMEWORK_LANGUAGE_ID)
     @_logger.call
     def collect(
         self, sender: Any, document: TextDocument

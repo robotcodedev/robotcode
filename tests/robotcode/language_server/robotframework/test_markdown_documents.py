@@ -15,7 +15,8 @@ from robotcode.core.uri import Uri
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsCollectType
 from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID, MARKDOWN_SUPPORTED
+from robotcode.robot.document_formats import MARKDOWN_SUPPORTED
+from robotcode.robot.language_definitions import MARKDOWN_LANGUAGE_ID
 from tests.robotcode.language_server.robotframework.tools import document_of, language_server, write_project
 
 requires_markdown = pytest.mark.skipif(not MARKDOWN_SUPPORTED, reason="Markdown needs Robot Framework 7.5.1")

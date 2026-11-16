@@ -7,7 +7,7 @@ from typing import Any, List, Optional, Sequence, Union
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import DocumentSymbol, FoldingRange, Position, Range, SelectionRange, SymbolInformation
 from robotcode.core.text_document import TextDocument
-from robotcode.robot.document_formats import MARKDOWN_LANGUAGE_ID
+from robotcode.robot.language_definitions import MARKDOWN_LANGUAGE_ID
 from robotcode.robot.utils.ast import range_from_node
 from robotcode.robot.utils.markdown_blocks import RobotBlock, find_block, range_in_blocks
 

@@ -35,7 +35,8 @@ from robotcode.robot.diagnostics.diagnostics_modifier import (
 )
 
 from ..config.model import RobotBaseProfile
-from ..document_formats import MARKDOWN_LANGUAGE_ID, is_markdown_file
+from ..document_formats import is_markdown_file
+from ..language_definitions import MARKDOWN_LANGUAGE_ID
 from ..utils import RF_VERSION
 from ..utils.markdown_blocks import RobotBlock, find_robot_blocks, read_markdown_data
 from ..utils.stubs import Languages

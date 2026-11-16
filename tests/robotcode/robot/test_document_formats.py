@@ -7,7 +7,6 @@ from typing import List, Optional
 import pytest
 from robot.running import builder
 
-from robotcode.core.language import LanguageDefinition
 from robotcode.robot.config.loader import load_robot_config_from_robot_toml_str
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.document_formats import (
@@ -15,7 +14,6 @@ from robotcode.robot.document_formats import (
     DocumentFormat,
     document_formats,
     markdown_extensions,
-    markdown_language_definition,
     parse_include_condition,
 )
 from robotcode.robot.utils import RF_VERSION
@@ -134,27 +132,6 @@ def test_no_markdown_below_robot_framework_7_5_1(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr("robotcode.robot.document_formats.MARKDOWN_SUPPORTED", False)
 
     assert markdown_extensions(RobotBaseProfile(extensions=extensions)) == []
-
-
-@requires_markdown
-def test_the_markdown_language_has_the_active_extensions(tmp_path: Path) -> None:
-    assert markdown_language_definition(RobotBaseProfile(), tmp_path) == LanguageDefinition(
-        id="robotframework-markdown", extensions=[".robot.md"], extensions_ignore_case=True
-    )
-
-
-@requires_markdown
-def test_the_markdown_language_has_the_condition_of_the_parse_include_patterns(tmp_path: Path) -> None:
-    definition = markdown_language_definition(RobotBaseProfile(parse_include=["docs/*.md"]), tmp_path)
-
-    assert definition is not None
-    assert definition.file_condition is not None
-    assert definition.file_condition(tmp_path / "docs" / "guide.md")
-    assert not definition.file_condition(tmp_path / "README.md")
-
-
-def test_no_markdown_language_without_an_active_format(tmp_path: Path) -> None:
-    assert markdown_language_definition(RobotBaseProfile(extensions="robot"), tmp_path) is None
 
 
 def test_no_condition_without_parse_include_patterns(tmp_path: Path) -> None:
