@@ -90,6 +90,8 @@ class KeywordEntry:
     doc: str
     source: str
     lineno: int
+    # only `True` or `None`: the JSON and TOML output leave the field out when it is `None`
+    deprecated: Optional[bool] = None
 
 
 @dataclass
@@ -398,6 +400,7 @@ def _keyword_entries(library: LibraryDoc, page: str, keywords: List[KeywordDoc])
             doc=kw.format_text(kw.doc),
             source=kw.source or "",
             lineno=kw.line_no,
+            deprecated=True if kw.is_deprecated else None,
         )
         for kw in keywords
     ]

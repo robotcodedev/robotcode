@@ -129,6 +129,22 @@ def use_value(value):
     """
 '''
 
+DEP_LIB = '''\
+def old_lib_kw():
+    """*DEPRECATED!!* Use New Lib Kw instead."""
+
+
+def new_lib_kw():
+    """Does the new thing."""
+'''
+
+DEP_RESOURCE = """\
+*** Keywords ***
+Old User Kw
+    [Documentation]    *DEPRECATED* Use something else.
+    No Operation
+"""
+
 COMMON_RESOURCE = """\
 *** Settings ***
 Documentation    Common keywords.
@@ -567,6 +583,38 @@ class TestJsonOutput:
         assert entry["name"] == "Use Value"
         assert "``" not in entry["doc"]
         assert "``" not in entry["short_doc"]
+
+    def test_deprecated_library_keyword(self, doc_project: Project) -> None:
+        name = _unique("DepLib")
+        _write(doc_project.root / "lib" / f"{name}.py", DEP_LIB)
+
+        entries = {entry["name"]: entry for entry in _json("doc", "keywords", name)["keywords"]}
+
+        assert entries["Old Lib Kw"]["deprecated"] is True
+
+    def test_keyword_that_is_not_deprecated(self, doc_project: Project) -> None:
+        name = _unique("DepLib")
+        _write(doc_project.root / "lib" / f"{name}.py", DEP_LIB)
+
+        entries = {entry["name"]: entry for entry in _json("doc", "keywords", name)["keywords"]}
+
+        assert "deprecated" not in entries["New Lib Kw"]
+
+    def test_deprecated_keyword_of_the_whole_library(self, doc_project: Project) -> None:
+        name = _unique("DepLib")
+        _write(doc_project.root / "lib" / f"{name}.py", DEP_LIB)
+
+        entries = {entry["name"]: entry for entry in _json("doc", "lib", name)["keywords"]}
+
+        assert entries["Old Lib Kw"]["deprecated"] is True
+        assert "deprecated" not in entries["New Lib Kw"]
+
+    def test_deprecated_resource_keyword(self, doc_project: Project) -> None:
+        _write(doc_project.root / "dep.resource", DEP_RESOURCE)
+
+        [entry] = _json("doc", "keyword", "dep.resource", "Old User Kw")["keywords"]
+
+        assert entry["deprecated"] is True
 
 
 class TestKeywordOverview:
