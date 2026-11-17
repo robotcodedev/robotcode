@@ -15,7 +15,16 @@
 
 - [x] 3.1 `hatch run lint:all` and `hatch run test:test` pass.
 
+## 4. Whole lines and the summary (D1, D3, D4)
+
+The first version of 1.1 cut the whole message anywhere; the maintainer's review on 2026-11-17 changed that to D1, D3 and D4.
+
+- [x] 4.1 In `results.py`, one function shortens a message by D1, and `_truncate()` and `_make_test_item()` use it, so that `show` also marks a cut line with `...` (D4). `results summary` takes `--message-chars` with the default 120 and passes it to its list of failures (D3). Verify with the test of ten lines in the scratchpad (`rc625/ten`) that `show --failed`, `summary --failed`, `diff` and `compare --show failures` show two lines and `... (8 more lines)`, and with `--message-chars 0` all ten.
+- [x] 4.2 Tests in `tests/robotcode/runner/cli/results/test_multiline_messages.py` for the scenarios of "Shortening a message": whole lines with `fullMessage`, a first line longer than the limit, the summary by default with a message of ten lines, and no limit; `test_message_chars_counts_the_line_breaks` goes, as the scenario it tested changed. Verify that the new tests pass with 4.1 and fail on the state before it (`5310aa731`), and that the tests of `--message-chars` in `test_show.py`, `test_diff.py` and `test_compare.py` still pass.
+- [x] 4.3 Generate `docs/src/content/docs/reference/cli.md` again and verify that `results summary` lists `--message-chars`. In `references/results.md` of the skill, say that `summary --failed` is cut to `--message-chars` too, commit it in `robotframework-agent-plugins` on the maintainer's word, and sync `chat-plugins/`.
+- [x] 4.4 `hatch run lint:all` and `hatch run test:test` pass.
+
 ## Workflow follow-up
 
-- Commit only on request: the fix with `Fixes #625` and `Co-authored-by: Emil Söderberg <emil@stutt.se>` (D2), the OpenSpec files in `docs(openspec)` commits; push on request.
+- Commit only on request: the fix with `Fixes #625` and `Co-authored-by: Emil Söderberg <emil@stutt.se>` (D2); while it isn't pushed, section 4 can go into that commit. The OpenSpec files in `docs(openspec)` commits; push on request.
 - Archive the change.
