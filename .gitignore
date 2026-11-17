@@ -340,7 +340,7 @@ bundled/libs
 .kilocode/
 
 # .agents
-.agents/
+#.agents/
 skills-lock.json
 #.claude
 
