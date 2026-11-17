@@ -39,7 +39,7 @@ robotcode results summary -o results/old-run.xml                # specific outpu
 robotcode results summary -o /tmp/ci-results/                   # directory — auto-discovery runs inside it
 ```
 
-This is the right starting point for any "did the run pass?" / "what failed?" question. The `--failed` listing shows each failing test with full name, `(path:line)` link, and the first line of the error message — exactly what you'd report to the user.
+This is the right starting point for any "did the run pass?" / "what failed?" question. The `--failed` listing shows each failing test with full name, `(path:line)` link, and its error message, shortened to the whole lines that fit into `--message-chars` (default 120, `0` for all of it) — exactly what you'd report to the user.
 
 ## 3. `robotcode results show` — list individual tests
 
@@ -57,7 +57,7 @@ robotcode results show --sort status                  # FAIL → SKIP → PASS �
 robotcode results show -bl "MyProject.Login.Login Works"  # exact-match by full longname
 ```
 
-One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--show-tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`).
+One entry per test: status badge, full name, `(path:line)`, plus any failure/skip message, shortened as in `summary`. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--show-tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`).
 
 ## 4. `robotcode results log` — the log.html in plain text
 
