@@ -35,6 +35,12 @@ def private_keyword_call_message(keyword: KeywordDoc, source: Optional[str]) -> 
     return None
 
 
+def deprecated_keyword_message(keyword: KeywordDoc) -> str:
+    """The `DeprecatedKeyword` message for a call of `keyword`, in the form of Robot Framework's warning."""
+    reason = keyword.deprecated_message
+    return f"Keyword '{keyword.name}' is deprecated.{f' {reason}' if reason else ''}"
+
+
 # The section headers of keyword documentation, as Robot Framework 7.5 recognizes them.
 _DOC_SECTION_HEADER = re.compile(
     r"[*_]*(args|arguments|parameters|returns|return|yields|raises|raise|tags)[*_]*::?[*_]*(\s+.*)?",

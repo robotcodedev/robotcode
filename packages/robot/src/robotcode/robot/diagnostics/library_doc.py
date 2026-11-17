@@ -66,6 +66,7 @@ from robot.utils.escaping import unescape
 from robot.utils.htmlformatters import HeaderFormatter as RobotHeaderFormatter
 from robot.utils.importer import Importer
 from robot.utils.robotpath import find_file as robot_find_file
+from robot.utils.text import getshortdoc
 from robot.variables import Variables
 from robot.variables.filesetter import PythonImporter, YamlImporter
 from robot.variables.finders import VariableFinder
@@ -1110,9 +1111,13 @@ class KeywordDoc(SourceEntity):
 
     @property
     def deprecated_message(self) -> str:
-        if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
-            return m.group("message").strip()
-        return ""
+        # Robot Framework's run-time warning takes the text after the closing `*` of the short doc;
+        # BuiltIn writes its reason between the asterisks, so that is the fallback.
+        short_doc: str = getshortdoc(self.doc)
+        if not short_doc.startswith("*DEPRECATED") or "*" not in short_doc[1:]:
+            return ""
+        _, marker, after = short_doc.split("*", 2)
+        return after.strip() or marker[len("DEPRECATED") :].strip()
 
     @property
     def name_range(self) -> Range:

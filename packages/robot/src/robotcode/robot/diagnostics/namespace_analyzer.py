@@ -70,7 +70,7 @@ from ..utils.variables import (
 )
 from ..utils.visitor import Visitor
 from .analyzer_result import AnalyzerResult
-from .diagnostic_rules import private_keyword_call_message, tags_row_without_empty_row
+from .diagnostic_rules import deprecated_keyword_message, private_keyword_call_message, tags_row_without_empty_row
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -897,8 +897,7 @@ class NamespaceAnalyzer(Visitor):
                 if result.is_deprecated:
                     self._append_diagnostics(
                         range=kw_range,
-                        message=f"Keyword '{result.name}' is deprecated"
-                        f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
+                        message=deprecated_keyword_message(result),
                         severity=DiagnosticSeverity.HINT,
                         tags=[DiagnosticTag.DEPRECATED],
                         code=Error.DEPRECATED_KEYWORD,
