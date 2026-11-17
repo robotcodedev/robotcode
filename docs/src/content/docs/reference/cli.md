@@ -2501,7 +2501,7 @@ robotcode results compare [OPTIONS] RUN RUN [RUN]...
 
 - `--message-chars INTEGER RANGE`
 
-   Cut messages and metadata values to N characters (0 = no cut).  [default: 120; x>=0]
+   Shorten messages and metadata values to the whole lines that fit into N characters (0 = no shortening).  [default: 120; x>=0]
 
 
 - `--help`
@@ -2615,7 +2615,7 @@ robotcode results diff [OPTIONS] BASELINE [CURRENT]
 
 - `--message-chars INTEGER RANGE`
 
-   Truncate failure messages to N characters (0 = no truncation).  [default: 120; x>=0]
+   Shorten each message to the whole lines that fit into N characters (0 = no shortening).  [default: 120; x>=0]
 
 
 - `--only [new-failures|new-passes|status-changes|added|removed] *`
@@ -2800,8 +2800,8 @@ robotcode results log [OPTIONS]
 
 List individual tests with status, source and failure message.
 
-One line per test: status badge, full name, `(path:line)` link, and the
-first line of any failure/skip message.
+One entry per test: status badge, full name, `(path:line)` link, and any
+failure/skip message, cut to `--message-chars`.
 
 Examples:
 ```
@@ -2904,7 +2904,7 @@ robotcode results show [OPTIONS]
 
 - `--message-chars INTEGER RANGE`
 
-   Truncate each message to N characters (0 = no truncation).  [default: 120; x>=0]
+   Shorten each message to the whole lines that fit into N characters (0 = no shortening).  [default: 120; x>=0]
 
 
 - `--full-paths / --no-full-paths`
@@ -3149,6 +3149,11 @@ robotcode results summary [OPTIONS]
 - `--failed / --no-failed`
 
    Include the list of failed tests (with messages) below the counts table.  [default: no-failed]
+
+
+- `--message-chars INTEGER RANGE`
+
+   Shorten each message to the whole lines that fit into N characters (0 = no shortening).  [default: 120; x>=0]
 
 
 - `--full-paths / --no-full-paths`

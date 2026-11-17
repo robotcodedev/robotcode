@@ -371,6 +371,34 @@ def diff_current_output(session_output_dir: Path) -> Path:
     )
 
 
+@pytest.fixture(scope="session")
+def multiline_baseline_output(session_output_dir: Path) -> Path:
+    """Baseline `output.xml` for the multi-line message tests — the test passes."""
+    return _run_robot(
+        SUITES_DIR / "multiline_baseline.robot",
+        session_output_dir,
+        "multiline_baseline",
+        suite_name="Multiline",
+    )
+
+
+@pytest.fixture(scope="session")
+def multiline_current_output(session_output_dir: Path) -> Path:
+    """Current `output.xml` for the multi-line message tests — the test fails with a message of three lines."""
+    return _run_robot(
+        SUITES_DIR / "multiline_current.robot",
+        session_output_dir,
+        "multiline_current",
+        suite_name="Multiline",
+    )
+
+
+@pytest.fixture(scope="session")
+def multiline_long_output(session_output_dir: Path) -> Path:
+    """`output.xml` of a test that fails with a message of ten lines."""
+    return _run_robot(SUITES_DIR / "multiline_long.robot", session_output_dir, "multiline_long", suite_name="Multiline")
+
+
 # ---------------------------------------------------------------------------
 # Misc helpers exposed as fixtures
 # ---------------------------------------------------------------------------

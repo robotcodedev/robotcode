@@ -330,6 +330,13 @@ def results() -> None:
     show_default=True,
     help="Include the list of failed tests (with messages) below the counts table.",
 )
+@click.option(
+    "--message-chars",
+    type=click.IntRange(min=0),
+    default=120,
+    show_default=True,
+    help="Shorten each message to the whole lines that fit into N characters (0 = no shortening).",
+)
 @FULL_PATHS_OPTION
 @pass_application
 def summary(
@@ -347,6 +354,7 @@ def summary(
     search_regex: Optional[str],
     output_file: Optional[Path],
     show_failed: bool,
+    message_chars: int,
     full_paths: bool,
 ) -> None:
     """\
@@ -401,7 +409,7 @@ def summary(
             exclude_by_test_metadata=exclude_by_test_metadata,
         )
         counts = _collect_counts(execution.suite)
-        failed = _collect_failures(execution.suite) if show_failed else None
+        failed = _collect_failures(execution.suite, message_chars) if show_failed else None
         exec_msg_counts = _count_execution_messages(execution_messages)
         msg_counts = _count_all_messages(execution.suite, execution_messages)
 
@@ -453,7 +461,7 @@ def summary(
     type=click.IntRange(min=0),
     default=120,
     show_default=True,
-    help="Truncate each message to N characters (0 = no truncation).",
+    help="Shorten each message to the whole lines that fit into N characters (0 = no shortening).",
 )
 @FULL_PATHS_OPTION
 @click.option(
@@ -531,8 +539,8 @@ def show(
     """\
     List individual tests with status, source and failure message.
 
-    One line per test: status badge, full name, `(path:line)` link, and
-    the first line of any failure/skip message.
+    One entry per test: status badge, full name, `(path:line)` link, and
+    any failure/skip message, cut to `--message-chars`.
 
     \b
     Examples:
@@ -1147,7 +1155,7 @@ def _diff_exit_code(data: DiffResult, mask: DiffExitCode) -> DiffExitCode:
     type=click.IntRange(min=0),
     default=120,
     show_default=True,
-    help="Truncate failure messages to N characters (0 = no truncation).",
+    help="Shorten each message to the whole lines that fit into N characters (0 = no shortening).",
 )
 @click.option(
     "--only",
@@ -1357,12 +1365,24 @@ def _make_diff_change(
 
 
 def _truncate(text: Optional[str], limit: int) -> Optional[str]:
+    """`text` with as many whole lines as fit into `limit` characters, line breaks counted, and a line that counts
+    the lines left out; a first line longer than `limit` is cut. With a `limit` of 0, `text` as it is."""
     if not text:
         return None
-    first_line = text.splitlines()[0]
-    if limit and len(first_line) > limit:
-        return first_line[:limit].rstrip() + "..."
-    return first_line
+    if not limit or len(text) <= limit:
+        return text
+    lines = text.splitlines()
+    shown = [lines[0]] if len(lines[0]) <= limit else [lines[0][:limit].rstrip() + "..."]
+    size = len(lines[0])
+    for line in lines[1:]:
+        size += 1 + len(line)
+        if size > limit:
+            break
+        shown.append(line)
+    left = len(lines) - len(shown)
+    if left:
+        shown.append(f"... ({left} more line{'' if left == 1 else 's'})")
+    return "\n".join(shown)
 
 
 _COMPARE_VIEWS = ("tests", "failures", "elapsed", "messages", "environment")
@@ -1456,7 +1476,7 @@ def _unique_lower(values: Iterable[str]) -> List[str]:
     type=click.IntRange(min=0),
     default=120,
     show_default=True,
-    help="Cut messages and metadata values to N characters (0 = no cut).",
+    help="Shorten messages and metadata values to the whole lines that fit into N characters (0 = no shortening).",
 )
 @pass_application
 def compare(
@@ -2288,13 +2308,8 @@ def _make_file_info(path: Path) -> ResultFileInfo:
 
 def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
     msg = test.message or ""
-    first_line = msg.splitlines()[0] if msg else ""
-    truncated_msg = first_line
-    full_msg: Optional[str] = None
-    if message_chars and len(first_line) > message_chars:
-        truncated_msg = first_line[:message_chars]
-    if msg and (truncated_msg != msg):
-        full_msg = msg
+    truncated_msg = _truncate(msg, message_chars) or ""
+    full_msg = msg if truncated_msg != msg else None
 
     full_name = _get_full_name(test)
     parent_name = _get_full_name(test.parent) if test.parent else ""
@@ -2317,9 +2332,9 @@ def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
     )
 
 
-def _collect_failures(suite: TestSuite) -> List[TestResultItem]:
+def _collect_failures(suite: TestSuite, message_chars: int) -> List[TestResultItem]:
     """Return failed tests with messages from a (filtered) suite tree."""
-    return [_make_test_item(t, message_chars=0) for t in _iter_all_tests(suite) if t.status == "FAIL"]
+    return [_make_test_item(t, message_chars=message_chars) for t in _iter_all_tests(suite) if t.status == "FAIL"]
 
 
 class _LoggedMessages(ResultVisitor):
